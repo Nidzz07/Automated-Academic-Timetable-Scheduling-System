@@ -1,0 +1,68 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Test / coverage / type-check caches
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# ---------- Secrets & config ----------
+# Commit .env.example instead; it is un-ignored below.
+.env
+.env.*
+!.env.example
+
+# ---------- Generated data ----------
+# Synthetic generator output. Committed sample instances in data/instances/ are tracked.
+data/generated/
+
+# ---------- Database ----------
+# Local scratch DBs only. Alembic migrations in versions/ ARE tracked.
+*.db
+*.sqlite
+*.sqlite3
+
+# ---------- Frontend (React + Vite) ----------
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
+coverage/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+
+# ---------- Editors ----------
+# Local machine settings. If the team later wants to share editor config,
+# un-ignore the specific file (e.g. !.vscode/extensions.json).
+.vscode/
+.idea/
+*.swp
+
+# ---------- OS ----------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

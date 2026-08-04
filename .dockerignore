@@ -1,0 +1,25 @@
+# Build context is the repo root; keep the image small and platform-clean.
+# .venv especially: it holds Windows binaries that must not land in a Linux image.
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+.git/
+.gitignore
+.vscode/
+.idea/
+
+frontend/node_modules/
+frontend/dist/
+
+.env
+*.md
