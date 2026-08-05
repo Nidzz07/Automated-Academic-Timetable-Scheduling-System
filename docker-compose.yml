@@ -1,34 +1,14 @@
+# The database is hosted Supabase Postgres — there is no local db service.
+# The backend connects out to it using DATABASE_URL from backend/.env.
 services:
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-chronos}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chronos}
-      POSTGRES_DB: ${POSTGRES_DB:-chronos}
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chronos} -d ${POSTGRES_DB:-chronos}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-chronos}:${POSTGRES_PASSWORD:-chronos}@db:5432/${POSTGRES_DB:-chronos}
+    env_file:
+      - backend/.env
     ports:
       - "8000:8000"
     volumes:
       # Bind-mount the source so --reload picks up local edits.
       - .:/app
-    depends_on:
-      db:
-        condition: service_healthy
-
-volumes:
-  pgdata:

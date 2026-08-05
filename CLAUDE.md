@@ -6,12 +6,13 @@ Read it fully before making changes.
 
 ## Current repo state
 
-**The repo is empty scaffolding — there is no source code yet and no commits on `main`.** The only files are this document, `requirements.txt`, `.venv/`, and `.vscode/settings.json`. Every directory in the Architecture section below is a *target layout to be created*, not something to navigate. Do not assume a file exists because it is named here; check first.
+**The directory skeleton exists, but it is empty of logic and there are still no commits on `main`.** `solver/`, `backend/`, `data/`, and `frontend/` exist with `__init__.py` / placeholder files only. Do not assume a module exists because it is named below; check first.
 
 Practical consequences:
 
-- There is no `frontend/`, no `package.json`, no `docker-compose.yml`, no `alembic.ini`. The frontend and Docker commands below will not run until that work lands.
-- **There is no `.gitignore`.** `.venv/` is currently untracked but uncommitted — write a `.gitignore` (at minimum `.venv/`, `__pycache__/`, `.pytest_cache/`, `*.pyc`, `.env`, `node_modules/`, `dist/`) before the first commit.
+- `backend/app/main.py` holds a bare `FastAPI()` instance with **no routes**. `solver/tests/` and `backend/tests/` are empty — pytest collects zero tests.
+- `frontend/` is an empty placeholder — **no `package.json`**, so every `npm` command below fails until it is scaffolded (`npm create vite@latest . -- --template react-ts`).
+- There is **no `alembic.ini`** and no `migrations/` yet; Alembic must be initialised before the migration commands work.
 - The venv is **Python 3.12.10** on Windows, and all of `requirements.txt` is already installed.
 
 ## Project
@@ -47,10 +48,12 @@ Data flow: DB (normalised hierarchy) → constraint-derivation queries produce c
 
 - **Solver:** Python 3.11+ (the local venv is 3.12.10), stdlib (`heapq`, `dataclasses`), `networkx` (validation/baseline only).
 - **Backend:** FastAPI, Pydantic, Uvicorn, SQLAlchemy 2.0, Alembic, `python-jose` + `passlib[bcrypt]` for JWT + role-based auth.
-- **Database:** PostgreSQL 16 (Neon/Supabase), normalised to 3NF — document the decomposition.
+- **Database:** **Supabase Postgres** (hosted) — the single source of truth for every environment; there is no local Postgres. Normalised to 3NF — document the decomposition. Connection string comes from `DATABASE_URL` in `backend/.env`; never hardcode it.
 - **Frontend:** React 18, Vite, TypeScript, TailwindCSS, shadcn/ui (use these components; don't hand-roll), dnd-kit (drag-and-drop), TanStack Query (server state), Recharts (score/benchmark plots), lucide-react (icons).
 - **Testing:** pytest + Hypothesis (property-based) and Faker on the Python side; Vitest + React Testing Library on the frontend.
-- **Ops:** Docker Compose locally; Render/Railway + Neon for deployment; GitHub Actions to run tests on push.
+- **Ops:** Docker Compose runs the **backend container only** (it connects out to Supabase); Render/Railway + Supabase for deployment; GitHub Actions to run tests on push.
+
+> **Shared-database warning.** Because every developer's local backend points at the same hosted Supabase instance, there is no throwaway local DB. `alembic upgrade head`, `alembic downgrade`, and the synthetic data generator all affect the whole team. Coordinate before running them, and never point destructive operations or test fixtures at the shared database.
 
 ## Conventions
 
@@ -91,11 +94,17 @@ alembic upgrade head                           # apply migrations
 uvicorn backend.app.main:app --reload          # API at :8000, docs at /docs
 ```
 
-Not yet usable — these require scaffolding that does not exist:
+Docker Compose runs the backend container alone; it reads `backend/.env` and connects out to Supabase.
+
+```powershell
+docker compose up --build      # backend on :8000, talking to Supabase
+```
+
+Not yet usable — requires scaffolding that does not exist:
 
 ```powershell
 cd frontend; npm install; npm run dev    # needs frontend/package.json
-docker compose up                        # needs docker-compose.yml
+alembic upgrade head                     # needs alembic init
 ```
 
 If a venv executable is not on `PATH`, call it directly: `.\.venv\Scripts\pytest.exe`, `.\.venv\Scripts\alembic.exe`.
