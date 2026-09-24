@@ -1,0 +1,30 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+exclude = [
+    ".venv",
+    "frontend",
+    "data/real",
+    "migrations/versions",
+]
+
+[tool.ruff.lint]
+# E/W  pycodestyle      - layout and whitespace
+# F    pyflakes         - unused imports, undefined names
+# I    isort            - import ordering
+# UP   pyupgrade        - modern syntax for the 3.12 target
+# B    flake8-bugbear   - mutable defaults, loop-variable capture
+# SIM  flake8-simplify  - redundant branches and comprehensions
+# RUF  ruff-specific
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["solver", "backend", "ingestion", "db", "bench"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "solver/tests", "backend/tests"]
+python_files = ["test_*.py"]
