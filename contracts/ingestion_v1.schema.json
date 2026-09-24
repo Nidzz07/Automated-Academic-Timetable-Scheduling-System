@@ -1,0 +1,473 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronos.spit.ac.in/contracts/ingestion_v1.schema.json",
+  "title": "Chronos Ingestion Contract v1",
+  "description": "The canonical intermediate JSON that a source parser (.docx class / lab / faculty timetables, classrooms.xlsx) emits and that the database seeder consumes. It is a faithful record of what was observed in one source file, including its data-quality defects: nothing is silently repaired, every defect is reported in `anomalies`. Frozen contract 1 of 3 (CONTEXT.md section 5) - changing it requires agreement from all three track owners.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_file",
+    "semester",
+    "departments",
+    "programmes",
+    "divisions",
+    "batches",
+    "rooms",
+    "faculty",
+    "subjects",
+    "qualifications",
+    "cohorts",
+    "observed_sessions",
+    "lab_blocks",
+    "pinned_blocks",
+    "anomalies"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Identifier of this contract revision. Pinned so a consumer can refuse a payload written against a different revision.",
+      "type": "string",
+      "const": "ingestion.v1"
+    },
+    "source_file": {
+      "description": "Basename of the source document this payload was parsed from, e.g. 'CE_Class_Time_Table-EVEN_sem_25-26.docx'.",
+      "type": "string",
+      "minLength": 1
+    },
+    "semester": {
+      "description": "The academic term the source file covers.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "academic_year", "term"],
+      "properties": {
+        "code": {
+          "description": "ODD (semesters III, V, VII) or EVEN (IV, VI, VIII).",
+          "type": "string",
+          "enum": ["ODD", "EVEN"]
+        },
+        "academic_year": {
+          "description": "Academic year as printed on the source, e.g. '2025-26'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "term": {
+          "description": "Human-readable term label, e.g. 'Even Semester 2025-26'.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "departments": {
+      "description": "Departments referenced by this file. Rooms are institute-level and are deliberately NOT scoped to a department (CONTEXT.md section 2, rule 5).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "code", "name"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "code": {
+            "description": "Short department code as used in the timetables, e.g. 'CE', 'CSE', 'EXTC'.",
+            "type": "string",
+            "minLength": 1
+          },
+          "name": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "programmes": {
+      "description": "Degree programmes offered by a department.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "department_id", "code", "name"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "department_id": { "$ref": "#/$defs/id" },
+          "code": {
+            "description": "Programme code, e.g. 'BTECH', 'MTECH'.",
+            "type": "string",
+            "minLength": 1
+          },
+          "name": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "divisions": {
+      "description": "Division-groups, one per class-timetable page.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "programme_id", "semester_number", "label", "strength"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "programme_id": { "$ref": "#/$defs/id" },
+          "semester_number": {
+            "description": "Semester ordinal within the programme: 3..8 for B.Tech, 1..2 for M.Tech.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "label": {
+            "description": "Label exactly as printed, e.g. 'SE-Comp A', 'TE-Comp C', 'BE-Comp A', 'M.Tech Comp'.",
+            "type": "string",
+            "minLength": 1
+          },
+          "strength": {
+            "description": "Student count, or null when the source does not state it.",
+            "type": ["integer", "null"],
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "batches": {
+      "description": "Lab batches within a division, normally four (A-D).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "division_id", "label", "strength"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "division_id": { "$ref": "#/$defs/id" },
+          "label": {
+            "description": "Batch letter as printed in a lab cell, 'A'..'D'.",
+            "type": "string",
+            "minLength": 1
+          },
+          "strength": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "rooms": {
+      "description": "Physical rooms from classrooms.xlsx. Institute-level: a room is not owned by a department.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "code", "capacity", "room_type", "separation", "sub_rooms"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "code": {
+            "description": "Room code exactly as printed, e.g. '002', '702', '509 new CSE'.",
+            "type": "string",
+            "minLength": 1
+          },
+          "capacity": { "type": "integer", "minimum": 0 },
+          "room_type": {
+            "description": "Derived from the 'used as' column. 'unknown' preserves an unusable value (rooms 605 and 609 read 'unsure') rather than guessing - see anomaly UNKNOWN_ROOM_USAGE.",
+            "type": "string",
+            "enum": ["class", "lab", "unknown"]
+          },
+          "separation": {
+            "description": "Raw value of the separation column, e.g. '20-20-20' for room 603. null when the room is not separable.",
+            "type": ["string", "null"]
+          },
+          "sub_rooms": {
+            "description": "Sub-rooms derived from `separation`. Naming is inconsistent in the source - both letters ('702-A') and digits ('603-2') occur - and is preserved verbatim.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "code", "capacity"],
+              "properties": {
+                "id": { "$ref": "#/$defs/id" },
+                "code": { "type": "string", "minLength": 1 },
+                "capacity": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "faculty": {
+      "description": "Faculty members, one per page of the faculty individual timetable.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "department_id",
+          "full_name",
+          "initials",
+          "theory_hours",
+          "practical_hours",
+          "total_hours"
+        ],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "department_id": {
+            "description": "Owning department. Faculty remain schedulable institute-wide.",
+            "$ref": "#/$defs/id"
+          },
+          "full_name": { "type": "string", "minLength": 1 },
+          "initials": {
+            "description": "Initials as used in class-timetable cells ('KKD', 'AGN', 'PBB'). null when the initials-to-name mapping could not be resolved - see anomaly UNRESOLVED_FACULTY_INITIALS.",
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "theory_hours": {
+            "description": "Theory hours taken from the '6T+ 8P =14' workload line. null when that line is absent - see anomaly MISSING_WORKLOAD.",
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "practical_hours": {
+            "description": "Practical hours from the same workload line. Load balancing and substitution ordering use the theory/practical split, never a raw session count.",
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "total_hours": {
+            "description": "Total as printed. Kept separate from theory+practical so an arithmetic error in the source stays visible instead of being silently corrected.",
+            "type": ["integer", "null"],
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "subjects": {
+      "description": "Subjects referenced by any cell in the source.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "department_id", "code", "name", "session_type"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "department_id": { "$ref": "#/$defs/id" },
+          "code": {
+            "description": "Subject code as printed in cells, e.g. 'OS', 'DAA', 'CCN', 'PCS'.",
+            "type": "string",
+            "minLength": 1
+          },
+          "name": { "type": "string", "minLength": 1 },
+          "session_type": {
+            "description": "'both' when the subject has a theory component and a lab component.",
+            "type": "string",
+            "enum": ["theory", "lab", "both"]
+          }
+        }
+      }
+    },
+    "qualifications": {
+      "description": "Faculty-subject competence, many-to-many. Drives substitution during live rescheduling. 'observed' was inferred from a timetable cell; 'declared' came from an authoritative allocation list.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["faculty_id", "subject_id", "source"],
+        "properties": {
+          "faculty_id": { "$ref": "#/$defs/id" },
+          "subject_id": { "$ref": "#/$defs/id" },
+          "source": {
+            "type": "string",
+            "enum": ["observed", "declared"]
+          }
+        }
+      }
+    },
+    "cohorts": {
+      "description": "The polymorphic student group a session is taught to - the constituency the solver treats as one vertex.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "cohort_type", "label", "member_batch_ids"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "cohort_type": {
+            "description": "'division' = a whole division; 'batch' = one lab batch; 'elective' = a cross-division elective group; 'combined' = two or more divisions taught together.",
+            "type": "string",
+            "enum": ["division", "batch", "elective", "combined"]
+          },
+          "label": {
+            "description": "Label as printed, e.g. 'SE-Comp B', 'PE-I-D', 'PE-II-A', 'SE C & D'.",
+            "type": "string",
+            "minLength": 1
+          },
+          "member_batch_ids": {
+            "description": "Full expansion of the cohort down to batches. Two cohorts clash exactly when these sets intersect, which is how COHORT edges are derived for the edge-list contract.",
+            "type": "array",
+            "items": { "$ref": "#/$defs/id" }
+          }
+        }
+      }
+    },
+    "observed_sessions": {
+      "description": "One parsed timetable cell = one session as it was actually observed in the source. This is ground truth for validation, not solver output.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "subject_id",
+          "faculty_id",
+          "cohort_id",
+          "room_id",
+          "sub_room_id",
+          "day",
+          "period",
+          "duration_periods",
+          "session_type",
+          "source_cell"
+        ],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "subject_id": { "$ref": "#/$defs/id" },
+          "faculty_id": {
+            "description": "null when the cell named initials that could not be resolved to a faculty member.",
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "cohort_id": { "$ref": "#/$defs/id" },
+          "room_id": {
+            "description": "null when the cell named no room, or named one absent from classrooms.xlsx.",
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "sub_room_id": {
+            "description": "Set when the cell named a sub-room such as '702-A' or '603-2'; null when it named the whole room.",
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "day": { "$ref": "#/$defs/day" },
+          "period": { "$ref": "#/$defs/teaching_period" },
+          "duration_periods": {
+            "description": "Number of consecutive teaching periods; 2 for the usual double lab period.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "session_type": {
+            "type": "string",
+            "enum": ["theory", "lab"]
+          },
+          "source_cell": {
+            "description": "The raw cell text, kept verbatim for traceability back to the document, e.g. 'OS / A / AGN / 702-A'.",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "lab_blocks": {
+      "description": "A lab slot holding N batch-parallel sessions of one division - four batches, four subjects, four faculty, four rooms - which must stay simultaneous and contiguous. Modelled as a block, never as N independent sessions.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "division_id",
+          "day",
+          "start_period",
+          "duration_periods",
+          "parallel_session_ids"
+        ],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "division_id": { "$ref": "#/$defs/id" },
+          "day": { "$ref": "#/$defs/day" },
+          "start_period": { "$ref": "#/$defs/teaching_period" },
+          "duration_periods": { "type": "integer", "minimum": 1 },
+          "parallel_session_ids": {
+            "description": "ids of the observed_sessions that run together in this block.",
+            "type": "array",
+            "items": { "$ref": "#/$defs/id" }
+          }
+        }
+      }
+    },
+    "pinned_blocks": {
+      "description": "Immovable occupancy the solver may not schedule into: MDM, HSS, LLC, student activity, major project, exams and breaks.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "cohort_id", "day", "period", "duration_periods", "kind"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "label": {
+            "description": "Label as printed, e.g. 'MDM -I THEORY', 'HSS II', 'DAA LAB EXAM ESE SE COMP NR'.",
+            "type": "string",
+            "minLength": 1
+          },
+          "cohort_id": {
+            "description": "The cohort held by this block, or null when it blocks the slot institute-wide (a break).",
+            "type": ["string", "null"],
+            "minLength": 1
+          },
+          "day": { "$ref": "#/$defs/day" },
+          "period": { "$ref": "#/$defs/teaching_period" },
+          "duration_periods": { "type": "integer", "minimum": 1 },
+          "kind": {
+            "type": "string",
+            "enum": ["mdm", "hss", "llc", "activity", "project", "exam", "break"]
+          }
+        }
+      }
+    },
+    "anomalies": {
+      "description": "Every data-quality defect found while parsing. The ingestion layer reports defects, it never repairs them (CONTEXT.md section 3.5). An empty array is a positive claim that the source was clean.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "code", "message", "source_file", "source_cell"],
+        "properties": {
+          "severity": {
+            "description": "'error' means the affected record could not be produced; 'warning' means it was produced but is suspect.",
+            "type": "string",
+            "enum": ["error", "warning"]
+          },
+          "code": {
+            "description": "Machine-readable defect class. This enum is the frozen minimum set; extending it is a contract revision.",
+            "type": "string",
+            "enum": [
+              "DUPLICATE_ROOM",
+              "UNKNOWN_ROOM_USAGE",
+              "SUBROOM_EXCEEDS_SEPARATION",
+              "UNRESOLVED_FACULTY_INITIALS",
+              "UNPARSEABLE_CELL",
+              "MISSING_WORKLOAD"
+            ]
+          },
+          "message": {
+            "description": "Human-readable explanation in institutional terms, naming the room, faculty member or cohort involved.",
+            "type": "string",
+            "minLength": 1
+          },
+          "source_file": { "type": "string", "minLength": 1 },
+          "source_cell": {
+            "description": "Raw cell text the defect was found in, or null for a file-level defect.",
+            "type": ["string", "null"]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "description": "Stable string identifier, unique within its collection in this payload.",
+      "type": "string",
+      "minLength": 1
+    },
+    "day": {
+      "description": "Teaching day index, Monday=0 .. Friday=4.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "teaching_period": {
+      "description": "Teaching-slot index within a day, 0..7 - the eight schedulable hours of CONTEXT.md section 3.2, counted in teaching order with the two breaks excluded. The edge-list contract re-indexes these onto its wall-clock grid via slot_grid.teaching_periods.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 7
+    }
+  }
+}

@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronos.spit.ac.in/contracts/solution_v1.schema.json",
+  "title": "Chronos Solution Contract v1",
+  "description": "What the solver returns to the API layer. Exactly one of `assignment` or `diagnosis` is present: a complete timetable with an itemised quality breakdown, or an infeasibility result carrying the minimal conflicting constraint set and the smallest relaxation that restores feasibility. A bare failure is not a legal response. Frozen contract 3 of 3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "metadata"],
+  "properties": {
+    "schema_version": {
+      "description": "Identifier of this contract revision.",
+      "type": "string",
+      "const": "solution.v1"
+    },
+    "status": {
+      "description": "'solved' - every session was placed; 'infeasible' - no valid timetable exists under the given constraints, and a diagnosis explains why.",
+      "type": "string",
+      "enum": ["solved", "infeasible"]
+    },
+    "assignment": {
+      "description": "The timetable: one placement per session. Present only when status is 'solved'.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["session_id", "day", "period", "room_id", "sub_room_id"],
+        "properties": {
+          "session_id": { "$ref": "#/$defs/id" },
+          "day": { "$ref": "#/$defs/day" },
+          "period": {
+            "description": "Starting period on the edge-list wall-clock grid. A session of duration n occupies this period and the next n-1 periods in teaching order.",
+            "$ref": "#/$defs/period"
+          },
+          "room_id": {
+            "description": "Physical room. When the session sits in a sub-room, this is the parent room and sub_room_id names the partition.",
+            "$ref": "#/$defs/id"
+          },
+          "sub_room_id": {
+            "description": "Sub-room within room_id, e.g. the '702-A' half of room 702. null when the session occupies the whole room.",
+            "type": ["string", "null"],
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "quality": {
+      "description": "Itemised score for the assignment. Present only when status is 'solved'. Rules and weights come from solver/rules/quality_rules.yaml - they are data, so a department can change a weight without a code change (CONTEXT.md section 2, rule 4).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "breakdown"],
+      "properties": {
+        "score": {
+          "description": "Aggregate quality score for the timetable. Higher is better.",
+          "type": "number"
+        },
+        "breakdown": {
+          "description": "One entry per quality rule that fired. Never a bare number: the breakdown is what makes the score defensible to a department.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rule_id", "weight", "raw", "penalty", "explanation"],
+            "properties": {
+              "rule_id": {
+                "description": "Rule identifier as declared in quality_rules.yaml.",
+                "type": "string",
+                "minLength": 1
+              },
+              "weight": {
+                "description": "Weight the rule carried, read from the YAML.",
+                "type": "number"
+              },
+              "raw": {
+                "description": "The measured quantity before weighting, e.g. a count of violating occurrences.",
+                "type": "number"
+              },
+              "penalty": {
+                "description": "The rule's contribution to the score, normally weight multiplied by raw.",
+                "type": "number"
+              },
+              "explanation": {
+                "description": "Human-readable reason in institutional terms, e.g. 'AGN has 3 consecutive sessions on Monday'. Never a clause index or an internal id.",
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "displaced": {
+      "description": "Sessions whose slot changed relative to the timetable being repaired. Empty for a fresh generate; populated by freeze-and-expand rescheduling, where minimising its length is the objective. Present only when status is 'solved'.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "diagnosis": {
+      "description": "Why no valid timetable exists. Present only when status is 'infeasible'.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimal_conflicting_set", "suggested_relaxation"],
+      "properties": {
+        "minimal_conflicting_set": {
+          "description": "The minimal unsatisfiable subset: constraints that cannot all hold at once, and from which removing any one restores satisfiability.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["constraint_id", "kind", "description", "entity_ids"],
+            "properties": {
+              "constraint_id": {
+                "description": "Stable identifier for the constraint, so a relaxation can name it.",
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "description": "Constraint class, e.g. 'FACULTY_CLASH', 'ROOM_CAPACITY', 'LAB_CONTIGUITY', 'PINNED_BLOCK', 'FACULTY_UNAVAILABLE'.",
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "description": "Institutional terms only - named faculty, rooms and cohorts. Never clause indices, vertex numbers or internal ids. This string is shown directly to a timetable coordinator.",
+                "type": "string",
+                "minLength": 1
+              },
+              "entity_ids": {
+                "description": "ids of the faculty, rooms, cohorts and sessions the constraint involves, for the UI to highlight. Ids live here; the description stays human.",
+                "type": "array",
+                "items": { "$ref": "#/$defs/id" }
+              }
+            }
+          }
+        },
+        "suggested_relaxation": {
+          "description": "The smallest single change that restores feasibility - the constraint to drop or loosen, stated the way a coordinator would act on it.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["constraint_id", "description"],
+          "properties": {
+            "constraint_id": {
+              "description": "Identifier of the constraint to relax. Must be one of the constraint_ids in minimal_conflicting_set.",
+              "type": "string",
+              "minLength": 1
+            },
+            "description": {
+              "description": "Institutional terms, e.g. 'Free room 603 at Wednesday 11.15 by moving the TE-Comp A DAA lab to Thursday'.",
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "description": "Run statistics. Always present, for both outcomes, so an infeasible run is still measurable and reportable in the benchmark harness.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "runtime_ms",
+        "sessions_total",
+        "sessions_assigned",
+        "slots_used",
+        "backtracks"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "Which algorithm produced this result, e.g. 'welsh-powell-greedy', 'backtracking+forward-checking+mrv', 'freeze-and-expand'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime_ms": {
+          "description": "Wall-clock solve time in milliseconds.",
+          "type": "number",
+          "minimum": 0
+        },
+        "sessions_total": {
+          "description": "Vertices in the instance.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "sessions_assigned": {
+          "description": "Vertices successfully coloured. Equals sessions_total when status is 'solved'.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "slots_used": {
+          "description": "Distinct slots the assignment occupies - the chromatic number achieved. null when no assignment was produced.",
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "backtracks": {
+          "description": "Backtracking steps taken, for the complexity analysis. null when the algorithm does not backtrack.",
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "description": "A solved result carries an assignment, its quality breakdown and its displacement list, and carries no diagnosis.",
+      "if": {
+        "properties": { "status": { "const": "solved" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["assignment", "quality", "displaced"],
+        "properties": { "diagnosis": false }
+      }
+    },
+    {
+      "description": "An infeasible result carries a diagnosis and no assignment.",
+      "if": {
+        "properties": { "status": { "const": "infeasible" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["diagnosis"],
+        "properties": { "assignment": false }
+      }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "description": "Stable opaque string identifier, matching the ids supplied in the edge-list payload.",
+      "type": "string",
+      "minLength": 1
+    },
+    "day": {
+      "description": "Teaching day index, Monday=0 .. Friday=4.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "period": {
+      "description": "Index on the edge-list wall-clock period axis.",
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

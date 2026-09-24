@@ -1,0 +1,169 @@
+{
+  "schema_version": "edge_list.v1",
+  "slot_grid": {
+    "days": 5,
+    "periods_per_day": 10,
+    "teaching_periods": [0, 1, 3, 4, 6, 7, 8, 9],
+    "adjacency": [
+      [0, 1],
+      [1, 3],
+      [3, 4],
+      [4, 6],
+      [6, 7],
+      [7, 8],
+      [8, 9]
+    ]
+  },
+  "sessions": [
+    {
+      "id": "sess-0001",
+      "subject_id": "subj-os",
+      "faculty_id": "fac-agn",
+      "cohort_id": "coh-batch-se-b-a",
+      "session_type": "lab",
+      "duration_periods": 2,
+      "cohort_size": 18,
+      "requires_lab": true,
+      "fixed_slot": null
+    },
+    {
+      "id": "sess-0002",
+      "subject_id": "subj-daa",
+      "faculty_id": "fac-nr",
+      "cohort_id": "coh-batch-se-b-b",
+      "session_type": "lab",
+      "duration_periods": 2,
+      "cohort_size": 18,
+      "requires_lab": true,
+      "fixed_slot": null
+    },
+    {
+      "id": "sess-0003",
+      "subject_id": "subj-ccn",
+      "faculty_id": "fac-js",
+      "cohort_id": "coh-batch-se-b-c",
+      "session_type": "lab",
+      "duration_periods": 2,
+      "cohort_size": 18,
+      "requires_lab": true,
+      "fixed_slot": null
+    },
+    {
+      "id": "sess-0004",
+      "subject_id": "subj-pcs",
+      "faculty_id": "fac-dn",
+      "cohort_id": "coh-batch-se-b-d",
+      "session_type": "lab",
+      "duration_periods": 2,
+      "cohort_size": 18,
+      "requires_lab": true,
+      "fixed_slot": null
+    },
+    {
+      "id": "sess-0005",
+      "subject_id": "subj-daa",
+      "faculty_id": "fac-nr",
+      "cohort_id": "coh-comb-se-cd",
+      "session_type": "theory",
+      "duration_periods": 1,
+      "cohort_size": 140,
+      "requires_lab": false,
+      "fixed_slot": null
+    },
+    {
+      "id": "sess-0006",
+      "subject_id": "subj-os",
+      "faculty_id": "fac-kkd",
+      "cohort_id": "coh-div-se-c",
+      "session_type": "theory",
+      "duration_periods": 1,
+      "cohort_size": 70,
+      "requires_lab": false,
+      "fixed_slot": null
+    },
+    {
+      "id": "sess-0007",
+      "subject_id": "subj-os",
+      "faculty_id": "fac-kkd",
+      "cohort_id": "coh-comb-se-ab",
+      "session_type": "theory",
+      "duration_periods": 1,
+      "cohort_size": 138,
+      "requires_lab": false,
+      "fixed_slot": null
+    },
+    {
+      "id": "sess-0008",
+      "subject_id": "subj-et",
+      "faculty_id": "fac-agn",
+      "cohort_id": "coh-div-se-b",
+      "session_type": "theory",
+      "duration_periods": 1,
+      "cohort_size": 72,
+      "requires_lab": false,
+      "fixed_slot": { "day": 2, "period": 0 }
+    }
+  ],
+  "edges": [
+    { "u": "sess-0001", "v": "sess-0008", "reason": "FACULTY" },
+    { "u": "sess-0001", "v": "sess-0008", "reason": "COHORT" },
+    { "u": "sess-0002", "v": "sess-0008", "reason": "COHORT" },
+    { "u": "sess-0003", "v": "sess-0008", "reason": "COHORT" },
+    { "u": "sess-0004", "v": "sess-0008", "reason": "COHORT" },
+    { "u": "sess-0002", "v": "sess-0005", "reason": "FACULTY" },
+    { "u": "sess-0005", "v": "sess-0006", "reason": "COHORT" },
+    { "u": "sess-0006", "v": "sess-0007", "reason": "FACULTY" },
+    { "u": "sess-0005", "v": "sess-0007", "reason": "ROOM" }
+  ],
+  "rooms": [
+    { "id": "room-002", "code": "002", "capacity": 80, "is_lab": false, "parent_room_id": null },
+    { "id": "room-508", "code": "508", "capacity": 160, "is_lab": false, "parent_room_id": null },
+    { "id": "room-509-cse", "code": "509 new CSE", "capacity": 120, "is_lab": true, "parent_room_id": null },
+    { "id": "room-603", "code": "603", "capacity": 60, "is_lab": true, "parent_room_id": null },
+    { "id": "room-603-2", "code": "603-2", "capacity": 20, "is_lab": true, "parent_room_id": "room-603" },
+    { "id": "room-608", "code": "608", "capacity": 20, "is_lab": true, "parent_room_id": null },
+    { "id": "room-702", "code": "702", "capacity": 60, "is_lab": true, "parent_room_id": null },
+    { "id": "room-702-a", "code": "702-A", "capacity": 20, "is_lab": true, "parent_room_id": "room-702" },
+    { "id": "room-702-b", "code": "702-B", "capacity": 20, "is_lab": true, "parent_room_id": "room-702" }
+  ],
+  "faculty_availability": [
+    {
+      "faculty_id": "fac-agn",
+      "unavailable_slots": [
+        { "day": 4, "period": 8 },
+        { "day": 4, "period": 9 }
+      ]
+    },
+    { "faculty_id": "fac-nr", "unavailable_slots": [] },
+    { "faculty_id": "fac-js", "unavailable_slots": [] },
+    { "faculty_id": "fac-dn", "unavailable_slots": [] },
+    {
+      "faculty_id": "fac-kkd",
+      "unavailable_slots": [{ "day": 0, "period": 0 }]
+    }
+  ],
+  "lab_blocks": [
+    {
+      "id": "labblk-0001",
+      "session_ids": ["sess-0001", "sess-0002", "sess-0003", "sess-0004"],
+      "duration_periods": 2,
+      "must_be_contiguous": true
+    }
+  ],
+  "pinned_occupancy": [
+    {
+      "day": 3,
+      "period": 4,
+      "faculty_ids": [],
+      "room_ids": ["room-508"],
+      "cohort_ids": ["coh-div-se-b"]
+    },
+    {
+      "day": 2,
+      "period": 7,
+      "faculty_ids": [],
+      "room_ids": ["room-002"],
+      "cohort_ids": ["coh-div-se-c"]
+    }
+  ]
+}

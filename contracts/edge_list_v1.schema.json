@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronos.spit.ac.in/contracts/edge_list_v1.schema.json",
+  "title": "Chronos Edge-List Contract v1",
+  "description": "What the data layer hands the solver: the conflict-graph instance. Plain data only - no ORM objects, no database rows, no identifiers that are anything other than opaque strings. The solver imports no web or database framework (CONTEXT.md section 2, rule 2), so everything it needs to colour the graph must be present here. Frozen contract 2 of 3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "slot_grid",
+    "sessions",
+    "edges",
+    "rooms",
+    "faculty_availability",
+    "lab_blocks",
+    "pinned_occupancy"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Identifier of this contract revision.",
+      "type": "string",
+      "const": "edge_list.v1"
+    },
+    "slot_grid": {
+      "description": "The colour palette: the set of (day, period) slots a session may take. Periods are wall-clock ordered and include the non-schedulable breaks, so `teaching_periods` and `adjacency` are what the solver actually reasons over.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["days", "periods_per_day", "teaching_periods", "adjacency"],
+      "properties": {
+        "days": {
+          "description": "Number of teaching days, 5 for Monday-Friday.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "periods_per_day": {
+          "description": "Length of the wall-clock period axis, breaks included. For the grid in CONTEXT.md section 3.2 this is 10: eight teaching hours plus the short break and the lunch break.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "teaching_periods": {
+          "description": "Period indices that can hold a session. Any index in 0..periods_per_day-1 absent from this list is a break and is unschedulable.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/period" }
+        },
+        "adjacency": {
+          "description": "Ordered pairs of teaching periods that are adjacent in TEACHING order rather than in wall-clock order. This is what lets a double lab span the 11.00-11.15 short break, as 'ET Lab /DDA /509 (10.00 -12.00)' does in the real data. A multi-period session must occupy a chain of pairs drawn from this list.",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "$ref": "#/$defs/period" }
+          }
+        }
+      }
+    },
+    "sessions": {
+      "description": "The vertices to be coloured. One vertex per teaching event; a batch-parallel lab contributes one vertex per batch, tied together by a lab_block.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "subject_id",
+          "faculty_id",
+          "cohort_id",
+          "session_type",
+          "duration_periods",
+          "cohort_size",
+          "requires_lab",
+          "fixed_slot"
+        ],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "subject_id": { "$ref": "#/$defs/id" },
+          "faculty_id": { "$ref": "#/$defs/id" },
+          "cohort_id": {
+            "description": "The student group. Cohort membership has already been expanded into COHORT edges by the data layer; the solver does not resolve it.",
+            "$ref": "#/$defs/id"
+          },
+          "session_type": {
+            "type": "string",
+            "enum": ["theory", "lab"]
+          },
+          "duration_periods": {
+            "description": "Consecutive teaching periods the session occupies; 2 for a double lab period.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "cohort_size": {
+            "description": "Head count, used against room capacity. A combined-division lecture carries the summed strength.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "requires_lab": {
+            "description": "true when the session may only be placed in a room with is_lab true.",
+            "type": "boolean"
+          },
+          "fixed_slot": {
+            "description": "Pre-assigned slot that the solver must honour - used by freeze-and-expand repair to freeze the untouched neighbourhood. null when the session is free to move.",
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["day", "period"],
+                "properties": {
+                  "day": { "$ref": "#/$defs/day" },
+                  "period": { "$ref": "#/$defs/period" }
+                }
+              },
+              { "type": "null" }
+            ]
+          }
+        }
+      }
+    },
+    "edges": {
+      "description": "Conflict edges. An edge asserts that its two sessions may not share a slot. The graph is undirected; each pair is listed once per distinct reason, so the same pair may appear more than once when it clashes for more than one reason.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["u", "v", "reason"],
+        "properties": {
+          "u": {
+            "description": "id of one endpoint session.",
+            "$ref": "#/$defs/id"
+          },
+          "v": {
+            "description": "id of the other endpoint session.",
+            "$ref": "#/$defs/id"
+          },
+          "reason": {
+            "description": "Why the two sessions conflict. REQUIRED - infeasibility diagnosis reports the minimal unsatisfiable subset in institutional terms, and it can only say 'these two clash because they share a teacher' if the reason travelled with the edge. FACULTY = same faculty member; ROOM = contention for the only room that can hold both; COHORT = overlapping student membership.",
+            "type": "string",
+            "enum": ["FACULTY", "ROOM", "COHORT"]
+          }
+        }
+      }
+    },
+    "rooms": {
+      "description": "Rooms available to the solver, physical rooms and sub-rooms alike. A sub-room carries parent_room_id: two sessions may occupy one parent room at the same time in different sub-rooms, but never the same sub-room, and never a sub-room while the whole parent room is in use.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "code", "capacity", "is_lab", "parent_room_id"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "code": {
+            "description": "Room code as printed, e.g. '508', '702-A', '603-2', '509 new CSE'.",
+            "type": "string",
+            "minLength": 1
+          },
+          "capacity": { "type": "integer", "minimum": 0 },
+          "is_lab": { "type": "boolean" },
+          "parent_room_id": {
+            "description": "id of the containing physical room when this entry is a sub-room; null when it is a physical room.",
+            "type": ["string", "null"],
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "faculty_availability": {
+      "description": "Per-faculty slot blackouts, from declared unavailability and recorded absences. A faculty member with no blackouts still appears, with an empty list.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["faculty_id", "unavailable_slots"],
+        "properties": {
+          "faculty_id": { "$ref": "#/$defs/id" },
+          "unavailable_slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["day", "period"],
+              "properties": {
+                "day": { "$ref": "#/$defs/day" },
+                "period": { "$ref": "#/$defs/period" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "lab_blocks": {
+      "description": "Groups of sessions that must start in the same slot and run over the same contiguous periods - the four batch-parallel labs of one division.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "session_ids", "duration_periods", "must_be_contiguous"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "session_ids": {
+            "description": "ids of the sessions bound into this block.",
+            "type": "array",
+            "items": { "$ref": "#/$defs/id" }
+          },
+          "duration_periods": { "type": "integer", "minimum": 1 },
+          "must_be_contiguous": {
+            "description": "Always true in v1. The field exists so the constraint is explicit in the payload rather than implied by the block's existence; a future revision may allow false.",
+            "type": "boolean",
+            "const": true
+          }
+        }
+      }
+    },
+    "pinned_occupancy": {
+      "description": "Slots already consumed by immovable blocks (MDM, HSS, LLC, activity, project, exams, breaks). The solver removes these from the domains of the listed faculty, rooms and cohorts instead of scheduling around them by guesswork.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["day", "period", "faculty_ids", "room_ids", "cohort_ids"],
+        "properties": {
+          "day": { "$ref": "#/$defs/day" },
+          "period": { "$ref": "#/$defs/period" },
+          "faculty_ids": {
+            "description": "Faculty tied up in this slot. May be empty.",
+            "type": "array",
+            "items": { "$ref": "#/$defs/id" }
+          },
+          "room_ids": {
+            "description": "Rooms occupied in this slot. May be empty.",
+            "type": "array",
+            "items": { "$ref": "#/$defs/id" }
+          },
+          "cohort_ids": {
+            "description": "Cohorts held in this slot. May be empty.",
+            "type": "array",
+            "items": { "$ref": "#/$defs/id" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "description": "Stable opaque string identifier. The solver never parses it and never assumes it is a database key.",
+      "type": "string",
+      "minLength": 1
+    },
+    "day": {
+      "description": "Teaching day index, Monday=0 .. Friday=4.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "period": {
+      "description": "Index on the wall-clock period axis, 0..slot_grid.periods_per_day-1. Break periods are valid indices but are absent from slot_grid.teaching_periods.",
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}
