@@ -1,6 +1,30 @@
-# The database is hosted Supabase Postgres — there is no local db service.
-# The backend connects out to it using DATABASE_URL from backend/.env.
+# Local development stack: the API plus its own throwaway Postgres.
+#
+# Why a local db service at all? Three developers running `alembic upgrade head`
+# against one shared Supabase instance corrupt each other's schema state. Each
+# developer migrates here; Supabase is shared staging only, promoted to
+# deliberately. Point DATABASE_URL in backend/.env at the db service below
+# (see .env.example) for everyday work.
 services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: chronos
+      POSTGRES_PASSWORD: chronos
+      POSTGRES_DB: chronos
+    ports:
+      # Published so alembic/psql running on the Windows host can reach it too.
+      - "5432:5432"
+    volumes:
+      - chronos_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # The backend must not start before Postgres is accepting connections.
+      test: ["CMD-SHELL", "pg_isready -U chronos -d chronos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   backend:
     build:
       context: .
@@ -12,3 +36,9 @@ services:
     volumes:
       # Bind-mount the source so --reload picks up local edits.
       - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  chronos_pgdata:

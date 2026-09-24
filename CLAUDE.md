@@ -6,7 +6,7 @@ Read it fully before making changes.
 
 ## Current repo state
 
-**The directory skeleton exists, but it is empty of logic and there are still no commits on `main`.** `solver/`, `backend/`, `data/`, and `frontend/` exist with `__init__.py` / placeholder files only. Do not assume a module exists because it is named below; check first.
+**The directory skeleton exists, but it is empty of logic.** `main` carries scaffolding and planning commits only — no application code has been written yet. `solver/`, `backend/`, `data/`, `ingestion/`, `db/`, and `frontend/` exist with `__init__.py` / placeholder files only. Do not assume a module exists because it is named below; check first. `CURRENT-STATUS.md` is the verified file-by-file inventory.
 
 Practical consequences:
 
@@ -35,25 +35,36 @@ This is a university mini-project. Every major design decision must trace to a c
 
 ```
 chronos/
+├── contracts/    The three frozen JSON Schemas + example payloads in examples/.
 ├── solver/       Pure Python. Conflict graph, colouring, backtracking, MUS, repair. NO framework imports.
+│   └── rules/    quality_rules.yaml — scoring rules are data, not code.
+├── ingestion/    Parsers for the real .docx/.xlsx sources, anomaly reporter, seeder.
+├── db/           SQLAlchemy schema + Alembic migrations.
 ├── backend/      FastAPI + SQLAlchemy + Alembic. Endpoints, auth, integration with solver.
 ├── frontend/     React 18 + Vite + TypeScript. Timetable grid, drag-and-drop, role views, charts.
-├── data/         Synthetic dataset generator (Faker) + sample instances at multiple scales.
+├── data/         real/ (committed source files, read-only), reference/ (derived lookups),
+│                 synthetic dataset generator (Faker) + sample instances in instances/.
+├── tests/        Cross-cutting tests; contracts/ validates each example against its schema.
+├── bench/        Benchmark harness and plots.
+├── docs/         SRS, UML, reports.
 └── docker-compose.yml
 ```
+
+See `CONTEXT.md` §7 for the authoritative layout and `CURRENT-STATUS.md` for what is actually
+populated today — most of the above is still an empty directory.
 
 Data flow: DB (normalised hierarchy) → constraint-derivation queries produce conflict edges → `solver` builds the graph and colours it → backend serves timetables via API → frontend renders role-differentiated views and allows server-validated drag-and-drop edits.
 
 ## Tech stack
 
-- **Solver:** Python 3.11+ (the local venv is 3.12.10), stdlib (`heapq`, `dataclasses`), `networkx` (validation/baseline only).
+- **Solver:** Python 3.12 (the local venv is 3.12.10), stdlib (`heapq`, `dataclasses`), `networkx` (validation/baseline only).
 - **Backend:** FastAPI, Pydantic, Uvicorn, SQLAlchemy 2.0, Alembic, `python-jose` + `passlib[bcrypt]` for JWT + role-based auth.
-- **Database:** **Supabase Postgres** (hosted) — the single source of truth for every environment; there is no local Postgres. Normalised to 3NF — document the decomposition. Connection string comes from `DATABASE_URL` in `backend/.env`; never hardcode it.
+- **Database:** PostgreSQL 16. **Local Postgres (the `db` service in `docker-compose.yml`) is the default for development and migrations**; hosted **Supabase Postgres** is shared staging only. Normalised to 3NF — document the decomposition. Connection string comes from `DATABASE_URL` in `backend/.env`; never hardcode it.
 - **Frontend:** React 18, Vite, TypeScript, TailwindCSS, shadcn/ui (use these components; don't hand-roll), dnd-kit (drag-and-drop), TanStack Query (server state), Recharts (score/benchmark plots), lucide-react (icons).
 - **Testing:** pytest + Hypothesis (property-based) and Faker on the Python side; Vitest + React Testing Library on the frontend.
-- **Ops:** Docker Compose runs the **backend container only** (it connects out to Supabase); Render/Railway + Supabase for deployment; GitHub Actions to run tests on push.
+- **Ops:** Docker Compose runs the **backend plus a local `postgres:16` database**; Render/Railway + Supabase for deployment; GitHub Actions to run tests on push.
 
-> **Shared-database warning.** Because every developer's local backend points at the same hosted Supabase instance, there is no throwaway local DB. `alembic upgrade head`, `alembic downgrade`, and the synthetic data generator all affect the whole team. Coordinate before running them, and never point destructive operations or test fixtures at the shared database.
+> **Shared-database warning.** Develop and migrate against the **local** compose database — it is throwaway, and three people running Alembic against one hosted instance corrupt each other's schema state. Point `DATABASE_URL` at Supabase only when deliberately promoting a migration to shared staging, and coordinate with the team first. `alembic upgrade head`, `alembic downgrade`, and the synthetic data generator all affect everyone when aimed at Supabase; never point destructive operations or test fixtures at it.
 
 ## Conventions
 
@@ -94,7 +105,7 @@ alembic upgrade head                           # apply migrations
 uvicorn backend.app.main:app --reload          # API at :8000, docs at /docs
 ```
 
-Docker Compose runs the backend container alone; it reads `backend/.env` and connects out to Supabase.
+Docker Compose runs the backend plus a local `postgres:16` database. The backend reads `backend/.env` and waits for the database's healthcheck before starting.
 
 ```powershell
 docker compose up --build      # backend on :8000, talking to Supabase
