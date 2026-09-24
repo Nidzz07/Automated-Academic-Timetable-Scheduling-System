@@ -28,29 +28,33 @@
       "required": ["days", "periods_per_day", "teaching_periods", "adjacency"],
       "properties": {
         "days": {
-          "description": "Number of teaching days, 5 for Monday-Friday.",
+          "description": "Number of teaching days, 5 for Monday-Friday. `default` records the canonical SPIT grid; it is an annotation and does not constrain validation.",
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "default": 5
         },
         "periods_per_day": {
-          "description": "Length of the wall-clock period axis, breaks included. For the grid in CONTEXT.md section 3.2 this is 10: eight teaching hours plus the short break and the lunch break.",
+          "description": "Length of the wall-clock period axis, breaks included. For the grid in CONTEXT.md section 3.2 this is 10: eight teaching hours plus the short break and the lunch break. `default` records the canonical SPIT grid; it is an annotation and does not constrain validation.",
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "default": 10
         },
         "teaching_periods": {
-          "description": "Period indices that can hold a session. Any index in 0..periods_per_day-1 absent from this list is a break and is unschedulable.",
+          "description": "Period indices that can hold a session. Any index in 0..periods_per_day-1 absent from this list is a break and is unschedulable. `default` records the canonical SPIT grid - index 2 is the 11.00-11.15 short break and index 5 is the 13.15-14.15 lunch break - and is what solver.slots.TEACHING_PERIODS is drift-checked against. It is an annotation and does not constrain validation, so an institution with a different break layout can still use this contract.",
           "type": "array",
-          "items": { "$ref": "#/$defs/period" }
+          "items": { "$ref": "#/$defs/period" },
+          "default": [0, 1, 3, 4, 6, 7, 8, 9]
         },
         "adjacency": {
-          "description": "Ordered pairs of teaching periods that are adjacent in TEACHING order rather than in wall-clock order. This is what lets a double lab span the 11.00-11.15 short break, as 'ET Lab /DDA /509 (10.00 -12.00)' does in the real data. A multi-period session must occupy a chain of pairs drawn from this list.",
+          "description": "Ordered pairs of teaching periods that are adjacent in TEACHING order rather than in wall-clock order. This is what lets a double lab span the 11.00-11.15 short break, as 'ET Lab /DDA /509 (10.00 -12.00)' does in the real data. A multi-period session must occupy a chain of pairs drawn from this list. `default` records the canonical SPIT grid; it is an annotation and does not constrain validation.",
           "type": "array",
           "items": {
             "type": "array",
             "minItems": 2,
             "maxItems": 2,
             "items": { "$ref": "#/$defs/period" }
-          }
+          },
+          "default": [[0, 1], [1, 3], [3, 4], [4, 6], [6, 7], [7, 8], [8, 9]]
         }
       }
     },
