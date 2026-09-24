@@ -4,7 +4,7 @@
 > Read `CONTEXT.md` for what the system is, `ROADMAP.md` for what to build next, and this file
 > for what is already done.
 
-**Last updated:** _(not yet started)_ · **by:** — · **Current phase:** 0 — Foundation and contract freeze
+**Last updated:** 2026-09-24 · **by:** NRD · **Current phase:** 0 — Foundation and contract freeze
 
 ---
 
@@ -25,7 +25,7 @@ A task is **done** when it is merged to `main`, CI is green, and it has a test. 
 
 | Phase | Weeks | Status | Exit criterion met? |
 |---|---|---|---|
-| 0 — Foundation and contracts | 1 | ⬜ Not started | ⬜ |
+| 0 — Foundation and contracts | 1 | 🟡 In progress | ⬜ |
 | 1 — Schema, graph builder, UI shell | 2–3 | ⬜ Not started | ⬜ |
 | 2 — Real data, core solver | 4–5 | ⬜ Not started | ⬜ |
 | 3 — API, scoring, role views | 6–7 | ⬜ Not started | ⬜ |
@@ -49,17 +49,17 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 
 ## Phase 0 checklist — Foundation and contract freeze
 
-- [ ] Repo reconciled against `CONTEXT.md` §7 layout
+- [x] Repo reconciled against `CONTEXT.md` §7 layout
 - [ ] Branch protection on `main`; three track branches created
 - [ ] CI running `pytest`, `ruff`, `tsc --noEmit`, `vitest` on push
-- [ ] `contracts/ingestion_v1.schema.json` written
-- [ ] `contracts/edge_list_v1.schema.json` written
-- [ ] `contracts/solution_v1.schema.json` written
-- [ ] Example payload committed for each contract
-- [ ] Schema-validation test passing on both sides of each contract
-- [ ] `SlotId` convention agreed; `is_adjacent()` handles the short break
+- [x] `contracts/ingestion_v1.schema.json` written
+- [x] `contracts/edge_list_v1.schema.json` written
+- [x] `contracts/solution_v1.schema.json` written
+- [x] Example payload committed for each contract
+- [x] Schema-validation test passing on both sides of each contract
+- [x] `SlotId` convention agreed; `is_adjacent()` handles the short break
 - [ ] `solver/rules/quality_rules.yaml` seeded with four rules
-- [ ] `docker-compose.yml` for local Postgres
+- [x] `docker-compose.yml` for local Postgres
 
 **Exit:** contract tests green in CI, and all three members can state the three contracts from
 memory.
@@ -223,7 +223,7 @@ diagnosis.
 
 _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
-- _(nothing yet)_
+- `2026-09-24` · NRD · Phase 0 contracts + `solver/slots.py` + CI workflow landed — three frozen JSON Schemas with example payloads, 41 schema-validation tests, the wall-clock slot module with 48 tests, GitHub Actions running `ruff check` + `pytest`, and a root `pyproject.toml`. 89 tests green. · _no PR (direct to `main`, pre-branch-protection)_
 
 ---
 
@@ -243,6 +243,7 @@ Record any choice a future session might otherwise re-litigate.
 |---|---|---|---|
 | — | Scope: CE only, ODD + EVEN, schema designed for CSE/EXTC | Real data is CE; multi-dept later must not need a migration | All three |
 | — | Ingestion parser is a real phase, not hand-curated data | Demonstrable feature: ingests the department's actual files | All three |
+| 2026-09-24 | Edge-list contract indexes periods on the **wall clock, 0–9**, with `teaching_periods` marking the 8 schedulable slots (2 = short break, 5 = lunch) | Lets `is_adjacent()` distinguish clock-adjacency from teaching-sequence adjacency, so a double lab can span the short break (periods 1→3) and lunch (4→6) — which the real data does (`ET Lab /DDA /509 (10.00 -12.00)`). Ingestion keeps its own teaching-order `period: 0..7`; translating between the two axes is the data layer's job and the axis must never leak into `solver/`. | NRD |
 
 ---
 
@@ -252,7 +253,7 @@ Changing a contract requires all three members to agree. Log every change here.
 
 | Date | Contract | Change | Agreed by |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-09-24 | `edge_list_v1.schema.json` | Added `default` annotations to the four `slot_grid` fields (`days`, `periods_per_day`, `teaching_periods`, `adjacency`) recording the canonical SPIT grid. **Non-breaking — `default` is annotation-only in JSON Schema, so validation behaviour is unchanged** (the 41 pre-existing contract tests pass untouched). Done so `solver/slots.py` can be drift-checked against the schema file itself rather than against a duplicated literal. | NRD — pending Rohan's and Dhruv's sign-off once onboarded |
 
 ---
 
