@@ -1,0 +1,90 @@
+{
+  "schema_version": "solution.v1",
+  "status": "solved",
+  "assignment": [
+    {
+      "session_id": "sess-0001",
+      "day": 0,
+      "period": 1,
+      "room_id": "room-702",
+      "sub_room_id": "room-702-a"
+    },
+    {
+      "session_id": "sess-0002",
+      "day": 0,
+      "period": 1,
+      "room_id": "room-702",
+      "sub_room_id": "room-702-b"
+    },
+    {
+      "session_id": "sess-0003",
+      "day": 0,
+      "period": 1,
+      "room_id": "room-603",
+      "sub_room_id": "room-603-2"
+    },
+    {
+      "session_id": "sess-0004",
+      "day": 0,
+      "period": 1,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "sess-0005",
+      "day": 1,
+      "period": 0,
+      "room_id": "room-508",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "sess-0006",
+      "day": 2,
+      "period": 3,
+      "room_id": "room-002",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "sess-0007",
+      "day": 1,
+      "period": 3,
+      "room_id": "room-508",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "sess-0008",
+      "day": 2,
+      "period": 0,
+      "room_id": "room-002",
+      "sub_room_id": null
+    }
+  ],
+  "quality": {
+    "score": 93.2,
+    "breakdown": [
+      {
+        "rule_id": "room_capacity_waste",
+        "weight": 0.15,
+        "raw": 32,
+        "penalty": 4.8,
+        "explanation": "32 seats stand idle across two lectures: SE-Comp C (70 students) sits in room 002 which holds 80, and SE A & B (138 students) sits in room 508 which holds 160."
+      },
+      {
+        "rule_id": "lab_spans_short_break",
+        "weight": 0.5,
+        "raw": 4,
+        "penalty": 2.0,
+        "explanation": "All four SE-Comp B batch labs run Monday 10.00-12.00, straddling the 11.00 short break: AGN in 702-A, NR in 702-B, JS in 603-2 and DN in 608."
+      }
+    ]
+  },
+  "displaced": [],
+  "metadata": {
+    "algorithm": "welsh-powell-greedy + backtracking(forward-checking, mrv)",
+    "runtime_ms": 41.7,
+    "sessions_total": 8,
+    "sessions_assigned": 8,
+    "slots_used": 5,
+    "backtracks": 2
+  }
+}
