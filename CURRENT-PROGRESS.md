@@ -74,7 +74,7 @@ memory.
 - [ ] Alembic migration 0001 applied to Supabase
 - [x] `Cohort` polymorphic resolution implemented
 - [ ] 32 faculty seeded with T/P workloads
-- [ ] 20 rooms seeded, sub-rooms expanded from the separation column
+- [x] 20 rooms seeded, sub-rooms expanded from the separation column
 - [ ] Faculty initials → name mapping derived and **human-verified**
 - [ ] *(S)* Synthetic instance generator
 - [ ] *(S)* Constraint-derivation SQL
@@ -223,6 +223,7 @@ diagnosis.
 
 _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
+- `2026-09-25` · NRD · Reference seed landed — 20 rooms + 8 sub-rooms, 33 faculty, 25 subjects, 64 qualifications, and the partial 8-of-33 initials map, from the three spreadsheets in `data/real/`. Two schema corrections came with it (migrations 0002, 0003 — see Decision log). 210 tests passing. · _no PR (direct to `track/data-seed`)_
 - `2026-09-25` · NRD · `db/models.py` + Alembic migration 0001 landed; 148 tests passing; `Cohort` polymorphism, institute-level `Room`, and a remote-DB safety guard in `migrations/env.py`. · _no PR (direct to `track/data`)_
 - `2026-09-24` · NRD · Phase 0 contracts + `solver/slots.py` + CI workflow landed — three frozen JSON Schemas with example payloads, 41 schema-validation tests, the wall-clock slot module with 48 tests, GitHub Actions running `ruff check` + `pytest`, and a root `pyproject.toml`. 89 tests green. · _no PR (direct to `main`, pre-branch-protection)_
 
@@ -244,6 +245,9 @@ Record any choice a future session might otherwise re-litigate.
 |---|---|---|---|
 | — | Scope: CE only, ODD + EVEN, schema designed for CSE/EXTC | Real data is CE; multi-dept later must not need a migration | All three |
 | — | Ingestion parser is a real phase, not hand-curated data | Demonstrable feature: ingests the department's actual files | All three |
+| 2026-09-25 | Migration 0002: `room_used_as` holds the **five verbatim strings** from classrooms.xlsx — `class`, `lab`, `unsure`, `as a lab`, `Mtech lab` — and the invented `unknown` is dropped | The enum was written before the real data was in hand. Folding `as a lab` into `lab` or `unsure` into `unknown` would erase distinctions the anomaly reporter exists to surface (`Mtech lab` reads like a real scheduling constraint). **Note:** `contracts/ingestion_v1.schema.json` still declares `rooms[].room_type` as class \| lab \| unknown — a *normalised* classification, a different thing from this raw column. That contract is frozen and untouched; the Phase 2 parser maps between the two. | Nidhi |
+| 2026-09-25 | Migration 0003: `Subject.session_type` is **nullable**, and every seeded subject has it null | No source spreadsheet states theory/lab/both. It is only observable from the timetable .docx files, so Phase 2 ingestion backfills it from real cells. `both` is not a safe default — it would make all 25 subjects look lab-capable to the room allocator. | Nidhi |
+| 2026-09-25 | The seeded **subject list derives from `Faculty___Subjects.xlsx`**, not from the inverted `Subject-wise_faculty.xlsx` | The inverted sheet drops `MDM-I Lab` and merges `MDM-III Theory (CC)` + `MDM-III Lab (CC)` into one `MDM-III (CC)`. Seeding from it orphaned three qualification pairs and inserted a merged code no faculty row names. Deriving from the faculty sheet gives 25 subjects and **zero orphaned pairs**. | Nidhi |
 | 2026-09-25 | `migrations/env.py` refuses to run against any non-local database host unless `CHRONOS_ALLOW_REMOTE_DB=1` is explicitly set | Prevents an accidental migration against shared Supabase staging. `backend/.env` pointed at Supabase at the time, so a plain `alembic upgrade head` would have hit it. | Nidhi |
 | 2026-09-25 | `Session.room_id` and `Session.sub_room_id` are mutually exclusive but **both-nullable** — not "exactly one required" | `contracts/ingestion_v1.schema.json` allows `room_id: null` for sessions whose room reference is missing or unresolved (CONTEXT.md §3.5 known data defects). The anomaly reporter must be able to **store** those sessions rather than discard them. | Nidhi |
 | 2026-09-24 | Edge-list contract indexes periods on the **wall clock, 0–9**, with `teaching_periods` marking the 8 schedulable slots (2 = short break, 5 = lunch) | Lets `is_adjacent()` distinguish clock-adjacency from teaching-sequence adjacency, so a double lab can span the short break (periods 1→3) and lunch (4→6) — which the real data does (`ET Lab /DDA /509 (10.00 -12.00)`). Ingestion keeps its own teaching-order `period: 0..7`; translating between the two axes is the data layer's job and the axis must never leak into `solver/`. | NRD |
