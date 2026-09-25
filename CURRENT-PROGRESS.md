@@ -4,7 +4,7 @@
 > Read `CONTEXT.md` for what the system is, `ROADMAP.md` for what to build next, and this file
 > for what is already done.
 
-**Last updated:** 2026-09-24 · **by:** NRD · **Current phase:** 0 — Foundation and contract freeze
+**Last updated:** 2026-09-25 · **by:** NRD · **Current phase:** 0 — Foundation and contract freeze
 
 ---
 
@@ -26,7 +26,7 @@ A task is **done** when it is merged to `main`, CI is green, and it has a test. 
 | Phase | Weeks | Status | Exit criterion met? |
 |---|---|---|---|
 | 0 — Foundation and contracts | 1 | 🟡 In progress | ⬜ |
-| 1 — Schema, graph builder, UI shell | 2–3 | ⬜ Not started | ⬜ |
+| 1 — Schema, graph builder, UI shell | 2–3 | 🟡 In progress | ⬜ |
 | 2 — Real data, core solver | 4–5 | ⬜ Not started | ⬜ |
 | 3 — API, scoring, role views | 6–7 | ⬜ Not started | ⬜ |
 | 4 — Novelty features | 8–9 | ⬜ Not started | ⬜ |
@@ -42,7 +42,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 | Track | Owner | Branch | Current task | State |
 |---|---|---|---|---|
 | A — Solver | Rohan | `track/solver` | — | ⬜ |
-| B — Data & Backend | Nidhi | `track/data` | — | ⬜ |
+| B — Data & Backend | Nidhi | `track/data` (now merged) | faculty/room seed data — pending faculty name-mapping input | 🟡 |
 | C — Frontend & Validation | Dhruv | `track/frontend` | — | ⬜ |
 
 ---
@@ -69,10 +69,10 @@ memory.
 ## Phase 1 checklist — Schema, graph builder, UI shell
 
 ### Track B — Data
-- [ ] SQLAlchemy models for the full entity model
-- [ ] `department_id` scoping present; `Room` is institute-level
+- [x] SQLAlchemy models for the full entity model
+- [x] `department_id` scoping present; `Room` is institute-level
 - [ ] Alembic migration 0001 applied to Supabase
-- [ ] `Cohort` polymorphic resolution implemented
+- [x] `Cohort` polymorphic resolution implemented
 - [ ] 32 faculty seeded with T/P workloads
 - [ ] 20 rooms seeded, sub-rooms expanded from the separation column
 - [ ] Faculty initials → name mapping derived and **human-verified**
@@ -223,6 +223,7 @@ diagnosis.
 
 _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
+- `2026-09-25` · NRD · `db/models.py` + Alembic migration 0001 landed; 148 tests passing; `Cohort` polymorphism, institute-level `Room`, and a remote-DB safety guard in `migrations/env.py`. · _no PR (direct to `track/data`)_
 - `2026-09-24` · NRD · Phase 0 contracts + `solver/slots.py` + CI workflow landed — three frozen JSON Schemas with example payloads, 41 schema-validation tests, the wall-clock slot module with 48 tests, GitHub Actions running `ruff check` + `pytest`, and a root `pyproject.toml`. 89 tests green. · _no PR (direct to `main`, pre-branch-protection)_
 
 ---
@@ -243,6 +244,8 @@ Record any choice a future session might otherwise re-litigate.
 |---|---|---|---|
 | — | Scope: CE only, ODD + EVEN, schema designed for CSE/EXTC | Real data is CE; multi-dept later must not need a migration | All three |
 | — | Ingestion parser is a real phase, not hand-curated data | Demonstrable feature: ingests the department's actual files | All three |
+| 2026-09-25 | `migrations/env.py` refuses to run against any non-local database host unless `CHRONOS_ALLOW_REMOTE_DB=1` is explicitly set | Prevents an accidental migration against shared Supabase staging. `backend/.env` pointed at Supabase at the time, so a plain `alembic upgrade head` would have hit it. | Nidhi |
+| 2026-09-25 | `Session.room_id` and `Session.sub_room_id` are mutually exclusive but **both-nullable** — not "exactly one required" | `contracts/ingestion_v1.schema.json` allows `room_id: null` for sessions whose room reference is missing or unresolved (CONTEXT.md §3.5 known data defects). The anomaly reporter must be able to **store** those sessions rather than discard them. | Nidhi |
 | 2026-09-24 | Edge-list contract indexes periods on the **wall clock, 0–9**, with `teaching_periods` marking the 8 schedulable slots (2 = short break, 5 = lunch) | Lets `is_adjacent()` distinguish clock-adjacency from teaching-sequence adjacency, so a double lab can span the short break (periods 1→3) and lunch (4→6) — which the real data does (`ET Lab /DDA /509 (10.00 -12.00)`). Ingestion keeps its own teaching-order `period: 0..7`; translating between the two axes is the data layer's job and the axis must never leak into `solver/`. | NRD |
 
 ---
