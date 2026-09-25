@@ -243,6 +243,7 @@ Record any choice a future session might otherwise re-litigate.
 
 | Date | Decision | Rationale | Decided by |
 |---|---|---|---|
+| 2026-09-25 | The ingestion contract's `room_type` (class/lab/unknown) and the DB's `room_used_as` (5 raw values) are deliberately **different layers**, not a bug to unify | `room_type` is the coarse signal the solver needs; `used_as` is raw fidelity for the anomaly reporter. Phase 2's `ingestion/rooms.py` must map used_as → room_type explicitly: class→class, lab→lab, 'as a lab'→lab, 'Mtech lab'→lab, unsure→unknown. | Nidhi |
 | — | Scope: CE only, ODD + EVEN, schema designed for CSE/EXTC | Real data is CE; multi-dept later must not need a migration | All three |
 | — | Ingestion parser is a real phase, not hand-curated data | Demonstrable feature: ingests the department's actual files | All three |
 | 2026-09-25 | Migration 0002: `room_used_as` holds the **five verbatim strings** from classrooms.xlsx — `class`, `lab`, `unsure`, `as a lab`, `Mtech lab` — and the invented `unknown` is dropped | The enum was written before the real data was in hand. Folding `as a lab` into `lab` or `unsure` into `unknown` would erase distinctions the anomaly reporter exists to surface (`Mtech lab` reads like a real scheduling constraint). **Note:** `contracts/ingestion_v1.schema.json` still declares `rooms[].room_type` as class \| lab \| unknown — a *normalised* classification, a different thing from this raw column. That contract is frozen and untouched; the Phase 2 parser maps between the two. | Nidhi |
