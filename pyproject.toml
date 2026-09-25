@@ -26,5 +26,5 @@ known-first-party = ["solver", "backend", "ingestion", "db", "bench"]
 quote-style = "double"
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "solver/tests", "backend/tests", "db/tests"]
+testpaths = ["tests", "solver/tests", "backend/tests", "db/tests", "ingestion/tests"]
 python_files = ["test_*.py"]
