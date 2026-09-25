@@ -242,6 +242,7 @@ Record any choice a future session might otherwise re-litigate.
 
 | Date | Decision | Rationale | Decided by |
 |---|---|---|---|
+| 2026-09-25 | The ingestion contract's `room_type` (class/lab/unknown) and the DB's `room_used_as` (5 raw values) are deliberately **different layers**, not a bug to unify | `room_type` is the coarse signal the solver needs; `used_as` is raw fidelity for the anomaly reporter. Phase 2's `ingestion/rooms.py` must map used_as → room_type explicitly: class→class, lab→lab, 'as a lab'→lab, 'Mtech lab'→lab, unsure→unknown. | Nidhi |
 | — | Scope: CE only, ODD + EVEN, schema designed for CSE/EXTC | Real data is CE; multi-dept later must not need a migration | All three |
 | — | Ingestion parser is a real phase, not hand-curated data | Demonstrable feature: ingests the department's actual files | All three |
 | 2026-09-25 | `migrations/env.py` refuses to run against any non-local database host unless `CHRONOS_ALLOW_REMOTE_DB=1` is explicitly set | Prevents an accidental migration against shared Supabase staging. `backend/.env` pointed at Supabase at the time, so a plain `alembic upgrade head` would have hit it. | Nidhi |
