@@ -98,15 +98,32 @@ class TermCode(enum.Enum):
 
 
 class RoomUsedAs(enum.Enum):
-    """From the 'used as' column of classrooms.xlsx.
+    """The 'used as' column of classrooms.xlsx, verbatim.
 
-    ``UNKNOWN`` preserves the literal 'unsure' recorded for rooms 605 and 609
-    rather than guessing. See CONTEXT.md section 3.5.
+    Every member is a string the source actually contains. Nothing is
+    normalised: 'as a lab' is kept apart from 'lab' and 'Mtech lab' from both,
+    because the distinction may be a real scheduling constraint and CONTEXT.md
+    section 3.5 requires defects and oddities to be *reported*, not smoothed
+    over. 'unsure' (rooms 605 and 609) is likewise stored as written.
+
+    A previous revision had a normalised ``UNKNOWN = "unknown"`` member. It was
+    a guess made before the real data was in hand, and the data never produces
+    it, so migration 0002 removed it.
+
+    **Not the same value set as the ingestion contract.**
+    ``contracts/ingestion_v1.schema.json`` still declares
+    ``rooms[].room_type`` as class | lab | unknown - a *normalised*
+    classification, which is a different thing from this raw column. The
+    Phase 2 parser therefore has to map between the two rather than passing a
+    value straight through. Changing that contract needs all three members to
+    agree, so it is deliberately untouched here.
     """
 
     CLASS = "class"
     LAB = "lab"
-    UNKNOWN = "unknown"
+    UNSURE = "unsure"
+    AS_A_LAB = "as a lab"
+    MTECH_LAB = "Mtech lab"
 
 
 class SubjectSessionType(enum.Enum):
@@ -392,8 +409,17 @@ class Subject(Base):
     department_id: Mapped[int] = mapped_column(ForeignKey("department.id"), index=True)
     code: Mapped[str] = mapped_column(String(32))
     name: Mapped[str] = mapped_column(String(255))
-    session_type: Mapped[SubjectSessionType] = mapped_column(
-        SAEnum(SubjectSessionType, name="subject_session_type", values_callable=_values)
+    #: Nullable, and null is the correct state for a freshly seeded subject.
+    #:
+    #: None of the three source spreadsheets states theory/lab/both for any
+    #: subject. It is only observable from the timetable .docx files, where a
+    #: subject's appearance in a lab cell versus a theory cell settles it, so
+    #: **Phase 2 ingestion backfills this from real timetable cells**. It is
+    #: not defaulted here: 'both' in particular is not a safe neutral, since it
+    #: would make every subject look lab-capable to the room allocator.
+    session_type: Mapped[SubjectSessionType | None] = mapped_column(
+        SAEnum(SubjectSessionType, name="subject_session_type", values_callable=_values),
+        nullable=True,
     )
 
     department: Mapped[Department] = relationship()
