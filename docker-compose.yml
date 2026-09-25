@@ -14,7 +14,15 @@ services:
       POSTGRES_DB: chronos
     ports:
       # Published so alembic/psql running on the Windows host can reach it too.
-      - "5432:5432"
+      #
+      # The host port is configurable because a native PostgreSQL install on the
+      # developer's machine may already own 5432 -- in which case the container
+      # starts and reports healthy, but localhost:5432 silently resolves to the
+      # native server and authentication fails with "password authentication
+      # failed for user chronos". Set CHRONOS_DB_PORT to something free, e.g.
+      #   $env:CHRONOS_DB_PORT = "5433"
+      # The default is unchanged, so this is a no-op if 5432 is free.
+      - "${CHRONOS_DB_PORT:-5432}:5432"
     volumes:
       - chronos_pgdata:/var/lib/postgresql/data
     healthcheck:
