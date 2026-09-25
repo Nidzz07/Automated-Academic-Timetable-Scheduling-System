@@ -26,7 +26,7 @@ A task is **done** when it is merged to `main`, CI is green, and it has a test. 
 | Phase | Weeks | Status | Exit criterion met? |
 |---|---|---|---|
 | 0 — Foundation and contracts | 1 | 🟡 In progress | ⬜ |
-| 1 — Schema, graph builder, UI shell | 2–3 | ⬜ Not started | ⬜ |
+| 1 — Schema, graph builder, UI shell | 2–3 | 🟡 In progress | ⬜ |
 | 2 — Real data, core solver | 4–5 | ⬜ Not started | ⬜ |
 | 3 — API, scoring, role views | 6–7 | ⬜ Not started | ⬜ |
 | 4 — Novelty features | 8–9 | ⬜ Not started | ⬜ |
