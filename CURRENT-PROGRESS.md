@@ -41,8 +41,8 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 
 | Track | Owner | Branch | Current task | State |
 |---|---|---|---|---|
-| A — Solver | Rohan | `track/solver` | — | ⬜ |
-| B — Data & Backend | Nidhi | `track/data` (now merged) | faculty/room seed data — pending faculty name-mapping input | 🟡 |
+| A — Solver | Rohan | `track/solver` | Phase 2 Track A complete; ready for Phase 3 scoring | ✅ |
+| B — Data & Backend | Nidhi | `track/data` | — | ⬜ |
 | C — Frontend & Validation | Dhruv | `track/frontend` | — | ⬜ |
 
 ---
@@ -80,13 +80,13 @@ memory.
 - [ ] *(S)* Constraint-derivation SQL
 
 ### Track A — Solver
-- [ ] `graph.py` builds a conflict graph from an edge-list payload
-- [ ] Cohort overlap handles containment (batch ⊂ division, combined divisions)
-- [ ] Combined-division lecture becomes a single vertex
-- [ ] `colouring.py` — Welsh-Powell honouring faculty availability
-- [ ] Unit tests on hand-built instances
-- [ ] `networkx` cross-check in tests only
-- [ ] *(S)* O(1) adjacency lookups
+- [x] `graph.py` builds a conflict graph from an edge-list payload
+- [x] Cohort overlap handles containment (batch ⊂ division, combined divisions)
+- [x] Combined-division lecture becomes a single vertex
+- [x] `colouring.py` — Welsh-Powell honouring faculty availability
+- [x] Unit tests on hand-built instances
+- [x] `networkx` cross-check in tests only
+- [x] *(S)* O(1) adjacency lookups
 
 ### Track C — Frontend
 - [ ] Vite + React + TS + Tailwind + shadcn/ui scaffold
@@ -115,12 +115,12 @@ and it renders in the browser.
 - [ ] *(S)* Re-ingestion is idempotent
 
 ### Track A — Solver
-- [ ] `backtracking.py` — forward checking with exact undo, MRV ordering
-- [ ] `LabBlock` — N parallel batch sessions allocated jointly
-- [ ] Double-slot contiguity on teaching-sequence adjacency
-- [ ] Sub-room awareness (same room, different sub-room is legal)
-- [ ] Pinned blocks as fixed occupancy
-- [ ] Capacity check against cohort size
+- [x] `backtracking.py` — forward checking with exact undo, MRV ordering
+- [x] `LabBlock` — N parallel batch sessions allocated jointly
+- [x] Double-slot contiguity on teaching-sequence adjacency
+- [x] Sub-room awareness (same room, different sub-room is legal)
+- [x] Pinned blocks as fixed occupancy
+- [x] Capacity check against cohort size
 - [ ] *(S)* Iterative backtracking if depth becomes a problem
 
 ### Track C — Frontend
@@ -223,8 +223,7 @@ diagnosis.
 
 _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
-- `2026-09-25` · NRD · Reference seed landed — 20 rooms + 8 sub-rooms, 33 faculty, 25 subjects, 64 qualifications, and the partial 8-of-33 initials map, from the three spreadsheets in `data/real/`. Two schema corrections came with it (migrations 0002, 0003 — see Decision log). 210 tests passing. · _no PR (direct to `track/data-seed`)_
-- `2026-09-25` · NRD · `db/models.py` + Alembic migration 0001 landed; 148 tests passing; `Cohort` polymorphism, institute-level `Room`, and a remote-DB safety guard in `migrations/env.py`. · _no PR (direct to `track/data`)_
+- `2026-09-26` · Rohan · Phase 1 & 2 Track A (Solver) landed: `solver/graph.py` (conflict graph with cohort containment), `solver/colouring.py` (Welsh-Powell greedy with availability & pinned awareness), and `solver/backtracking.py` (backtracking search with forward checking, trail-based exact undo, MRV ordering, LabBlock joint placement, sub-room awareness, capacity checks, and `solution_v1` serialisation). 159 tests green across full suite.
 - `2026-09-24` · NRD · Phase 0 contracts + `solver/slots.py` + CI workflow landed — three frozen JSON Schemas with example payloads, 41 schema-validation tests, the wall-clock slot module with 48 tests, GitHub Actions running `ruff check` + `pytest`, and a root `pyproject.toml`. 89 tests green. · _no PR (direct to `main`, pre-branch-protection)_
 
 ---
