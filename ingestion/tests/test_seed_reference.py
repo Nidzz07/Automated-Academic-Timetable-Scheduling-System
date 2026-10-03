@@ -29,6 +29,9 @@ from sqlalchemy.orm import Session as OrmSession
 from db.models import (
     Base,
     Faculty,
+    FacultyInitials,
+    FacultySource,
+    MappingSource,
     QualificationSource,
     Room,
     RoomUsedAs,
@@ -468,16 +471,50 @@ def test_initials_applied_to_exactly_eight(session, department):
     applied = apply_faculty_initials(session, department)
 
     assert len(applied) == 8
-    with_initials = session.query(Faculty).filter(Faculty.initials.isnot(None)).all()
-    assert len(with_initials) == 8
-    assert {f.initials for f in with_initials} == set(FACULTY_INITIALS)
+    rows = session.query(FacultyInitials).all()
+    assert len(rows) == 8
+    assert {r.initials for r in rows} == set(FACULTY_INITIALS)
+
+
+def test_manual_initials_are_unscoped_and_unambiguous(session, department):
+    """They came from an instruction, not a legend, so they carry no scope."""
+    seed_faculty(session, department)
+    apply_faculty_initials(session, department)
+    for row in session.query(FacultyInitials).all():
+        assert row.source is MappingSource.MANUAL
+        assert row.semester_id is None and row.division_id is None
+        assert row.is_ambiguous is False
+
+
+def test_applying_initials_twice_does_not_duplicate(session, department):
+    seed_faculty(session, department)
+    apply_faculty_initials(session, department)
+    apply_faculty_initials(session, department)
+    assert session.query(FacultyInitials).count() == 8
 
 
 def test_the_other_25_have_no_initials(session, department):
     seed_faculty(session, department)
     apply_faculty_initials(session, department)
-    without = session.query(Faculty).filter(Faculty.initials.is_(None)).count()
+    without = session.query(Faculty).filter(~Faculty.initials.any()).count()
     assert without == 25
+
+
+def test_seeded_faculty_carry_their_provenance(session, department):
+    seed_faculty(session, department)
+    sources = {f.full_name: f.source for f in session.query(Faculty).all()}
+    assert sources.pop(EXTRA_FACULTY_NAME) is FacultySource.MANUAL
+    assert set(sources.values()) == {FacultySource.SPREADSHEET}
+
+
+def test_seed_faculty_backfills_missing_provenance(session, department):
+    """A row that predates migration 0004 has none; a re-seed supplies it."""
+    seed_faculty(session, department)
+    for row in session.query(Faculty).all():
+        row.source = None
+    session.flush()
+    seed_faculty(session, department)
+    assert session.query(Faculty).filter(Faculty.source.is_(None)).count() == 0
 
 
 def test_kkd_attaches_to_the_spreadsheet_row_not_a_new_one(session, department):
@@ -485,11 +522,11 @@ def test_kkd_attaches_to_the_spreadsheet_row_not_a_new_one(session, department):
     seed_faculty(session, department)
     apply_faculty_initials(session, department)
 
-    kkd = session.query(Faculty).filter(Faculty.initials == "KKD").one()
-    assert kkd.full_name == "Kailas Devadkar"
+    kkd = session.query(FacultyInitials).filter(FacultyInitials.initials == "KKD").one()
+    assert kkd.faculty.full_name == "Kailas Devadkar"
 
-    pbb = session.query(Faculty).filter(Faculty.initials == "PBB").one()
-    assert pbb.full_name == "Prasenjit Bhavathankar"
+    pbb = session.query(FacultyInitials).filter(FacultyInitials.initials == "PBB").one()
+    assert pbb.faculty.full_name == "Prasenjit Bhavathankar"
 
     assert session.query(Faculty).count() == 33
 
@@ -497,8 +534,8 @@ def test_kkd_attaches_to_the_spreadsheet_row_not_a_new_one(session, department):
 def test_dn_attaches_to_deepak_nair(session, department):
     seed_faculty(session, department)
     apply_faculty_initials(session, department)
-    dn = session.query(Faculty).filter(Faculty.initials == "DN").one()
-    assert dn.full_name == EXTRA_FACULTY_NAME
+    dn = session.query(FacultyInitials).filter(FacultyInitials.initials == "DN").one()
+    assert dn.faculty.full_name == EXTRA_FACULTY_NAME
 
 
 def test_full_seed_writes_rooms_subjects_and_qualifications(session):
