@@ -3,7 +3,7 @@
 **Status:** PROPOSAL — nothing in `contracts/` has changed. No schema moves until all three
 members sign the decision table at the end.
 **Branch:** `contracts/v2-proposal` (off `main` @ `f1e5b1b`)
-**Date:** 2026-10-03 (revision 2: change 5 made concrete, open questions resolved)
+**Date:** 2026-10-03 (revision 3: change 6 added — quality-block evaluation status and rule-set version)
 **Author:** Nidhi (drafted with Claude Code)
 
 Read before this document: `CONTEXT.md` §5 (the three frozen contracts),
@@ -11,8 +11,8 @@ Read before this document: `CONTEXT.md` §5 (the three frozen contracts),
 `contracts/solution_v1.schema.json`, `contracts/edge_list_v1.schema.json`, and
 `solver/backtracking.py` + `solver/graph.py` on `origin/track/solver` (`d10dcce`).
 
-**Dependency order:** change 5 is a prerequisite of change 3 (§7). Changes 2–5 ship together
-as `solution.v2`. Change 1 ships as `ingestion.v2`. `edge_list_v1` does not change (§8, Q1).
+**Dependency order:** change 5 is a prerequisite of change 3 (§8). Changes 2–6 ship together
+as `solution.v2`. Change 1 ships as `ingestion.v2`. `edge_list_v1` does not change (§9, Q1).
 
 ---
 
@@ -97,7 +97,7 @@ from `payload.semester`. The DB check `source <> 'legend' OR division_id IS NOT 
 carries over as a contract-level rule (`if source = legend then division_id non-null`).
 
 **(c) Give every `observed_sessions[]` entry exactly one faculty-resolution state.** The full
-rule is in §8 Q1. In short: `faculty_initials_raw` is always present, `faculty_id` is set only
+rule is in §9 Q1. In short: `faculty_initials_raw` is always present, `faculty_id` is set only
 on a unique resolution, and `faculty_candidates` (≥ 2 ids) is set only when the initials are
 ambiguous.
 
@@ -114,8 +114,8 @@ become contract tests in `tests/contracts/`, as the DB-side equivalent already i
 | Side | Impact |
 |---|---|
 | **Ingestion / DB (Nidhi)** | `contracts/examples/ingestion_v1.example.json` loses six `initials` keys and gains a `faculty_initials` array. No parser emits `ingestion_v1` yet, so there is no producer code to change. The DB is already in the target shape (0004), so no migration is needed. |
-| **Solver (Rohan)** | None. The solver never sees initials, and `edge_list_v1` does not change. Ambiguity stops at the DB → edge-list boundary (§8 Q1). |
-| **Frontend (Dhruv)** | `frontend/src/lib/timetableData.ts:186-187` reads `ingestionFixture.faculty[].initials` and breaks. See §9. |
+| **Solver (Rohan)** | None. The solver never sees initials, and `edge_list_v1` does not change. Ambiguity stops at the DB → edge-list boundary (§9 Q1). |
+| **Frontend (Dhruv)** | `frontend/src/lib/timetableData.ts:186-187` reads `ingestionFixture.faculty[].initials` and breaks. See §10. |
 
 ### Version
 
@@ -201,7 +201,7 @@ That is not the deepest partial. Keeping a snapshot of the deepest partial is ne
 ## 3. `solution_v1` — the suggested relaxation is prose only
 
 **Prerequisite: change 5.** The legal `action_type`s for a relaxation depend on the
-constraint `kind` it relaxes. That needs `kind` to be a closed set (§5, §7).
+constraint `kind` it relaxes. That needs `kind` to be a closed set (§5, §8).
 
 ### Problem
 
@@ -234,7 +234,7 @@ restores feasibility", but nothing in the payload shows that this was checked.
                                   "RELAX_PINNED_BLOCK", "RECLASSIFY_ROOM", "MANUAL"] },
         "params": { "type": "object" }
       },
-      "allOf": [ /* one if/then per action_type fixing its exact params - see §7 */ ]
+      "allOf": [ /* one if/then per action_type fixing its exact params - see §8 */ ]
     },
     "verification": {
       "type": "object",
@@ -255,7 +255,7 @@ restores feasibility", but nothing in the payload shows that this was checked.
 }
 ```
 
-The action vocabulary and its link to `kind` are in §7. That section explains why three of
+The action vocabulary and its link to `kind` are in §8. That section explains why three of
 the originally suggested action types were dropped or deferred, and why `RECLASSIFY_ROOM`
 was added.
 
@@ -267,7 +267,7 @@ An earlier draft had `verified: boolean`. It is replaced by `verification: {stat
   with "never checked". That is the same honesty gap change 3 exists to close: a UI could
   not tell a tested fix from an untested one.
 - **Always attempted, within a budget.** For every non-`MANUAL` action, the solver applies
-  the action to the instance (`solver/relaxation.py`, §8 Q2) and re-solves within a
+  the action to the instance (`solver/relaxation.py`, §9 Q2) and re-solves within a
   configurable time budget. The budget is a solver/backend configuration value. This
   proposal deliberately does not fix a number.
 - **`restored`** — the re-solve found a complete timetable.
@@ -286,9 +286,9 @@ An earlier draft had `verified: boolean`. It is replaced by `verification: {stat
 
 | Side | Impact |
 |---|---|
-| **Ingestion / DB** | None in ingestion. The backend gains the apply endpoint (§8 Q2). |
-| **Solver (Rohan)** | Emit a structured action chosen through the kind → action map (§7). Add `solver/relaxation.py`. Run the verification solve. |
-| **Frontend (Dhruv)** | `SuggestedRelaxation` gains `action` (a discriminated union on `action_type`) and `verification`. Apply control per §8 Q2. Show a visible caveat for `still_infeasible` / `timeout`. |
+| **Ingestion / DB** | None in ingestion. The backend gains the apply endpoint (§9 Q2). |
+| **Solver (Rohan)** | Emit a structured action chosen through the kind → action map (§8). Add `solver/relaxation.py`. Run the verification solve. |
+| **Frontend (Dhruv)** | `SuggestedRelaxation` gains `action` (a discriminated union on `action_type`) and `verification`. Apply control per §9 Q2. Show a visible caveat for `still_infeasible` / `timeout`. |
 
 ### Version
 
@@ -332,7 +332,7 @@ highlight the conflicting cells must regex English.
   "Monday 10.00–12.00" is `[{day:0, period:1}, {day:0, period:3}]`, which skips break
   period 2.
 - **Wall-clock axis**, the same as `assignment.period` (decision of 2026-09-24).
-- `slot_ref` is reused by the action params in §7 (`RELAX_FACULTY_AVAILABILITY.slots`,
+- `slot_ref` is reused by the action params in §8 (`RELAX_FACULTY_AVAILABILITY.slots`,
   `RELAX_PINNED_BLOCK.slot`).
 
 ### What breaks
@@ -361,7 +361,7 @@ per unplaced session) or `kind: "INFEASIBLE_INSTANCE"` (when nothing is unplaced
 validate today. An open `kind` has two consequences:
 
 - **The UI and the relaxation map cannot rely on the vocabulary.** Change 3's kind →
-  action mapping (§7) needs a closed set to map from.
+  action mapping (§8) needs a closed set to map from.
 - **The fallback misrepresents itself.** It is a list of unplaced sessions presented as
   a minimal unsatisfiable subset of *constraints*. Its descriptions embed internal ids,
   which the schema prose forbids. Its relaxation ("Relax constraints on session X") is not
@@ -497,7 +497,187 @@ MUS path emits `method = "mus"`.
 
 ---
 
-## 6. Summary and recommended bundling
+## 6. `solution_v1` — the quality block cannot say "not evaluated" or which rule set scored it
+
+### Problem
+
+Three facts a score must carry cannot be expressed in `solution_v1`'s `quality` block.
+
+**(a) "Not evaluated" vs "evaluated, zero penalty".** Some quality rules depend on data that
+a department may legitimately not supply: a configured threshold, or faculty preferences.
+That data is optional per department, so in some instances such a rule cannot run. The
+scoring engine must then be able to say "this rule was not evaluated, because…" in a way
+that is distinct from "this rule ran and found nothing to penalise". v1 has no way to say
+that without overloading a field:
+
+- Each `breakdown` entry *requires* `rule_id`, `weight`, `raw`, `penalty` and `explanation`,
+  with `additionalProperties: false`. `raw` and `penalty` are `"type": "number"`, not
+  nullable. So a not-evaluated rule must either report `penalty: 0`, which reads as
+  "fine", or put its status in the free-text `explanation`, which a program cannot read.
+- Leaving the rule out of `breakdown` does not work either, because absence already has a
+  meaning (see (c)).
+- `score` is a bare `number`. Nothing marks it as computed over fewer rules than the rule
+  set declares, so a partial total reads as a complete one.
+
+**(b) Which rule set produced the score.** CONTEXT.md rule 4: *"Scoring rules and weights
+live in a versioned YAML file."* The `quality` block is `additionalProperties: false` with
+only `score` and `breakdown`. `metadata` is equally closed (`algorithm`, `runtime_ms`,
+`sessions_total`, `sessions_assigned`, `slots_used`, `backtracks`). The only place a version
+could go is the free-text `metadata.algorithm`, which would be overloading. Per-entry
+`weight` records the weight a rule carried, but not which file revision supplied it. And
+under (c), rules that did not fire are absent, so their weights are not recorded at all.
+Two scores computed under different YAML revisions are indistinguishable.
+
+**(c) "Ran and scored zero" vs "not in the rule set".** The schema defines `breakdown` as
+*"One entry per quality rule that fired"*. An absent rule already means "did not fire",
+which reads as "fine". The same definition means a rule that *was* evaluated and
+contributed zero is also absent, exactly like a rule the loaded YAML never declared. A
+reader of a v1 payload cannot tell which rules were run at all. Only a breakdown that lists
+every loaded rule makes "ran and scored zero" distinguishable from "not in the rule set".
+
+The current code already shows the risk. `BacktrackResult.to_solution_dict` on
+`origin/track/solver` defaults `quality` to `{"score": 100.0, "breakdown": []}` when no
+scoring ran. That is a perfect score with an empty breakdown, valid under v1, and
+indistinguishable from a timetable that really scored 100.
+
+### Proposed schema change
+
+The starting point is validated against the v1 schema, with two corrections:
+
+- The v1 field is named `penalty`, not `contribution`. It is kept as `penalty` to avoid a
+  rename that changes nothing.
+- The *"one entry per rule that fired"* definition has to change. Otherwise
+  not-evaluated rules still have nowhere to appear, and "evaluated, zero" stays
+  indistinguishable from absent.
+
+```jsonc
+"quality": {
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["score", "rules_version", "breakdown", "not_evaluated_rule_ids"],
+  "properties": {
+    "score": {
+      "type": "number",
+      "description": "Aggregate over EVALUATED rules only. Complete iff not_evaluated_rule_ids is empty."
+    },
+    "rules_version": {
+      "type": "string", "minLength": 1,
+      "description": "The `version` declared at the top of solver/rules/quality_rules.yaml for the rule set that produced this score."
+    },
+    "not_evaluated_rule_ids": {
+      "type": "array", "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "rule_ids whose breakdown entry has status not_evaluated. Non-empty means `score` is partial."
+    },
+    "breakdown": {
+      "description": "One entry per rule in the loaded rule set - fired, zero, or not evaluated. Never only the rules that fired.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule_id", "status", "weight"],
+        "properties": {
+          "rule_id":     { "type": "string", "minLength": 1 },
+          "status":      { "enum": ["evaluated", "not_evaluated"] },
+          "weight":      { "type": "number", "description": "Weight from the YAML. Known even when the rule could not run." },
+          "raw":         { "type": "number" },
+          "penalty":     { "type": "number" },
+          "explanation": { "type": "string", "minLength": 1 },
+          "reason":      { "type": "string", "minLength": 1,
+                           "description": "Why the rule could not run, in institutional terms, e.g. 'FAC_PREFERENCE_MISMATCH: no faculty preferences supplied for this instance.' (Illustrative only; FAC_PREFERENCE_MISMATCH is not one of the four ROADMAP rules.)" }
+        },
+        "allOf": [
+          { "if":   { "properties": { "status": { "const": "evaluated" } } },
+            "then": { "required": ["raw", "penalty", "explanation"],
+                      "properties": { "reason": false } } },
+          { "if":   { "properties": { "status": { "const": "not_evaluated" } } },
+            "then": { "required": ["reason"],
+                      "properties": { "raw": false, "penalty": false, "explanation": false } } }
+        ]
+      }
+    }
+  }
+}
+```
+
+Design notes:
+
+- **A not-evaluated entry forbids `raw` and `penalty`.** It does not just leave them
+  optional. That makes "unknown" structurally impossible to write as `0`.
+- **`weight` stays required in both states.** The weight is known from the YAML even when
+  the rule cannot run. Showing it tells a coordinator how much of the score is missing.
+- **`not_evaluated_rule_ids` duplicates information in `breakdown` on purpose.** A
+  consumer that reads only `score` and the top-level fields still cannot mistake a partial
+  total for a complete one. The two must agree; that is a contract test (below).
+- **`rules_version` comes from the YAML file itself.** `quality_rules.yaml` declares a
+  top-level `version`. The scoring loader fails loudly if it is missing, the same way
+  ROADMAP already requires an unknown rule ID to fail at startup. The contract can carry
+  the version, but it cannot force anyone to bump it when a weight changes. That
+  discipline belongs to review of the YAML file. Per-entry `weight`, now present for
+  every rule, gives a second, direct record of the weights used.
+- **Not-evaluated is decided by input availability, deterministically.** A rule is
+  `not_evaluated` when its required input is absent, never when its result looks odd.
+
+Contract tests (not expressible in JSON Schema):
+
+- `breakdown` `rule_id`s are unique;
+- `not_evaluated_rule_ids` equals the set of entries with `status = not_evaluated`;
+- `score` equals the documented aggregate (as `solver/scoring.py` defines it) over evaluated
+  entries only.
+
+A solver test checks that `breakdown`'s rule ids equal the rule set loaded from the YAML.
+
+**Workload source for `FAC_LOAD_IMBALANCE` — no contract change needed.** The T/P figures
+on the faculty timetables (`6T+ 8P =14`) count a faculty member's theory and practical
+hours in the timetable. Every `edge_list_v1` session already carries what is needed to
+derive them, all as required fields: `faculty_id`, `duration_periods`, and `session_type`
+(`theory` | `lab`). A faculty member's T is the sum of `duration_periods` over their
+`theory` sessions, and P is the same sum over their `lab` sessions. A batch-parallel lab
+contributes one session per batch, each with its own faculty. A combined-division lecture
+is one session, so it counts once. So the scorer derives T/P-weighted load from the
+instance's own sessions. The database's published T/P totals are a **validation target**
+(ingestion should reproduce them, as with the lab-utilisation figures in CONTEXT.md §3.6),
+not a scoring input. One caveat for that validation: `pinned_occupancy` entries (MDM, HSS,
+LLC, …) name faculty per slot but carry no `session_type`. If the published totals include
+pinned-block hours, the derived totals will differ by exactly those hours. The validation
+then shows that difference; the scorer does not paper over it.
+
+**Rule definition for sign-off — a ROADMAP clarification, not a contract change.** Faculty
+assignment is an input. Every session arrives with `faculty_id` fixed, and the solver
+chooses only the slot and the room. So each faculty member's *total* T/P-weighted load is
+identical in every timetable for a given instance. A rule that measures total-load
+imbalance across faculty gives every timetable for an instance the same penalty, so it
+cannot tell one timetable from another. Proposed:
+
+- `FAC_LOAD_IMBALANCE` measures the imbalance of **each faculty member's T/P-weighted load
+  across the days of the week**. One example is the spread between their heaviest and
+  lightest teaching day, aggregated over faculty. Slot choice determines this, so it does
+  distinguish timetables.
+- Cross-faculty *total* load belongs to substitution ordering in Phase 4 absence handling
+  (candidates ordered by ascending T/P-weighted workload). That matches CONTEXT.md §3.4,
+  which names both "load balancing and substitution ordering" as users of the weighting.
+
+This changes no schema. It refines the meaning of ROADMAP Phase 3 Track A's
+`FAC_LOAD_IMBALANCE` line, which is Rohan's rule. **It needs Rohan's agreement** before
+`solver/scoring.py` implements it.
+
+### What breaks
+
+| Side | Impact |
+|---|---|
+| **Ingestion / DB (Nidhi)** | No ingestion change. `db/models.py` `Timetable` stores only `quality_score: float \| None`. A partial score stored there loses its "partial" flag and its rule-set version. The table needs `rules_version` and the not-evaluated rule ids (or the full breakdown) beside the score. That is a migration, not a contract change, but it should land with v2. |
+| **Solver (Rohan)** | `solver/scoring.py` (Phase 3, not yet written) emits one entry per loaded rule with a status, and reads `version` from the YAML. The `{"score": 100.0, "breakdown": []}` default in `to_solution_dict` must go, since it cannot validate under v2 (`rules_version` is required). The v2 solved example should use the registry's rule ids (`FAC_BACK_TO_BACK`, `FAC_LOAD_IMBALANCE`, `STU_IDLE_GAPS`, `FAC_DAILY_OVERLOAD`) instead of v1's `room_capacity_waste` / `lab_spans_short_break`, and include one `not_evaluated` entry. |
+| **Frontend (Dhruv)** | `QualityBreakdownItem` in `types/solution.ts` becomes a union discriminated on `status`. Its comment "One entry per quality rule that fired" changes. `QualityScoreCard` must render not-evaluated rules distinctly, with their reason, and label the score as partial whenever `not_evaluated_rule_ids` is non-empty. It shows `rules_version`. |
+
+### Version
+
+**v2 (`solution.v2`).** New required fields (`status`, `rules_version`,
+`not_evaluated_rule_ids`) invalidate v1 payloads. The meaning of `breakdown` also changes,
+from "rules that fired" to "every rule in the set". Either alone is v2 under §0.
+
+---
+
+## 7. Summary and recommended bundling
 
 | # | Contract | Change | Breaking? | Recommended version |
 |---|---|---|---|---|
@@ -506,23 +686,24 @@ MUS path emits `method = "mus"`.
 | 3 | solution | `suggested_relaxation.action` (typed) + `verification` status object | Yes | **`solution.v2`**, after 5 |
 | 4 | solution | `slot_ref` + `minimal_conflicting_set[].slots` | Only if required | **`solution.v2`** (required, may be empty) |
 | 5 | solution | closed `kind` enum; retire placeholder kinds; `diagnosis.method` | Yes (enum narrows) | **`solution.v2`**, prerequisite of 3 |
+| 6 | solution | per-rule `status` (`evaluated` \| `not_evaluated`) with `reason`; `not_evaluated_rule_ids`; `rules_version`; breakdown lists every rule | Yes (new required; `breakdown` meaning changes) | **`solution.v2`** |
 
-`edge_list_v1` is untouched by all five.
+`edge_list_v1` is untouched by all six. (§11 row 7 is a ROADMAP clarification, not a contract change, so it is not listed here.)
 
 Proposed sequence once signed:
 1. Add `ingestion_v2.schema.json`, `solution_v2.schema.json` and
-   `relaxation_actions_v2.json` (§7) beside the v1 files. Do not edit v1 in place. Add v2
+   `relaxation_actions_v2.json` (§8) beside the v1 files. Do not edit v1 in place. Add v2
    examples and contract tests.
 2. Producers and consumers move to v2 in one coordinated merge per contract. v1 files stay
    until nothing references them, then move to a cut-list entry.
 3. Log both in `CURRENT-PROGRESS.md` → Contract change log, with all three names. Copy the
-   §9 seed decision into the Decision log.
+   §10 seed decision into the Decision log.
 
 ---
 
-## 7. Coupling between change 5 and change 3
+## 8. Coupling between change 5 and change 3
 
-### 7.1 Action types — validated, not copied
+### 8.1 Action types — validated, not copied
 
 The suggested starting set was REASSIGN_FACULTY, REASSIGN_ROOM, MOVE_SESSION, UNFIX_SLOT,
 RELAX_FACULTY_AVAILABILITY, RELAX_PINNED_BLOCK, MANUAL. Each was checked against two tests.
@@ -533,10 +714,10 @@ answer.) And can some component in this system actually perform it?
 |---|---|---|---|
 | `UNFIX_SLOT` | **Kept** | `session_id` | Solver: `relaxation.py` sets `fixed_slot = null`. Backend: releases the freeze on that session. |
 | `RELAX_FACULTY_AVAILABILITY` | **Kept** | `faculty_id`, `slots: [slot_ref]` | Solver: removes those slots from `faculty_availability`. Backend: edits the faculty member's *declared* unavailability. It **refuses** if a slot comes from an `AbsenceRecord`, because a recorded absence is a fact, not a preference. The edge list does not distinguish the two, so the backend must check. |
-| `RELAX_PINNED_BLOCK` | **Kept** | `slot: slot_ref`, `entity_kind ∈ {faculty, room, cohort}`, `entity_id` | Solver: removes that entity from that slot's `pinned_occupancy` entry. Backend: edits the `PinnedBlock` row. Coordinator/admin only (§8 Q2). `pinned_occupancy` entries carry no id in `edge_list_v1`, so the action names slot + entity, and the backend maps that back to the row. |
+| `RELAX_PINNED_BLOCK` | **Kept** | `slot: slot_ref`, `entity_kind ∈ {faculty, room, cohort}`, `entity_id` | Solver: removes that entity from that slot's `pinned_occupancy` entry. Backend: edits the `PinnedBlock` row. Coordinator/admin only (§9 Q2). `pinned_occupancy` entries carry no id in `edge_list_v1`, so the action names slot + entity, and the backend maps that back to the row. |
 | `RECLASSIFY_ROOM` | **Added** | `room_id`, `is_lab: boolean` | Solver: flips `is_lab` on that room. Backend: updates the room's classification. This is the action the v1 example already describes in prose ("classify room 606 as a lab"). It was missing from the suggested set. |
 | `MANUAL` | **Kept** | `{}` | Nobody automatically. A human acts on `description`. `verification.status = not_attempted`. |
-| `REASSIGN_FACULTY` | **Deferred** | — | The backend could execute it, but the solver cannot *propose* one. Naming a substitute needs faculty–subject qualifications, which `edge_list_v1` does not carry. Adding them is an edge-list change, out of scope here (§8 Q1 keeps `edge_list_v1` fixed). Until then it is `MANUAL`. |
+| `REASSIGN_FACULTY` | **Deferred** | — | The backend could execute it, but the solver cannot *propose* one. Naming a substitute needs faculty–subject qualifications, which `edge_list_v1` does not carry. Adding them is an edge-list change, out of scope here (§9 Q1 keeps `edge_list_v1` fixed). Until then it is `MANUAL`. |
 | `REASSIGN_ROOM` | **Dropped** | — | Rooms are not inputs: `edge_list_v1` sessions carry no room, and the solver already searches every eligible room. There is nothing to relax. The real input lever on rooms is `RECLASSIFY_ROOM`. |
 | `MOVE_SESSION` | **Dropped** | — | A free session's slot is already searched exhaustively, so moving it changes the answer, not the problem. The only legitimate case, a session pinned to a slot, is `UNFIX_SLOT`. Manually moving a session is drag-and-drop editing, a separate feature. |
 | (lab-block split, cohort split) | **`MANUAL`** | — | Administrative decisions, not something the system does. `must_be_contiguous` is also `const: true` in `edge_list_v1`. |
@@ -544,19 +725,19 @@ answer.) And can some component in this system actually perform it?
 `params` per type is fixed by one `if/then` per `action_type` inside `action` (change 3), so
 the frontend can `switch` exhaustively on a closed union.
 
-### 7.2 The kind → action map
+### 8.2 The kind → action map
 
 `MANUAL` is permitted for every kind.
 
 | `kind` | Permitted `action_type`s | Why |
 |---|---|---|
-| `FACULTY_CLASH` | `MANUAL` | Only a different teacher relaxes it. `REASSIGN_FACULTY` is deferred (§7.1). |
+| `FACULTY_CLASH` | `MANUAL` | Only a different teacher relaxes it. `REASSIGN_FACULTY` is deferred (§8.1). |
 | `COHORT_CLASH` | `MANUAL` | Splitting or regrouping students is administrative. |
 | `ROOM_CLASH` | `MANUAL` | The edge is derived by the data layer. `relaxation.py` cannot re-derive it, so any automated action would leave the very edge it targets in place. |
 | `ROOM_OCCUPANCY` | `RECLASSIFY_ROOM`, `MANUAL` | Adding an eligible room increases supply. |
 | `ROOM_CAPACITY` | `MANUAL` | Capacity is physical. The fix is a cohort split or a different room choice made by a person. |
 | `ROOM_TYPE` | `RECLASSIFY_ROOM`, `MANUAL` | Makes a room lab-eligible (or not). |
-| `FACULTY_UNAVAILABLE` | `RELAX_FACULTY_AVAILABILITY`, `MANUAL` | Declared blackouts only; absences are refused (§7.1). |
+| `FACULTY_UNAVAILABLE` | `RELAX_FACULTY_AVAILABILITY`, `MANUAL` | Declared blackouts only; absences are refused (§8.1). |
 | `PINNED_BLOCK` | `RELAX_PINNED_BLOCK`, `MANUAL` | Overrides an institutional decision, so authorisation is gated. |
 | `LAB_CONTIGUITY` | `MANUAL` | Contiguity is `const: true` in the edge list; splitting a block is administrative. |
 | `FIXED_SLOT` | `UNFIX_SLOT`, `MANUAL` | Releases a frozen or pre-assigned session. |
@@ -566,7 +747,7 @@ re-derive the data layer's `ROOM` edges. Stale `ROOM` edges can only *over*-cons
 `restored` verdict is still sound, but `still_infeasible` may be pessimistic. When it
 persists the change, the backend re-derives the edge list from the DB before the real re-solve.
 
-### 7.3 Where the map lives and how it is enforced
+### 8.3 Where the map lives and how it is enforced
 
 JSON Schema cannot enforce "`action.action_type` must be legal for the `kind` of the
 `minimal_conflicting_set` entry whose `constraint_id` equals
@@ -586,7 +767,7 @@ language cannot express. So:
   the precedent of `solver/slots.py` being drift-checked against the edge-list schema's
   `default`s.
 
-### 7.4 The ongoing coupling rule
+### 8.4 The ongoing coupling rule
 
 - **Adding a `kind`** requires declaring, in the same change, which actions relax it. At
   minimum this is `MANUAL`.
@@ -597,7 +778,7 @@ language cannot express. So:
 
 ---
 
-## 8. Resolved open questions
+## 9. Resolved open questions
 
 ### Q1 — Faculty on sessions in `ingestion.v2`
 
@@ -643,29 +824,35 @@ configurable time budget. The result is the `verification` status object, never 
 
 ---
 
-## 9. Migration impact
+## 10. Migration impact
 
 - **Solver:** `backtracking.py`'s infeasible output migrates to
   `method = "search_exhaustion"` (empty set, no relaxation, plus `partial_placement` /
   `unplaced_session_ids`). The placeholder kinds `UNSATISFIABLE_DOMAIN` /
   `INFEASIBLE_INSTANCE` are removed. New `solver/relaxation.py`. The two observations in
-  §5.1 (fixed-slot bypass, lab second-period clash) are separate bug fixes.
+  §5.1 (fixed-slot bypass, lab second-period clash) are separate bug fixes. The
+  `{"score": 100.0, "breakdown": []}` quality default in `to_solution_dict` is removed
+  (change 6).
 - **Frontend:** `frontend/src/lib/timetableData.ts:186-187` reads `faculty[].initials` and
   breaks under `ingestion.v2` (change 1). `InfeasibilityDiagnosisPanel` must handle
-  `method = "search_exhaustion"`, which has no conflicting set to render.
+  `method = "search_exhaustion"`, which has no conflicting set to render. `QualityScoreCard`
+  renders not-evaluated rules and labels a partial score (change 6).
 - **Backend / ingestion:** `ingestion/seed_legends.py` writes reference data (initials
   legends, legend-only faculty, aliases) straight to the database, bypassing the ingestion
   contract. **Proposed as a deliberate decision, for reference data only.** Timetable
   observations must go through the contract: the Phase 2 class-timetable parser
   `ingestion/class_tt.py` (not yet written) emits `ingestion.v2` payloads and the seeder
-  consumes them.
+  consumes them. `Timetable.quality_score` alone cannot hold a partial score; it needs
+  `rules_version` and the not-evaluated rule ids beside it (migration, change 6).
 
 ---
 
-## 10. Decision table
+## 11. Decision table
 
-Mark each cell **Agree / Agree with changes / Disagree**, with initials and date. A change
-proceeds only with three Agrees. Row 3 cannot proceed unless row 5 is agreed.
+Mark each cell **Agree / Agree with changes / Disagree**, with initials and date. A contract
+change (rows 1–6) proceeds only with three Agrees. Row 3 cannot proceed unless row 5 is
+agreed. Row 7 is a ROADMAP clarification (§6) that alters no contract; it needs Rohan's Agree
+before `solver/scoring.py` implements it. Nidhi and Dhruv may add a comment but do not sign it.
 
 | # | Change | Proposed version | Nidhi | Rohan | Dhruv |
 |---|---|---|---|---|---|
@@ -674,3 +861,5 @@ proceeds only with three Agrees. Row 3 cannot proceed unless row 5 is agreed.
 | 3 | `solution`: structured action + verification status object on `suggested_relaxation` (requires row 5) | `solution.v2` | | | |
 | 4 | `solution`: structured `slots` on `minimal_conflicting_set` entries | `solution.v2` | | | |
 | 5 | `solution`: close `kind` to an enum of enforced constraints; retire `UNSATISFIABLE_DOMAIN` / `INFEASIBLE_INSTANCE`; add `diagnosis.method` (`mus` \| `search_exhaustion`) — **prerequisite of row 3** | `solution.v2` | | | |
+| 6 | `solution`: quality breakdown gets per-rule `status` (`evaluated` \| `not_evaluated`, `reason` required when not evaluated); score over evaluated rules only, with `not_evaluated_rule_ids`; `rules_version` | `solution.v2` | | | |
+| 7 | **ROADMAP clarification (NOT a schema change):** `FAC_LOAD_IMBALANCE` measures each faculty member's T/P-weighted load spread across the days of the week; cross-faculty total load moves to Phase 4 substitution ordering | none (no contract version change) | n/a | | n/a |
