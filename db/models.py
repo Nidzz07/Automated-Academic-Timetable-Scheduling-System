@@ -54,6 +54,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     MetaData,
     String,
@@ -144,6 +145,31 @@ class SessionType(enum.Enum):
 class QualificationSource(enum.Enum):
     OBSERVED = "observed"
     DECLARED = "declared"
+
+
+class FacultySource(enum.Enum):
+    """Where a Faculty row's existence is attested.
+
+    ``spreadsheet`` - a row of Faculty___Subjects.xlsx. ``legend`` - named only
+    in a class-timetable initials legend; such a person has no qualifications
+    until parsed grids backfill them. ``manual`` - entered on an instruction
+    with no source file behind it (Dr. Deepak Nair, originally).
+    """
+
+    SPREADSHEET = "spreadsheet"
+    LEGEND = "legend"
+    MANUAL = "manual"
+
+
+class MappingSource(enum.Enum):
+    """Where an initials or alias mapping came from.
+
+    ``legend`` - read off an 'Initials / Name of the Faculty' table, scoped to
+    that table's division. ``manual`` - entered by hand, unscoped.
+    """
+
+    LEGEND = "legend"
+    MANUAL = "manual"
 
 
 class CohortType(enum.Enum):
@@ -382,11 +408,15 @@ class Faculty(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     department_id: Mapped[int] = mapped_column(ForeignKey("department.id"), index=True)
+    #: As written by whichever source attests the person, titles included.
     full_name: Mapped[str] = mapped_column(String(255))
-    #: Initials as used in class-timetable cells ('KKD', 'AGN'). Nullable: the
-    #: mapping is derived and human-verified, not guessed, and stays null until
-    #: it is confirmed.
-    initials: Mapped[str | None] = mapped_column(String(16), nullable=True, index=True)
+    #: Provenance. Nullable: rows that predate migration 0004 carry no
+    #: provenance until the seeder is re-run, and the migration will not guess
+    #: one for them.
+    source: Mapped[FacultySource | None] = mapped_column(
+        SAEnum(FacultySource, name="faculty_source", values_callable=_values),
+        nullable=True,
+    )
     #: From the '6T+ 8P =14' workload line. All three are nullable because that
     #: line is absent on some faculty pages (anomaly MISSING_WORKLOAD), and the
     #: printed total is stored separately from theory+practical so an
@@ -399,6 +429,109 @@ class Faculty(Base):
     subjects: Mapped[list[Subject]] = relationship(
         secondary=qualification, back_populates="faculty"
     )
+    initials: Mapped[list[FacultyInitials]] = relationship(
+        back_populates="faculty", cascade="all, delete-orphan"
+    )
+    aliases: Mapped[list[FacultyAlias]] = relationship(
+        back_populates="faculty", cascade="all, delete-orphan"
+    )
+
+
+class FacultyInitials(Base):
+    """One way a faculty member is abbreviated, in one scope.
+
+    Replaces the single ``faculty.initials`` column (migration 0004), which
+    could not represent the real data:
+
+    - **Initials are not globally unique.** ``SD`` is Sonali Dudhihalli in the
+      SE legends and Surekha Dholay in the TE ones; ``SK`` and ``SM`` likewise.
+      A legend row is therefore scoped to its ``(semester, division)``.
+    - **Initials can be ambiguous even inside one scope.** ODD BE's legend
+      lists both Swapnali Kurhade and Suhas Kakade under ``SK``. Both rows are
+      kept with ``is_ambiguous`` set; neither is picked.
+    - **Initials are case-sensitive.** ``AsT`` (Asma Tambe) and ``AT`` (Anuj
+      Tawari) are different people. Postgres ``varchar`` equality under the
+      default deterministic collation is case-sensitive, so no ``lower()``
+      appears anywhere near this column - do not add one.
+
+    ``semester_id`` is redundant with ``division_id`` whenever both are set (a
+    division already names its semester); it is kept because a manual mapping
+    may be scoped to a semester without a division. The seeder writes the two
+    consistently and a test checks it.
+    """
+
+    __tablename__ = "faculty_initials"
+    __table_args__ = (
+        # NULLS NOT DISTINCT: without it, two identical *unscoped* manual rows
+        # would both be accepted, since NULL <> NULL.
+        UniqueConstraint(
+            "faculty_id",
+            "initials",
+            "semester_id",
+            "division_id",
+            name="uq_faculty_initials_scope",
+            postgresql_nulls_not_distinct=True,
+        ),
+        CheckConstraint(
+            "division_id IS NULL OR semester_id IS NOT NULL",
+            name="division_requires_semester",
+        ),
+        CheckConstraint(
+            "source <> 'legend' OR division_id IS NOT NULL",
+            name="legend_requires_division",
+        ),
+        # The ingestion lookup: "who is 'SK' in this division?"
+        Index("ix_faculty_initials_division_initials", "division_id", "initials"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    faculty_id: Mapped[int] = mapped_column(
+        ForeignKey("faculty.id", ondelete="CASCADE"), index=True
+    )
+    initials: Mapped[str] = mapped_column(String(16))
+    semester_id: Mapped[int | None] = mapped_column(
+        ForeignKey("semester.id"), nullable=True, index=True
+    )
+    #: A Division cohort. Null for an unscoped manual mapping.
+    division_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cohort.id"), nullable=True
+    )
+    source: Mapped[MappingSource] = mapped_column(
+        SAEnum(MappingSource, name="mapping_source", values_callable=_values)
+    )
+    #: True when the same initials name more than one person in this scope.
+    #: Every candidate is stored; resolving a cell is then a human decision.
+    is_ambiguous: Mapped[bool] = mapped_column(default=False, server_default="false")
+
+    faculty: Mapped[Faculty] = relationship(back_populates="initials")
+    semester: Mapped[Semester | None] = relationship()
+    division: Mapped[Division | None] = relationship("Division")
+
+
+class FacultyAlias(Base):
+    """Another spelling of a faculty member's name, as some source wrote it.
+
+    Written when a legend spells an existing person differently from their
+    ``full_name`` ('Prof. Jotsna Bhagat' for 'Jostna Bhagat'), so the legend
+    spelling resolves to the existing row instead of creating a second person.
+    """
+
+    __tablename__ = "faculty_alias"
+    __table_args__ = (
+        UniqueConstraint("faculty_id", "alias", name="uq_faculty_alias_faculty_alias"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    faculty_id: Mapped[int] = mapped_column(
+        ForeignKey("faculty.id", ondelete="CASCADE"), index=True
+    )
+    #: Exactly as written, titles included.
+    alias: Mapped[str] = mapped_column(String(255), index=True)
+    source: Mapped[MappingSource] = mapped_column(
+        SAEnum(MappingSource, name="mapping_source", values_callable=_values)
+    )
+
+    faculty: Mapped[Faculty] = relationship(back_populates="aliases")
 
 
 class Subject(Base):

@@ -38,7 +38,10 @@ from sqlalchemy.orm import Session
 from db.models import (
     Department,
     Faculty,
+    FacultyInitials,
+    FacultySource,
     Institute,
+    MappingSource,
     QualificationSource,
     Room,
     RoomUsedAs,
@@ -164,8 +167,10 @@ EXTRA_SUBJECT_NAME = "Professional Communication Skills"
 # Initials -> faculty, 8 of 33. NOT a complete mapping and not to be extended
 # by guesswork.
 #
-# The remaining 25 are filled in during Phase 2 .docx ingestion, where each
-# initial is verified against the timetable cell it actually appears in. Two
+# These become unscoped ``manual`` FacultyInitials rows. The division-scoped
+# mappings for everyone come from the class-timetable legends
+# (ingestion.seed_legends), and each is verified against the timetable cell it
+# actually appears in during Phase 2 .docx ingestion. Two
 # faculty share a surname often enough in this department that deriving
 # initials from names would produce plausible-looking wrong answers, and a
 # wrong initials mapping silently assigns somebody else's teaching load.
@@ -446,30 +451,38 @@ def seed_faculty(
     """Seed the 32 spreadsheet faculty plus the unverified 33rd.
 
     Workload (T/P hours) is left null: it is not in these files, it comes from
-    the faculty .docx in Phase 2.
+    the faculty .docx in Phase 2. ``source`` records provenance - spreadsheet
+    for the 32, manual for Deepak Nair - and is filled in on rows that predate
+    migration 0004 and so carry none.
     """
     faculty = parse_faculty_subjects() if faculty is None else faculty
 
-    names = [row.full_name for row in faculty]
-    names.append(EXTRA_FACULTY_NAME)
+    names = [(row.full_name, FacultySource.SPREADSHEET) for row in faculty]
+    names.append((EXTRA_FACULTY_NAME, FacultySource.MANUAL))
 
     seeded: list[Faculty] = []
-    for name in names:
+    for name, source in names:
         existing = session.scalar(
             select(Faculty).where(
                 Faculty.department_id == department.id, Faculty.full_name == name
             )
         )
         if existing is None:
-            existing = Faculty(department_id=department.id, full_name=name)
+            existing = Faculty(department_id=department.id, full_name=name, source=source)
             session.add(existing)
-            session.flush()
+        elif existing.source is None:
+            existing.source = source
+        session.flush()
         seeded.append(existing)
     return seeded
 
 
 def apply_faculty_initials(session: Session, department: Department) -> dict[str, str]:
-    """Apply the partial 8-of-33 initials map, leaving the other 25 null.
+    """Apply the partial 8-of-33 initials map as unscoped ``manual`` rows.
+
+    Each becomes a :class:`FacultyInitials` row with no semester or division:
+    these came from an instruction, not from a legend, so they carry no scope.
+    The division-scoped legend mappings are :mod:`ingestion.seed_legends`.
 
     Returns the initials actually applied. Raises if an entry does not resolve
     to exactly one Faculty row - a silently unmatched initial would leave a
@@ -488,7 +501,20 @@ def apply_faculty_initials(session: Session, department: Department) -> dict[str
                 f"initials {initials!r} map to {as_given!r} (spreadsheet name "
                 f"{sheet_name!r}) but no such Faculty row exists"
             )
-        row.initials = initials
+        existing = session.scalar(
+            select(FacultyInitials).where(
+                FacultyInitials.faculty_id == row.id,
+                FacultyInitials.initials == initials,
+                FacultyInitials.semester_id.is_(None),
+                FacultyInitials.division_id.is_(None),
+            )
+        )
+        if existing is None:
+            session.add(
+                FacultyInitials(
+                    faculty_id=row.id, initials=initials, source=MappingSource.MANUAL
+                )
+            )
         applied[initials] = row.full_name
     session.flush()
     return applied

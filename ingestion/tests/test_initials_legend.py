@@ -21,7 +21,9 @@ from ingestion.initials_legend import (
     group_by_initials,
     legend_pairs,
     name_key,
+    normalise_whitespace,
     read_legend,
+    strip_title,
 )
 from ingestion.seed_reference import FACULTY_INITIALS
 from ingestion.survey import REAL_DIR
@@ -59,14 +61,14 @@ def test_hand_checked_entries(even: list[Legend], odd: list[Legend]) -> None:
     # EVEN t1, SE-Comp A: the name cell has a leading space in the source.
     se_a = _legend(even, 1)
     assert se_a.division == "SE-Comp A"
-    assert LegendEntry("AsT", "Asma Tambe", 8, 0) in se_a.entries
-    assert LegendEntry("AVN", "Dr, Anant Nimkar", 2, 0) in se_a.entries
+    assert LegendEntry("AsT", "Asma Tambe", 8, 0, " Asma Tambe") in se_a.entries
+    assert LegendEntry("AVN", "Dr, Anant Nimkar", 2, 0, "Dr, Anant Nimkar") in se_a.entries
     # EVEN t5, SE-Comp C: SD abbreviated, and initials cell "  TP" padded.
     se_c = _legend(even, 5)
-    assert LegendEntry("SD", "Prof. Sonali D.", 7, 0) in se_c.entries
-    assert LegendEntry("TP", "Prof. Taqdis Pawle", 8, 0) in se_c.entries
+    assert LegendEntry("SD", "Prof. Sonali D.", 7, 0, "Prof. Sonali D.") in se_c.entries
+    assert LegendEntry("TP", "Prof. Taqdis Pawle", 8, 0, "Prof. Taqdis Pawle") in se_c.entries
     # ODD t12, TE Comp- B: the one legend entry with no honorific.
-    assert LegendEntry("VK", "Vipul Kushwah", 9, 0) in _legend(odd, 12).entries
+    assert LegendEntry("VK", "Vipul Kushwah", 9, 0, "Vipul Kushwah") in _legend(odd, 12).entries
 
 
 def test_legend_after_a_note_belongs_to_the_preceding_grid(even: list[Legend]) -> None:
@@ -141,8 +143,84 @@ def test_read_legend_skips_blank_pairs_and_reports_half_filled() -> None:
         ["CD", "", "", "Orphan Name"],
     ]
     entries, problems = read_legend(grid)
-    assert entries == [LegendEntry("AB", "Dr. A B", 1, 0)]
+    assert entries == [LegendEntry("AB", "Dr. A B", 1, 0, " Dr.  A\nB ")]
     assert len(problems) == 2
+
+
+# --------------------------------------------------------------------------- #
+# Whitespace normalisation and title stripping
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    ("raw", "normalised"),
+    [
+        # A soft line break inside a Word cell.
+        ("Dr, Anant Nim\nkar", "Dr, Anant Nim kar"),
+        ("Kail\nas Devadkar", "Kail as Devadkar"),
+        ("Kail\r\n  as\tDevadkar", "Kail as Devadkar"),
+        ("  Prof.   Asma\u00a0Tambe ", "Prof. Asma Tambe"),
+        ("Dr. Deepak Nair", "Dr. Deepak Nair"),
+    ],
+)
+def test_normalise_whitespace_collapses_internal_breaks(raw: str, normalised: str) -> None:
+    assert normalise_whitespace(raw) == normalised
+
+
+def test_read_legend_keeps_the_raw_name_alongside_the_normalised_one() -> None:
+    grid = [
+        ["Initials", "Name of the Faculty"],
+        ["AVN", "Dr, Anant Nim\nkar"],
+        ["KKD", "Kail\nas Devadkar"],
+    ]
+    entries, problems = read_legend(grid)
+    assert not problems
+    assert [(e.name, e.raw_name) for e in entries] == [
+        ("Dr, Anant Nim kar", "Dr, Anant Nim\nkar"),
+        ("Kail as Devadkar", "Kail\nas Devadkar"),
+    ]
+    assert all("\n" not in e.name for e in entries)
+
+
+def test_real_legend_names_are_single_line(even: list[Legend], odd: list[Legend]) -> None:
+    """Every stored name is normalised; the raw cell text survives beside it."""
+    entries = [e for lg in even + odd for e in lg.entries]
+    assert all(e.name == normalise_whitespace(e.raw_name) for e in entries)
+    assert all("\n" not in e.name for e in entries)
+    # EVEN t1 pads this cell with a leading space; raw keeps it, name drops it.
+    asma = next(e for e in _legend(even, 1).entries if e.initials == "AsT")
+    assert (asma.raw_name, asma.name) == (" Asma Tambe", "Asma Tambe")
+
+
+@pytest.mark.parametrize(
+    ("name", "stripped"),
+    [
+        ("Mr. Anas Ansari", "Anas Ansari"),
+        ("Ms. Aishwarya Nalawade", "Aishwarya Nalawade"),
+        ("Mrs. Isha Sawalkar", "Isha Sawalkar"),
+        ("Prof. Asma Tambe", "Asma Tambe"),
+        ("Prof.Shaily Goyal", "Shaily Goyal"),
+        ("Dr. Anuj Tawari", "Anuj Tawari"),
+        ("Dr, Anant Nimkar", "Anant Nimkar"),
+        ("Prof. Dr. X Y", "X Y"),
+        # Initials inside the name are not titles.
+        ("Dr. D. R. Kalbande", "D. R. Kalbande"),
+        ("Prof. Suman M.", "Suman M."),
+        # Only a real title is stripped.
+        ("Drishti Rao", "Drishti Rao"),
+        ("Mrinal Sen", "Mrinal Sen"),
+        ("Asma Tambe", "Asma Tambe"),
+    ],
+)
+def test_strip_title(name: str, stripped: str) -> None:
+    assert strip_title(name) == stripped
+
+
+def test_strip_title_does_not_change_what_is_stored(even: list[Legend]) -> None:
+    """Titles are dropped for matching only; LegendEntry.name keeps them."""
+    names = {e.name for lg in even for e in lg.entries}
+    assert "Prof. Asma Tambe" in names
+    assert "Dr, Anant Nimkar" in names
 
 
 def test_read_legend_rejects_a_non_legend() -> None:
