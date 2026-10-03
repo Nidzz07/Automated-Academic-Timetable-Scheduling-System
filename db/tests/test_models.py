@@ -41,8 +41,12 @@ from db.models import (
     Division,
     ElectiveGroup,
     Faculty,
+    FacultyAlias,
+    FacultyInitials,
+    FacultySource,
     Institute,
     LabBlock,
+    MappingSource,
     PinnedBlock,
     PinnedKind,
     Programme,
@@ -215,7 +219,6 @@ def scaffold(session):
     faculty = Faculty(
         department_id=ce.id,
         full_name="A. G. Nikam",
-        initials="AGN",
         theory_hours=6,
         practical_hours=8,
         total_hours=14,
@@ -331,7 +334,7 @@ def test_qualification_association_inserts(session, scaffold):
 
 def test_absence_record_and_audit_entry_insert(session, scaffold):
     replacement = Faculty(
-        department_id=scaffold["department"].id, full_name="N. Raut", initials="NR"
+        department_id=scaffold["department"].id, full_name="N. Raut"
     )
     session.add(replacement)
     session.flush()
@@ -355,7 +358,7 @@ def test_absence_record_and_audit_entry_insert(session, scaffold):
     session.add_all([absence, audit])
     session.flush()
 
-    assert absence.replacement_faculty.initials == "NR"
+    assert absence.replacement_faculty.full_name == "N. Raut"
     assert audit.affected_session_ids == [11, 12, 13]
 
 
@@ -371,6 +374,142 @@ def test_absence_replacement_is_nullable(session, scaffold):
     session.add(absence)
     session.flush()
     assert absence.replacement_faculty_id is None
+
+
+# ---------------------------------------------------------------------------
+# faculty_initials and faculty_alias (migration 0004)
+# ---------------------------------------------------------------------------
+
+
+def _person(session, scaffold, name: str) -> Faculty:
+    row = Faculty(department_id=scaffold["department"].id, full_name=name)
+    session.add(row)
+    session.flush()
+    return row
+
+
+def _scoped(scaffold, faculty: Faculty, initials: str, **extra) -> FacultyInitials:
+    return FacultyInitials(
+        faculty_id=faculty.id,
+        initials=initials,
+        semester_id=scaffold["semester"].id,
+        division_id=scaffold["division"].id,
+        source=MappingSource.LEGEND,
+        **extra,
+    )
+
+
+def test_faculty_initials_column_is_gone():
+    """Replaced by the faculty_initials table; a list relationship now."""
+    assert "initials" not in Faculty.__table__.c
+
+
+def test_initials_are_case_sensitive_in_the_database(session, scaffold):
+    """AsT (Asma Tambe) and AT (Anuj Tawari) are different people."""
+    asma = _person(session, scaffold, "Prof. Asma Tambe")
+    anuj = _person(session, scaffold, "Anuj Tawari")
+    session.add_all([_scoped(scaffold, asma, "AsT"), _scoped(scaffold, anuj, "AT")])
+    session.flush()
+
+    at = session.query(FacultyInitials).filter(FacultyInitials.initials == "AT").all()
+    ast = session.query(FacultyInitials).filter(FacultyInitials.initials == "AsT").all()
+    assert [row.faculty.full_name for row in at] == ["Anuj Tawari"]
+    assert [row.faculty.full_name for row in ast] == ["Prof. Asma Tambe"]
+
+
+def test_ambiguous_initials_keep_both_candidates(session, scaffold):
+    kurhade = _person(session, scaffold, "Swapnali Kurhade")
+    kakade = _person(session, scaffold, "Prof. Suhas Kakade")
+    session.add_all(
+        [
+            _scoped(scaffold, kurhade, "SK", is_ambiguous=True),
+            _scoped(scaffold, kakade, "SK", is_ambiguous=True),
+        ]
+    )
+    session.flush()
+    rows = session.query(FacultyInitials).filter(FacultyInitials.initials == "SK").all()
+    assert len(rows) == 2
+    assert all(row.is_ambiguous for row in rows)
+
+
+def test_is_ambiguous_defaults_false_at_the_database(session, scaffold):
+    session.execute(
+        text(
+            "INSERT INTO faculty_initials (faculty_id, initials, source) "
+            "VALUES (:f, 'AGN', 'manual')"
+        ),
+        {"f": scaffold["faculty"].id},
+    )
+    row = session.query(FacultyInitials).one()
+    assert row.is_ambiguous is False
+    assert row.semester_id is None and row.division_id is None
+
+
+def test_duplicate_unscoped_manual_initials_are_refused(session, scaffold):
+    """NULLS NOT DISTINCT: two identical unscoped rows are a duplicate."""
+    for _ in range(2):
+        session.add(
+            FacultyInitials(
+                faculty_id=scaffold["faculty"].id, initials="AGN", source=MappingSource.MANUAL
+            )
+        )
+    with pytest.raises(IntegrityError, match="uq_faculty_initials_scope"):
+        session.flush()
+
+
+def test_legend_initials_require_a_division(session, scaffold):
+    session.add(
+        FacultyInitials(
+            faculty_id=scaffold["faculty"].id,
+            initials="AGN",
+            semester_id=scaffold["semester"].id,
+            source=MappingSource.LEGEND,
+        )
+    )
+    with pytest.raises(IntegrityError, match="legend_requires_division"):
+        session.flush()
+
+
+def test_a_division_scope_requires_its_semester(session, scaffold):
+    session.add(
+        FacultyInitials(
+            faculty_id=scaffold["faculty"].id,
+            initials="AGN",
+            division_id=scaffold["division"].id,
+            source=MappingSource.MANUAL,
+        )
+    )
+    with pytest.raises(IntegrityError, match="division_requires_semester"):
+        session.flush()
+
+
+def test_deleting_a_faculty_member_deletes_their_mappings(session, scaffold):
+    person = _person(session, scaffold, "Prof. Jotsna Bhagat")
+    session.add_all(
+        [
+            _scoped(scaffold, person, "JB"),
+            FacultyAlias(faculty_id=person.id, alias="Prof. Jotsna Bhagat",
+                         source=MappingSource.LEGEND),
+        ]
+    )
+    session.flush()
+    session.delete(person)
+    session.flush()
+    assert session.query(FacultyInitials).count() == 0
+    assert session.query(FacultyAlias).count() == 0
+
+
+def test_faculty_source_is_nullable_and_stores_legend(session, scaffold):
+    assert scaffold["faculty"].source is None
+    person = Faculty(
+        department_id=scaffold["department"].id,
+        full_name="Vipul Kushwah",
+        source=FacultySource.LEGEND,
+    )
+    session.add(person)
+    session.flush()
+    session.refresh(person)
+    assert person.source is FacultySource.LEGEND
 
 
 # ---------------------------------------------------------------------------
@@ -806,3 +945,91 @@ def test_hand_added_indexes_exist(migration_config, table_name, column):
     assert any(idx["column_names"] == [column] for idx in indexes), (
         f"missing index on {table_name}.{column}; found {indexes}"
     )
+
+
+def _run(url: str, sql: str, **params) -> None:
+    eng = create_engine(url)
+    try:
+        with eng.begin() as conn:
+            conn.execute(text(sql), params)
+    finally:
+        eng.dispose()
+
+
+def _rows(url: str, sql: str) -> list[tuple]:
+    eng = create_engine(url)
+    try:
+        with eng.connect() as conn:
+            return [tuple(row) for row in conn.execute(text(sql))]
+    finally:
+        eng.dispose()
+
+
+def _seed_pre_0004_faculty(url: str) -> None:
+    """Two faculty as the 0003 schema held them: one with initials, one without."""
+    _run(url, "INSERT INTO institute (id, code, name) VALUES (1, 'SPIT', 'SPIT')")
+    _run(url, "INSERT INTO department (id, institute_id, code, name) VALUES (1, 1, 'CE', 'CE')")
+    _run(
+        url,
+        "INSERT INTO faculty (id, department_id, full_name, initials) VALUES "
+        "(1, 1, 'Kailas Devadkar', 'KKD'), (2, 1, 'Anand Godbole', NULL)",
+    )
+
+
+def test_0004_moves_existing_initials_into_the_new_table(migration_config):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "0003_subject_type_null")
+    _seed_pre_0004_faculty(url)
+
+    command.upgrade(cfg, "0004_faculty_initials")
+
+    assert _rows(
+        url,
+        "SELECT faculty_id, initials, semester_id, division_id, source::text, is_ambiguous "
+        "FROM faculty_initials",
+    ) == [(1, "KKD", None, None, "manual", False)]
+    eng = create_engine(url)
+    try:
+        columns = {c["name"] for c in inspect(eng).get_columns("faculty")}
+    finally:
+        eng.dispose()
+    assert "initials" not in columns
+    assert "source" in columns
+    # Provenance is not guessed for pre-existing rows.
+    assert _rows(url, "SELECT source FROM faculty ORDER BY id") == [(None,), (None,)]
+
+
+def test_0004_downgrade_restores_manual_initials(migration_config):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "0003_subject_type_null")
+    _seed_pre_0004_faculty(url)
+    command.upgrade(cfg, "0004_faculty_initials")
+
+    command.downgrade(cfg, "0003_subject_type_null")
+
+    assert _rows(url, "SELECT id, initials FROM faculty ORDER BY id") == [
+        (1, "KKD"),
+        (2, None),
+    ]
+    assert "faculty_initials" not in _table_names(url)
+
+
+def test_0004_downgrade_refuses_to_drop_legend_mappings(migration_config):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "head")
+    _run(url, "INSERT INTO institute (id, code, name) VALUES (1, 'SPIT', 'SPIT')")
+    _run(url, "INSERT INTO department (id, institute_id, code, name) VALUES (1, 1, 'CE', 'CE')")
+    _run(
+        url,
+        "INSERT INTO faculty (id, department_id, full_name, source) "
+        "VALUES (1, 1, 'Prof. Suhas Kakade', 'legend')",
+    )
+
+    with pytest.raises(RuntimeError, match="1 legend-sourced faculty"):
+        command.downgrade(cfg, "0003_subject_type_null")
