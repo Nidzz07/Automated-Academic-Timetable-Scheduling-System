@@ -3,7 +3,8 @@
 > **Read this file at the start of every session before writing code.**
 > It describes what the system is, the rules that must never be broken, and what the
 > real institutional data actually looks like. It changes rarely.
-> For *what to build next*, read `ROADMAP.md`. For *what is done*, read `CURRENT-PROGRESS.md`.
+> For *what to build next*, read `ROADMAP.md` (repo root). For *what is done*, read
+> `docs/CURRENT-PROGRESS.md`.
 
 ---
 
@@ -254,10 +255,9 @@ against them in tests.
 
 ```
 chronos/
-├── CONTEXT.md                  this file
+├── README.md                   setup and how to run things
 ├── ROADMAP.md                  the phased plan
-├── CURRENT-PROGRESS.md         living status, updated after every work session
-├── CLAUDE.md                   agent rules (mirrors section 2)
+├── CLAUDE.md                   agent rules (mirrors section 2); auto-loaded by Claude Code
 ├── contracts/                  the three frozen JSON Schemas + examples
 ├── data/real/                  source .docx and .xlsx, read-only
 ├── ingestion/                  parsers, anomaly reporter, seeder      [Nidhi]
@@ -274,7 +274,11 @@ chronos/
 ├── frontend/                   React app                              [Dhruv]
 ├── tests/                      unit, property, integration, e2e
 ├── bench/                      benchmark harness and plots            [Dhruv]
-└── docs/                       SRS, UML, reports
+└── docs/
+    ├── CONTEXT.md              this file
+    ├── CURRENT-PROGRESS.md     living status, updated after every work session
+    ├── CURRENT-STATUS.md       historical inventory snapshot (2026-09-24)
+    └── …                       proposals, SRS, UML, reports
 ```
 
 ---

@@ -1,10 +1,10 @@
 # CURRENT-PROGRESS.md — Chronos
 
 > **Living document. Update it at the end of every work session.**
-> Read `CONTEXT.md` for what the system is, `ROADMAP.md` for what to build next, and this file
-> for what is already done.
+> Read `docs/CONTEXT.md` for what the system is, `ROADMAP.md` (repo root) for what to build
+> next, and this file for what is already done.
 
-**Last updated:** 2026-10-03 · **by:** Dhruv (Track A correctness fixes, with Claude Code) · **Current phase:** 0 — Foundation and contract freeze
+**Last updated:** 2026-10-06 · **by:** _(fill in)_ — repo-hygiene pass with Claude Code: committed merge-conflict markers resolved, PR #15 state recorded · **Current phase:** 0–2 in progress; no phase exit criterion met yet
 
 ---
 
@@ -27,7 +27,7 @@ A task is **done** when it is merged to `main`, CI is green, and it has a test. 
 |---|---|---|---|
 | 0 — Foundation and contracts | 1 | 🟡 In progress | ⬜ |
 | 1 — Schema, graph builder, UI shell | 2–3 | 🟡 In progress | ⬜ |
-| 2 — Real data, core solver | 4–5 | ⬜ Not started | ⬜ |
+| 2 — Real data, core solver | 4–5 | 🟡 In progress | ⬜ |
 | 3 — API, scoring, role views | 6–7 | ⬜ Not started | ⬜ |
 | 4 — Novelty features | 8–9 | ⬜ Not started | ⬜ |
 | 5 — Validation and benchmarking | 10–11 | ⬜ Not started | ⬜ |
@@ -41,17 +41,9 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 
 | Track | Owner | Branch | Current task | State |
 |---|---|---|---|---|
-<<<<<<< HEAD:docs/CURRENT-PROGRESS.md
-| A — Solver | Rohan | `track/solver` | Phase 2 Track A complete; ready for Phase 3 scoring | ✅ |
-<<<<<<< HEAD:docs/CURRENT-PROGRESS.md
-| B — Data & Backend | Nidhi | `track/data` | — | ⬜ |
-=======
-=======
-| A — Solver | Rohan | `track/solver` | Phase 2 Track A: §5.1 correctness fixes + independent validator (uncommitted on `track/solver`); then Phase 3 scoring | 🟡 |
->>>>>>> e9faa80 (remaining stuff):CURRENT-PROGRESS.md
-| B — Data & Backend | Nidhi | `track/data` (now merged) | faculty/room seed data — pending faculty name-mapping input | 🟡 |
->>>>>>> 7f6d59e (feat(solver): implement backtracking search with forward checking, MRV, and lab block support):CURRENT-PROGRESS.md
-| C — Frontend & Validation | Dhruv | `track/frontend` | — | ⬜ |
+| A — Solver | Rohan | `track/solver` | Phase 2 Track A [M] items merged (PR #13, #15), including the §5.1 correctness fixes and `solver/validate.py`. Welsh-Powell blocker still open (see Blockers). Next: Phase 3 `solver/scoring.py` (not started) | 🟡 |
+| B — Data & Backend | Nidhi | `track/data-*` feature branches (all merged; latest PR #10) | Reference seed and division-scoped faculty initials merged (41 faculty, migration 0004). Initials mapping not yet human-verified; faculty T/P workloads not seeded. Phase 2 ingestion parsers (`class_tt.py`, `lab_tt.py`, `anomalies.py`) not started | 🟡 |
+| C — Frontend & Validation | Dhruv | `track/frontend` | Phase 1 grid and Phase 2 drag-and-drop / role views / mock API merged (PR #6, #14), all running against contract fixtures and a mock client — not yet wired to a real API | 🟡 |
 
 ---
 
@@ -130,10 +122,10 @@ and it renders in the browser.
 - [x] Pinned blocks as fixed occupancy
 - [x] Capacity check against cohort size
 - [ ] *(S)* Iterative backtracking if depth becomes a problem
-- [ ] `solver/validate.py` — independent hard-constraint checker; every solved result is held to it _(on `track/solver`, uncommitted)_
-- [ ] Fix: `fixed_slot` intersected with availability, never substituted for it (proposal §5.1 obs. 1) _(on `track/solver`, uncommitted)_
-- [ ] Fix: every period of a multi-period placement checked, in a LabBlock or not (proposal §5.1 obs. 2) _(on `track/solver`, uncommitted)_
-- [ ] `Room.room_type` (class | lab | unknown) replaces `Room.is_lab` inside the solver _(on `track/solver`, uncommitted)_
+- [x] `solver/validate.py` — independent hard-constraint checker; every solved result is held to it _(PR #15; `solver/tests/test_validate.py`)_
+- [x] Fix: `fixed_slot` intersected with availability, never substituted for it (proposal §5.1 obs. 1) _(PR #15; `TestRegressionFixedSlotVsAvailability`)_ — in `backtracking.py` only; `colouring.py` still has it, see Blockers
+- [x] Fix: every period of a multi-period placement checked, in a LabBlock or not (proposal §5.1 obs. 2) _(PR #15; `TestRegressionMultiPeriodOccupancy`)_ — in `backtracking.py` only; `colouring.py` still has it, see Blockers
+- [x] `Room.room_type` (class | lab | unknown) replaces `Room.is_lab` inside the solver _(PR #15; `TestRoomType`)_
 
 **Placeholders in Track A — NOT features, do not tick anything on their account:**
 - ⚠️ **Infeasibility diagnosis is NOT implemented.** `BacktrackResult.to_solution_dict` emits
@@ -247,7 +239,7 @@ diagnosis.
 
 _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
-- `2026-10-03` · Dhruv · **Track A correctness fixes (uncommitted on `track/solver`).** Two bugs from
+- `2026-10-03` · Dhruv · **Track A correctness fixes (merged to `main` in PR #15 on 2026-10-06).** Two bugs from
   `docs/contract-change-proposal-v2.md` §5.1 let `backtracking.py` report "solved" for a timetable
   breaking a hard constraint. (1) `available_slots_for` returned `[fixed_slot]` before checking
   availability — a fixed slot is now intersected with faculty availability and pinned
@@ -260,14 +252,10 @@ _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
   start). New `solver/validate.py` re-checks every hard constraint independently of the search;
   every solved result in the solver tests and a 400-instance seeded property test go through it.
   On that generator the pre-fix solver returned 333 "solved" results, 287 of them invalid.
-  · _no PR yet_
-- `2026-09-26` · Rohan · Phase 1 & 2 Track A (Solver) landed: `solver/graph.py` (conflict graph with cohort containment), `solver/colouring.py` (Welsh-Powell greedy with availability & pinned awareness), and `solver/backtracking.py` (backtracking search with forward checking, trail-based exact undo, MRV ordering, LabBlock joint placement, sub-room awareness, capacity checks, and `solution_v1` serialisation). 159 tests green across full suite.
-<<<<<<< HEAD:docs/CURRENT-PROGRESS.md
-=======
-- `2026-09-25` · NRD · Reference seed landed — 20 rooms + 8 sub-rooms, 33 faculty, 25 subjects, 64 qualifications, and the partial 8-of-33 initials map, from the three spreadsheets in `data/real/`. Two schema corrections came with it (migrations 0002, 0003 — see Decision log). 210 tests passing. · _no PR (direct to `track/data-seed`)_
-- `2026-09-25` · NRD · `db/models.py` + Alembic migration 0001 landed; 148 tests passing; `Cohort` polymorphism, institute-level `Room`, and a remote-DB safety guard in `migrations/env.py`. · _no PR (direct to `track/data`)_
-- `2026-09-26` · Rohan · Phase 1 & 2 Track A (Solver) landed: `solver/graph.py` (conflict graph with cohort containment), `solver/colouring.py` (Welsh-Powell greedy with availability & pinned awareness), and `solver/backtracking.py` (backtracking search with forward checking, trail-based exact undo, MRV ordering, LabBlock joint placement, sub-room awareness, capacity checks, and `solution_v1` serialisation). 159 tests green across full suite.
->>>>>>> 7f6d59e (feat(solver): implement backtracking search with forward checking, MRV, and lab block support):CURRENT-PROGRESS.md
+  · PR #15
+- `2026-09-26` · Rohan · Phase 1 & 2 Track A (Solver) landed: `solver/graph.py` (conflict graph with cohort containment), `solver/colouring.py` (Welsh-Powell greedy with availability & pinned awareness), and `solver/backtracking.py` (backtracking search with forward checking, trail-based exact undo, MRV ordering, LabBlock joint placement, sub-room awareness, capacity checks, and `solution_v1` serialisation). 159 tests green across full suite. · PR #5, #13
+- `2026-09-25` · NRD · Reference seed landed — 20 rooms + 8 sub-rooms, 33 faculty, 25 subjects, 64 qualifications, and the partial 8-of-33 initials map, from the three spreadsheets in `data/real/`. Two schema corrections came with it (migrations 0002, 0003 — see Decision log). 210 tests passing. · PR #3 (`track/data-seed`)
+- `2026-09-25` · NRD · `db/models.py` + Alembic migration 0001 landed; 148 tests passing; `Cohort` polymorphism, institute-level `Room`, and a remote-DB safety guard in `migrations/env.py`. · PR #1, #2 (`track/data`)
 - `2026-09-24` · NRD · Phase 0 contracts + `solver/slots.py` + CI workflow landed — three frozen JSON Schemas with example payloads, 41 schema-validation tests, the wall-clock slot module with 48 tests, GitHub Actions running `ruff check` + `pytest`, and a root `pyproject.toml`. 89 tests green. · _no PR (direct to `main`, pre-branch-protection)_
 
 ---
