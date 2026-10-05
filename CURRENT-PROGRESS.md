@@ -80,13 +80,13 @@ memory.
 - [ ] *(S)* Constraint-derivation SQL
 
 ### Track A — Solver
-- [ ] `graph.py` builds a conflict graph from an edge-list payload
-- [ ] Cohort overlap handles containment (batch ⊂ division, combined divisions)
-- [ ] Combined-division lecture becomes a single vertex
-- [ ] `colouring.py` — Welsh-Powell honouring faculty availability
-- [ ] Unit tests on hand-built instances
-- [ ] `networkx` cross-check in tests only
-- [ ] *(S)* O(1) adjacency lookups
+- [x] `graph.py` builds a conflict graph from an edge-list payload
+- [x] Cohort overlap handles containment (batch ⊂ division, combined divisions)
+- [x] Combined-division lecture becomes a single vertex
+- [x] `colouring.py` — Welsh-Powell honouring faculty availability
+- [x] Unit tests on hand-built instances
+- [x] `networkx` cross-check in tests only
+- [x] *(S)* O(1) adjacency lookups
 
 ### Track C — Frontend
 - [ ] Vite + React + TS + Tailwind + shadcn/ui scaffold
@@ -115,12 +115,12 @@ and it renders in the browser.
 - [ ] *(S)* Re-ingestion is idempotent
 
 ### Track A — Solver
-- [ ] `backtracking.py` — forward checking with exact undo, MRV ordering
-- [ ] `LabBlock` — N parallel batch sessions allocated jointly
-- [ ] Double-slot contiguity on teaching-sequence adjacency
-- [ ] Sub-room awareness (same room, different sub-room is legal)
-- [ ] Pinned blocks as fixed occupancy
-- [ ] Capacity check against cohort size
+- [x] `backtracking.py` — forward checking with exact undo, MRV ordering
+- [x] `LabBlock` — N parallel batch sessions allocated jointly
+- [x] Double-slot contiguity on teaching-sequence adjacency
+- [x] Sub-room awareness (same room, different sub-room is legal)
+- [x] Pinned blocks as fixed occupancy
+- [x] Capacity check against cohort size
 - [ ] *(S)* Iterative backtracking if depth becomes a problem
 
 ### Track C — Frontend
