@@ -42,7 +42,11 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 | Track | Owner | Branch | Current task | State |
 |---|---|---|---|---|
 | A — Solver | Rohan | `track/solver` | Phase 2 Track A complete; ready for Phase 3 scoring | ✅ |
+<<<<<<< HEAD:docs/CURRENT-PROGRESS.md
 | B — Data & Backend | Nidhi | `track/data` | — | ⬜ |
+=======
+| B — Data & Backend | Nidhi | `track/data` (now merged) | faculty/room seed data — pending faculty name-mapping input | 🟡 |
+>>>>>>> 7f6d59e (feat(solver): implement backtracking search with forward checking, MRV, and lab block support):CURRENT-PROGRESS.md
 | C — Frontend & Validation | Dhruv | `track/frontend` | — | ⬜ |
 
 ---
@@ -224,6 +228,12 @@ diagnosis.
 _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
 - `2026-09-26` · Rohan · Phase 1 & 2 Track A (Solver) landed: `solver/graph.py` (conflict graph with cohort containment), `solver/colouring.py` (Welsh-Powell greedy with availability & pinned awareness), and `solver/backtracking.py` (backtracking search with forward checking, trail-based exact undo, MRV ordering, LabBlock joint placement, sub-room awareness, capacity checks, and `solution_v1` serialisation). 159 tests green across full suite.
+<<<<<<< HEAD:docs/CURRENT-PROGRESS.md
+=======
+- `2026-09-25` · NRD · Reference seed landed — 20 rooms + 8 sub-rooms, 33 faculty, 25 subjects, 64 qualifications, and the partial 8-of-33 initials map, from the three spreadsheets in `data/real/`. Two schema corrections came with it (migrations 0002, 0003 — see Decision log). 210 tests passing. · _no PR (direct to `track/data-seed`)_
+- `2026-09-25` · NRD · `db/models.py` + Alembic migration 0001 landed; 148 tests passing; `Cohort` polymorphism, institute-level `Room`, and a remote-DB safety guard in `migrations/env.py`. · _no PR (direct to `track/data`)_
+- `2026-09-26` · Rohan · Phase 1 & 2 Track A (Solver) landed: `solver/graph.py` (conflict graph with cohort containment), `solver/colouring.py` (Welsh-Powell greedy with availability & pinned awareness), and `solver/backtracking.py` (backtracking search with forward checking, trail-based exact undo, MRV ordering, LabBlock joint placement, sub-room awareness, capacity checks, and `solution_v1` serialisation). 159 tests green across full suite.
+>>>>>>> 7f6d59e (feat(solver): implement backtracking search with forward checking, MRV, and lab block support):CURRENT-PROGRESS.md
 - `2026-09-24` · NRD · Phase 0 contracts + `solver/slots.py` + CI workflow landed — three frozen JSON Schemas with example payloads, 41 schema-validation tests, the wall-clock slot module with 48 tests, GitHub Actions running `ruff check` + `pytest`, and a root `pyproject.toml`. 89 tests green. · _no PR (direct to `main`, pre-branch-protection)_
 
 ---
