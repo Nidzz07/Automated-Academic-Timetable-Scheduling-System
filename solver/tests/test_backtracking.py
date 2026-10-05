@@ -13,27 +13,40 @@ Test coverage:
   - Capacity check enforcement.
   - An infeasible instance that exhausts the search.
   - Pinned occupancy blocks room placement.
+  - Regression, proposal section 5.1: a fixed slot never overrides faculty
+    unavailability or pinned blocks; every period of a multi-period placement
+    (in a lab block or not) is checked.
   - Solver purity (no networkx import).
+
+Every SOLVED result in this file goes through ``_solve_checked``, which holds it
+to the independent checker in :mod:`solver.validate`.
 """
 
 from __future__ import annotations
 
+import pickle
 from typing import Any
 
 import pytest
 
 from solver.backtracking import (
+    BacktrackResult,
+    Room,
+    _assign,
     _build_initial_domains,
-    _build_room_hierarchy,
     _forward_check,
+    _new_state,
+    _occupied_slots,
     _SolverState,
+    _unassign,
     _undo_trail,
     backtrack_solve,
     parse_lab_blocks,
     parse_rooms,
 )
-from solver.graph import build_conflict_graph
+from solver.graph import ConflictGraph, build_conflict_graph
 from solver.slots import SlotId, is_adjacent
+from solver.validate import validate_solution
 
 # ======================================================================
 # Helpers — tiny payload builders (adapted from test_graph_colouring)
@@ -145,6 +158,15 @@ def _payload(
     }
 
 
+def _solve_checked(graph: ConflictGraph, payload: dict[str, Any]) -> BacktrackResult:
+    """Solve, and hold every SOLVED result to the independent validator."""
+    result = backtrack_solve(graph, payload)
+    if result.solved:
+        violations = validate_solution(payload, result.to_solution_dict())
+        assert violations == [], f"solver reported solved but: {violations}"
+    return result
+
+
 # ======================================================================
 # Parsing tests
 # ======================================================================
@@ -193,7 +215,31 @@ class TestParseLabBlocks:
 
 
 class TestTrailUndo:
-    """The undo must be EXACT — assert byte-identical domain state."""
+    """The undo must be EXACT.
+
+    Each check compares the domains two ways: plain set equality, and the
+    pickled bytes of a canonical (sorted) form.  Pickling the raw sets would not
+    be a meaningful byte test - a set's iteration order can change after values
+    are removed and re-added even though the set is equal - so the canonical
+    form is what gets pickled.
+    """
+
+    @staticmethod
+    def _sets(state: _SolverState) -> dict[str, frozenset[tuple[SlotId, str]]]:
+        return {sid: frozenset(domain) for sid, domain in state.domains.items()}
+
+    @staticmethod
+    def _pickled(state: _SolverState) -> bytes:
+        canonical = sorted(
+            (sid, sorted(domain)) for sid, domain in state.domains.items()
+        )
+        return pickle.dumps(canonical)
+
+    @staticmethod
+    def _state(payload: dict[str, Any]) -> _SolverState:
+        state = _new_state(build_conflict_graph(payload), payload)
+        _build_initial_domains(state)
+        return state
 
     def test_domain_state_restored_exactly_after_full_backtrack(self) -> None:
         """After FC + undo, domains must be identical to before."""
@@ -209,58 +255,25 @@ class TestTrailUndo:
             ],
             rooms=[_room("r1", capacity=200)],
         )
-        graph = build_conflict_graph(payload)
-        rooms = parse_rooms(payload)
-        children_of, parent_of = _build_room_hierarchy(rooms)
-
-        state = _SolverState(
-            graph=graph,
-            rooms=rooms,
-            lab_blocks=[],
-            domains={},
-            slot_assignment={},
-            room_assignment={},
-            session_to_block={},
-            children_of=children_of,
-            parent_of=parent_of,
-        )
-        _build_initial_domains(state)
-
-        # Snapshot domains before FC
-        domains_before = {
-            sid: frozenset(domain)
-            for sid, domain in state.domains.items()
-        }
+        state = self._state(payload)
+        sets_before = self._sets(state)
+        bytes_before = self._pickled(state)
 
         # Assign s1 and forward-check
         slot = SlotId(0, 0)
         trail_start = len(state.trail)
-        state.slot_assignment["s1"] = slot
-        state.room_assignment["s1"] = "r1"
-        state.room_occupancy[(slot, "r1")] = "s1"
-        _forward_check(state, "s1", slot, "r1", trail_start)
+        _assign(state, "s1", slot, "r1", (slot,))
+        _forward_check(state, "s1")
 
-        # Domains should be different now (pruned)
-        domains_during = {
-            sid: frozenset(domain)
-            for sid, domain in state.domains.items()
-        }
-        assert domains_during != domains_before, (
+        assert self._sets(state) != sets_before, (
             "FC should have changed at least one domain"
         )
 
-        # Undo
         _undo_trail(state, trail_start)
-        del state.slot_assignment["s1"]
-        del state.room_assignment["s1"]
-        del state.room_occupancy[(slot, "r1")]
+        _unassign(state, "s1")
 
-        # Domains must be exactly restored
-        domains_after = {
-            sid: frozenset(domain)
-            for sid, domain in state.domains.items()
-        }
-        assert domains_after == domains_before, (
+        assert self._sets(state) == sets_before
+        assert self._pickled(state) == bytes_before, (
             "Domain state must be byte-identical after undo"
         )
 
@@ -274,42 +287,59 @@ class TestTrailUndo:
             edges=[_edge("s1", "s2", "FACULTY")],
             rooms=[_room("r1", capacity=200)],
         )
-        graph = build_conflict_graph(payload)
-        rooms = parse_rooms(payload)
-        children_of, parent_of = _build_room_hierarchy(rooms)
+        state = self._state(payload)
+        sets_before = self._sets(state)
+        bytes_before = self._pickled(state)
 
-        state = _SolverState(
-            graph=graph,
-            rooms=rooms,
-            lab_blocks=[],
-            domains={},
-            slot_assignment={},
-            room_assignment={},
-            session_to_block={},
-            children_of=children_of,
-            parent_of=parent_of,
-        )
-        _build_initial_domains(state)
-        snapshot = {
-            sid: frozenset(d) for sid, d in state.domains.items()
-        }
-
-        # Do 3 assign/undo cycles
         for slot in [SlotId(0, 0), SlotId(1, 1), SlotId(2, 3)]:
             t = len(state.trail)
-            state.slot_assignment["s1"] = slot
-            state.room_assignment["s1"] = "r1"
-            state.room_occupancy[(slot, "r1")] = "s1"
-            _forward_check(state, "s1", slot, "r1", t)
+            _assign(state, "s1", slot, "r1", (slot,))
+            _forward_check(state, "s1")
             _undo_trail(state, t)
-            del state.slot_assignment["s1"]
-            del state.room_assignment["s1"]
-            del state.room_occupancy[(slot, "r1")]
+            _unassign(state, "s1")
 
-        restored = {
-            sid: frozenset(d) for sid, d in state.domains.items()
-        }
-        assert restored == snapshot
+        assert self._sets(state) == sets_before
+        assert self._pickled(state) == bytes_before
+
+    def test_multi_period_prune_and_undo_is_exact(self) -> None:
+        """A 2-period placement prunes neighbours in BOTH periods, and undo
+        restores exactly what was pruned."""
+        payload = _payload(
+            sessions=[
+                _session("lab", faculty="f1", cohort="c1", duration=2,
+                         session_type="lab", requires_lab=True),
+                _session("thy", faculty="f2", cohort="c1"),
+                _session("other", faculty="f3", cohort="c3"),
+            ],
+            edges=[_edge("lab", "thy", "COHORT")],
+            rooms=[_room("lab-r", capacity=30, is_lab=True),
+                   _room("class-r", capacity=30)],
+        )
+        state = self._state(payload)
+        sets_before = self._sets(state)
+        bytes_before = self._pickled(state)
+
+        start = SlotId(0, 1)  # occupies periods 1 and 3, across the short break
+        occupied = _occupied_slots(state, "lab", start)
+        assert occupied == (SlotId(0, 1), SlotId(0, 3))
+
+        t = len(state.trail)
+        _assign(state, "lab", start, "lab-r", occupied)
+        assert _forward_check(state, "lab")
+
+        thy_starts = {s for s, _ in state.domains["thy"]}
+        assert SlotId(0, 1) not in thy_starts
+        assert SlotId(0, 3) not in thy_starts, "second period must be pruned too"
+        # The unrelated session keeps both periods (its room differs).
+        other_starts = {s for s, _ in state.domains["other"]}
+        assert {SlotId(0, 1), SlotId(0, 3)} <= other_starts
+
+        _undo_trail(state, t)
+        _unassign(state, "lab")
+
+        assert self._sets(state) == sets_before
+        assert self._pickled(state) == bytes_before
+        assert state.room_occupancy == {}
 
 
 # ======================================================================
@@ -377,7 +407,7 @@ class TestBacktrackingRequired:
         assert len(unplaced) > 0, "Greedy should fail on this instance"
 
         # Now backtracking should succeed
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         assert result.solved, (
             "Backtracking should solve an instance that greedy cannot"
         )
@@ -436,7 +466,7 @@ class TestLabBlock:
             ],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         assert result.solved, "Lab block should be placed jointly"
 
         # All 4 sessions must have the SAME starting slot
@@ -508,7 +538,7 @@ class TestContiguity:
             ],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         assert result.solved, "Lab should be placed spanning the short break"
         assert result.assignment["lab-s1"] == SlotId(0, 1), (
             f"Lab should start at period 1, got {result.assignment['lab-s1']}"
@@ -549,7 +579,7 @@ class TestSubRoomAwareness:
             ],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         assert result.solved
 
         # They CAN share the same slot
@@ -591,7 +621,7 @@ class TestSubRoomAwareness:
             ],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         assert not result.solved, (
             "Two sessions cannot share one sub-room at the same time"
         )
@@ -626,7 +656,7 @@ class TestSubRoomAwareness:
             ],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         # s1 takes parent-702 (only room with cap ≥ 60)
         # s2 needs lab and cap ≥ 20, but 702-A is blocked by parent
         # parent-702 is taken by s1
@@ -652,7 +682,7 @@ class TestCapacity:
             rooms=[_room("r1", capacity=50)],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         assert not result.solved, "No room with sufficient capacity"
 
     def test_cohort_fits_large_room(self) -> None:
@@ -664,7 +694,7 @@ class TestCapacity:
             rooms=[_room("r1", capacity=80)],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         assert result.solved
         assert result.room_assignment["s1"] == "r1"
 
@@ -711,7 +741,7 @@ class TestInfeasible:
             ],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         assert not result.solved, (
             "K3 with 2 slots should be infeasible"
         )
@@ -751,7 +781,7 @@ class TestPinnedOccupancy:
             }],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         # The only slot available has its only room pinned → infeasible
         assert not result.solved
 
@@ -773,7 +803,7 @@ class TestFixedSlot:
             rooms=[_room("r1", capacity=200)],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         assert result.solved
         assert result.assignment["s1"] == SlotId(2, 3)
 
@@ -804,7 +834,7 @@ class TestContractExampleBacktrack:
         self, example_payload: dict[str, Any]
     ) -> None:
         graph = build_conflict_graph(example_payload)
-        result = backtrack_solve(graph, example_payload)
+        result = _solve_checked(graph, example_payload)
         assert result.solved, (
             "Contract example should be solvable by backtracking"
         )
@@ -815,7 +845,7 @@ class TestContractExampleBacktrack:
         self, example_payload: dict[str, Any]
     ) -> None:
         graph = build_conflict_graph(example_payload)
-        result = backtrack_solve(graph, example_payload)
+        result = _solve_checked(graph, example_payload)
         assert result.solved
         for sid in result.assignment:
             for neighbour in graph.neighbours(sid):
@@ -826,7 +856,7 @@ class TestContractExampleBacktrack:
         self, example_payload: dict[str, Any]
     ) -> None:
         graph = build_conflict_graph(example_payload)
-        result = backtrack_solve(graph, example_payload)
+        result = _solve_checked(graph, example_payload)
         assert result.solved
         # sess-0008 has fixed_slot day=2 period=0
         assert result.assignment["sess-0008"] == SlotId(2, 0)
@@ -835,7 +865,7 @@ class TestContractExampleBacktrack:
         self, example_payload: dict[str, Any]
     ) -> None:
         graph = build_conflict_graph(example_payload)
-        result = backtrack_solve(graph, example_payload)
+        result = _solve_checked(graph, example_payload)
         assert result.solved
         # All sessions in labblk-0001 should share the same starting slot.
         block_sids = ["sess-0001", "sess-0002", "sess-0003", "sess-0004"]
@@ -854,7 +884,7 @@ class TestContractExampleBacktrack:
         from jsonschema import Draft202012Validator
 
         graph = build_conflict_graph(example_payload)
-        result = backtrack_solve(graph, example_payload)
+        result = _solve_checked(graph, example_payload)
         assert result.solved
 
         sol_dict = result.to_solution_dict()
@@ -882,7 +912,7 @@ class TestContractExampleBacktrack:
             rooms=[_room("r1", capacity=50)],
         )
         graph = build_conflict_graph(payload)
-        result = backtrack_solve(graph, payload)
+        result = _solve_checked(graph, payload)
         assert not result.solved
 
         sol_dict = result.to_solution_dict()
@@ -895,6 +925,301 @@ class TestContractExampleBacktrack:
             solution_schema = json.load(fh)
 
         Draft202012Validator(solution_schema).validate(sol_dict)
+
+
+# ======================================================================
+# Regression — docs/contract-change-proposal-v2.md section 5.1
+# ======================================================================
+
+
+def _only_open(*slots: SlotId) -> list[dict[str, int]]:
+    """Unavailability list leaving exactly *slots* open for a faculty member."""
+    from solver.slots import all_slots
+
+    keep = set(slots)
+    return [{"day": s.day, "period": s.period} for s in all_slots() if s not in keep]
+
+
+def _hand_solution(placements: list[tuple[str, int, int, str]]) -> dict[str, Any]:
+    """A hand-built solution_v1 'solved' payload (physical rooms only)."""
+    return {
+        "schema_version": "solution.v1",
+        "status": "solved",
+        "assignment": [
+            {"session_id": sid, "day": d, "period": p, "room_id": r, "sub_room_id": None}
+            for sid, d, p, r in placements
+        ],
+        "quality": {"score": 0.0, "breakdown": []},
+        "displaced": [],
+        "metadata": {
+            "algorithm": "hand-built", "runtime_ms": 0.0,
+            "sessions_total": len(placements), "sessions_assigned": len(placements),
+            "slots_used": None, "backtracks": None,
+        },
+    }
+
+
+class TestRegressionFixedSlotVsAvailability:
+    """Bug 1: a fixed_slot overrode faculty unavailability.
+
+    ``available_slots_for`` returned ``[fixed_slot]`` before consulting
+    availability, so a session fixed to a slot its faculty member is
+    unavailable in was placed and reported solved.
+    """
+
+    @staticmethod
+    def _repro() -> dict[str, Any]:
+        # Section 5.1 observation 1: f1 is unavailable at Wednesday 11.15,
+        # and s1 is fixed to exactly that slot.
+        return _payload(
+            sessions=[_session("s1", faculty="f1", fixed_slot={"day": 2, "period": 3})],
+            rooms=[_room("r1", capacity=200)],
+            faculty_availability=[_faculty_avail("f1", [{"day": 2, "period": 3}])],
+        )
+
+    def test_section_5_1_fixed_slot_in_unavailable_slot_is_infeasible(self) -> None:
+        payload = self._repro()
+        result = _solve_checked(build_conflict_graph(payload), payload)
+        assert not result.solved
+        assert result.unplaced_sessions == ["s1"]
+
+    def test_validator_flags_what_the_old_solver_returned(self) -> None:
+        """The pre-fix output (s1 at its fixed slot) is a FACULTY_UNAVAILABLE."""
+        violations = validate_solution(self._repro(), _hand_solution([("s1", 2, 3, "r1")]))
+        assert [(v.kind, v.session_ids, v.slots) for v in violations] == [
+            ("FACULTY_UNAVAILABLE", ("s1",), (SlotId(2, 3),)),
+        ]
+
+    def test_available_slots_for_intersects_fixed_slot(self) -> None:
+        from solver.graph import available_slots_for
+
+        graph = build_conflict_graph(self._repro())
+        assert available_slots_for(graph, graph.sessions["s1"]) == []
+
+    @pytest.mark.parametrize("pinned_key", ["faculty_ids", "cohort_ids"])
+    def test_fixed_slot_in_pinned_slot_is_infeasible(self, pinned_key: str) -> None:
+        pin: dict[str, Any] = {
+            "day": 2, "period": 3, "faculty_ids": [], "room_ids": [], "cohort_ids": [],
+        }
+        pin[pinned_key] = ["f1" if pinned_key == "faculty_ids" else "c1"]
+        payload = _payload(
+            sessions=[_session("s1", faculty="f1", cohort="c1",
+                               fixed_slot={"day": 2, "period": 3})],
+            rooms=[_room("r1", capacity=200)],
+            pinned_occupancy=[pin],
+        )
+        assert not _solve_checked(build_conflict_graph(payload), payload).solved
+
+    def test_fixed_multi_period_session_needs_every_period_open(self) -> None:
+        """Fixed at period 1, but its second period (3) is unavailable."""
+        payload = _payload(
+            sessions=[_session("s1", faculty="f1", duration=2,
+                               fixed_slot={"day": 0, "period": 1})],
+            rooms=[_room("r1", capacity=200)],
+            faculty_availability=[_faculty_avail("f1", [{"day": 0, "period": 3}])],
+        )
+        assert not _solve_checked(build_conflict_graph(payload), payload).solved
+
+    def test_two_fixed_sessions_with_an_edge_in_one_slot_are_infeasible(self) -> None:
+        """Fixed sessions used to be pre-placed with no neighbour check."""
+        payload = _payload(
+            sessions=[
+                _session("s1", faculty="f1", fixed_slot={"day": 1, "period": 0}),
+                _session("s2", faculty="f1", fixed_slot={"day": 1, "period": 0}),
+            ],
+            edges=[_edge("s1", "s2", "FACULTY")],
+            rooms=[_room("r1", capacity=200), _room("r2", capacity=200)],
+        )
+        assert not _solve_checked(build_conflict_graph(payload), payload).solved
+
+    def test_infeasible_result_keeps_placeholder_diagnosis_shape(self) -> None:
+        payload = self._repro()
+        sol = _solve_checked(build_conflict_graph(payload), payload).to_solution_dict()
+        assert sol["status"] == "infeasible"
+        entry = sol["diagnosis"]["minimal_conflicting_set"][0]
+        assert entry["constraint_id"] == "unplaced.s1"
+        assert entry["kind"] == "UNSATISFIABLE_DOMAIN"
+
+
+class TestRegressionMultiPeriodOccupancy:
+    """Bug 2: only the first period of a multi-period placement was checked.
+
+    Section 5.1 observation 2: a 2-period lab for cohort C1 at Monday
+    periods 0-1 plus a C1 theory session with a COHORT edge to it returned
+    solved with the theory at Monday period 1 - both at Monday period 1.
+    """
+
+    @staticmethod
+    def _repro(
+        *, standalone: bool = False, theory_open: tuple[SlotId, ...] = ()
+    ) -> dict[str, Any]:
+        lab_open = (SlotId(0, 0), SlotId(0, 1))  # lab can only run Mon 09.00-11.00
+        thy_open = (SlotId(0, 1), *theory_open)  # theory forced into Mon 10.00
+        return _payload(
+            sessions=[
+                _session("lab", faculty="f-lab", cohort="C1", duration=2,
+                         session_type="lab", requires_lab=True),
+                _session("thy", faculty="f-thy", cohort="C1"),
+            ],
+            edges=[_edge("lab", "thy", "COHORT")],
+            rooms=[_room("lab-r", capacity=30, is_lab=True),
+                   _room("class-r", capacity=30)],
+            faculty_availability=[
+                _faculty_avail("f-lab", _only_open(*lab_open)),
+                _faculty_avail("f-thy", _only_open(*thy_open)),
+            ],
+            lab_blocks=[] if standalone else [_lab_block("blk", ["lab"], duration=2)],
+        )
+
+    def test_section_5_1_lab_and_theory_both_at_monday_period_1_is_infeasible(
+        self,
+    ) -> None:
+        payload = self._repro()
+        result = _solve_checked(build_conflict_graph(payload), payload)
+        assert not result.solved, "lab occupies Mon period 1; theory has nowhere else"
+
+    def test_validator_flags_what_the_old_solver_returned(self) -> None:
+        """Pre-fix output: lab starts Mon 0 (occupying 0 and 1), theory at Mon 1."""
+        violations = validate_solution(
+            self._repro(),
+            _hand_solution([("lab", 0, 0, "lab-r"), ("thy", 0, 1, "class-r")]),
+        )
+        assert [(v.kind, v.session_ids, v.slots) for v in violations] == [
+            ("COHORT_CLASH", ("lab", "thy"), (SlotId(0, 1),)),
+        ]
+
+    def test_theory_moves_past_the_lab_when_it_can(self) -> None:
+        payload = self._repro(theory_open=(SlotId(0, 3),))
+        result = _solve_checked(build_conflict_graph(payload), payload)
+        assert result.solved
+        assert result.assignment["lab"] == SlotId(0, 0)
+        assert result.occupied["lab"] == (SlotId(0, 0), SlotId(0, 1))
+        assert result.assignment["thy"] == SlotId(0, 3)
+
+    def test_multi_period_session_outside_a_lab_block_is_enforced(self) -> None:
+        """duration_periods = 2 with no LabBlock used to be placed as 1 period."""
+        payload = self._repro(standalone=True)
+        assert not _solve_checked(build_conflict_graph(payload), payload).solved
+
+        payload = self._repro(standalone=True, theory_open=(SlotId(0, 3),))
+        result = _solve_checked(build_conflict_graph(payload), payload)
+        assert result.solved
+        assert result.occupied["lab"] == (SlotId(0, 0), SlotId(0, 1))
+
+    def test_room_is_held_for_every_period(self) -> None:
+        """No edge, one room: a session in the other's second period has no room."""
+        payload = _payload(
+            sessions=[
+                _session("long", faculty="f1", cohort="c1", duration=2),
+                _session("short", faculty="f2", cohort="c2"),
+            ],
+            rooms=[_room("r1", capacity=30)],
+            faculty_availability=[
+                _faculty_avail("f1", _only_open(SlotId(0, 0), SlotId(0, 1))),
+                _faculty_avail("f2", _only_open(SlotId(0, 1))),
+            ],
+        )
+        assert not _solve_checked(build_conflict_graph(payload), payload).solved
+
+    def test_session_longer_than_the_rest_of_the_day_is_infeasible(self) -> None:
+        payload = _payload(
+            sessions=[_session("s1", faculty="f1", duration=2)],
+            rooms=[_room("r1", capacity=30)],
+            faculty_availability=[_faculty_avail("f1", _only_open(SlotId(0, 9)))],
+        )
+        assert not _solve_checked(build_conflict_graph(payload), payload).solved
+
+    def test_second_period_must_be_open_for_the_cohort(self) -> None:
+        """Start open, second period pinned for the cohort → that start is out."""
+        payload = _payload(
+            sessions=[_session("s1", faculty="f1", cohort="c1", duration=2)],
+            rooms=[_room("r1", capacity=30)],
+            faculty_availability=[
+                _faculty_avail("f1", _only_open(SlotId(0, 1), SlotId(0, 3))),
+            ],
+            pinned_occupancy=[{"day": 0, "period": 3, "faculty_ids": [],
+                               "room_ids": [], "cohort_ids": ["c1"]}],
+        )
+        assert not _solve_checked(build_conflict_graph(payload), payload).solved
+
+
+class TestLabBlockDeclarations:
+    def test_member_duration_must_match_block(self) -> None:
+        payload = _payload(
+            sessions=[_session("a", faculty="f1", duration=1)],
+            lab_blocks=[_lab_block("blk", ["a"], duration=2)],
+        )
+        with pytest.raises(ValueError, match="duration"):
+            backtrack_solve(build_conflict_graph(payload), payload)
+
+    def test_session_in_two_blocks_is_rejected(self) -> None:
+        payload = _payload(
+            sessions=[_session("a", faculty="f1", duration=2)],
+            lab_blocks=[_lab_block("b1", ["a"]), _lab_block("b2", ["a"])],
+        )
+        with pytest.raises(ValueError, match="more than one lab block"):
+            backtrack_solve(build_conflict_graph(payload), payload)
+
+    def test_edge_inside_a_block_makes_it_unplaceable(self) -> None:
+        """Members share every slot, so a shared faculty member cannot work."""
+        payload = _payload(
+            sessions=[
+                _session("a", faculty="f1", cohort="ca", duration=2, requires_lab=True),
+                _session("b", faculty="f1", cohort="cb", duration=2, requires_lab=True),
+            ],
+            edges=[_edge("a", "b", "FACULTY")],
+            rooms=[_room("l1", is_lab=True), _room("l2", is_lab=True)],
+            lab_blocks=[_lab_block("blk", ["a", "b"])],
+        )
+        assert not _solve_checked(build_conflict_graph(payload), payload).solved
+
+    def test_empty_block_does_not_block_the_search(self) -> None:
+        payload = _payload(
+            sessions=[_session("a", faculty="f1")],
+            lab_blocks=[_lab_block("blk", [])],
+        )
+        assert _solve_checked(build_conflict_graph(payload), payload).solved
+
+
+class TestRoomType:
+    def test_parse_rooms_maps_is_lab_to_room_type(self) -> None:
+        rooms = parse_rooms({"rooms": [_room("lab", is_lab=True), _room("cls")]})
+        assert rooms["lab"].room_type == "lab"
+        assert rooms["cls"].room_type == "class"
+
+    def test_unknown_room_never_hosts_a_lab(self) -> None:
+        """Rooms 605/609 (unsure → unknown) stay unusable for labs."""
+        payload = _payload(
+            sessions=[_session("s1", faculty="f1", requires_lab=True, cohort_size=10)],
+            rooms=[_room("r605", capacity=40)],
+        )
+        state = _new_state(build_conflict_graph(payload), payload)
+        state.rooms = {"r605": Room("r605", "605", 40, "unknown", None)}
+        _build_initial_domains(state)
+        assert state.domains["s1"] == set()
+
+    def test_unknown_room_can_host_theory(self) -> None:
+        payload = _payload(
+            sessions=[_session("s1", faculty="f1", cohort_size=10)],
+            rooms=[_room("r605", capacity=40)],
+        )
+        state = _new_state(build_conflict_graph(payload), payload)
+        state.rooms = {"r605": Room("r605", "605", 40, "unknown", None)}
+        _build_initial_domains(state)
+        assert state.domains["s1"]
+
+
+class TestPinnedSubRoomLocksParent:
+    def test_pinned_sub_room_blocks_whole_room(self) -> None:
+        payload = _payload(
+            sessions=[_session("s1", faculty="f1", cohort_size=50)],
+            rooms=[_room("p702", capacity=60),
+                   _room("702-A", capacity=20, parent_room_id="p702")],
+            faculty_availability=[_faculty_avail("f1", _only_open(SlotId(0, 0)))],
+            pinned_occupancy=[{"day": 0, "period": 0, "faculty_ids": [],
+                               "room_ids": ["702-A"], "cohort_ids": []}],
+        )
+        assert not _solve_checked(build_conflict_graph(payload), payload).solved
 
 
 # ======================================================================
