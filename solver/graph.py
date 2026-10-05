@@ -46,7 +46,9 @@ __all__ = [
     "ConflictGraph",
     "Edge",
     "Session",
+    "available_slots_for",
     "build_conflict_graph",
+    "slot_is_open",
 ]
 
 
@@ -222,6 +224,31 @@ def build_conflict_graph(payload: dict[str, Any]) -> ConflictGraph:
     return graph
 
 
+def slot_is_open(
+    graph: ConflictGraph,
+    session: Session,
+    slot: SlotId,
+) -> bool:
+    """True when *slot* is free for *session*'s faculty and cohort.
+
+    Checks the teaching grid, faculty unavailability, and pinned occupancy of
+    the session's faculty or cohort. It does **not** look at ``fixed_slot``:
+    that restricts where a session may *start*, which is a separate question
+    from whether a slot is open at all.
+    """
+    if not is_teaching_period(slot.period):
+        return False
+    if slot in graph.faculty_unavailable.get(session.faculty_id, set()):
+        return False
+    pin = graph.pinned_slots.get(slot)
+    if pin is not None:
+        if session.faculty_id in pin["faculty_ids"]:
+            return False
+        if session.cohort_id in pin["cohort_ids"]:
+            return False
+    return True
+
+
 def available_slots_for(
     graph: ConflictGraph,
     session: Session,
@@ -230,30 +257,24 @@ def available_slots_for(
 
     * faculty unavailability,
     * pinned occupancy blocking the session's faculty or cohort,
-    * the fixed_slot pre-assignment (returns just that slot).
+    * the fixed_slot pre-assignment.
 
-    Room assignment is **not** handled here — that is Phase 2 (backtracking).
-    This function provides the colour domain for greedy colouring.
+    A ``fixed_slot`` is **intersected** with availability, never substituted
+    for it: a session fixed to a slot its faculty member is unavailable in (or
+    that a pinned block holds for its faculty or cohort) gets an empty list,
+    and the instance is infeasible. Returning ``[fixed_slot]`` unconditionally
+    let a solver report "solved" for a timetable that breaks
+    ``FACULTY_UNAVAILABLE`` (docs/contract-change-proposal-v2.md section 5.1,
+    observation 1).
+
+    This checks one slot per session - the colour domain for greedy colouring.
+    A multi-period session must also have its later periods open; the
+    backtracker checks that with :func:`slot_is_open` per occupied slot.
+    Room assignment is **not** handled here.
     """
-    if session.fixed_slot is not None:
-        return [session.fixed_slot]
-
-    unavailable = graph.faculty_unavailable.get(session.faculty_id, set())
-    result: list[SlotId] = []
-
-    for slot in all_slots():
-        if not is_teaching_period(slot.period):
-            continue
-        if slot in unavailable:
-            continue
-        # Pinned occupancy: skip if this slot pins the session's faculty or
-        # cohort.
-        pin = graph.pinned_slots.get(slot)
-        if pin is not None:
-            if session.faculty_id in pin["faculty_ids"]:
-                continue
-            if session.cohort_id in pin["cohort_ids"]:
-                continue
-        result.append(slot)
-
-    return result
+    return [
+        slot
+        for slot in all_slots()
+        if (session.fixed_slot is None or slot == session.fixed_slot)
+        and slot_is_open(graph, session, slot)
+    ]

@@ -4,7 +4,7 @@
 > Read `CONTEXT.md` for what the system is, `ROADMAP.md` for what to build next, and this file
 > for what is already done.
 
-**Last updated:** 2026-09-25 · **by:** NRD · **Current phase:** 0 — Foundation and contract freeze
+**Last updated:** 2026-10-03 · **by:** Dhruv (Track A correctness fixes, with Claude Code) · **Current phase:** 0 — Foundation and contract freeze
 
 ---
 
@@ -41,8 +41,16 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 
 | Track | Owner | Branch | Current task | State |
 |---|---|---|---|---|
-| A — Solver | Rohan | `track/solver` | — | ⬜ |
+<<<<<<< HEAD:docs/CURRENT-PROGRESS.md
+| A — Solver | Rohan | `track/solver` | Phase 2 Track A complete; ready for Phase 3 scoring | ✅ |
+<<<<<<< HEAD:docs/CURRENT-PROGRESS.md
+| B — Data & Backend | Nidhi | `track/data` | — | ⬜ |
+=======
+=======
+| A — Solver | Rohan | `track/solver` | Phase 2 Track A: §5.1 correctness fixes + independent validator (uncommitted on `track/solver`); then Phase 3 scoring | 🟡 |
+>>>>>>> e9faa80 (remaining stuff):CURRENT-PROGRESS.md
 | B — Data & Backend | Nidhi | `track/data` (now merged) | faculty/room seed data — pending faculty name-mapping input | 🟡 |
+>>>>>>> 7f6d59e (feat(solver): implement backtracking search with forward checking, MRV, and lab block support):CURRENT-PROGRESS.md
 | C — Frontend & Validation | Dhruv | `track/frontend` | — | ⬜ |
 
 ---
@@ -122,6 +130,22 @@ and it renders in the browser.
 - [x] Pinned blocks as fixed occupancy
 - [x] Capacity check against cohort size
 - [ ] *(S)* Iterative backtracking if depth becomes a problem
+- [ ] `solver/validate.py` — independent hard-constraint checker; every solved result is held to it _(on `track/solver`, uncommitted)_
+- [ ] Fix: `fixed_slot` intersected with availability, never substituted for it (proposal §5.1 obs. 1) _(on `track/solver`, uncommitted)_
+- [ ] Fix: every period of a multi-period placement checked, in a LabBlock or not (proposal §5.1 obs. 2) _(on `track/solver`, uncommitted)_
+- [ ] `Room.room_type` (class | lab | unknown) replaces `Room.is_lab` inside the solver _(on `track/solver`, uncommitted)_
+
+**Placeholders in Track A — NOT features, do not tick anything on their account:**
+- ⚠️ **Infeasibility diagnosis is NOT implemented.** `BacktrackResult.to_solution_dict` emits
+  `_placeholder_diagnosis`: one `unplaced.<id>` / `UNSATISFIABLE_DOMAIN` entry per unplaced
+  session and "Relax constraints on session X". That is not a minimal unsatisfiable subset.
+  The shape is kept for `solution_v1`; `solution.v2` moves it to `method = search_exhaustion`.
+  The real thing is `solver/mus.py`, Phase 4 — still unticked below.
+- ⚠️ **Quality score is NOT computed.** A solved result defaults to
+  `quality = {"score": 100.0, "breakdown": []}` — a hardcoded stand-in, not a perfect score.
+  `solution_v1` requires a numeric `score` on every solved result and cannot say "not
+  evaluated", so it stays (with a loud code comment) until `solver/scoring.py` lands in Phase 3
+  and `solution.v2` change 6 adds per-rule status.
 
 ### Track C — Frontend
 - [ ] Drag-and-drop with provisional drop and revert-on-reject
@@ -176,7 +200,7 @@ percentage reproduced.
 - [ ] *(S)* "No qualified faculty free" path offers repair
 
 ### Diagnosis and repair
-- [ ] `mus.py` — deletion-based extraction; timeout counts as infeasible
+- [ ] `mus.py` — deletion-based extraction; timeout counts as infeasible _(today's infeasible output is a placeholder — see Phase 2 Track A)_
 - [ ] Core translated to named faculty / rooms / cohorts
 - [ ] Smallest relaxation suggested
 - [ ] `repair.py` — freeze-and-expand with BFS ring expansion
@@ -192,7 +216,7 @@ diagnosis.
 
 ## Phase 5 checklist — Validation and benchmarking
 
-- [ ] Hypothesis property test: no timetable ever contains a conflict
+- [ ] Hypothesis property test: no timetable ever contains a conflict _(a seeded-random property test now exists: `solver/tests/test_property_solved_is_valid.py`, 400 instances, seed 20261003 — backtracking only; Welsh-Powell fails it, see Blockers)_
 - [ ] Edge cases: empty, single session, no replacement, infeasible, over-subscribed division
 - [ ] Benchmark: runtime vs instance size (plot)
 - [ ] Benchmark: **displaced sessions, repair vs regeneration** (mean + CI)
@@ -223,8 +247,27 @@ diagnosis.
 
 _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
+- `2026-10-03` · Dhruv · **Track A correctness fixes (uncommitted on `track/solver`).** Two bugs from
+  `docs/contract-change-proposal-v2.md` §5.1 let `backtracking.py` report "solved" for a timetable
+  breaking a hard constraint. (1) `available_slots_for` returned `[fixed_slot]` before checking
+  availability — a fixed slot is now intersected with faculty availability and pinned
+  faculty/cohort occupancy; empty ⇒ infeasible. (2) Only a placement's first period was checked —
+  one helper, `_occupied_slots`, now gives every period a placement occupies, and availability,
+  neighbour clashes, room occupancy and forward checking all use it; `duration_periods > 1` outside
+  a LabBlock is enforced too. Found while testing: a LabBlock member with a `fixed_slot` was
+  pre-placed alone, the block was then skipped, and its other members were never placed — yet the
+  result said "solved". Fixed sessions are no longer pre-placed (their domain is just the fixed
+  start). New `solver/validate.py` re-checks every hard constraint independently of the search;
+  every solved result in the solver tests and a 400-instance seeded property test go through it.
+  On that generator the pre-fix solver returned 333 "solved" results, 287 of them invalid.
+  · _no PR yet_
+- `2026-09-26` · Rohan · Phase 1 & 2 Track A (Solver) landed: `solver/graph.py` (conflict graph with cohort containment), `solver/colouring.py` (Welsh-Powell greedy with availability & pinned awareness), and `solver/backtracking.py` (backtracking search with forward checking, trail-based exact undo, MRV ordering, LabBlock joint placement, sub-room awareness, capacity checks, and `solution_v1` serialisation). 159 tests green across full suite.
+<<<<<<< HEAD:docs/CURRENT-PROGRESS.md
+=======
 - `2026-09-25` · NRD · Reference seed landed — 20 rooms + 8 sub-rooms, 33 faculty, 25 subjects, 64 qualifications, and the partial 8-of-33 initials map, from the three spreadsheets in `data/real/`. Two schema corrections came with it (migrations 0002, 0003 — see Decision log). 210 tests passing. · _no PR (direct to `track/data-seed`)_
 - `2026-09-25` · NRD · `db/models.py` + Alembic migration 0001 landed; 148 tests passing; `Cohort` polymorphism, institute-level `Room`, and a remote-DB safety guard in `migrations/env.py`. · _no PR (direct to `track/data`)_
+- `2026-09-26` · Rohan · Phase 1 & 2 Track A (Solver) landed: `solver/graph.py` (conflict graph with cohort containment), `solver/colouring.py` (Welsh-Powell greedy with availability & pinned awareness), and `solver/backtracking.py` (backtracking search with forward checking, trail-based exact undo, MRV ordering, LabBlock joint placement, sub-room awareness, capacity checks, and `solution_v1` serialisation). 159 tests green across full suite.
+>>>>>>> 7f6d59e (feat(solver): implement backtracking search with forward checking, MRV, and lab block support):CURRENT-PROGRESS.md
 - `2026-09-24` · NRD · Phase 0 contracts + `solver/slots.py` + CI workflow landed — three frozen JSON Schemas with example payloads, 41 schema-validation tests, the wall-clock slot module with 48 tests, GitHub Actions running `ruff check` + `pytest`, and a root `pyproject.toml`. 89 tests green. · _no PR (direct to `main`, pre-branch-protection)_
 
 ---
@@ -233,7 +276,8 @@ _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
 | Since | Blocker | Blocks whom | Needs |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-10-03 | `solver/colouring.py` (Welsh-Powell) produces invalid timetables: it checks only a multi-period session's start slot, colours lab-block members independently, and places `fixed_slot` sessions with no availability, pinned or neighbour check. On the 400-instance property generator, 338 of 394 complete colourings violate a hard constraint. Recorded as a strict `xfail`; the validator was not loosened. Single-period, block-free, fixed-free instances are clean (400/400). | Anyone using greedy output as a timetable or as a backtracking seed; Phase 5 greedy-vs-backtracking benchmark | Rohan — fix or scope Welsh-Powell to the single-period subclass |
+| 2026-10-03 | `edge_list_v1` rooms carry `is_lab: boolean`, not the three-valued `room_type`; `unknown` cannot reach the solver | Exact `RECLASSIFY_ROOM` semantics for rooms 605/609 | All three — decide whether a future edge-list revision carries `room_type` (contract change) |
 
 ---
 
@@ -243,6 +287,9 @@ Record any choice a future session might otherwise re-litigate.
 
 | Date | Decision | Rationale | Decided by |
 |---|---|---|---|
+| 2026-10-03 | A `fixed_slot` restricts where a session may **start**; it is intersected with availability (faculty, cohort, pinned) and every other constraint, never substituted for it. Empty intersection ⇒ infeasible. | A frozen session in a slot its teacher cannot attend is not a timetable. Substituting meant `FIXED_SLOT` vs `FACULTY_UNAVAILABLE` could never surface in a MUS. | Dhruv (Track A fix; Rohan to confirm) |
+| 2026-10-03 | Solver `Room` carries `room_type` (class \| lab \| unknown); only `lab` hosts a `requires_lab` session. Under `edge_list_v1` it is derived from `is_lab` (true→lab, false→class). Rooms 605/609 (`unsure` → `unknown`) stay unusable for labs until reclassified — exactly the `RECLASSIFY_ROOM` relaxation. | `unknown` must never be silently treated as a lab. The edge list is frozen, so the three-valued type lives inside the solver only. | Dhruv (Rohan to confirm) |
+| 2026-10-03 | `solver/validate.py` imports nothing from `backtracking`/`colouring`/`graph` (only `solver.slots`). Malformed payloads (unknown/missing/duplicate session, bad room ids, start on a break) **raise**; constraint breaks are **reported** with the proposal §5.1 kinds. A multi-period session whose chain runs off the day is `LAB_CONTIGUITY` even outside a LabBlock. | A bug in the search's helpers must not be able to hide in its checker. The reconciled kind enum has no separate "duration" kind. | Dhruv |
 | 2026-09-25 | The ingestion contract's `room_type` (class/lab/unknown) and the DB's `room_used_as` (5 raw values) are deliberately **different layers**, not a bug to unify | `room_type` is the coarse signal the solver needs; `used_as` is raw fidelity for the anomaly reporter. Phase 2's `ingestion/rooms.py` must map used_as → room_type explicitly: class→class, lab→lab, 'as a lab'→lab, 'Mtech lab'→lab, unsure→unknown. | Nidhi |
 | — | Scope: CE only, ODD + EVEN, schema designed for CSE/EXTC | Real data is CE; multi-dept later must not need a migration | All three |
 | — | Ingestion parser is a real phase, not hand-curated data | Demonstrable feature: ingests the department's actual files | All three |
