@@ -88,9 +88,16 @@ Source files live in `data/real/` (committed, read-only):
 | Teaching slots | 8 per day × 5 days = **40 per week** |
 | Division-groups | SE A–D, TE A–D, BE A&B, M.Tech = **10** (EVEN), 9 (ODD) |
 | Batches | 4 per division (A/B/C/D) → **~40** |
-| Faculty | **32**, workloads 5–18 hours |
+| Faculty | **41**, workloads 5–18 hours — see note below |
 | Rooms | **20 physical**, ~35 usable once sub-rooms are counted |
 | Sessions | roughly 180–250 per week per semester |
+
+**Faculty count.** 41 is the seeded total from the class-timetable initials legends *plus*
+`Faculty___Subjects.xlsx`, not from the spreadsheet alone. The spreadsheet lists 32. Dr. Deepak
+Nair is in neither spreadsheet but appears in the EVEN SE legends. Eight more people appear only
+in legends (Asma Tambe, Aman Yadav, Govind Gaundalkar, Shaily Goyal, Vipul Kushwah, Suman M.,
+Suhas Kakade, Sonali Dudhihalli). Those eight are seeded with `source = legend` and no
+qualifications. The earlier figure of 32 was the spreadsheet count.
 
 ### 3.2 Slot grid
 

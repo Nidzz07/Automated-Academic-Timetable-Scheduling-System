@@ -1,0 +1,38 @@
+{
+  "schema_version": "solution.v1",
+  "status": "infeasible",
+  "diagnosis": {
+    "minimal_conflicting_set": [
+      {
+        "constraint_id": "labblk-0001.contiguity",
+        "kind": "LAB_CONTIGUITY",
+        "description": "The SE-Comp B lab block runs four batch labs at once - OS with AGN, DAA with NR, CCN with JS and PCS with DN - and all four must share one slot of two consecutive teaching periods.",
+        "entity_ids": ["labblk-0001", "sess-0001", "sess-0002", "sess-0003", "sess-0004"]
+      },
+      {
+        "kind": "ROOM_CAPACITY",
+        "constraint_id": "lab-rooms.monday-10.00",
+        "description": "Only three lab rooms are free on Monday from 10.00 to 12.00: 702-A, 702-B and 603-2. Room 608 is held by the TE-Comp A CCN lab, and room 606 is still recorded as 'unsure' in the room inventory so it cannot be allocated.",
+        "entity_ids": ["room-702-a", "room-702-b", "room-603-2", "room-608", "room-606"]
+      },
+      {
+        "constraint_id": "pin-0003",
+        "kind": "PINNED_BLOCK",
+        "description": "The DAA lab exam for SE Comp, invigilated by NR, holds Friday 14.15 to 16.15 - the only other slot of the week with four free lab rooms.",
+        "entity_ids": ["pin-0003", "fac-nr", "coh-div-se-b"]
+      }
+    ],
+    "suggested_relaxation": {
+      "constraint_id": "lab-rooms.monday-10.00",
+      "description": "Classify room 606 as a lab. The room inventory records its usage as 'unsure', so it is currently withheld from lab allocation; confirming it gives SE-Comp B a fourth lab room on Monday at 10.00 and all four batch labs then fit."
+    }
+  },
+  "metadata": {
+    "algorithm": "backtracking(forward-checking, mrv) + mus-extraction(deletion-based)",
+    "runtime_ms": 1284.5,
+    "sessions_total": 8,
+    "sessions_assigned": 5,
+    "slots_used": null,
+    "backtracks": 9417
+  }
+}

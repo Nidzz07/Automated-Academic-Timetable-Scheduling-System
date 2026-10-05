@@ -1,0 +1,419 @@
+{
+  "schema_version": "ingestion.v1",
+  "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+  "semester": {
+    "code": "EVEN",
+    "academic_year": "2025-26",
+    "term": "Even Semester 2025-26"
+  },
+  "departments": [
+    { "id": "dept-ce", "code": "CE", "name": "Computer Engineering" },
+    { "id": "dept-cse", "code": "CSE", "name": "Computer Science and Engineering" }
+  ],
+  "programmes": [
+    { "id": "prog-ce-btech", "department_id": "dept-ce", "code": "BTECH", "name": "B.Tech Computer Engineering" },
+    { "id": "prog-ce-mtech", "department_id": "dept-ce", "code": "MTECH", "name": "M.Tech Computer Engineering" }
+  ],
+  "divisions": [
+    { "id": "div-se-comp-b", "programme_id": "prog-ce-btech", "semester_number": 4, "label": "SE-Comp B", "strength": 72 },
+    { "id": "div-se-comp-c", "programme_id": "prog-ce-btech", "semester_number": 4, "label": "SE-Comp C", "strength": 70 },
+    { "id": "div-se-comp-d", "programme_id": "prog-ce-btech", "semester_number": 4, "label": "SE-Comp D", "strength": 70 },
+    { "id": "div-mtech-comp", "programme_id": "prog-ce-mtech", "semester_number": 2, "label": "M.Tech Comp", "strength": null }
+  ],
+  "batches": [
+    { "id": "batch-se-b-a", "division_id": "div-se-comp-b", "label": "A", "strength": 18 },
+    { "id": "batch-se-b-b", "division_id": "div-se-comp-b", "label": "B", "strength": 18 },
+    { "id": "batch-se-b-c", "division_id": "div-se-comp-b", "label": "C", "strength": 18 },
+    { "id": "batch-se-b-d", "division_id": "div-se-comp-b", "label": "D", "strength": 18 },
+    { "id": "batch-se-c-a", "division_id": "div-se-comp-c", "label": "A", "strength": 18 },
+    { "id": "batch-se-c-b", "division_id": "div-se-comp-c", "label": "B", "strength": 18 },
+    { "id": "batch-se-c-c", "division_id": "div-se-comp-c", "label": "C", "strength": 17 },
+    { "id": "batch-se-c-d", "division_id": "div-se-comp-c", "label": "D", "strength": 17 },
+    { "id": "batch-se-d-a", "division_id": "div-se-comp-d", "label": "A", "strength": 18 },
+    { "id": "batch-se-d-b", "division_id": "div-se-comp-d", "label": "B", "strength": 18 },
+    { "id": "batch-se-d-c", "division_id": "div-se-comp-d", "label": "C", "strength": 17 },
+    { "id": "batch-se-d-d", "division_id": "div-se-comp-d", "label": "D", "strength": 17 }
+  ],
+  "rooms": [
+    {
+      "id": "room-002",
+      "code": "002",
+      "capacity": 80,
+      "room_type": "class",
+      "separation": null,
+      "sub_rooms": []
+    },
+    {
+      "id": "room-508",
+      "code": "508",
+      "capacity": 160,
+      "room_type": "class",
+      "separation": null,
+      "sub_rooms": []
+    },
+    {
+      "id": "room-509-cse",
+      "code": "509 new CSE",
+      "capacity": 120,
+      "room_type": "lab",
+      "separation": null,
+      "sub_rooms": []
+    },
+    {
+      "id": "room-507-class",
+      "code": "507",
+      "capacity": 160,
+      "room_type": "class",
+      "separation": null,
+      "sub_rooms": []
+    },
+    {
+      "id": "room-507-lab",
+      "code": "507",
+      "capacity": 20,
+      "room_type": "lab",
+      "separation": null,
+      "sub_rooms": []
+    },
+    {
+      "id": "room-603",
+      "code": "603",
+      "capacity": 60,
+      "room_type": "lab",
+      "separation": "20-20-20",
+      "sub_rooms": [
+        { "id": "sub-603-1", "code": "603-1", "capacity": 20 },
+        { "id": "sub-603-2", "code": "603-2", "capacity": 20 },
+        { "id": "sub-603-3", "code": "603-3", "capacity": 20 }
+      ]
+    },
+    {
+      "id": "room-605",
+      "code": "605",
+      "capacity": 20,
+      "room_type": "unknown",
+      "separation": null,
+      "sub_rooms": []
+    },
+    {
+      "id": "room-606",
+      "code": "606",
+      "capacity": 40,
+      "room_type": "lab",
+      "separation": "20-20",
+      "sub_rooms": [
+        { "id": "sub-606-1", "code": "606-1", "capacity": 20 },
+        { "id": "sub-606-2", "code": "606-2", "capacity": 20 }
+      ]
+    },
+    {
+      "id": "room-608",
+      "code": "608",
+      "capacity": 20,
+      "room_type": "lab",
+      "separation": null,
+      "sub_rooms": []
+    },
+    {
+      "id": "room-609",
+      "code": "609",
+      "capacity": 20,
+      "room_type": "unknown",
+      "separation": null,
+      "sub_rooms": []
+    },
+    {
+      "id": "room-702",
+      "code": "702",
+      "capacity": 60,
+      "room_type": "lab",
+      "separation": "20-20-20",
+      "sub_rooms": [
+        { "id": "sub-702-a", "code": "702-A", "capacity": 20 },
+        { "id": "sub-702-b", "code": "702-B", "capacity": 20 },
+        { "id": "sub-702-c", "code": "702-C", "capacity": 20 }
+      ]
+    }
+  ],
+  "faculty": [
+    {
+      "id": "fac-agn",
+      "department_id": "dept-ce",
+      "full_name": "A. G. Nikam",
+      "initials": "AGN",
+      "theory_hours": 6,
+      "practical_hours": 8,
+      "total_hours": 14
+    },
+    {
+      "id": "fac-nr",
+      "department_id": "dept-ce",
+      "full_name": "N. Raut",
+      "initials": "NR",
+      "theory_hours": 4,
+      "practical_hours": 12,
+      "total_hours": 16
+    },
+    {
+      "id": "fac-js",
+      "department_id": "dept-ce",
+      "full_name": "J. Shinde",
+      "initials": "JS",
+      "theory_hours": 4,
+      "practical_hours": 8,
+      "total_hours": 12
+    },
+    {
+      "id": "fac-dn",
+      "department_id": "dept-ce",
+      "full_name": "D. Naik",
+      "initials": "DN",
+      "theory_hours": 2,
+      "practical_hours": 8,
+      "total_hours": 10
+    },
+    {
+      "id": "fac-kkd",
+      "department_id": "dept-ce",
+      "full_name": "K. K. Deshpande",
+      "initials": "KKD",
+      "theory_hours": 8,
+      "practical_hours": 4,
+      "total_hours": 12
+    },
+    {
+      "id": "fac-pbb",
+      "department_id": "dept-ce",
+      "full_name": "P. B. Bhosale",
+      "initials": "PBB",
+      "theory_hours": null,
+      "practical_hours": null,
+      "total_hours": null
+    }
+  ],
+  "subjects": [
+    { "id": "subj-os", "department_id": "dept-ce", "code": "OS", "name": "Operating Systems", "session_type": "both" },
+    { "id": "subj-daa", "department_id": "dept-ce", "code": "DAA", "name": "Design and Analysis of Algorithms", "session_type": "both" },
+    { "id": "subj-ccn", "department_id": "dept-ce", "code": "CCN", "name": "Computer Communication Networks", "session_type": "both" },
+    { "id": "subj-pcs", "department_id": "dept-ce", "code": "PCS", "name": "Professional Communication Skills", "session_type": "lab" },
+    { "id": "subj-et", "department_id": "dept-ce", "code": "ET", "name": "Emerging Technologies", "session_type": "both" }
+  ],
+  "qualifications": [
+    { "faculty_id": "fac-agn", "subject_id": "subj-os", "source": "observed" },
+    { "faculty_id": "fac-agn", "subject_id": "subj-et", "source": "observed" },
+    { "faculty_id": "fac-nr", "subject_id": "subj-daa", "source": "observed" },
+    { "faculty_id": "fac-js", "subject_id": "subj-ccn", "source": "observed" },
+    { "faculty_id": "fac-dn", "subject_id": "subj-pcs", "source": "observed" },
+    { "faculty_id": "fac-kkd", "subject_id": "subj-os", "source": "observed" },
+    { "faculty_id": "fac-kkd", "subject_id": "subj-daa", "source": "declared" }
+  ],
+  "cohorts": [
+    {
+      "id": "coh-div-se-b",
+      "cohort_type": "division",
+      "label": "SE-Comp B",
+      "member_batch_ids": ["batch-se-b-a", "batch-se-b-b", "batch-se-b-c", "batch-se-b-d"]
+    },
+    {
+      "id": "coh-div-se-c",
+      "cohort_type": "division",
+      "label": "SE-Comp C",
+      "member_batch_ids": ["batch-se-c-a", "batch-se-c-b", "batch-se-c-c", "batch-se-c-d"]
+    },
+    { "id": "coh-batch-se-b-a", "cohort_type": "batch", "label": "SE-Comp B / A", "member_batch_ids": ["batch-se-b-a"] },
+    { "id": "coh-batch-se-b-b", "cohort_type": "batch", "label": "SE-Comp B / B", "member_batch_ids": ["batch-se-b-b"] },
+    { "id": "coh-batch-se-b-c", "cohort_type": "batch", "label": "SE-Comp B / C", "member_batch_ids": ["batch-se-b-c"] },
+    { "id": "coh-batch-se-b-d", "cohort_type": "batch", "label": "SE-Comp B / D", "member_batch_ids": ["batch-se-b-d"] },
+    {
+      "id": "coh-comb-se-cd",
+      "cohort_type": "combined",
+      "label": "SE C & D",
+      "member_batch_ids": [
+        "batch-se-c-a", "batch-se-c-b", "batch-se-c-c", "batch-se-c-d",
+        "batch-se-d-a", "batch-se-d-b", "batch-se-d-c", "batch-se-d-d"
+      ]
+    },
+    {
+      "id": "coh-elec-pe-i-d",
+      "cohort_type": "elective",
+      "label": "PE-I-D",
+      "member_batch_ids": ["batch-se-c-c", "batch-se-d-a"]
+    }
+  ],
+  "observed_sessions": [
+    {
+      "id": "obs-0001",
+      "subject_id": "subj-os",
+      "faculty_id": "fac-agn",
+      "cohort_id": "coh-batch-se-b-a",
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-a",
+      "day": 0,
+      "period": 1,
+      "duration_periods": 2,
+      "session_type": "lab",
+      "source_cell": "OS / A / AGN / 702-A"
+    },
+    {
+      "id": "obs-0002",
+      "subject_id": "subj-daa",
+      "faculty_id": "fac-nr",
+      "cohort_id": "coh-batch-se-b-b",
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-2",
+      "day": 0,
+      "period": 1,
+      "duration_periods": 2,
+      "session_type": "lab",
+      "source_cell": "DAA / B / NR / 603-2"
+    },
+    {
+      "id": "obs-0003",
+      "subject_id": "subj-ccn",
+      "faculty_id": "fac-js",
+      "cohort_id": "coh-batch-se-b-c",
+      "room_id": "room-606",
+      "sub_room_id": null,
+      "day": 0,
+      "period": 1,
+      "duration_periods": 2,
+      "session_type": "lab",
+      "source_cell": "CCN / C / JS / 606-4"
+    },
+    {
+      "id": "obs-0004",
+      "subject_id": "subj-pcs",
+      "faculty_id": "fac-dn",
+      "cohort_id": "coh-batch-se-b-d",
+      "room_id": "room-608",
+      "sub_room_id": null,
+      "day": 0,
+      "period": 1,
+      "duration_periods": 2,
+      "session_type": "lab",
+      "source_cell": "PCS / D / DN / 608"
+    },
+    {
+      "id": "obs-0005",
+      "subject_id": "subj-daa",
+      "faculty_id": "fac-nr",
+      "cohort_id": "coh-comb-se-cd",
+      "room_id": "room-508",
+      "sub_room_id": null,
+      "day": 1,
+      "period": 0,
+      "duration_periods": 1,
+      "session_type": "theory",
+      "source_cell": "DAA / SE C & D / 508"
+    },
+    {
+      "id": "obs-0006",
+      "subject_id": "subj-os",
+      "faculty_id": "fac-kkd",
+      "cohort_id": "coh-div-se-c",
+      "room_id": "room-002",
+      "sub_room_id": null,
+      "day": 2,
+      "period": 3,
+      "duration_periods": 1,
+      "session_type": "theory",
+      "source_cell": "OS / KKD / 002"
+    },
+    {
+      "id": "obs-0007",
+      "subject_id": "subj-et",
+      "faculty_id": null,
+      "cohort_id": "coh-div-se-b",
+      "room_id": "room-509-cse",
+      "sub_room_id": null,
+      "day": 3,
+      "period": 1,
+      "duration_periods": 2,
+      "session_type": "lab",
+      "source_cell": "ET Lab /DDA /509 (10.00 -12.00)"
+    }
+  ],
+  "lab_blocks": [
+    {
+      "id": "labblk-0001",
+      "division_id": "div-se-comp-b",
+      "day": 0,
+      "start_period": 1,
+      "duration_periods": 2,
+      "parallel_session_ids": ["obs-0001", "obs-0002", "obs-0003", "obs-0004"]
+    }
+  ],
+  "pinned_blocks": [
+    {
+      "id": "pin-0001",
+      "label": "MDM -I THEORY",
+      "cohort_id": "coh-div-se-b",
+      "day": 3,
+      "period": 4,
+      "duration_periods": 1,
+      "kind": "mdm"
+    },
+    {
+      "id": "pin-0002",
+      "label": "HSS II",
+      "cohort_id": "coh-div-se-c",
+      "day": 2,
+      "period": 6,
+      "duration_periods": 1,
+      "kind": "hss"
+    },
+    {
+      "id": "pin-0003",
+      "label": "DAA LAB EXAM ESE SE COMP NR",
+      "cohort_id": "coh-div-se-b",
+      "day": 4,
+      "period": 5,
+      "duration_periods": 2,
+      "kind": "exam"
+    }
+  ],
+  "anomalies": [
+    {
+      "severity": "error",
+      "code": "DUPLICATE_ROOM",
+      "message": "Room 507 is listed twice in classrooms.xlsx: capacity 160 used as 'class', and capacity 20 used as 'a lab'. Both rows were kept as separate rooms; the department must confirm which is correct.",
+      "source_file": "classrooms.xlsx",
+      "source_cell": "507"
+    },
+    {
+      "severity": "warning",
+      "code": "UNKNOWN_ROOM_USAGE",
+      "message": "Rooms 605 and 609 declare 'used as' = 'unsure'. Both were recorded with room_type 'unknown' and are excluded from lab allocation until classified.",
+      "source_file": "classrooms.xlsx",
+      "source_cell": "unsure"
+    },
+    {
+      "severity": "warning",
+      "code": "SUBROOM_EXCEEDS_SEPARATION",
+      "message": "Cell references sub-room 606-4, but room 606 declares separation '20-20' - only 606-1 and 606-2 exist. The session was attached to the whole of room 606 and its sub-room left unset.",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "source_cell": "CCN / C / JS / 606-4"
+    },
+    {
+      "severity": "error",
+      "code": "UNRESOLVED_FACULTY_INITIALS",
+      "message": "Initials 'DDA' in the SE-Comp B ET lab cell match no faculty member in Faculty_Individual_timetable_Even_2025-26.docx. The session was kept with no faculty attached.",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "source_cell": "ET Lab /DDA /509 (10.00 -12.00)"
+    },
+    {
+      "severity": "error",
+      "code": "UNPARSEABLE_CELL",
+      "message": "Cell for SE-Comp D, Thursday 15.15, does not match any known field order for a class timetable and was skipped.",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "source_cell": "HMI /A /412 / DRK (CSE+CE) / 603-7"
+    },
+    {
+      "severity": "warning",
+      "code": "MISSING_WORKLOAD",
+      "message": "Faculty page for P. B. Bhosale (PBB) carries no 'T + P =' workload line. Theory, practical and total hours were left unset, so PBB is excluded from load-balanced substitution ordering.",
+      "source_file": "Faculty_Individual_timetable_Even_2025-26.docx",
+      "source_cell": null
+    }
+  ]
+}
