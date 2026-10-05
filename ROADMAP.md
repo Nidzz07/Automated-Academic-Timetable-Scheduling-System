@@ -1,7 +1,7 @@
 # ROADMAP.md — Chronos Implementation Plan
 
-> **Read `CONTEXT.md` first.** This file says what to build and in what order.
-> `CURRENT-PROGRESS.md` says what is already done — check it before starting work.
+> **Read `docs/CONTEXT.md` first.** This file says what to build and in what order.
+> `docs/CURRENT-PROGRESS.md` says what is already done — check it before starting work.
 
 **Duration:** 12 weeks · **Team:** 3, working in parallel · **Scope:** CE department, ODD + EVEN
 semesters, designed (not built) for CSE and EXTC.
@@ -48,7 +48,7 @@ exist, because they are what let the three tracks proceed without blocking each 
 ### Tasks
 
 - **[M]** Reconcile the existing repo against `CONTEXT.md` §7 — create missing directories, move
-  anything misplaced. (Driven by `CURRENT-STATUS.md`.)
+  anything misplaced. (Driven by `docs/CURRENT-STATUS.md`.)
 - **[M]** Agree branch discipline and write it into `CONTEXT.md` (see *Parallel work protocol*).
 - **[M]** GitHub Actions: on every push, run `pytest`, `ruff`, `tsc --noEmit`, `vitest`.
 - **[M]** Write `contracts/ingestion_v1.schema.json` — the canonical JSON a parser emits.
@@ -327,7 +327,7 @@ Three agentic tools on one repository **will** collide unless the boundaries are
 | `ingestion/`, `db/`, `backend/` | Nidhi | read, open issues |
 | `frontend/`, `bench/`, `tests/e2e/` | Dhruv | read, open issues |
 | `contracts/` | **all three jointly** | change only by agreement |
-| `CONTEXT.md`, `ROADMAP.md` | all three | edit freely, but commit alone |
+| `docs/CONTEXT.md`, `ROADMAP.md` | all three | edit freely, but commit alone |
 
 If your task needs a change in someone else's directory, do not make it. Open an issue, or agree
 the contract change first.
@@ -346,9 +346,10 @@ the contract change first.
 
 - Give the agent **one track's directory** as its working scope. Do not let it "fix" a failing
   test in another track's directory — that is where silent contract drift starts.
-- Start every session by having the agent read `CONTEXT.md`, `ROADMAP.md` and
-  `CURRENT-PROGRESS.md`.
-- End every session by having it update `CURRENT-PROGRESS.md`.
+- Start every session by having the agent read `docs/CONTEXT.md`, `ROADMAP.md` and
+  `docs/CURRENT-PROGRESS.md`. Agent rules live in the root `CLAUDE.md`, which Claude Code loads
+  automatically.
+- End every session by having it update `docs/CURRENT-PROGRESS.md`.
 - Never let two agents run against the same working tree at once. Separate clones or
   `git worktree` if you must work simultaneously on one machine.
 
