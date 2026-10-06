@@ -1,7 +1,7 @@
 # Contract change proposal — v2
 
-**Status:** PROPOSAL — nothing in `contracts/` has changed. No schema moves until all three
-members sign the decision table at the end.
+**Status:** signed off 2026-10-06, all three members agreed rows 1-7 with no changes, nothing in
+`contracts/` has changed yet, the v2 schema files are next.
 **Branch:** `contracts/v2-proposal` (off `main` @ `f1e5b1b`)
 **Date:** 2026-10-03 (revision 3: change 6 added — quality-block evaluation status and rule-set version)
 **Author:** Nidhi (drafted with Claude Code)
@@ -856,10 +856,10 @@ before `solver/scoring.py` implements it. Nidhi and Dhruv may add a comment but 
 
 | # | Change | Proposed version | Nidhi | Rohan | Dhruv |
 |---|---|---|---|---|---|
-| 1 | `ingestion`: division-scoped faculty initials with flagged ambiguity | `ingestion.v2` | | | |
-| 2 | `solution`: expose partial placement inside `diagnosis`; forbid `quality`/`displaced` when infeasible | `solution.v2` | | | |
-| 3 | `solution`: structured action + verification status object on `suggested_relaxation` (requires row 5) | `solution.v2` | | | |
-| 4 | `solution`: structured `slots` on `minimal_conflicting_set` entries | `solution.v2` | | | |
-| 5 | `solution`: close `kind` to an enum of enforced constraints; retire `UNSATISFIABLE_DOMAIN` / `INFEASIBLE_INSTANCE`; add `diagnosis.method` (`mus` \| `search_exhaustion`) — **prerequisite of row 3** | `solution.v2` | | | |
-| 6 | `solution`: quality breakdown gets per-rule `status` (`evaluated` \| `not_evaluated`, `reason` required when not evaluated); score over evaluated rules only, with `not_evaluated_rule_ids`; `rules_version` | `solution.v2` | | | |
-| 7 | **ROADMAP clarification (NOT a schema change):** `FAC_LOAD_IMBALANCE` measures each faculty member's T/P-weighted load spread across the days of the week; cross-faculty total load moves to Phase 4 substitution ordering | none (no contract version change) | n/a | | n/a |
+| 1 | `ingestion`: division-scoped faculty initials with flagged ambiguity | `ingestion.v2` | Agree 2026-10-06 | Agree 2026-10-06 | Agree 2026-10-06 |
+| 2 | `solution`: expose partial placement inside `diagnosis`; forbid `quality`/`displaced` when infeasible | `solution.v2` | Agree 2026-10-06 | Agree 2026-10-06 | Agree 2026-10-06 |
+| 3 | `solution`: structured action + verification status object on `suggested_relaxation` (requires row 5) | `solution.v2` | Agree 2026-10-06 | Agree 2026-10-06 | Agree 2026-10-06 |
+| 4 | `solution`: structured `slots` on `minimal_conflicting_set` entries | `solution.v2` | Agree 2026-10-06 | Agree 2026-10-06 | Agree 2026-10-06 |
+| 5 | `solution`: close `kind` to an enum of enforced constraints; retire `UNSATISFIABLE_DOMAIN` / `INFEASIBLE_INSTANCE`; add `diagnosis.method` (`mus` \| `search_exhaustion`) — **prerequisite of row 3** | `solution.v2` | Agree 2026-10-06 | Agree 2026-10-06 | Agree 2026-10-06 |
+| 6 | `solution`: quality breakdown gets per-rule `status` (`evaluated` \| `not_evaluated`, `reason` required when not evaluated); score over evaluated rules only, with `not_evaluated_rule_ids`; `rules_version` | `solution.v2` | Agree 2026-10-06 | Agree 2026-10-06 | Agree 2026-10-06 |
+| 7 | **ROADMAP clarification (NOT a schema change):** `FAC_LOAD_IMBALANCE` measures each faculty member's T/P-weighted load spread across the days of the week; cross-faculty total load moves to Phase 4 substitution ordering | none (no contract version change) | n/a | Agree 2026-10-06 | n/a |
