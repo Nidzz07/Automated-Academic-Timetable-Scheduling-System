@@ -52,8 +52,8 @@ fix them** (`docs/CONTEXT.md` §3.5).
 
 `contracts/` holds `ingestion_v1`, `edge_list_v1` and `solution_v1` JSON Schemas plus examples.
 Changing one needs all three members' agreement and an entry in the Contract change log in
-`docs/CURRENT-PROGRESS.md`. `docs/contract-change-proposal-v2.md` is an **unsigned proposal** —
-no `*_v2` schema exists, so do not emit or consume v2 shapes.
+`docs/CURRENT-PROGRESS.md`. `docs/contract-change-proposal-v2.md` was **signed off on 2026-10-06**,
+but the v2 schema files do not exist yet — so do not emit or consume v2 shapes until they do.
 
 ## Ownership — stay inside your track's directory
 

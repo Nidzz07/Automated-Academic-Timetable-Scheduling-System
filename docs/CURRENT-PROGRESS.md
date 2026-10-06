@@ -239,6 +239,13 @@ diagnosis.
 
 _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
+- `2026-10-06` · Nidhi, Rohan, Dhruv · **Contract v2 proposal signed off by all three tracks.**
+  `docs/contract-change-proposal-v2.md` §11 rows 1–7 all marked Agree with no changes (row 7, the
+  `FAC_LOAD_IMBALANCE` ROADMAP clarification, needed only Rohan's Agree). **No schema files have
+  been created yet** — `contracts/` still holds only the v1 schemas, so nothing has entered the
+  Contract change log. Next: the v2 schema files (`ingestion_v2.schema.json`,
+  `solution_v2.schema.json`, `relaxation_actions_v2.json`, with examples and contract tests, per
+  proposal §7), then the per-track implementation. · _no PR yet (branch `contracts/v2-signoff`)_
 - `2026-10-03` · Dhruv · **Track A correctness fixes (merged to `main` in PR #15 on 2026-10-06).** Two bugs from
   `docs/contract-change-proposal-v2.md` §5.1 let `backtracking.py` report "solved" for a timetable
   breaking a hard constraint. (1) `available_slots_for` returned `[fixed_slot]` before checking
