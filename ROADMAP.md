@@ -91,6 +91,8 @@ First week of genuine parallel work. Each track builds against fixtures, not aga
   `data/reference/faculty_initials.yaml` with any unresolved initials listed explicitly.
 - **[S]** Synthetic instance generator, parameterised by divisions/batches/subjects, for
   benchmarking at scales the real data does not reach.
+  _Note (2026-10-06): the generator now lives in `solver/benchmarks/synthetic.py` (stdlib only,
+  maintained by Track A); Track B reuses it rather than building another._
 - **[S]** Constraint-derivation SQL producing conflict edges directly from the hierarchy.
 
 ### Track A — Solver (Rohan)

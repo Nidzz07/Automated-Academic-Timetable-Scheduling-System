@@ -15,9 +15,9 @@ For every instance:
   and the solution payload conforms to ``solution_v1``;
 * Welsh-Powell: whenever it places every session, ``validate_slot_placements``
   (the room-free half of the validator - colouring assigns no rooms) must
-  hold.  It does not on the full generator - see
-  ``test_welsh_powell_full_generator_known_violations`` - and the validator is
-  NOT loosened to hide that.
+  hold, on the full generator and on the single-period subclass.  Before the
+  2026-10-06 fix it did not (338 of 394 complete colourings were invalid); the
+  validator was never loosened.
 
 Each generated edge list is itself validated against ``edge_list_v1``.
 """
@@ -32,7 +32,6 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
-import pytest
 from jsonschema import Draft202012Validator
 
 from solver.backtracking import backtrack_solve
@@ -275,18 +274,12 @@ def test_welsh_powell_valid_on_its_supported_subclass() -> None:
     assert failing == [], (kinds, failing[:10])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "KNOWN, REPORTED, NOT FIXED HERE: solver/colouring.py checks only the start "
-        "slot of a multi-period session, ignores lab blocks (members are coloured "
-        "independently), and places fixed_slot sessions unconditionally - no "
-        "availability, pinned or neighbour check. The validator is not loosened; "
-        "strict=True makes this fail loudly once colouring is fixed."
-    ),
-)
-def test_welsh_powell_full_generator_known_violations() -> None:
+def test_welsh_powell_full_generator_is_valid() -> None:
+    """Formerly a strict xfail: colouring checked only start slots, coloured
+    lab-block members independently and placed fixed slots unconditionally."""
     complete, kinds, failing = _colouring_violations()
+    # A colouring that placed nothing would pass vacuously; require real coverage.
+    assert complete >= N_INSTANCES // 5, complete
     assert failing == [], (
         f"{len(failing)} of {complete} complete colourings violate: {dict(kinds)}"
     )
