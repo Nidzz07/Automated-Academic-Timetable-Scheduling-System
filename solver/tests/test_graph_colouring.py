@@ -11,6 +11,7 @@ reference implementation.  ``solver/`` itself never imports ``networkx``
 
 from __future__ import annotations
 
+import random
 from typing import Any
 
 import networkx as nx
@@ -18,7 +19,10 @@ import pytest
 
 from solver.colouring import welsh_powell
 from solver.graph import ConflictGraph, build_conflict_graph
-from solver.slots import SlotId, all_slots
+from solver.slots import TEACHING_PERIODS, SlotId, all_slots
+from solver.tests.test_property_solved_is_valid import N_INSTANCES as PROPERTY_N
+from solver.tests.test_property_solved_is_valid import SEED as PROPERTY_SEED
+from solver.tests.test_property_solved_is_valid import generate_instance
 
 # ======================================================================
 # Helpers — tiny payload builders
@@ -78,6 +82,7 @@ def _minimal_payload(
     edges: list[dict[str, str]] | None = None,
     faculty_availability: list[dict[str, Any]] | None = None,
     pinned_occupancy: list[dict[str, Any]] | None = None,
+    lab_blocks: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build a complete edge-list payload from just sessions and edges."""
     # Auto-generate faculty_availability entries for every distinct faculty_id.
@@ -97,7 +102,7 @@ def _minimal_payload(
         "edges": edges or [],
         "rooms": [],
         "faculty_availability": faculty_availability,
-        "lab_blocks": [],
+        "lab_blocks": lab_blocks or [],
         "pinned_occupancy": pinned_occupancy or [],
     }
 
@@ -815,3 +820,334 @@ class TestSolverPurity:
             code = fh.read()
         assert "import networkx" not in code
         assert "from networkx" not in code
+
+
+# ======================================================================
+# Regressions — the Welsh-Powell hard-constraint bugs (fixed 2026-10-06)
+# ======================================================================
+#
+# Before the fix, colouring compared start slots only, coloured lab-block
+# members independently and placed fixed slots unconditionally. On the
+# property generator 338 of 394 complete colourings were invalid. One test
+# per root cause, plus the smallest failing generator instance itself.
+
+
+def _lab_block(block_id: str, session_ids: list[str], duration: int = 2) -> dict[str, Any]:
+    return {
+        "id": block_id,
+        "session_ids": session_ids,
+        "duration_periods": duration,
+        "must_be_contiguous": True,
+    }
+
+
+def _occupied(start: SlotId, duration: int) -> set[SlotId]:
+    """Test-local occupancy: *duration* consecutive teaching periods from *start*."""
+    position = TEACHING_PERIODS.index(start.period)
+    periods = TEACHING_PERIODS[position : position + duration]
+    assert len(periods) == duration, "chain runs off the day"
+    return {SlotId(start.day, p) for p in periods}
+
+
+class TestWelshPowellRegressions:
+    # ---- root cause 1: fixed slots were placed with no checks ---------------
+
+    def test_property_instance_303_fixed_slot_in_unavailable_slot(self) -> None:
+        """The smallest failing generator instance: ``random.Random(SEED + 303)``.
+
+        t0 is fixed to Monday 14.15 (period 6), a slot its faculty member f2 is
+        declared unavailable in. The old colouring placed it there anyway.
+        """
+        edge_list = generate_instance(random.Random(PROPERTY_SEED + 303))
+        t0 = next(s for s in edge_list["sessions"] if s["id"] == "t0")
+        assert t0["fixed_slot"] == {"day": 0, "period": 6}
+        f2 = next(
+            e for e in edge_list["faculty_availability"] if e["faculty_id"] == t0["faculty_id"]
+        )
+        assert {"day": 0, "period": 6} in f2["unavailable_slots"]
+
+        assignment, unplaced = welsh_powell(build_conflict_graph(edge_list))
+        assert "t0" in unplaced
+        assert "t0" not in assignment
+
+    def test_fixed_slot_in_unavailable_slot_is_unplaced(self) -> None:
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[_session("s1", faculty="fac-x", fixed_slot={"day": 1, "period": 3})],
+                faculty_availability=[_faculty_avail("fac-x", [{"day": 1, "period": 3}])],
+            )
+        )
+        assignment, unplaced = welsh_powell(g)
+        assert assignment == {}
+        assert unplaced == ["s1"]
+
+    def test_fixed_slot_in_pinned_cohort_slot_is_unplaced(self) -> None:
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[_session("s1", cohort="coh-a", fixed_slot={"day": 0, "period": 0})],
+                pinned_occupancy=[
+                    {"day": 0, "period": 0, "faculty_ids": [], "room_ids": [],
+                     "cohort_ids": ["coh-a"]},
+                ],
+            )
+        )
+        assert welsh_powell(g) == ({}, ["s1"])
+
+    def test_two_fixed_sessions_with_an_edge_do_not_share_a_slot(self) -> None:
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[
+                    _session("a", faculty="fac-x", fixed_slot={"day": 0, "period": 0}),
+                    _session("b", faculty="fac-x", fixed_slot={"day": 0, "period": 0}),
+                ],
+                edges=[_edge("a", "b", "FACULTY")],
+            )
+        )
+        assignment, unplaced = welsh_powell(g)
+        assert assignment == {"a": SlotId(0, 0)}
+        assert unplaced == ["b"]
+
+    def test_fixed_double_clashing_with_fixed_single_in_its_second_period(self) -> None:
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[
+                    _session("d", cohort="coh-a", duration=2,
+                             fixed_slot={"day": 0, "period": 0}),
+                    _session("s", faculty="fac-2", cohort="coh-a",
+                             fixed_slot={"day": 0, "period": 1}),
+                ],
+                edges=[_edge("d", "s", "COHORT")],
+            )
+        )
+        assignment, unplaced = welsh_powell(g)
+        assert len(assignment) == 1
+        assert len(unplaced) == 1
+
+    # ---- root cause 2: only the start slot was compared ----------------------
+
+    def test_neighbour_is_kept_out_of_a_doubles_second_period(self) -> None:
+        """d (degree 2) is coloured first at Monday 09.00 and occupies periods 0
+        and 1. The old code then put t at Monday 10.00 - d's second period."""
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[
+                    _session("d", faculty="f-d", cohort="coh-a", duration=2),
+                    _session("t", faculty="f-t", cohort="coh-a"),
+                    _session("u", faculty="f-d", cohort="coh-u"),
+                ],
+                edges=[_edge("d", "t", "COHORT"), _edge("d", "u", "FACULTY")],
+            )
+        )
+        assignment, unplaced = welsh_powell(g)
+        assert unplaced == []
+        assert assignment["d"] == SlotId(0, 0)
+        assert assignment["t"] == SlotId(0, 3)
+        assert assignment["u"] == SlotId(0, 3)
+
+    def test_second_period_must_be_open_for_the_faculty(self) -> None:
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[_session("d", faculty="fac-x", duration=2)],
+                faculty_availability=[_faculty_avail("fac-x", [{"day": 0, "period": 1}])],
+            )
+        )
+        assignment, _ = welsh_powell(g)
+        # Monday 09.00 and 10.00 both need Monday 10.00; 11.15 is the first start.
+        assert assignment["d"] == SlotId(0, 3)
+
+    def test_double_may_span_the_short_break(self) -> None:
+        """Positive check, not a regression: teaching-order adjacency still lets
+        a double run across 11.00-11.15."""
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[_session("d", faculty="fac-x", duration=2)],
+                faculty_availability=[_faculty_avail("fac-x", [{"day": 0, "period": 0}])],
+            )
+        )
+        assignment, _ = welsh_powell(g)
+        assert assignment["d"] == SlotId(0, 1)  # periods 1 and 3, across 11.00-11.15
+
+    # ---- root cause 3: a chain could run off the end of the day -------------
+
+    def test_double_fixed_to_the_last_period_is_unplaced(self) -> None:
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[_session("d", duration=2, fixed_slot={"day": 2, "period": 9})],
+            )
+        )
+        assert welsh_powell(g) == ({}, ["d"])
+
+    def test_double_never_starts_in_the_last_period(self) -> None:
+        """Every slot but Friday 17.15 is blocked; a double cannot start there."""
+        blocked = [
+            {"day": s.day, "period": s.period} for s in all_slots() if s != SlotId(4, 9)
+        ]
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[_session("d", faculty="fac-x", duration=2)],
+                faculty_availability=[_faculty_avail("fac-x", blocked)],
+            )
+        )
+        assert welsh_powell(g) == ({}, ["d"])
+
+    # ---- root cause 4: lab-block members were coloured independently --------
+
+    def test_lab_block_members_share_one_start(self) -> None:
+        sessions = [
+            _session(f"b{i}", faculty=f"f{i}", cohort=f"batch-{i}", duration=2,
+                     session_type="lab", requires_lab=True)
+            for i in range(3)
+        ]
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=sessions,
+                # f1 cannot do Monday 10.00, which a Monday 09.00 start needs.
+                faculty_availability=[
+                    _faculty_avail("f0"),
+                    _faculty_avail("f1", [{"day": 0, "period": 1}]),
+                    _faculty_avail("f2"),
+                ],
+                lab_blocks=[_lab_block("blk", ["b0", "b1", "b2"])],
+            )
+        )
+        assignment, unplaced = welsh_powell(g)
+        assert unplaced == []
+        assert assignment == {"b0": SlotId(0, 3), "b1": SlotId(0, 3), "b2": SlotId(0, 3)}
+
+    def test_edge_inside_a_lab_block_makes_it_unplaceable(self) -> None:
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[
+                    _session("a", faculty="f1", cohort="ca", duration=2),
+                    _session("b", faculty="f1", cohort="cb", duration=2),
+                ],
+                edges=[_edge("a", "b", "FACULTY")],
+                lab_blocks=[_lab_block("blk", ["a", "b"])],
+            )
+        )
+        assignment, unplaced = welsh_powell(g)
+        assert assignment == {}
+        assert sorted(unplaced) == ["a", "b"]
+
+    def test_fixed_member_pins_the_whole_block(self) -> None:
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[
+                    _session("a", faculty="f1", cohort="ca", duration=2,
+                             fixed_slot={"day": 3, "period": 6}),
+                    _session("b", faculty="f2", cohort="cb", duration=2),
+                ],
+                lab_blocks=[_lab_block("blk", ["a", "b"])],
+            )
+        )
+        assignment, unplaced = welsh_powell(g)
+        assert unplaced == []
+        assert assignment == {"a": SlotId(3, 6), "b": SlotId(3, 6)}
+
+    def test_block_neighbour_avoids_every_period_of_the_block(self) -> None:
+        """The block (degree 3) goes first at Monday 09.00, occupying periods 0
+        and 1. The division lecture t must then skip Monday 10.00 as well."""
+        g = build_conflict_graph(
+            _minimal_payload(
+                sessions=[
+                    _session("a", faculty="f1", cohort="div-a1", duration=2),
+                    _session("b", faculty="f2", cohort="div-a2", duration=2),
+                    _session("t", faculty="f3", cohort="div"),
+                    _session("x", faculty="f1", cohort="cx"),
+                    _session("y", faculty="f2", cohort="cy"),
+                ],
+                edges=[
+                    _edge("a", "t", "COHORT"),
+                    _edge("b", "t", "COHORT"),
+                    _edge("a", "x", "FACULTY"),
+                    _edge("b", "y", "FACULTY"),
+                ],
+                lab_blocks=[_lab_block("blk", ["a", "b"])],
+            )
+        )
+        assignment, unplaced = welsh_powell(g)
+        assert unplaced == []
+        assert assignment["a"] == assignment["b"] == SlotId(0, 0)
+        block = _occupied(assignment["a"], 2)
+        for sid in ("t", "x", "y"):
+            assert assignment[sid] not in block, sid
+        assert assignment["t"] == SlotId(0, 3)
+
+    # ---- malformed block declarations are rejected by the graph builder -----
+
+    @pytest.mark.parametrize(
+        ("blocks", "message"),
+        [
+            ([_lab_block("blk", ["missing"])], "unknown session"),
+            ([_lab_block("b1", ["a"]), _lab_block("b2", ["a"])], "more than one lab block"),
+            ([_lab_block("blk", ["a"], duration=3)], "duration"),
+            ([_lab_block("blk", ["a"]), _lab_block("blk", [])], "duplicate lab block id"),
+        ],
+    )
+    def test_malformed_lab_blocks_raise(
+        self, blocks: list[dict[str, Any]], message: str
+    ) -> None:
+        payload = _minimal_payload(sessions=[_session("a", duration=2)], lab_blocks=blocks)
+        with pytest.raises(ValueError, match=message):
+            build_conflict_graph(payload)
+
+
+# ======================================================================
+# networkx cross-check of the fixed colouring — tests only
+# ======================================================================
+
+
+class TestNetworkxCrossCheckAfterFix:
+    def test_matches_networkx_largest_first_exactly_when_unconstrained(self) -> None:
+        """Where the comparison is valid - single-period sessions, no
+        availability limits, no pins, no blocks, no fixed slots, at most 40
+        colours - Welsh-Powell *is* networkx's ``largest_first`` greedy with
+        colour k = ``all_slots()[k]``.  Nodes are inserted in id order, so
+        networkx's stable sort breaks degree ties by id, as ours does."""
+        slots = all_slots()
+        for seed in range(40):
+            nxg = nx.gnp_random_graph(30, 0.25, seed=seed)
+            ids = [f"v{i:02d}" for i in range(30)]
+            sessions = [_session(sid, faculty=f"f-{sid}", cohort=f"c-{sid}") for sid in ids]
+            edges = [_edge(ids[u], ids[v], "COHORT") for u, v in nxg.edges()]
+            graph = build_conflict_graph(_minimal_payload(sessions=sessions, edges=edges))
+
+            reference = nx.Graph()
+            reference.add_nodes_from(ids)
+            reference.add_edges_from((e["u"], e["v"]) for e in edges)
+            expected = nx.coloring.greedy_color(reference, strategy="largest_first")
+
+            assignment, unplaced = welsh_powell(graph)
+            assert unplaced == []
+            assert assignment == {sid: slots[colour] for sid, colour in expected.items()}, seed
+
+    def test_property_colourings_are_proper_on_the_time_expanded_graph(self) -> None:
+        """Every complete colouring of the full property generator is a proper
+        colouring once each session is expanded into the periods it occupies.
+
+        A colour-count bound against networkx is *not* asserted here: with
+        availability, pins, fixed slots and blocks the domains differ from
+        plain graph colouring, so networkx's greedy count is not a valid bound.
+        """
+        checked = 0
+        for index in range(PROPERTY_N):
+            edge_list = generate_instance(random.Random(PROPERTY_SEED + index))
+            graph = build_conflict_graph(edge_list)
+            assignment, unplaced = welsh_powell(graph)
+            if unplaced:
+                continue
+            checked += 1
+            expanded = nx.Graph()
+            occupancy = {
+                sid: _occupied(start, graph.sessions[sid].duration_periods)
+                for sid, start in assignment.items()
+            }
+            for edge in graph.edges:
+                for su in occupancy[edge.u]:
+                    for sv in occupancy[edge.v]:
+                        expanded.add_edge((edge.u, su), (edge.v, sv))
+            for (_, slot_u), (_, slot_v) in expanded.edges():
+                assert slot_u != slot_v, index
+            for members in graph.lab_blocks.values():
+                assert len({assignment[sid] for sid in members}) <= 1, index
+        assert checked >= PROPERTY_N // 5

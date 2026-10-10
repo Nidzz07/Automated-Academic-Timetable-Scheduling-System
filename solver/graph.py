@@ -29,7 +29,13 @@ What the graph builder *does* verify:
 
 * every edge endpoint is a known session id,
 * a session's ``faculty_id`` has a matching ``faculty_availability`` entry,
-* there are no duplicate session ids.
+* there are no duplicate session ids,
+* every lab-block member is a known session, sits in only one block, and has
+  the block's ``duration_periods``.
+
+Lab blocks are kept on the graph (:attr:`ConflictGraph.lab_blocks`) because
+they are a constraint *between vertices* - all members take one colour - and
+every colouring of this graph, greedy or backtracking, has to honour them.
 
 Stdlib only — ``solver/`` must never import ``networkx`` or any non-stdlib
 package (CONTEXT.md rule 3).
@@ -100,6 +106,9 @@ class ConflictGraph:
     adjacency: dict[str, dict[str, set[str]]] = field(default_factory=dict)
     faculty_unavailable: dict[str, set[SlotId]] = field(default_factory=dict)
     pinned_slots: dict[SlotId, dict[str, set[str]]] = field(default_factory=dict)
+    #: block id -> member session ids, in payload order. All members of a block
+    #: must start in the same slot (``lab_blocks`` in the edge-list contract).
+    lab_blocks: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
     # ------------------------------------------------------------------
     # Query helpers — O(1), as ROADMAP Track A [S] asks for
@@ -220,6 +229,29 @@ def build_conflict_graph(payload: dict[str, Any]) -> ConflictGraph:
         bucket["faculty_ids"].update(pin["faculty_ids"])
         bucket["room_ids"].update(pin["room_ids"])
         bucket["cohort_ids"].update(pin["cohort_ids"])
+
+    # ---- lab blocks ----------------------------------------------------
+    # Same checks, and the same messages, as solver.backtracking._new_state:
+    # an ambiguous block declaration is a malformed instance, not a constraint.
+
+    block_of: dict[str, str] = {}
+    for raw in payload["lab_blocks"]:
+        bid = raw["id"]
+        if bid in graph.lab_blocks:
+            raise ValueError(f"duplicate lab block id: {bid!r}")
+        members = tuple(raw["session_ids"])
+        for sid in members:
+            if sid not in graph.sessions:
+                raise ValueError(f"lab block {bid!r} names unknown session {sid!r}")
+            if sid in block_of:
+                raise ValueError(f"session {sid!r} is in more than one lab block")
+            if graph.sessions[sid].duration_periods != raw["duration_periods"]:
+                raise ValueError(
+                    f"lab block {bid!r} has duration {raw['duration_periods']} but "
+                    f"member {sid!r} has duration {graph.sessions[sid].duration_periods}"
+                )
+            block_of[sid] = bid
+        graph.lab_blocks[bid] = members
 
     return graph
 
