@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MockChronosApiClient } from '../chronosApi';
-import { isSolvedSolution, isInfeasibleSolution } from '@/types/solution';
-import solvedFixture from '@/fixtures/solution_v1.solved.example.json';
-import infeasibleFixture from '@/fixtures/solution_v1.infeasible.example.json';
+import { isSolvedSolution, isInfeasibleSolution } from '@/adapters/solution';
+import solvedFixture from '@contracts/examples/solution_v1.solved.example.json';
+import infeasibleFixture from '@contracts/examples/solution_v1.infeasible.example.json';
 
 describe('MockChronosApiClient', () => {
   let client: MockChronosApiClient;

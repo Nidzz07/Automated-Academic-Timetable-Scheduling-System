@@ -1,17 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import solvedFixture from '@/fixtures/solution_v1.solved.example.json';
-import infeasibleFixture from '@/fixtures/solution_v1.infeasible.example.json';
+import solvedFixture from '@contracts/examples/solution_v1.solved.example.json';
+import infeasibleFixture from '@contracts/examples/solution_v1.infeasible.example.json';
 import {
   SolvedSolution,
   InfeasibleSolution,
   SolutionContract,
   isSolvedSolution,
   isInfeasibleSolution,
-} from '../solution';
+  parseSolution,
+} from '@/adapters/solution';
+
+function parseSolved(raw: unknown): SolvedSolution {
+  const sol = parseSolution(raw);
+  if (!isSolvedSolution(sol)) throw new Error('expected a solved payload');
+  return sol;
+}
+
+function parseInfeasible(raw: unknown): InfeasibleSolution {
+  const sol = parseSolution(raw);
+  if (!isInfeasibleSolution(sol)) throw new Error('expected an infeasible payload');
+  return sol;
+}
 
 describe('Solution Contract v1 TypeScript Typing', () => {
   it('correctly types and validates the solved fixture', () => {
-    const solved: SolvedSolution = solvedFixture as unknown as SolvedSolution;
+    const solved: SolvedSolution = parseSolved(solvedFixture);
     expect(isSolvedSolution(solved)).toBe(true);
     expect(isInfeasibleSolution(solved)).toBe(false);
 
@@ -26,7 +39,7 @@ describe('Solution Contract v1 TypeScript Typing', () => {
   });
 
   it('correctly types and validates the infeasible fixture', () => {
-    const infeasible: InfeasibleSolution = infeasibleFixture as unknown as InfeasibleSolution;
+    const infeasible: InfeasibleSolution = parseInfeasible(infeasibleFixture);
     expect(isInfeasibleSolution(infeasible)).toBe(true);
     expect(isSolvedSolution(infeasible)).toBe(false);
 
@@ -40,8 +53,8 @@ describe('Solution Contract v1 TypeScript Typing', () => {
 
   it('enforces discriminated union exhaustiveness', () => {
     const payloads: SolutionContract[] = [
-      solvedFixture as unknown as SolvedSolution,
-      infeasibleFixture as unknown as InfeasibleSolution,
+      parseSolved(solvedFixture),
+      parseInfeasible(infeasibleFixture),
     ];
 
     payloads.forEach((payload) => {

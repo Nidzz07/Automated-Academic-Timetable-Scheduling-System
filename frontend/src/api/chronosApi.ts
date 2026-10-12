@@ -1,7 +1,8 @@
 /**
  * Chronos API Client interface and mock implementation.
  * 
- * Typed directly against contracts/solution_v1.schema.json.
+ * Every solution payload is validated against contracts/solution_v1.schema.json
+ * (see contractValidation.ts); an invalid one throws ContractValidationError.
  * Swapping in the real backend later is a change of implementation,
  * not of call sites.
  */
@@ -13,10 +14,13 @@ import {
   DayIndex,
   PeriodIndex,
   SessionAssignment,
-} from '@/types/solution';
-import solvedFixture from '@/fixtures/solution_v1.solved.example.json';
-import infeasibleFixture from '@/fixtures/solution_v1.infeasible.example.json';
-import { metadataStore, wallClockToTeachingPeriod } from '@/lib/timetableData';
+  parseSolution,
+  isSolvedSolution,
+  isInfeasibleSolution,
+} from '@/adapters/solution';
+import solvedFixture from '@contracts/examples/solution_v1.solved.example.json';
+import infeasibleFixture from '@contracts/examples/solution_v1.infeasible.example.json';
+import { metadataStore, wallClockToTeachingPeriod } from '@/adapters/timetable';
 
 export interface MoveSessionRequest {
   sessionId: string;
@@ -126,13 +130,17 @@ export class MockChronosApiClient implements ChronosApiClient {
   }
 
   public async getSolvedSolution(): Promise<SolvedSolution> {
-    // Return deep clone of solved fixture
-    return JSON.parse(JSON.stringify(solvedFixture)) as SolvedSolution;
+    // Deep clone of the solved example, validated like any API payload
+    const solution = parseSolution(JSON.parse(JSON.stringify(solvedFixture)));
+    if (!isSolvedSolution(solution)) throw new Error('Expected a solved solution_v1 payload');
+    return solution;
   }
 
   public async getInfeasibleSolution(): Promise<InfeasibleSolution> {
-    // Return deep clone of infeasible fixture
-    return JSON.parse(JSON.stringify(infeasibleFixture)) as InfeasibleSolution;
+    // Deep clone of the infeasible example, validated like any API payload
+    const solution = parseSolution(JSON.parse(JSON.stringify(infeasibleFixture)));
+    if (!isInfeasibleSolution(solution)) throw new Error('Expected an infeasible solution_v1 payload');
+    return solution;
   }
 
   /**
@@ -271,6 +279,7 @@ export class MockChronosApiClient implements ChronosApiClient {
       },
     };
 
+    parseSolution(updatedSolution);
     return {
       success: true,
       solution: updatedSolution,

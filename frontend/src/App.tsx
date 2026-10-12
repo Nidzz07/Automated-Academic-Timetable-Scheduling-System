@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { TimetableGrid } from '@/components/timetable/TimetableGrid';
 import { TimetableHeader } from '@/components/timetable/TimetableHeader';
 import { QualityScoreCard } from '@/components/timetable/QualityScoreCard';
@@ -7,6 +8,8 @@ import { RoleSelector } from '@/components/timetable/RoleSelector';
 import { FacultyWorkloadCard } from '@/components/timetable/FacultyWorkloadCard';
 import { InfeasibilityDiagnosisPanel } from '@/components/timetable/InfeasibilityDiagnosisPanel';
 import { RejectionAlert } from '@/components/timetable/RejectionAlert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { UserRole, ROLE_CAPABILITIES } from '@/types/roles';
 import {
   SolutionContract,
@@ -14,18 +17,81 @@ import {
   isSolvedSolution,
   isInfeasibleSolution,
   DayIndex,
-} from '@/types/solution';
+} from '@/adapters/solution';
 import {
   buildEnrichedSessions,
-  getSolvedSolutionFixture,
   EnrichedSession,
   DAYS,
   TEACHING_PERIODS,
   wallClockToTeachingPeriod,
-} from '@/lib/timetableData';
+} from '@/adapters/timetable';
 import { chronosApiClient } from '@/api/chronosApi';
+import { ContractValidationError } from '@/api/contractValidation';
+import { timetableQueryKey, useMoveSessionMutation, useTimetableQuery } from '@/api/queries';
 
 export function App() {
+  // One client per App mount, so every render (and every test) starts with an empty cache.
+  const [queryClient] = useState(() => new QueryClient());
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TimetableApp />
+    </QueryClientProvider>
+  );
+}
+
+function TimetableApp() {
+  const timetable = useTimetableQuery();
+
+  if (timetable.isPending || timetable.isError) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          {timetable.isPending ? (
+            <Card role="status" data-testid="timetable-loading">
+              <CardHeader>
+                <CardTitle>Loading timetable…</CardTitle>
+              </CardHeader>
+            </Card>
+          ) : (
+            <TimetableLoadError error={timetable.error} onRetry={() => timetable.refetch()} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return <TimetableWorkspace solution={timetable.data} />;
+}
+
+function TimetableLoadError({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  const isContractError = error instanceof ContractValidationError;
+  return (
+    <Card role="alert" data-testid="timetable-error" className="border-destructive/50">
+      <CardHeader>
+        <CardTitle>
+          {isContractError
+            ? `Timetable payload failed ${error.contract}_v1 contract validation`
+            : 'Could not load the timetable'}
+        </CardTitle>
+        {!isContractError && <CardDescription>{error.message}</CardDescription>}
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isContractError && (
+          <ul className="list-disc pl-5 font-mono text-xs" data-testid="contract-issues">
+            {error.issues.map((issue) => (
+              <li key={issue}>{issue}</li>
+            ))}
+          </ul>
+        )}
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          Retry
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('administrator');
   const [selectedFaculty, setSelectedFaculty] = useState<string>('AGN');
@@ -35,8 +101,10 @@ export function App() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
-  // Solution contract state: can be SolvedSolution or InfeasibleSolution
-  const [solution, setSolution] = useState<SolutionContract>(() => getSolvedSolutionFixture());
+  // The query cache holds the solution; optimistic moves and reverts write straight into it
+  const queryClient = useQueryClient();
+  const moveSession = useMoveSessionMutation();
+  const setSolution = (next: SolutionContract) => queryClient.setQueryData(timetableQueryKey, next);
 
   // Track provisional session ID during optimistic move validation
   const [provisionalSessionId, setProvisionalSessionId] = useState<string | null>(null);
@@ -55,15 +123,8 @@ export function App() {
 
   // Helper to toggle between solved timetable and infeasible diagnosis
   const handleToggleOutcome = async () => {
-    if (isSolvedSolution(solution)) {
-      chronosApiClient.setSimulatedOutcome('infeasible');
-      const inf = await chronosApiClient.getInfeasibleSolution();
-      setSolution(inf);
-    } else {
-      chronosApiClient.setSimulatedOutcome('solved');
-      const sol = await chronosApiClient.getSolvedSolution();
-      setSolution(sol);
-    }
+    chronosApiClient.setSimulatedOutcome(isSolvedSolution(solution) ? 'infeasible' : 'solved');
+    await queryClient.refetchQueries({ queryKey: timetableQueryKey });
     setRejectionAlert(null);
   };
 
@@ -189,15 +250,15 @@ export function App() {
 
     // 3. CALL MOCK API CLIENT
     try {
-      const result = await chronosApiClient.moveSession(
-        {
+      const result = await moveSession.mutateAsync({
+        request: {
           sessionId,
           targetDay,
           targetTeachingPeriod,
           targetWallClockPeriod,
         },
-        priorSolution
-      );
+        current: priorSolution,
+      });
 
       if (result.success && result.solution) {
         // Backend confirmed move
@@ -218,13 +279,13 @@ export function App() {
           originalSlotLabel,
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Revert cleanly on exception
       setSolution(priorSolution);
       setSelectedSessionId(priorSelectedSessionId);
       setProvisionalSessionId(null);
       setRejectionAlert({
-        reason: err?.message || 'Network exception during move validation.',
+        reason: (err instanceof Error && err.message) || 'Network exception during move validation.',
         sessionId,
         originalSlotLabel,
       });
@@ -310,8 +371,18 @@ export function App() {
           />
         )}
 
+        {/* Empty state: solver returned a solved timetable with no sessions */}
+        {isSolvedSolution(solution) && solution.assignment.length === 0 && (
+          <Card data-testid="timetable-empty">
+            <CardHeader>
+              <CardTitle>No sessions scheduled</CardTitle>
+              <CardDescription>The solver returned a timetable with no session placements.</CardDescription>
+            </CardHeader>
+          </Card>
+        )}
+
         {/* Main 8-Period x 5-Day Weekly Grid (Rendered when solved) */}
-        {isSolvedSolution(solution) && roleFilteredSolution && (
+        {isSolvedSolution(solution) && solution.assignment.length > 0 && roleFilteredSolution && (
           <main className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
               <span className="font-semibold text-foreground">

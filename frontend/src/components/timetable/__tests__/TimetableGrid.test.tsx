@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { TimetableGrid } from '../TimetableGrid';
-import { getSolvedSolutionFixture } from '@/lib/timetableData';
-import { SolvedSolution, InfeasibleSolution, SolutionContract } from '@/types/solution';
+import { getSolvedSolutionFixture } from '@/adapters/timetable';
+import { SolvedSolution, InfeasibleSolution, SolutionContract } from '@/adapters/solution';
 
 describe('TimetableGrid Component', () => {
   it('renders an 8-period x 5-day week grid from the static fixture', () => {

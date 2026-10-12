@@ -1,5 +1,5 @@
 import React from 'react';
-import { EnrichedSession } from '@/lib/timetableData';
+import { EnrichedSession } from '@/adapters/timetable';
 import { Badge } from '@/components/ui/badge';
 import { Users, DoorOpen, User, BookOpen, Sparkles, GripVertical, Loader2 } from 'lucide-react';
 

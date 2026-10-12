@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { EnrichedSession } from '@/lib/timetableData';
+import { EnrichedSession } from '@/adapters/timetable';
 import { School, BookOpen, Clock, Activity, CheckCircle } from 'lucide-react';
 
 interface FacultyWorkloadCardProps {
