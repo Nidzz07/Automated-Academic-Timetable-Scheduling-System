@@ -8,6 +8,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // contracts/ is the single source of truth for schemas and example payloads
+      '@contracts': path.resolve(__dirname, '../contracts'),
+    },
+  },
+  server: {
+    fs: {
+      allow: [__dirname, path.resolve(__dirname, '../contracts')],
     },
   },
   test: {

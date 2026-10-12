@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { InfeasibilityDiagnosisPanel } from '../InfeasibilityDiagnosisPanel';
-import infeasibleFixture from '@/fixtures/solution_v1.infeasible.example.json';
-import { InfeasibleSolution } from '@/types/solution';
+import infeasibleFixture from '@contracts/examples/solution_v1.infeasible.example.json';
+import { parseSolution, isInfeasibleSolution } from '@/adapters/solution';
 
 describe('Infeasibility Diagnosis Panel', () => {
-  const infeasibleSolution = infeasibleFixture as unknown as InfeasibleSolution;
+  const infeasibleSolution = parseSolution(infeasibleFixture);
+  if (!isInfeasibleSolution(infeasibleSolution)) throw new Error('expected an infeasible payload');
 
   it('renders the infeasible status and solver metadata strip', () => {
     render(<InfeasibilityDiagnosisPanel infeasibleSolution={infeasibleSolution} />);

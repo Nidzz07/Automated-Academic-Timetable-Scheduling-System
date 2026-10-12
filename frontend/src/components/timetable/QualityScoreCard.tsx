@@ -1,5 +1,5 @@
 import React from 'react';
-import { QualityEvaluation, SolutionMetadata } from '@/types/solution';
+import { QualityEvaluation, SolutionMetadata } from '@/adapters/solution';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Cpu, Timer, ShieldCheck, Activity } from 'lucide-react';
