@@ -1,0 +1,60 @@
+{
+  "schema_version": "solution.v2",
+  "status": "solved",
+  "assignment": [
+    { "session_id": "sess-0001", "day": 0, "period": 1, "room_id": "room-702", "sub_room_id": "room-702-a" },
+    { "session_id": "sess-0002", "day": 0, "period": 1, "room_id": "room-702", "sub_room_id": "room-702-b" },
+    { "session_id": "sess-0003", "day": 0, "period": 1, "room_id": "room-603", "sub_room_id": "room-603-2" },
+    { "session_id": "sess-0004", "day": 0, "period": 1, "room_id": "room-608", "sub_room_id": null },
+    { "session_id": "sess-0005", "day": 1, "period": 0, "room_id": "room-508", "sub_room_id": null },
+    { "session_id": "sess-0006", "day": 2, "period": 3, "room_id": "room-002", "sub_room_id": null },
+    { "session_id": "sess-0007", "day": 1, "period": 3, "room_id": "room-508", "sub_room_id": null },
+    { "session_id": "sess-0008", "day": 2, "period": 0, "room_id": "room-002", "sub_room_id": null }
+  ],
+  "quality": {
+    "score": 99.0,
+    "rules_version": "1",
+    "not_evaluated_rule_ids": ["S-LOAD16"],
+    "breakdown": [
+      {
+        "rule_id": "S-GAP",
+        "status": "evaluated",
+        "weight": 2.0,
+        "raw": 0,
+        "penalty": 0.0,
+        "explanation": "No division has an idle teaching period between its first and last session of any day."
+      },
+      {
+        "rule_id": "S-B2B",
+        "status": "evaluated",
+        "weight": 1.0,
+        "raw": 0,
+        "penalty": 0.0,
+        "explanation": "No faculty member teaches in two consecutive teaching periods; the SE-Comp B Monday 10.00-12.00 lab block counts once, not as back-to-back."
+      },
+      {
+        "rule_id": "FAC_LOAD_IMBALANCE",
+        "status": "evaluated",
+        "weight": 0.5,
+        "raw": 2,
+        "penalty": 1.0,
+        "explanation": "AGN teaches 2 h on Monday (the SE-Comp B OS lab) and 1 h on Wednesday (ET); NR teaches 2 h on Monday (the SE-Comp B DAA lab) and 1 h on Tuesday (DAA, SE C & D). JS, DN and KKD teach the same hours on each day they teach."
+      },
+      {
+        "rule_id": "S-LOAD16",
+        "status": "not_evaluated",
+        "weight": 1.0,
+        "reason": "S-LOAD16: this instance holds 8 sessions, not a full department week, so no faculty member's weekly load can be compared with the 16 h target."
+      }
+    ]
+  },
+  "displaced": [],
+  "metadata": {
+    "algorithm": "welsh-powell-greedy + backtracking(forward-checking, mrv)",
+    "runtime_ms": 41.7,
+    "sessions_total": 8,
+    "sessions_assigned": 8,
+    "slots_used": 5,
+    "backtracks": 2
+  }
+}
