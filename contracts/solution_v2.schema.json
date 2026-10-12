@@ -1,0 +1,811 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chronos.spit.ac.in/contracts/solution_v2.schema.json",
+  "title": "Chronos Solution Contract v2",
+  "description": "What the solver returns to the API layer. Exactly one of `assignment` or `diagnosis` is present: a complete timetable with an itemised quality breakdown, or an infeasibility result carrying the minimal conflicting constraint set and the smallest relaxation that restores feasibility. A bare failure is not a legal response. Revision v2 (docs/contract-change-proposal-v2.md changes 2-6, signed 2026-10-06): an infeasible result also carries the deepest partial placement inside `diagnosis`, says how it was diagnosed (`method`), names constraints from a closed `kind` enum with the cells they concern, and gives a typed, verified relaxation; the quality block lists every loaded rule with an evaluation status and the rule-set version. Frozen contract 3 of 3.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "metadata"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Identifier of this contract revision.",
+      "type": "string",
+      "const": "solution.v2"
+    },
+    "status": {
+      "description": "'solved' - every session was placed; 'infeasible' - no valid timetable exists under the given constraints, and a diagnosis explains why.",
+      "type": "string",
+      "enum": [
+        "solved",
+        "infeasible"
+      ]
+    },
+    "assignment": {
+      "description": "The timetable: one placement per session. Present only when status is 'solved'.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/placement"
+      }
+    },
+    "quality": {
+      "description": "Itemised score for the assignment. Present only when status is 'solved'. Rules and weights come from solver/rules/quality_rules.yaml - they are data, so a department can change a weight without a code change (CONTEXT.md section 2, rule 4).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "rules_version",
+        "breakdown",
+        "not_evaluated_rule_ids"
+      ],
+      "properties": {
+        "score": {
+          "description": "Aggregate over EVALUATED rules only. Complete iff not_evaluated_rule_ids is empty. Higher is better.",
+          "type": "number"
+        },
+        "rules_version": {
+          "description": "The `version` declared at the top of solver/rules/quality_rules.yaml for the rule set that produced this score.",
+          "type": "string",
+          "minLength": 1
+        },
+        "not_evaluated_rule_ids": {
+          "description": "rule_ids whose breakdown entry has status not_evaluated. Non-empty means `score` is partial.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "breakdown": {
+          "description": "One entry per rule in the loaded rule set - fired, zero, or not evaluated. Never only the rules that fired.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "rule_id",
+              "status",
+              "weight"
+            ],
+            "properties": {
+              "rule_id": {
+                "description": "Rule identifier as declared in quality_rules.yaml.",
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "evaluated",
+                  "not_evaluated"
+                ]
+              },
+              "weight": {
+                "description": "Weight from the YAML. Known even when the rule could not run.",
+                "type": "number"
+              },
+              "raw": {
+                "description": "The measured quantity before weighting, e.g. a count of violating occurrences.",
+                "type": "number"
+              },
+              "penalty": {
+                "description": "The rule's contribution to the score, normally weight multiplied by raw.",
+                "type": "number"
+              },
+              "explanation": {
+                "description": "Human-readable reason in institutional terms, e.g. 'AGN has 3 consecutive sessions on Monday'. Never a clause index or an internal id.",
+                "type": "string",
+                "minLength": 1
+              },
+              "reason": {
+                "description": "Why the rule could not run, in institutional terms. A rule is not_evaluated only when its required input is absent, never because its result looks odd.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "evaluated"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "raw",
+                    "penalty",
+                    "explanation"
+                  ],
+                  "properties": {
+                    "reason": false
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "not_evaluated"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "reason"
+                  ],
+                  "properties": {
+                    "raw": false,
+                    "penalty": false,
+                    "explanation": false
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "displaced": {
+      "description": "Sessions whose slot changed relative to the timetable being repaired. Empty for a fresh generate; populated by freeze-and-expand rescheduling, where minimising its length is the objective. Present only when status is 'solved'.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "diagnosis": {
+      "description": "Why no valid timetable exists. Present only when status is 'infeasible'.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "minimal_conflicting_set",
+        "partial_placement",
+        "unplaced_session_ids"
+      ],
+      "properties": {
+        "method": {
+          "description": "mus: a minimal unsatisfiable subset was extracted. search_exhaustion: complete search proved no timetable exists, but no explanation was extracted.",
+          "type": "string",
+          "enum": [
+            "mus",
+            "search_exhaustion"
+          ]
+        },
+        "minimal_conflicting_set": {
+          "description": "The minimal unsatisfiable subset: constraints that cannot all hold at once, and from which removing any one restores satisfiability. Present and empty when method is search_exhaustion.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "constraint_id",
+              "kind",
+              "description",
+              "entity_ids",
+              "slots"
+            ],
+            "properties": {
+              "constraint_id": {
+                "description": "Stable identifier for the constraint, so a relaxation can name it.",
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "$ref": "#/$defs/kind"
+              },
+              "description": {
+                "description": "Institutional terms only - named faculty, rooms and cohorts. Never clause indices, vertex numbers or internal ids. This string is shown directly to a timetable coordinator.",
+                "type": "string",
+                "minLength": 1
+              },
+              "entity_ids": {
+                "description": "ids of the faculty, rooms, cohorts and sessions the constraint involves, for the UI to highlight. Ids live here; the description stays human.",
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "slots": {
+                "description": "Every (day, period) cell this constraint is about, on the edge-list wall-clock axis. Empty when the constraint is not slot-specific. Individual cells, not a range: 'Monday 10.00-12.00' is [{day 0, period 1}, {day 0, period 3}], skipping break period 2.",
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/$defs/slot_ref"
+                }
+              }
+            }
+          }
+        },
+        "suggested_relaxation": {
+          "description": "The smallest single change that restores feasibility - the constraint to drop or loosen, stated the way a coordinator would act on it. Required when method is mus, forbidden when method is search_exhaustion.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "constraint_id",
+            "description",
+            "action",
+            "verification"
+          ],
+          "properties": {
+            "constraint_id": {
+              "description": "Identifier of the constraint to relax. Must be one of the constraint_ids in minimal_conflicting_set.",
+              "type": "string",
+              "minLength": 1
+            },
+            "description": {
+              "description": "Institutional terms, e.g. 'Free room 603 at Wednesday 11.15 by moving the TE-Comp A DAA lab to Thursday'.",
+              "type": "string",
+              "minLength": 1
+            },
+            "action": {
+              "description": "The relaxation as a typed change to the solver's input. Legal action_types per constraint kind are listed in contracts/relaxation_actions_v2.json.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "action_type",
+                "params"
+              ],
+              "properties": {
+                "action_type": {
+                  "type": "string",
+                  "enum": [
+                    "UNFIX_SLOT",
+                    "RELAX_FACULTY_AVAILABILITY",
+                    "RELAX_PINNED_BLOCK",
+                    "RECLASSIFY_ROOM",
+                    "MANUAL"
+                  ]
+                },
+                "params": {
+                  "description": "Exact shape fixed per action_type by the allOf below (one branch per action_type)."
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "action_type": {
+                        "const": "UNFIX_SLOT"
+                      }
+                    },
+                    "required": [
+                      "action_type"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "params": {
+                        "$ref": "#/$defs/params_unfix_slot"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "action_type": {
+                        "const": "RELAX_FACULTY_AVAILABILITY"
+                      }
+                    },
+                    "required": [
+                      "action_type"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "params": {
+                        "$ref": "#/$defs/params_relax_faculty_availability"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "action_type": {
+                        "const": "RELAX_PINNED_BLOCK"
+                      }
+                    },
+                    "required": [
+                      "action_type"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "params": {
+                        "$ref": "#/$defs/params_relax_pinned_block"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "action_type": {
+                        "const": "RECLASSIFY_ROOM"
+                      }
+                    },
+                    "required": [
+                      "action_type"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "params": {
+                        "$ref": "#/$defs/params_reclassify_room"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "action_type": {
+                        "const": "MANUAL"
+                      }
+                    },
+                    "required": [
+                      "action_type"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "params": {
+                        "$ref": "#/$defs/params_manual"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "verification": {
+              "description": "Result of re-solving with the action applied, within a configurable time budget. Never a boolean: 'checked and failed' and 'never checked' are different answers.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "status",
+                "runtime_ms"
+              ],
+              "properties": {
+                "status": {
+                  "description": "restored: the re-solve found a complete timetable. still_infeasible: it proved infeasibility again (a second, independent conflict exists). timeout: the budget ran out before either answer - 'could not confirm', never 'fixed'. not_attempted: only for MANUAL actions.",
+                  "type": "string",
+                  "enum": [
+                    "restored",
+                    "still_infeasible",
+                    "timeout",
+                    "not_attempted"
+                  ]
+                },
+                "runtime_ms": {
+                  "description": "Wall-clock time of the verification solve. null iff status = not_attempted.",
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "status": {
+                        "const": "not_attempted"
+                      }
+                    },
+                    "required": [
+                      "status"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "runtime_ms": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "runtime_ms": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "description": "MANUAL cannot be auto-applied, so it alone is never verified.",
+              "if": {
+                "properties": {
+                  "action": {
+                    "properties": {
+                      "action_type": {
+                        "const": "MANUAL"
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "action"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "verification": {
+                    "properties": {
+                      "status": {
+                        "const": "not_attempted"
+                      }
+                    }
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "verification": {
+                    "properties": {
+                      "status": {
+                        "not": {
+                          "const": "not_attempted"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "partial_placement": {
+          "description": "Diagnostic only - NOT a timetable. The deepest consistent partial assignment the search reached before proving infeasibility: the partial with the most sessions placed, ties going to the first reached in the solver's deterministic search order. Never to be published, scored or edited.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/placement"
+          }
+        },
+        "unplaced_session_ids": {
+          "description": "Sessions not in partial_placement. Never empty: an infeasible result with nothing unplaced is a contradiction.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "description": "Exhaustive search proves infeasibility but explains nothing: no conflicting set, no relaxation.",
+          "if": {
+            "properties": {
+              "method": {
+                "const": "search_exhaustion"
+              }
+            },
+            "required": [
+              "method"
+            ]
+          },
+          "then": {
+            "properties": {
+              "minimal_conflicting_set": {
+                "maxItems": 0
+              },
+              "suggested_relaxation": false
+            }
+          }
+        },
+        {
+          "description": "A MUS names at least one constraint and the relaxation for it.",
+          "if": {
+            "properties": {
+              "method": {
+                "const": "mus"
+              }
+            },
+            "required": [
+              "method"
+            ]
+          },
+          "then": {
+            "required": [
+              "suggested_relaxation"
+            ],
+            "properties": {
+              "minimal_conflicting_set": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "metadata": {
+      "description": "Run statistics. Always present, for both outcomes, so an infeasible run is still measurable and reportable in the benchmark harness.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "runtime_ms",
+        "sessions_total",
+        "sessions_assigned",
+        "slots_used",
+        "backtracks"
+      ],
+      "properties": {
+        "algorithm": {
+          "description": "Which algorithm produced this result, e.g. 'welsh-powell-greedy', 'backtracking+forward-checking+mrv', 'freeze-and-expand'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime_ms": {
+          "description": "Wall-clock solve time in milliseconds.",
+          "type": "number",
+          "minimum": 0
+        },
+        "sessions_total": {
+          "description": "Vertices in the instance.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "sessions_assigned": {
+          "description": "Vertices successfully coloured. Equals sessions_total when status is 'solved'.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "slots_used": {
+          "description": "Distinct slots the assignment occupies - the chromatic number achieved. null when no assignment was produced.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "backtracks": {
+          "description": "Backtracking steps taken, for the complexity analysis. null when the algorithm does not backtrack.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "description": "A solved result carries an assignment, its quality breakdown and its displacement list, and carries no diagnosis.",
+      "if": {
+        "properties": {
+          "status": {
+            "const": "solved"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "assignment",
+          "quality",
+          "displaced"
+        ],
+        "properties": {
+          "diagnosis": false
+        }
+      }
+    },
+    {
+      "description": "An infeasible result carries a diagnosis and nothing that could be mistaken for a timetable or its score.",
+      "if": {
+        "properties": {
+          "status": {
+            "const": "infeasible"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "diagnosis"
+        ],
+        "properties": {
+          "assignment": false,
+          "quality": false,
+          "displaced": false
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "description": "Stable opaque string identifier, matching the ids supplied in the edge-list payload.",
+      "type": "string",
+      "minLength": 1
+    },
+    "day": {
+      "description": "Teaching day index, Monday=0 .. Friday=4.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "period": {
+      "description": "Index on the edge-list wall-clock period axis.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "slot_ref": {
+      "description": "One (day, period) cell on the edge-list wall-clock axis.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "day",
+        "period"
+      ],
+      "properties": {
+        "day": {
+          "$ref": "#/$defs/day"
+        },
+        "period": {
+          "$ref": "#/$defs/period"
+        }
+      }
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id",
+        "day",
+        "period",
+        "room_id",
+        "sub_room_id"
+      ],
+      "properties": {
+        "session_id": {
+          "$ref": "#/$defs/id"
+        },
+        "day": {
+          "$ref": "#/$defs/day"
+        },
+        "period": {
+          "description": "Starting period on the edge-list wall-clock grid. A session of duration n occupies this period and the next n-1 periods in teaching order.",
+          "$ref": "#/$defs/period"
+        },
+        "room_id": {
+          "description": "Physical room. When the session sits in a sub-room, this is the parent room and sub_room_id names the partition.",
+          "$ref": "#/$defs/id"
+        },
+        "sub_room_id": {
+          "description": "Sub-room within room_id, e.g. the '702-A' half of room 702. null when the session occupies the whole room.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      },
+      "description": "One session placed in one slot and room."
+    },
+    "kind": {
+      "description": "Constraint class - only constraints the solver enforces (proposal section 5.1). FACULTY_CLASH, COHORT_CLASH, ROOM_CLASH: two sessions joined by a FACULTY / COHORT / ROOM edge may not share a slot. ROOM_OCCUPANCY: one session per room or sub-room per slot; a parent room in use locks its sub-rooms and vice versa. ROOM_CAPACITY: cohort head count <= room capacity. ROOM_TYPE: requires_lab => room.is_lab. FACULTY_UNAVAILABLE: declared or absence-derived blackout slots. PINNED_BLOCK: slots held by immovable blocks. LAB_CONTIGUITY: a lab block's sessions start together and run over a contiguous teaching-order chain. FIXED_SLOT: a pre-assigned session stays in its slot. The search outcomes UNSATISFIABLE_DOMAIN and INFEASIBLE_INSTANCE are not constraints and are not members.",
+      "type": "string",
+      "enum": [
+        "FACULTY_CLASH",
+        "COHORT_CLASH",
+        "ROOM_CLASH",
+        "ROOM_OCCUPANCY",
+        "ROOM_CAPACITY",
+        "ROOM_TYPE",
+        "FACULTY_UNAVAILABLE",
+        "PINNED_BLOCK",
+        "LAB_CONTIGUITY",
+        "FIXED_SLOT"
+      ]
+    },
+    "params_unfix_slot": {
+      "description": "Release a frozen or pre-assigned session: its fixed_slot becomes null.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "session_id"
+      ],
+      "properties": {
+        "session_id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "params_relax_faculty_availability": {
+      "description": "Remove these slots from the faculty member's declared unavailability. The backend refuses slots that come from a recorded absence.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "faculty_id",
+        "slots"
+      ],
+      "properties": {
+        "faculty_id": {
+          "$ref": "#/$defs/id"
+        },
+        "slots": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/slot_ref"
+          }
+        }
+      }
+    },
+    "params_relax_pinned_block": {
+      "description": "Remove one entity from one slot's pinned occupancy. Coordinator/admin only.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot",
+        "entity_kind",
+        "entity_id"
+      ],
+      "properties": {
+        "slot": {
+          "$ref": "#/$defs/slot_ref"
+        },
+        "entity_kind": {
+          "type": "string",
+          "enum": [
+            "faculty",
+            "room",
+            "cohort"
+          ]
+        },
+        "entity_id": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "params_reclassify_room": {
+      "description": "Set the room's lab classification.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "room_id",
+        "is_lab"
+      ],
+      "properties": {
+        "room_id": {
+          "$ref": "#/$defs/id"
+        },
+        "is_lab": {
+          "type": "boolean"
+        }
+      }
+    },
+    "params_manual": {
+      "description": "No machine-applicable change; a person acts on the relaxation's description.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {}
+    }
+  }
+}
