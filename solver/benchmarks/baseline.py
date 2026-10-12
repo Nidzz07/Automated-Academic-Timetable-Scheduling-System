@@ -15,8 +15,10 @@ then runs, in a child process so a runaway search can be stopped:
    time, search nodes (``nodes_explored``), and
    :func:`solver.validate.validate_solution` on a solved result.
 
-Nothing is tuned: the solver runs with its defaults. A run that exceeds the
-time limit is reported as a timeout, with no node count (the child is killed).
+Nothing is tuned: the solver runs with its defaults, plus its own time budget
+(``time_limit_s``) set to the limit, so a search that runs out reports
+``timeout`` with a node count. Pre-solve rejections show the failed check. If
+the child still overruns, it is killed and reported as a timeout with no count.
 Times are wall-clock and machine-dependent; everything else is a pure function
 of (preset, seed).
 
@@ -57,7 +59,7 @@ def instance_facts(preset: str, seed: int) -> dict[str, Any]:
     }
 
 
-def _worker(preset: str, seed: int, out: Any) -> None:
+def _worker(preset: str, seed: int, timeout_s: float, out: Any) -> None:
     edge_list = generate(PRESETS[preset], seed)
     graph = build_conflict_graph(edge_list)
 
@@ -75,19 +77,21 @@ def _worker(preset: str, seed: int, out: Any) -> None:
 
     start = time.perf_counter()
     try:
-        result = backtrack_solve(graph, edge_list)
+        result = backtrack_solve(graph, edge_list, time_limit_s=timeout_s)
     except RecursionError:
         out.put(("backtracking", {"outcome": "RecursionError",
                                   "ms": (time.perf_counter() - start) * 1000}))
         return
     search_ms = (time.perf_counter() - start) * 1000
-    solution = result.to_solution_dict(runtime_ms=search_ms)
     if result.solved:
-        violations = validate_solution(edge_list, solution)
+        violations = validate_solution(edge_list, result.to_solution_dict(runtime_ms=search_ms))
         check = "valid" if not violations else f"{len(violations)} violations"
     else:
         check = "n/a (not solved)"
-    out.put(("backtracking", {"outcome": "solved" if result.solved else "infeasible",
+    outcome = result.outcome
+    if result.certificate is not None:
+        outcome += f" (presolve: {result.certificate.check})"
+    out.put(("backtracking", {"outcome": outcome,
                               "ms": search_ms, "nodes": result.nodes_explored,
                               "validator": check}))
 
@@ -96,7 +100,8 @@ def run(preset: str, seed: int, timeout_s: float) -> dict[str, Any]:
     """Run one preset in a child process; never waits longer than *timeout_s*."""
     ctx = multiprocessing.get_context("spawn")
     out = ctx.Queue()
-    child = ctx.Process(target=_worker, args=(preset, seed, out), daemon=True)
+    child = ctx.Process(target=_worker, args=(preset, seed, timeout_s, out),
+                        daemon=True)
     started = time.perf_counter()
     child.start()
     results: dict[str, Any] = {}
