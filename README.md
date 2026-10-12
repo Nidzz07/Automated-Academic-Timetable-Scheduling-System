@@ -22,9 +22,9 @@ The solver is fully deterministic. There is no machine learning anywhere in the 
 
 | Track | Owner | Scope | Directories |
 |---|---|---|---|
-| A — Solver | Rohan | conflict graph, colouring, backtracking, MUS, repair, scoring | `solver/` |
+| A — Solver | Dhruv | conflict graph, colouring, backtracking, MUS, repair, scoring | `solver/` |
 | B — Data & Backend | Nidhi | schema, migrations, ingestion of the real .docx/.xlsx files, API | `db/`, `migrations/`, `ingestion/`, `backend/` |
-| C — Frontend & Validation | Dhruv | timetable UI, role views, frontend tests, benchmarks | `frontend/`, `bench/` |
+| C — Frontend & Validation | Rohan | timetable UI, role views, frontend tests, benchmarks | `frontend/`, `bench/` |
 
 The tracks meet only at the three frozen JSON contracts in [`contracts/`](contracts/):
 ingestion → DB, DB → solver (edge list), and solver → API (solution).
@@ -166,6 +166,7 @@ This is a scaffold: there are no routes yet.
 - [`ROADMAP.md`](ROADMAP.md) is the phased plan and the parallel-work protocol.
 - [`docs/CURRENT-PROGRESS.md`](docs/CURRENT-PROGRESS.md) tracks what is done, blockers, the
   decision log and the contract change log.
-- [`docs/contract-change-proposal-v2.md`](docs/contract-change-proposal-v2.md) is the proposed v2
-  contract changes. It is not yet signed.
+- [`docs/contract-change-proposal-v2.md`](docs/contract-change-proposal-v2.md) is the v2
+  contract changes. All three members signed it off on 2026-10-06; the v2 schema files are not
+  written yet.
 - [`CLAUDE.md`](CLAUDE.md) holds the rules for coding agents working in this repo.

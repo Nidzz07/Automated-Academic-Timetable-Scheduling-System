@@ -114,8 +114,8 @@ become contract tests in `tests/contracts/`, as the DB-side equivalent already i
 | Side | Impact |
 |---|---|
 | **Ingestion / DB (Nidhi)** | `contracts/examples/ingestion_v1.example.json` loses six `initials` keys and gains a `faculty_initials` array. No parser emits `ingestion_v1` yet, so there is no producer code to change. The DB is already in the target shape (0004), so no migration is needed. |
-| **Solver (Rohan)** | None. The solver never sees initials, and `edge_list_v1` does not change. Ambiguity stops at the DB → edge-list boundary (§9 Q1). |
-| **Frontend (Dhruv)** | `frontend/src/lib/timetableData.ts:186-187` reads `ingestionFixture.faculty[].initials` and breaks. See §10. |
+| **Solver (Dhruv)** | None. The solver never sees initials, and `edge_list_v1` does not change. Ambiguity stops at the DB → edge-list boundary (§9 Q1). |
+| **Frontend (Rohan)** | `frontend/src/lib/timetableData.ts:186-187` reads `ingestionFixture.faculty[].initials` and breaks. See §10. |
 
 ### Version
 
@@ -189,8 +189,8 @@ That is not the deepest partial. Keeping a snapshot of the deepest partial is ne
 | Side | Impact |
 |---|---|
 | **Ingestion / DB** | None. |
-| **Solver (Rohan)** | Snapshot the deepest partial during search and emit it with `unplaced_session_ids`. The two schema-conformance tests in `solver/tests/test_backtracking.py` (≈ lines 848–892) move to the v2 schema. |
-| **Frontend (Dhruv)** | `InfeasibilityDiagnosisPanel` can overlay `partial_placement` as a greyed, non-editable layer and list `unplaced_session_ids`. It must never reuse the drag-and-drop grid for the partial. |
+| **Solver (Dhruv)** | Snapshot the deepest partial during search and emit it with `unplaced_session_ids`. The two schema-conformance tests in `solver/tests/test_backtracking.py` (≈ lines 848–892) move to the v2 schema. |
+| **Frontend (Rohan)** | `InfeasibilityDiagnosisPanel` can overlay `partial_placement` as a greyed, non-editable layer and list `unplaced_session_ids`. It must never reuse the drag-and-drop grid for the partial. |
 
 ### Version
 
@@ -287,8 +287,8 @@ An earlier draft had `verified: boolean`. It is replaced by `verification: {stat
 | Side | Impact |
 |---|---|
 | **Ingestion / DB** | None in ingestion. The backend gains the apply endpoint (§9 Q2). |
-| **Solver (Rohan)** | Emit a structured action chosen through the kind → action map (§8). Add `solver/relaxation.py`. Run the verification solve. |
-| **Frontend (Dhruv)** | `SuggestedRelaxation` gains `action` (a discriminated union on `action_type`) and `verification`. Apply control per §9 Q2. Show a visible caveat for `still_infeasible` / `timeout`. |
+| **Solver (Dhruv)** | Emit a structured action chosen through the kind → action map (§8). Add `solver/relaxation.py`. Run the verification solve. |
+| **Frontend (Rohan)** | `SuggestedRelaxation` gains `action` (a discriminated union on `action_type`) and `verification`. Apply control per §9 Q2. Show a visible caveat for `still_infeasible` / `timeout`. |
 
 ### Version
 
@@ -340,8 +340,8 @@ highlight the conflicting cells must regex English.
 | Side | Impact |
 |---|---|
 | **Ingestion / DB** | None. |
-| **Solver (Rohan)** | MUS members carry their slots. Clash and contiguity constraints may emit `[]`. |
-| **Frontend (Dhruv)** | `ConflictingConstraint` gains `slots: SlotRef[]`, so the grid can highlight cells directly. |
+| **Solver (Dhruv)** | MUS members carry their slots. Clash and contiguity constraints may emit `[]`. |
+| **Frontend (Rohan)** | `ConflictingConstraint` gains `slots: SlotRef[]`, so the grid can highlight cells directly. |
 
 ### Version
 
@@ -399,7 +399,7 @@ Every member is a constraint that (c) actually checks.
 - **`ROOM_CLASH` and `ROOM_OCCUPANCY` are both kept** because the solver checks both
   independently. `ROOM` edges are precomputed by the data layer, while occupancy is checked
   natively during search. The two overlap. Whether the data layer should keep emitting
-  `ROOM` edges at all is a question for Rohan and Nidhi; it is not part of this proposal.
+  `ROOM` edges at all is a question for Dhruv and Nidhi; it is not part of this proposal.
 - **Named by a source but left out, because nothing enforces it:**
   - `edge_list_v1.sessions[].duration_periods` for a session that is **not** in a lab
     block. `_solve_session` places such a session in one slot and books its room for that
@@ -413,7 +413,7 @@ Every member is a constraint that (c) actually checks.
     instance infeasible, so they cannot be in a MUS.
 
 **Solver observations found while deriving the table.** These are not contract changes; they
-are for Rohan. Both were reproduced against a scratch copy of `origin/track/solver` (`d10dcce`):
+are for Dhruv. Both were reproduced against a scratch copy of `origin/track/solver` (`d10dcce`):
 
 1. **A `fixed_slot` overrides faculty unavailability and pinned faculty/cohort checks.**
    `available_slots_for` returns `[fixed_slot]` before it consults either. A session fixed to
@@ -488,8 +488,8 @@ MUS path emits `method = "mus"`.
 | Side | Impact |
 |---|---|
 | **Ingestion / DB** | None. |
-| **Solver (Rohan)** | Fallback rewritten as above. Placeholder kinds deleted. Kinds come from the §5.1 enum only. |
-| **Frontend (Dhruv)** | `ConflictingConstraint.kind` becomes a string-literal union. `InfeasibilityDiagnosisPanel` must render `search_exhaustion`, which has no set and no relaxation: show the unplaced sessions and the partial placement, and say no explanation is available. |
+| **Solver (Dhruv)** | Fallback rewritten as above. Placeholder kinds deleted. Kinds come from the §5.1 enum only. |
+| **Frontend (Rohan)** | `ConflictingConstraint.kind` becomes a string-literal union. `InfeasibilityDiagnosisPanel` must render `search_exhaustion`, which has no set and no relaxation: show the unplaced sessions and the partial placement, and say no explanation is available. |
 
 ### Version
 
@@ -658,7 +658,7 @@ cannot tell one timetable from another. Proposed:
   which names both "load balancing and substitution ordering" as users of the weighting.
 
 This changes no schema. It refines the meaning of ROADMAP Phase 3 Track A's
-`FAC_LOAD_IMBALANCE` line, which is Rohan's rule. **It needs Rohan's agreement** before
+`FAC_LOAD_IMBALANCE` line, which is Dhruv's rule. **It needs Dhruv's agreement** before
 `solver/scoring.py` implements it.
 
 ### What breaks
@@ -666,8 +666,8 @@ This changes no schema. It refines the meaning of ROADMAP Phase 3 Track A's
 | Side | Impact |
 |---|---|
 | **Ingestion / DB (Nidhi)** | No ingestion change. `db/models.py` `Timetable` stores only `quality_score: float \| None`. A partial score stored there loses its "partial" flag and its rule-set version. The table needs `rules_version` and the not-evaluated rule ids (or the full breakdown) beside the score. That is a migration, not a contract change, but it should land with v2. |
-| **Solver (Rohan)** | `solver/scoring.py` (Phase 3, not yet written) emits one entry per loaded rule with a status, and reads `version` from the YAML. The `{"score": 100.0, "breakdown": []}` default in `to_solution_dict` must go, since it cannot validate under v2 (`rules_version` is required). The v2 solved example should use the registry's rule ids (`FAC_BACK_TO_BACK`, `FAC_LOAD_IMBALANCE`, `STU_IDLE_GAPS`, `FAC_DAILY_OVERLOAD`) instead of v1's `room_capacity_waste` / `lab_spans_short_break`, and include one `not_evaluated` entry. |
-| **Frontend (Dhruv)** | `QualityBreakdownItem` in `types/solution.ts` becomes a union discriminated on `status`. Its comment "One entry per quality rule that fired" changes. `QualityScoreCard` must render not-evaluated rules distinctly, with their reason, and label the score as partial whenever `not_evaluated_rule_ids` is non-empty. It shows `rules_version`. |
+| **Solver (Dhruv)** | `solver/scoring.py` (Phase 3, not yet written) emits one entry per loaded rule with a status, and reads `version` from the YAML. The `{"score": 100.0, "breakdown": []}` default in `to_solution_dict` must go, since it cannot validate under v2 (`rules_version` is required). The v2 solved example should use the registry's rule ids (`FAC_BACK_TO_BACK`, `FAC_LOAD_IMBALANCE`, `STU_IDLE_GAPS`, `FAC_DAILY_OVERLOAD`) instead of v1's `room_capacity_waste` / `lab_spans_short_break`, and include one `not_evaluated` entry. |
+| **Frontend (Rohan)** | `QualityBreakdownItem` in `types/solution.ts` becomes a union discriminated on `status`. Its comment "One entry per quality rule that fired" changes. `QualityScoreCard` must render not-evaluated rules distinctly, with their reason, and label the score as partial whenever `not_evaluated_rule_ids` is non-empty. It shows `rules_version`. |
 
 ### Version
 
@@ -813,9 +813,9 @@ The solver never guesses which `SK`.
 
 | Owner | Responsibility |
 |---|---|
-| **Rohan — solver** | A pure function `apply_relaxation(instance, action) -> instance` in **`solver/relaxation.py`**. Plain data in, plain data out, no DB. Re-solving is a call to the existing solver. The verification solve of change 3 uses the same function. |
+| **Dhruv — solver** | A pure function `apply_relaxation(instance, action) -> instance` in **`solver/relaxation.py`**. Plain data in, plain data out, no DB. Re-solving is a call to the existing solver. The verification solve of change 3 uses the same function. |
 | **Nidhi — backend** | The endpoint. It loads the instance, calls `apply_relaxation`, re-solves, and persists the result as a **candidate** timetable. The live timetable is not overwritten until someone confirms. It writes the `AuditEntry`. It enforces authorisation: `RELAX_PINNED_BLOCK` overrides an institutional decision, so only coordinator/admin may apply it. (Proposed for sign-off: `RECLASSIFY_ROOM` edits institute-level room data and gets the same gate.) It refuses `RELAX_FACULTY_AVAILABILITY` on absence-derived slots. |
-| **Dhruv — frontend** | The Apply control, enabled only for non-`MANUAL` actions. An explicit confirmation step for any action overriding a pinned block. The candidate is shown beside the live timetable until confirmed. |
+| **Rohan — frontend** | The Apply control, enabled only for non-`MANUAL` actions. An explicit confirmation step for any action overriding a pinned block. The candidate is shown beside the live timetable until confirmed. |
 
 ### Q3 — Verification timing
 
@@ -851,8 +851,8 @@ configurable time budget. The result is the `verification` status object, never 
 
 Mark each cell **Agree / Agree with changes / Disagree**, with initials and date. A contract
 change (rows 1–6) proceeds only with three Agrees. Row 3 cannot proceed unless row 5 is
-agreed. Row 7 is a ROADMAP clarification (§6) that alters no contract; it needs Rohan's Agree
-before `solver/scoring.py` implements it. Nidhi and Dhruv may add a comment but do not sign it.
+agreed. Row 7 is a ROADMAP clarification (§6) that alters no contract; it needs Dhruv's Agree
+before `solver/scoring.py` implements it. Nidhi and Rohan may add a comment but do not sign it.
 
 | # | Change | Proposed version | Nidhi | Rohan | Dhruv |
 |---|---|---|---|---|---|

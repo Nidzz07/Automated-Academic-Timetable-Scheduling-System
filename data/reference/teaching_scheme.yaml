@@ -1,0 +1,29 @@
+# Teaching scheme for v1 scope (D2): SE = Semester IV, TE = Semester VI.
+# Source: data/real/academic_scheme.pdf ("SPIT Computer Engineering Regular Subject Details").
+# Transcribed 2026-10-11. Hours are per week. L = lecture (whole division).
+# T = tutorial, P = practical: both per batch (D7, D9). P: 2 = one 2-hour block per batch per week.
+# include: true | false | if_ce_faculty (kept only if its teacher is in the CE faculty list, D3)
+
+version: 1
+source: "data/real/academic_scheme.pdf"
+
+semesters:
+  - semester: 4
+    year: SE
+    courses:
+      - {code: CE205, name: "Statistical Methods in Computer Science", category: BSES, L: 3, T: 0, P: 0, pdf_page: 10, include: true}
+      - {code: AS201, name: "Professional Communication Skills", category: SEC, L: 0, T: 1, P: 2, pdf_page: 10, include: if_ce_faculty}
+      - {code: HS2XX, name: "Humanities and Social Science Course II", category: HSSM-II, L: 2, T: 0, P: 0, pdf_page: 10, include: false, exclude_reason: "HSSM (D3)"}
+      - {code: CE206, name: "Operating Systems", category: PCC, L: 3, T: 0, P: 2, pdf_page: 10, include: true}
+      - {code: CE207, name: "Design and Analysis of Algorithms", category: PCC, L: 3, T: 0, P: 2, pdf_page: 11, include: true}
+      - {code: CE208, name: "Computer Communications and Networks", category: PCC, L: 3, T: 0, P: 2, pdf_page: 11, include: true}
+      - {code: LLCXX, name: "Cocurricular / Liberal Learning Course IV", category: "CC (LLC)", L: 1, T: 0, P: 0, pdf_page: 11, include: false, exclude_reason: "LLC (D3)"}
+
+  - semester: 6
+    year: TE
+    courses:
+      - {code: CE306, name: "System Programming and Compiler Construction", category: PCC, L: 3, T: 0, P: 2, pdf_page: 14, include: true}
+      - {code: CE307, name: "Machine Learning", category: PCC, L: 2, T: 0, P: 2, pdf_page: 14, include: true}
+      - {code: PR3-I, name: "Main Project Stage I", category: ELC, L: 0, T: 0, P: 2, pdf_page: 14, include: false, exclude_reason: "project (D3)"}
+      - {code: CE308, name: "DevOps Lab", category: SEC, L: 0, T: 1, P: 2, pdf_page: 14, include: true}
+    note: "Semester VI programme electives are not listed in the PDF and are excluded (D3)."

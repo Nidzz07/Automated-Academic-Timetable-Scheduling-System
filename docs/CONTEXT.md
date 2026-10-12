@@ -29,9 +29,9 @@ TimeTables, UniTime) do not:
 
 | Member | Owns | Directories |
 |---|---|---|
-| Rohan Shashikant Dhumal | Solver core and algorithms | `solver/` |
+| Dhruv Hemant Gangurde | Solver core and algorithms | `solver/` |
 | Nidhi Rajkamal Dhyani | Backend, data layer, ingestion | `backend/`, `ingestion/`, `db/` |
-| Dhruv Hemant Gangurde | Frontend and validation | `frontend/`, `tests/e2e/`, `bench/` |
+| Rohan Shashikant Dhumal | Frontend and validation | `frontend/`, `tests/e2e/`, `bench/` |
 
 Supervisor: Mr. Devang Parab.
 
@@ -78,9 +78,13 @@ Source files live in `data/real/` (committed, read-only):
 |---|---|
 | `CE_Class_Time_Table-EVEN_sem_25-26.docx` | Division-wise class timetables, EVEN semester |
 | `CE_Class_Time_Table-ODD_sem_25-26.docx` | Division-wise class timetables, ODD semester |
-| `Lab_CE_Time_Table-Even_sem_25-26.docx` | Room-wise lab timetables with utilisation % |
-| `Faculty_Individual_timetable_Even_2025-26.docx` | Per-faculty timetables and T/P workloads |
+| `Lab CE_Time_Table-Even_sem_25-26.docx` | Room-wise lab timetables with utilisation % |
+| `Faculty Individual timetable Even 2025-26.docx` | Per-faculty timetables and T/P workloads |
 | `classrooms.xlsx` | Room inventory with capacity and separation |
+| `Faculty___Subjects.xlsx` | Faculty → subjects taught (qualification source) |
+| `Subject-wise_faculty.xlsx` | Subject → faculty (inverted view of the same data) |
+| `academic_scheme.pdf` | Academic scheme: weekly L/T/P hours per course (transcribed into `data/reference/teaching_scheme.yaml`) |
+| `lab_capacities.yaml` | Parallel batches per lab (ROADMAP D8); stated by Nidhi in the project chat on 2026-10-11, not derived from another file |
 
 ### 3.1 Scale
 
@@ -183,7 +187,7 @@ certainly touch on this.
 
 ### 3.6 A free validation target
 
-`Lab_CE_Time_Table-Even_sem_25-26.docx` already states, per room, a figure such as
+`Lab CE_Time_Table-Even_sem_25-26.docx` already states, per room, a figure such as
 `Lab Utilization in %= 24/30= 80.00 %`. Once ingestion works, the system should reproduce those
 percentages from the parsed data. Matching them is proof the parser is correct.
 
@@ -263,7 +267,7 @@ chronos/
 ├── ingestion/                  parsers, anomaly reporter, seeder      [Nidhi]
 ├── db/                         schema, Alembic migrations             [Nidhi]
 ├── backend/                    FastAPI app, routers, auth, services   [Nidhi]
-├── solver/                     pure Python solver core                [Rohan]
+├── solver/                     pure Python solver core                [Dhruv]
 │   ├── graph.py                conflict graph construction
 │   ├── colouring.py            Welsh-Powell greedy
 │   ├── backtracking.py         forward checking + MRV
@@ -271,9 +275,9 @@ chronos/
 │   ├── repair.py               freeze-and-expand
 │   ├── scoring.py              YAML rule evaluation
 │   └── rules/quality_rules.yaml
-├── frontend/                   React app                              [Dhruv]
+├── frontend/                   React app                              [Rohan]
 ├── tests/                      unit, property, integration, e2e
-├── bench/                      benchmark harness and plots            [Dhruv]
+├── bench/                      benchmark harness and plots            [Rohan]
 └── docs/
     ├── CONTEXT.md              this file
     ├── CURRENT-PROGRESS.md     living status, updated after every work session
