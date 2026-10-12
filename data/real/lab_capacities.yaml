@@ -1,0 +1,45 @@
+# Lab capacities for Computer Engineering practicals.
+# Source: stated by Nidhi Dhyani in the project chat on 2026-10-11 (not derived from any other file).
+# Rule: nothing in this file is inferred. Change a number only when the department confirms it.
+#
+# parallel_batches : how many batches can run a practical in this lab at the same time.
+# btech_use        : false = exclude from B.Tech timetables.
+# One practical = a 2-hour lab block (2 consecutive teaching periods).
+# Batch size = 20 students (4 batches per division), so a lab fits parallel_batches x 20 students.
+
+version: 1
+source: "stated by Nidhi Dhyani, project chat, 2026-10-11"
+batch_size_students: 20
+
+labs:
+  - room: "509"
+    parallel_batches: 2
+    btech_use: true
+  - room: "603"
+    parallel_batches: 3
+    btech_use: true
+  - room: "604"
+    parallel_batches: 1
+    btech_use: true
+  - room: "606"
+    parallel_batches: 2
+    btech_use: true
+  - room: "607B"
+    parallel_batches: 1
+    btech_use: true
+  - room: "607A"
+    parallel_batches: 1
+    btech_use: false
+    note: "M.Tech batches only"
+  - room: "608"
+    parallel_batches: 1
+    btech_use: true
+  - room: "702"
+    parallel_batches: 3
+    btech_use: true
+  - room: "703"
+    parallel_batches: 2
+    btech_use: true
+  - room: "507"
+    parallel_batches: 1
+    btech_use: true

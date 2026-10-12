@@ -4,7 +4,7 @@
 > Read `docs/CONTEXT.md` for what the system is, `ROADMAP.md` (repo root) for what to build
 > next, and this file for what is already done.
 
-**Last updated:** 2026-10-06 · **by:** _(fill in)_ — repo-hygiene pass with Claude Code: committed merge-conflict markers resolved, PR #15 state recorded · **Current phase:** 0–2 in progress; no phase exit criterion met yet
+**Last updated:** 2026-10-11 · **by:** Nidhi — S2 docs-truth pass with Claude Code: ownership corrected (ROADMAP D1), Welsh-Powell fix (PR #18) and merged Track C work recorded · **Current phase:** 0–2 in progress; no phase exit criterion met yet
 
 ---
 
@@ -41,9 +41,9 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 
 | Track                      | Owner | Branch                                                        | Current task                                                                                                                                                                                                                                                                                                                                     | State |
 | -------------------------- | ----- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
-| A — Solver                | Rohan | `track/solver`                                              | Phase 2 Track A [M] items merged (PR#13, #15). Step 3 done, uncommitted: Welsh-Powell hard-constraint bug fixed, synthetic generator + baseline (`docs/solver-baseline-2026-10-06.md`). Open: lab-block room enumeration dominates solve time; pigeonhole infeasibility not proven in 300 s. Next: Phase 3 `solver/scoring.py` (not started) | 🟡    |
+| A — Solver                | Dhruv | `track/solver`                                              | Phase 2 Track A [M] items merged (PR#13, #15). Step 3 merged (PR #18): Welsh-Powell hard-constraint bug fixed, synthetic generator + baseline (`docs/solver-baseline-2026-10-06.md`). Open: lab-block room enumeration dominates solve time; pigeonhole infeasibility not proven in 300 s. Next: Phase 3 `solver/scoring.py` (not started) | 🟡    |
 | B — Data & Backend        | Nidhi | `track/data-*` feature branches (all merged; latest PR #10) | Reference seed and division-scoped faculty initials merged (41 faculty, migration 0004). Initials mapping not yet human-verified; faculty T/P workloads not seeded. Phase 2 ingestion parsers (`class_tt.py`, `lab_tt.py`, `anomalies.py`) not started                                                                                     | 🟡    |
-| C — Frontend & Validation | Dhruv | `track/frontend`                                            | Phase 1 grid and Phase 2 drag-and-drop / role views / mock API merged (PR#6, #14), all running against contract fixtures and a mock client — not yet wired to a real API                                                                                                                                                                        | 🟡    |
+| C — Frontend & Validation | Rohan | `track/frontend`                                            | Phase 1 grid and Phase 2 drag-and-drop / role views / mock API merged (PR#6, #14), all running against contract fixtures and a mock client — not yet wired to a real API                                                                                                                                                                        | 🟡    |
 
 ---
 
@@ -51,7 +51,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 
 - [X] Repo reconciled against `CONTEXT.md` §7 layout
 - [ ] Branch protection on `main`; three track branches created
-- [ ] CI running `pytest`, `ruff`, `tsc --noEmit`, `vitest` on push
+- [X] CI running `pytest`, `ruff`, `tsc --noEmit`, `vitest` on push _(`.github/workflows/ci.yml`; frontend job added in PR #16 — `tsc` runs via `npm run build`)_
 - [X] `contracts/ingestion_v1.schema.json` written
 - [X] `contracts/edge_list_v1.schema.json` written
 - [X] `contracts/solution_v1.schema.json` written
@@ -92,9 +92,9 @@ memory.
 
 ### Track C — Frontend
 
-- [ ] Vite + React + TS + Tailwind + shadcn/ui scaffold
-- [ ] Grid renders an 8×5 week from a static `solution_v1` fixture
-- [ ] Renders: double-period lab, four parallel batches, combined lecture, pinned block
+- [X] Vite + React + TS + Tailwind + shadcn/ui scaffold _(PR #6)_
+- [X] Grid renders an 8×5 week from a static `solution_v1` fixture _(PR #6; `TimetableGrid.test.tsx`)_
+- [X] Renders: double-period lab, four parallel batches, combined lecture, pinned block _(PR #6)_
 - [ ] TypeScript types mirror the contracts
 - [ ] *(S)* Theming and tablet-width responsiveness
 
@@ -128,8 +128,8 @@ and it renders in the browser.
 - [X] Capacity check against cohort size
 - [ ] *(S)* Iterative backtracking if depth becomes a problem
 - [X] `solver/validate.py` — independent hard-constraint checker; every solved result is held to it _(PR #15; `solver/tests/test_validate.py`)_
-- [X] Fix: `fixed_slot` intersected with availability, never substituted for it (proposal §5.1 obs. 1) _(PR #15; `TestRegressionFixedSlotVsAvailability`)_ — in `backtracking.py` only; `colouring.py` still has it, see Blockers
-- [X] Fix: every period of a multi-period placement checked, in a LabBlock or not (proposal §5.1 obs. 2) _(PR #15; `TestRegressionMultiPeriodOccupancy`)_ — in `backtracking.py` only; `colouring.py` still has it, see Blockers
+- [X] Fix: `fixed_slot` intersected with availability, never substituted for it (proposal §5.1 obs. 1) _(PR #15; `TestRegressionFixedSlotVsAvailability`)_ — in `backtracking.py` (PR #15); `colouring.py` fixed in PR #18
+- [X] Fix: every period of a multi-period placement checked, in a LabBlock or not (proposal §5.1 obs. 2) _(PR #15; `TestRegressionMultiPeriodOccupancy`)_ — in `backtracking.py` (PR #15); `colouring.py` fixed in PR #18
 - [X] `Room.room_type` (class | lab | unknown) replaces `Room.is_lab` inside the solver _(PR #15; `TestRoomType`)_
 
 **Placeholders in Track A — NOT features, do not tick anything on their account:**
@@ -147,10 +147,10 @@ and it renders in the browser.
 
 ### Track C — Frontend
 
-- [ ] Drag-and-drop with provisional drop and revert-on-reject
-- [ ] Four role-differentiated views
-- [ ] Mock API layer
-- [ ] *(S)* Vitest coverage of grid and drag
+- [X] Drag-and-drop with provisional drop and revert-on-reject _(PR #14; `DragAndDrop.test.tsx`)_
+- [X] Four role-differentiated views _(PR #14; `RoleViews.test.tsx`)_
+- [X] Mock API layer _(PR #14; `MockChronosApiClient`, `chronosApi.test.ts`)_
+- [X] *(S)* Vitest coverage of grid and drag _(PR #6, #14)_
 - [ ] *(S)* Anomaly report viewer
 
 **Exit:** real CE EVEN instance solved conflict-free; at least one published lab-utilisation
@@ -220,7 +220,7 @@ diagnosis.
 
 ## Phase 5 checklist — Validation and benchmarking
 
-- [ ] Hypothesis property test: no timetable ever contains a conflict _(a seeded-random property test now exists: `solver/tests/test_property_solved_is_valid.py`, 400 instances, seed 20261003 — backtracking only; Welsh-Powell fails it, see Blockers)_
+- [ ] Hypothesis property test: no timetable ever contains a conflict _(a seeded-random property test now exists: `solver/tests/test_property_solved_is_valid.py`, 400 instances, seed 20261003 — backtracking and, since PR #18, Welsh-Powell too)_
 - [ ] Edge cases: empty, single session, no replacement, infeasible, over-subscribed division
 - [ ] Benchmark: runtime vs instance size (plot)
 - [ ] Benchmark: **displaced sessions, repair vs regeneration** (mean + CI)
@@ -264,10 +264,10 @@ _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
   Baseline, seeds 1–3: every preset up to `large` (242 sessions) solved and validator-clean,
   with zero backtracks; `large` ~37–43 s, dominated by lab-block room-tuple enumeration; the
   pigeonhole infeasible preset times out at 300 s. See `docs/solver-baseline-2026-10-06.md`.
-  · _no PR yet (uncommitted)_
+  · PR #18
 - `2026-10-06` · Nidhi, Rohan, Dhruv · **Contract v2 proposal signed off by all three tracks.**
   `docs/contract-change-proposal-v2.md` §11 rows 1–7 all marked Agree with no changes (row 7, the
-  `FAC_LOAD_IMBALANCE` ROADMAP clarification, needed only Rohan's Agree). **No schema files have
+  `FAC_LOAD_IMBALANCE` ROADMAP clarification, needed only the Track A owner's Agree — Dhruv per ROADMAP D1; see D17). **No schema files have
   been created yet** — `contracts/` still holds only the v1 schemas, so nothing has entered the
   Contract change log. Next: the v2 schema files (`ingestion_v2.schema.json`,
   `solution_v2.schema.json`, `relaxation_actions_v2.json`, with examples and contract tests, per
@@ -286,7 +286,7 @@ _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
   every solved result in the solver tests and a 400-instance seeded property test go through it.
   On that generator the pre-fix solver returned 333 "solved" results, 287 of them invalid.
   · PR #15
-- `2026-09-26` · Rohan · Phase 1 & 2 Track A (Solver) landed: `solver/graph.py` (conflict graph with cohort containment), `solver/colouring.py` (Welsh-Powell greedy with availability & pinned awareness), and `solver/backtracking.py` (backtracking search with forward checking, trail-based exact undo, MRV ordering, LabBlock joint placement, sub-room awareness, capacity checks, and `solution_v1` serialisation). 159 tests green across full suite. · PR #5, #13
+- `2026-09-26` · Dhruv · Phase 1 & 2 Track A (Solver) landed: `solver/graph.py` (conflict graph with cohort containment), `solver/colouring.py` (Welsh-Powell greedy with availability & pinned awareness), and `solver/backtracking.py` (backtracking search with forward checking, trail-based exact undo, MRV ordering, LabBlock joint placement, sub-room awareness, capacity checks, and `solution_v1` serialisation). 159 tests green across full suite. · PR #5, #13
 - `2026-09-25` · NRD · Reference seed landed — 20 rooms + 8 sub-rooms, 33 faculty, 25 subjects, 64 qualifications, and the partial 8-of-33 initials map, from the three spreadsheets in `data/real/`. Two schema corrections came with it (migrations 0002, 0003 — see Decision log). 210 tests passing. · PR #3 (`track/data-seed`)
 - `2026-09-25` · NRD · `db/models.py` + Alembic migration 0001 landed; 148 tests passing; `Cohort` polymorphism, institute-level `Room`, and a remote-DB safety guard in `migrations/env.py`. · PR #1, #2 (`track/data`)
 - `2026-09-24` · NRD · Phase 0 contracts + `solver/slots.py` + CI workflow landed — three frozen JSON Schemas with example payloads, 41 schema-validation tests, the wall-clock slot module with 48 tests, GitHub Actions running `ruff check` + `pytest`, and a root `pyproject.toml`. 89 tests green. · _no PR (direct to `main`, pre-branch-protection)_
@@ -297,7 +297,7 @@ _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
 | Since      | Blocker                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Blocks whom                                                                                                   | Needs                                                                                          |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 2026-10-03 | ✅**Resolved 2026-10-06** (branch `track/solver-baseline`, uncommitted; see `docs/solver-baseline-2026-10-06.md`). Was: `solver/colouring.py` (Welsh-Powell) produces invalid timetables: it checks only a multi-period session's start slot, colours lab-block members independently, and places `fixed_slot` sessions with no availability, pinned or neighbour check. On the 400-instance property generator, 338 of 394 complete colourings violate a hard constraint. Recorded as a strict `xfail`; the validator was not loosened. Single-period, block-free, fixed-free instances are clean (400/400). | Anyone using greedy output as a timetable or as a backtracking seed; Phase 5 greedy-vs-backtracking benchmark | Nothing — resolved (was: Rohan — fix or scope Welsh-Powell to the single-period subclass)    |
+| 2026-10-03 | ✅**Resolved 2026-10-06** (PR #18, branch `track/solver-baseline`; see `docs/solver-baseline-2026-10-06.md`). Was: `solver/colouring.py` (Welsh-Powell) produces invalid timetables: it checks only a multi-period session's start slot, colours lab-block members independently, and places `fixed_slot` sessions with no availability, pinned or neighbour check. On the 400-instance property generator, 338 of 394 complete colourings violate a hard constraint. Recorded as a strict `xfail`; the validator was not loosened. Single-period, block-free, fixed-free instances are clean (400/400). | Anyone using greedy output as a timetable or as a backtracking seed; Phase 5 greedy-vs-backtracking benchmark | Nothing — resolved (was: Dhruv — fix or scope Welsh-Powell to the single-period subclass)    |
 | 2026-10-03 | `edge_list_v1` rooms carry `is_lab: boolean`, not the three-valued `room_type`; `unknown` cannot reach the solver                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Exact`RECLASSIFY_ROOM` semantics for rooms 605/609                                                          | All three — decide whether a future edge-list revision carries`room_type` (contract change) |
 
 ---
@@ -306,10 +306,14 @@ _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
 Record any choice a future session might otherwise re-litigate.
 
+Decisions D1–D22 are recorded in `ROADMAP.md` §3 and are binding; this log keeps the earlier entries and adds detail.
+
 | Date       | Decision                                                                                                                                                                                                                                                                                                                                                                                         | Rationale                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Decided by                            |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| 2026-10-03 | A`fixed_slot` restricts where a session may **start**; it is intersected with availability (faculty, cohort, pinned) and every other constraint, never substituted for it. Empty intersection ⇒ infeasible.                                                                                                                                                                             | A frozen session in a slot its teacher cannot attend is not a timetable. Substituting meant`FIXED_SLOT` vs `FACULTY_UNAVAILABLE` could never surface in a MUS.                                                                                                                                                                                                                                                                                                                                                                 | Dhruv (Track A fix; Rohan to confirm) |
-| 2026-10-03 | Solver`Room` carries `room_type` (class \| lab \| unknown); only `lab` hosts a `requires_lab` session. Under `edge_list_v1` it is derived from `is_lab` (true→lab, false→class). Rooms 605/609 (`unsure` → `unknown`) stay unusable for labs until reclassified — exactly the `RECLASSIFY_ROOM` relaxation.                                                                | `unknown` must never be silently treated as a lab. The edge list is frozen, so the three-valued type lives inside the solver only.                                                                                                                                                                                                                                                                                                                                                                                               | Dhruv (Rohan to confirm)              |
+| 2026-10-03 | `ingestion/seed_legends.py` writes reference data (initials legends, legend-only faculty, aliases) straight to the database, **bypassing the ingestion contract**. Reference data only: timetable observations must go through the contract (`ingestion/class_tt.py` emits `ingestion.v2` payloads that the seeder consumes). | Proposal §10 records it as deliberate and limited to reference data; copied here as proposal §7 step 3 asks. | Nidhi (proposed in `docs/contract-change-proposal-v2.md` §10; not one of the signed §11 rows) |
+| 2026-10-03 | **D20:** faculty initials are stored in the DB table `faculty_initials` (migration 0004), division-scoped, with ambiguous initials flagged — instead of the `data/reference/faculty_initials.yaml` file the old ROADMAP named. | Initials are division-scoped and can be ambiguous (ODD BE `SK`); a DB table holds the scope and the ambiguity flag, and nothing is picked silently. See ROADMAP §3 D20. | Nidhi |
+| 2026-10-03 | A`fixed_slot` restricts where a session may **start**; it is intersected with availability (faculty, cohort, pinned) and every other constraint, never substituted for it. Empty intersection ⇒ infeasible.                                                                                                                                                                             | A frozen session in a slot its teacher cannot attend is not a timetable. Substituting meant`FIXED_SLOT` vs `FACULTY_UNAVAILABLE` could never surface in a MUS.                                                                                                                                                                                                                                                                                                                                                                 | Dhruv (Track A fix) |
+| 2026-10-03 | Solver`Room` carries `room_type` (class \| lab \| unknown); only `lab` hosts a `requires_lab` session. Under `edge_list_v1` it is derived from `is_lab` (true→lab, false→class). Rooms 605/609 (`unsure` → `unknown`) stay unusable for labs until reclassified — exactly the `RECLASSIFY_ROOM` relaxation.                                                                | `unknown` must never be silently treated as a lab. The edge list is frozen, so the three-valued type lives inside the solver only.                                                                                                                                                                                                                                                                                                                                                                                               | Dhruv              |
 | 2026-10-03 | `solver/validate.py` imports nothing from `backtracking`/`colouring`/`graph` (only `solver.slots`). Malformed payloads (unknown/missing/duplicate session, bad room ids, start on a break) **raise**; constraint breaks are **reported** with the proposal §5.1 kinds. A multi-period session whose chain runs off the day is `LAB_CONTIGUITY` even outside a LabBlock. | A bug in the search's helpers must not be able to hide in its checker. The reconciled kind enum has no separate "duration" kind.                                                                                                                                                                                                                                                                                                                                                                                                   | Dhruv                                 |
 | 2026-09-25 | The ingestion contract's`room_type` (class/lab/unknown) and the DB's `room_used_as` (5 raw values) are deliberately **different layers**, not a bug to unify                                                                                                                                                                                                                           | `room_type` is the coarse signal the solver needs; `used_as` is raw fidelity for the anomaly reporter. Phase 2's `ingestion/rooms.py` must map used_as → room_type explicitly: class→class, lab→lab, 'as a lab'→lab, 'Mtech lab'→lab, unsure→unknown.                                                                                                                                                                                                                                                                  | Nidhi                                 |
 | —         | Scope: CE only, ODD + EVEN, schema designed for CSE/EXTC                                                                                                                                                                                                                                                                                                                                         | Real data is CE; multi-dept later must not need a migration                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | All three                             |

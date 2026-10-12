@@ -9,6 +9,8 @@ before making changes.
 2. `ROADMAP.md` (repo root) — the phased plan, the [M]/[S]/[C] tags, and the parallel-work protocol.
 3. `docs/CURRENT-PROGRESS.md` — what is actually done, blockers, decision log, contract change log.
 
+`ROADMAP.md` §1 (ownership) and §3 (decisions D1–D22) are binding; they override anything here that disagrees.
+
 `docs/CURRENT-STATUS.md` is a **historical snapshot from 2026-09-24** (before any application
 code existed). Do not treat it as the current inventory — check the code and
 `docs/CURRENT-PROGRESS.md` instead.
@@ -59,9 +61,9 @@ but the v2 schema files do not exist yet — so do not emit or consume v2 shapes
 
 | Directory | Owner |
 |---|---|
-| `solver/` | Rohan (Track A) |
+| `solver/` | Dhruv (Track A) |
 | `ingestion/`, `db/`, `migrations/`, `backend/` | Nidhi (Track B) |
-| `frontend/`, `bench/`, `tests/e2e/` | Dhruv (Track C) |
+| `frontend/`, `bench/`, `tests/e2e/` | Rohan (Track C) |
 | `contracts/` | all three, by agreement only |
 
 Do not "fix" a failing test in another track's directory — report it instead.
@@ -125,8 +127,8 @@ cd frontend; npm run dev                       # Vite dev server
 
 ## What exists today (verify before relying on it)
 
-- `solver/`: `slots.py`, `graph.py`, `colouring.py` (Welsh-Powell — known hard-constraint bugs,
-  see Blockers), `backtracking.py` (forward checking + MRV, lab blocks, sub-rooms), `validate.py`
+- `solver/`: `slots.py`, `graph.py`, `colouring.py` (Welsh-Powell),
+  `backtracking.py` (forward checking + MRV, lab blocks, sub-rooms), `validate.py`
   (independent checker). **Placeholders:** infeasible results carry a placeholder diagnosis
   (`unplaced.<id>` / `UNSATISFIABLE_DOMAIN`), and solved results carry a hardcoded
   `{"score": 100.0, "breakdown": []}`. No `scoring.py`, `mus.py`, `repair.py` yet.
