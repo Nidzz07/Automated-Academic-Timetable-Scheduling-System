@@ -119,3 +119,96 @@ rerun.
      either way.
 5. **Not measured:** fixed slots (no preset uses them), ODD-semester shapes, real timetable
    data (no parser yet), memory use, and seeds beyond 1–3.
+
+## 2026-10-12 — after S4 (pre-solve, lazy lab rooms, symmetry breaking, time budget)
+
+Same generator, presets and seeds as above; nothing in the instances changed.
+
+- **Code:** `track/solver-presolve` @ `693b8fb` plus the uncommitted S4 changes
+  (`solver/presolve.py` new; `solver/backtracking.py`, `solver/benchmarks/baseline.py`).
+- **Reproduce:** `python -m solver.benchmarks.baseline --seed N --timeout 300` for N = 1, 2, 3.
+  The runner now also passes the limit to the solver as `time_limit_s`.
+- **What changed in the solver (ROADMAP D21):**
+  - `_lab_block_candidates` / `_gen_room_tuples` are generators that yield in the old sorted
+    order, so only the room tuples actually tried are built (finding 3).
+  - `solver/presolve.py` runs before search: room suitability, per-faculty and per-cohort
+    pigeonhole, per-period forced lab demand vs. parallel lab rooms, and Hall's condition by
+    Hopcroft–Karp per faculty and per cohort. A failure returns infeasible with zero search
+    nodes and the certificate in the v1 `diagnosis` fields.
+  - Interchangeable rooms (same type, capacity, parent and pinned slots, no sub-rooms) are
+    tried once per day while unused.
+  - `backtrack_solve(time_limit_s=...)` reports `outcome == "timeout"`, never infeasible.
+
+### Results — machine-independent
+
+Seeds 1, 2 and 3 gave identical rows.
+
+| Preset | Sessions | Backtracking | Search nodes | Independent validator |
+|---|---|---|---|---|
+| small | 12 | solved | 11 | valid (0 violations) |
+| medium | 81 | solved | 58 | valid (0 violations) |
+| large | 242 | solved | 153 | valid (0 violations) |
+| infeasible | 46 | **infeasible, pre-solve `cohort_load` on `d00`** (40 periods, 39 free) | 0 | n/a |
+
+**Same answers as before.** Before the change, the old code's output was recorded for the 400
+property instances and for small, medium and large × seeds 1–3. After it, all 409 results
+(solved flag, every start slot and every room) were identical. Two tests keep this checked:
+`solver/tests/test_search_equivalence.py`.
+- The lazy generators are compared against the old eager code (kept verbatim in the test) on
+  the property instances and on small and medium.
+- Symmetry on vs. off is compared on the property instances and on all three feasible presets.
+
+The eager reference is too slow for CI on `large`, about 40 s per seed, so `large` was compared
+against the recorded output only.
+
+**Property generator (400 instances).** 172 solved, 228 infeasible. Of the infeasible ones,
+152 are proved by pre-solve with zero search nodes:
+
+| Check | Instances proved |
+|---|---|
+| `faculty_load` | 72 |
+| `hall_faculty` | 45 |
+| `lab_capacity` | 18 |
+| `cohort_load` | 15 |
+| `hall_cohort` | 2 |
+
+The other 76 are refuted by search. Symmetry breaking cut the total search nodes over all 400
+instances from 1260 to 1229. The effect is small because these instances have few
+interchangeable rooms and short searches.
+
+### Results — machine-dependent timings
+
+**Machine:** Windows 11 (10.0.26300), Intel64 Family 6 Model 183, Python 3.12.10. This is not the
+machine used for the 2026-10-06 tables, so for a like-for-like comparison the old code was also
+timed here, in-process and without the validator, just before the change.
+
+| Preset | Seed | Welsh-Powell | Backtracking (S4) | Backtracking, old code, same machine |
+|---|---|---|---|---|
+| small | 1 / 2 / 3 | 1.0 / 1.1 / 1.1 ms | 15.0 / 11.0 / 11.1 ms | ~10 ms |
+| medium | 1 / 2 / 3 | 9.0 / 8.9 / 8.5 ms | 0.19 / 0.19 / 0.18 s | 0.60 / 0.72 / 0.61 s |
+| large | 1 / 2 / 3 | 29.5 / 29.5 / 25.6 ms | **1.60 / 1.54 / 1.51 s** | 43.1 / 38.8 / 28.9 s |
+| infeasible | 1 / 2 / 3 | 9.0 / 8.0 / 8.2 ms | **14.6 / 13.5 / 13.2 ms** | not rerun (timed out at 300 s on 2026-10-06) |
+
+- On `large`, pre-solve itself takes about 60 ms.
+- Symmetry breaking makes no measurable difference on the presets: large took 1.53–1.59 s with
+  it off and 1.53–1.57 s with it on. These searches never backtrack, so it has nothing to prune.
+
+### Findings
+
+1. **The feasible speed-up is all from lazy lab-room candidates.** `large` went from ~40 s to
+   ~1.6 s and `medium` became ~3.5× faster, with identical solutions.
+2. **The pigeonhole edge case is now proved, not timed out.** The infeasible preset fails
+   `cohort_load` for division `d00` in ~14 ms. The certificate names the 39 sessions that
+   conflict pairwise. This is a proof, not a minimal unsatisfiable subset: `solver/mus.py`
+   (Phase 4) is still needed for that.
+3. **Search-exhausted infeasibility still carries the placeholder diagnosis.** Pre-solve checks
+   are necessary conditions only. An odd cycle in two slots, for example, passes every check
+   and is refuted only by search (`TestInfeasible.test_odd_cycle_in_two_slots_exhausts_the_search`).
+4. **A timeout cannot be expressed in `solution_v1`.** Its `status` enum is
+   `solved | infeasible`. `BacktrackResult.outcome` is `"timeout"`, and `to_solution_dict()`
+   raises rather than mislabel it, so the timeout stays internal until a contract carries it.
+   `solution_v2` has `timeout` only as a relaxation-verification status, not as a top-level
+   status.
+5. **Not measured:** the same gaps as above (fixed slots in presets, ODD semester, real data,
+   memory). Also not measured: the time budget on a real long search, since no preset needs
+   one any more.

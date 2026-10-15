@@ -80,7 +80,24 @@ Pinned faculty and cohort slots are excluded from domains through
 are excluded for every occupied period, including a pinned parent locking
 its sub-rooms and a pinned sub-room locking its parent.
 
-**Infeasible results carry a PLACEHOLDER diagnosis.**
+**Pre-solve before search (ROADMAP D21).**
+:func:`solver.presolve.presolve` runs polynomial necessary-condition checks
+(pigeonhole counting, Hall's condition by Hopcroft-Karp, room suitability,
+per-period lab capacity) on the initial domains.  A failed check returns
+infeasible at once, with its certificate as the diagnosis.
+
+**Interchangeable rooms are tried once (symmetry breaking).**
+Rooms with the same type, capacity, parent and pinned slots, and no sub-rooms,
+are interchangeable.  Within one day, a value naming such a room is skipped
+when a smaller-id room of the same class is also unused that day - see
+:func:`_symmetric_duplicate` for why no solution is lost.
+
+**Time budget.**  ``time_limit_s`` stops the search and reports
+``outcome == "timeout"``, never infeasible: running out of time proves nothing.
+``solution_v1`` has no status for that, so :meth:`BacktrackResult.to_solution_dict`
+refuses to serialise a timeout.
+
+**Infeasible results from the search carry a PLACEHOLDER diagnosis.**
 See :func:`_placeholder_diagnosis`.  It is not a minimal unsatisfiable
 subset; ``solver/mus.py`` does not exist yet.
 
@@ -90,11 +107,16 @@ non-stdlib package (CONTEXT.md rule 3).
 
 from __future__ import annotations
 
+import time
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from solver.graph import ConflictGraph, Session, available_slots_for, slot_is_open
 from solver.slots import DAYS, TEACHING_PERIODS, SlotId, is_adjacent
+
+if TYPE_CHECKING:
+    from solver.presolve import Certificate
 
 __all__ = [
     "BacktrackResult",
@@ -156,6 +178,15 @@ class BacktrackResult:
     rooms: dict[str, Room] = field(default_factory=dict)
     # session_id → every slot the placement occupies, in teaching order
     occupied: dict[str, tuple[SlotId, ...]] = field(default_factory=dict)
+    timed_out: bool = False
+    # set when pre-solve proved the instance infeasible before any search
+    certificate: Certificate | None = None
+
+    @property
+    def outcome(self) -> Literal["solved", "infeasible", "timeout"]:
+        if self.solved:
+            return "solved"
+        return "timeout" if self.timed_out else "infeasible"
 
     def to_solution_dict(
         self,
@@ -166,7 +197,14 @@ class BacktrackResult:
         displaced: list[str] | None = None,
         diagnosis: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Serialise this result into a dict matching ``contracts/solution_v1.schema.json``."""
+        """Serialise this result into a dict matching ``contracts/solution_v1.schema.json``.
+
+        Raises:
+            ValueError: on a timeout - ``solution_v1`` can only say solved or
+                infeasible, and a timeout is neither.
+        """
+        if self.timed_out:
+            raise ValueError("solution_v1 has no status for a search timeout")
         tot = (
             total_sessions
             if total_sessions is not None
@@ -225,9 +263,12 @@ class BacktrackResult:
                 "displaced": disp,
                 "metadata": metadata,
             }
-        diag = diagnosis if diagnosis is not None else _placeholder_diagnosis(
-            self.unplaced_sessions
-        )
+        if diagnosis is not None:
+            diag = diagnosis
+        elif self.certificate is not None:
+            diag = self.certificate.to_diagnosis()
+        else:
+            diag = _placeholder_diagnosis(self.unplaced_sessions)
         return {
             "schema_version": "solution.v1",
             "status": "infeasible",
@@ -385,6 +426,13 @@ class _SolverState:
     nodes_explored: int = 0
     trail: list[_TrailEntry] = field(default_factory=list)
 
+    # Symmetry breaking: room_id → its interchangeable class, ids ascending
+    # (classes of two or more only), and (room_id, day) → sessions placed there.
+    room_classes: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    day_use: dict[tuple[str, int], int] = field(default_factory=dict)
+    break_symmetry: bool = True
+    deadline: float | None = None  # time.perf_counter() value
+
 
 def _build_room_hierarchy(rooms: dict[str, Room]) -> tuple[
     dict[str, list[str]],  # children_of
@@ -459,7 +507,7 @@ def _new_state(graph: ConflictGraph, payload: dict[str, Any]) -> _SolverState:
         for chain in _contiguous_start_slots(duration):
             chains[(chain[0], duration)] = chain
 
-    return _SolverState(
+    state = _SolverState(
         graph=graph,
         rooms=rooms,
         lab_blocks=lab_blocks,
@@ -471,6 +519,22 @@ def _new_state(graph: ConflictGraph, payload: dict[str, Any]) -> _SolverState:
         children_of=children_of,
         parent_of=parent_of,
     )
+
+    # Interchangeable rooms: everything a constraint reads about a room alike.
+    # shortcut: rooms with sub-rooms are never grouped (swapping them would
+    # have to swap their sub-rooms too); add that if real data needs it.
+    classes: dict[tuple[Any, ...], list[str]] = {}
+    for room in rooms.values():
+        if room.id in children_of:
+            continue
+        pins = tuple(s for s in sorted(graph.pinned_slots) if _room_is_pinned(state, room.id, s))
+        key = (room.room_type, room.capacity, room.parent_room_id, pins)
+        classes.setdefault(key, []).append(room.id)
+    for members in classes.values():
+        if len(members) > 1:
+            for rid in members:
+                state.room_classes[rid] = tuple(sorted(members))
+    return state
 
 
 # ---------------------------------------------------------------------------
@@ -598,13 +662,49 @@ def _assign(
     state.occupied[sid] = slots
     for s in slots:
         state.room_occupancy[(s, room_id)] = sid
+    state.day_use[(room_id, start.day)] = state.day_use.get((room_id, start.day), 0) + 1
 
 
 def _unassign(state: _SolverState, sid: str) -> None:
     room_id = state.room_assignment.pop(sid)
     for s in state.occupied.pop(sid):
         del state.room_occupancy[(s, room_id)]
-    del state.slot_assignment[sid]
+    day = state.slot_assignment.pop(sid).day
+    state.day_use[(room_id, day)] -= 1
+
+
+def _symmetric_duplicate(
+    state: _SolverState,
+    room_id: str,
+    day: int,
+    taken: tuple[str, ...] = (),
+) -> bool:
+    """True when placing in *room_id* on *day* repeats a placement already tried.
+
+    That holds when a smaller-id room of *room_id*'s interchangeable class is,
+    like *room_id*, unused on *day* by every assigned session and not in
+    *taken* (rooms already chosen for earlier members of the same lab block).
+
+    Why no solution is lost: interchangeable rooms agree on everything any
+    constraint reads - type, capacity, parent, pinned slots - and have no
+    sub-rooms.  Every placement lies within one day (chains never cross days),
+    so exchanging the two rooms in every placement on *day* maps timetables to
+    timetables.  Neither room is used on *day* yet, so the exchange leaves the
+    current partial assignment, and therefore every domain, unchanged.  Any
+    completion that puts this session in *room_id* thus has a mirror image
+    putting it in the smaller room, which sorts first and was already tried at
+    the same start: if it led to a solution the search has returned, and if
+    not, neither does this value.  The first solution found is the same with
+    or without this rule; only failed subtrees are skipped.
+    """
+    if not state.break_symmetry or state.day_use.get((room_id, day)):
+        return False
+    for other in state.room_classes.get(room_id, ()):
+        if other == room_id:
+            return False
+        if other not in taken and not state.day_use.get((other, day)):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -763,32 +863,34 @@ def _select_mrv_block(state: _SolverState) -> LabBlock | None:
 def _gen_room_tuples(
     room_lists: list[list[str]],
     state: _SolverState,
+    day: int,
     idx: int = 0,
     chosen: tuple[str, ...] = (),
-) -> list[tuple[str, ...]]:
-    """Enumerate room assignments for the block's sessions, in order.
+) -> Iterator[tuple[str, ...]]:
+    """Yield room assignments for the block's sessions, lexicographically.
 
     No two sessions share a room, and no session takes a whole room while
-    another takes one of its sub-rooms.
+    another takes one of its sub-rooms.  Lazy: the search usually needs only
+    the first tuple, and building all of them was ~78% of the runtime
+    (docs/solver-baseline-2026-10-06.md, finding 3).
     """
     if idx == len(room_lists):
-        return [chosen]
-    results: list[tuple[str, ...]] = []
+        yield chosen
+        return
     for r in room_lists[idx]:
         if any(
             r == c or state.parent_of.get(r) == c or state.parent_of.get(c) == r
             for c in chosen
-        ):
+        ) or _symmetric_duplicate(state, r, day, chosen):
             continue
-        results.extend(_gen_room_tuples(room_lists, state, idx + 1, (*chosen, r)))
-    return results
+        yield from _gen_room_tuples(room_lists, state, day, idx + 1, (*chosen, r))
 
 
 def _lab_block_candidates(
     state: _SolverState,
     block: LabBlock,
-) -> list[tuple[SlotId, tuple[str, ...]]]:
-    """Generate candidate ``(start_slot, room_tuple)`` for a LabBlock.
+) -> Iterator[tuple[SlotId, tuple[str, ...]]]:
+    """Yield candidate ``(start_slot, room_tuple)`` for a LabBlock, in sorted order.
 
     Every member starts at the same slot and occupies the same chain, so a
     conflict edge between two members makes the block unplaceable.  Starts
@@ -796,20 +898,22 @@ def _lab_block_candidates(
     rooms are those its domain still allows at that start and that pass
     :func:`_placement_ok` over every occupied period.
 
-    Returns a sorted list for determinism.
+    Lazy, and in the same order as sorting every candidate: starts ascend and
+    each start's tuples come out lexicographically.  The caller undoes every
+    change before asking for the next candidate, so each one is computed
+    against the same state the old eager list was.
     """
     members = block.session_ids
     if not members:
-        return []
+        return
     for i, a in enumerate(members):
         if any(b in state.graph.adjacency[a] for b in members[i + 1:]):
-            return []
+            return
 
     common_starts = set.intersection(
         *({start for start, _ in state.domains[sid]} for sid in members)
     )
 
-    candidates: list[tuple[SlotId, tuple[str, ...]]] = []
     for start in sorted(common_starts):
         room_lists: list[list[str]] = []
         for sid in members:
@@ -821,11 +925,8 @@ def _lab_block_candidates(
                 break
             room_lists.append(rooms)
         else:
-            for rt in _gen_room_tuples(room_lists, state):
-                candidates.append((start, rt))
-
-    candidates.sort()
-    return candidates
+            for rt in _gen_room_tuples(room_lists, state, start.day):
+                yield start, rt
 
 
 # ---------------------------------------------------------------------------
@@ -833,12 +934,21 @@ def _lab_block_candidates(
 # ---------------------------------------------------------------------------
 
 
+class _Timeout(Exception):
+    """The search ran past its time budget."""
+
+
 def _solve(state: _SolverState) -> bool:
     """Recursive backtracking with forward checking.
 
     Returns True if a complete assignment was found.
+
+    Raises:
+        _Timeout: when ``state.deadline`` has passed.
     """
     state.nodes_explored += 1
+    if state.deadline is not None and time.perf_counter() >= state.deadline:
+        raise _Timeout
 
     # 1. Try to place the next lab block (prioritise blocks — they are harder)
     block = _select_mrv_block(state)
@@ -857,6 +967,8 @@ def _solve(state: _SolverState) -> bool:
 def _solve_session(state: _SolverState, sid: str) -> bool:
     """Try to assign session *sid* to each (start, room) in its domain."""
     for start, room_id in sorted(state.domains[sid]):
+        if _symmetric_duplicate(state, room_id, start.day):
+            continue
         slots = _placement_ok(state, sid, start, room_id)
         if slots is None:
             continue
@@ -903,6 +1015,8 @@ def backtrack_solve(
     payload: dict[str, Any],
     *,
     seed_assignment: dict[str, SlotId] | None = None,
+    time_limit_s: float | None = None,
+    break_symmetry: bool = True,
 ) -> BacktrackResult:
     """Solve the timetable by backtracking with forward checking and MRV.
 
@@ -918,21 +1032,32 @@ def backtrack_solve(
         may only start at its seed slot - its domain is restricted to it, like
         a ``fixed_slot`` - and is checked like any other placement.  Ids not in
         the graph are ignored.
+    time_limit_s:
+        Wall-clock budget for the search (pre-solve is polynomial and not
+        counted).  When it runs out the result has ``outcome == "timeout"``,
+        which is never reported as infeasible.  ``None``: no limit.
+    break_symmetry:
+        Skip placements that differ only by an interchangeable room (see
+        :func:`_symmetric_duplicate`).  It never changes the solution found;
+        ``False`` exists so tests can show that.
 
     Returns
     -------
     BacktrackResult
-        ``solved=True`` with full slot and room assignments, or
-        ``solved=False`` with an explored-node count.  The search unwinds
-        fully on failure, so an infeasible result normally has no sessions
-        assigned.
+        ``outcome`` is ``"solved"`` with full slot and room assignments,
+        ``"infeasible"`` (with ``certificate`` set when pre-solve proved it,
+        with no search), or ``"timeout"``.  The search unwinds fully on
+        failure, so an infeasible result normally has no sessions assigned.
 
     Raises
     ------
     ValueError
         On an inconsistent lab-block declaration (see :func:`_new_state`).
     """
+    from solver.presolve import presolve  # presolve imports this module's helpers
+
     state = _new_state(graph, payload)
+    state.break_symmetry = break_symmetry
     _build_initial_domains(state)
 
     if seed_assignment:
@@ -940,7 +1065,17 @@ def backtrack_solve(
             if sid in state.domains:
                 state.domains[sid] = {v for v in state.domains[sid] if v[0] == slot}
 
-    solved = _solve(state)
+    certificate = presolve(state)
+    timed_out = False
+    if certificate is not None:
+        solved = False
+    else:
+        if time_limit_s is not None:
+            state.deadline = time.perf_counter() + time_limit_s
+        try:
+            solved = _solve(state)
+        except _Timeout:
+            solved, timed_out = False, True
 
     unplaced = [
         sid for sid in graph.sessions if sid not in state.slot_assignment
@@ -954,4 +1089,6 @@ def backtrack_solve(
         unplaced_sessions=unplaced,
         rooms=state.rooms,
         occupied=dict(state.occupied),
+        timed_out=timed_out,
+        certificate=certificate,
     )

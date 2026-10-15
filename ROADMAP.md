@@ -143,7 +143,7 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | S1 | Nidhi | track/solver-baseline | — | Dhruv | In progress |
 | S2 | Nidhi | chore/docs-truth | S1 merged | Dhruv + Rohan | Not started |
 | S3 | Nidhi | contracts/v2-schemas | S2 merged | all three | Not started |
-| S4 | Dhruv | track/solver-presolve | S1 merged | Nidhi | Not started |
+| S4 | Dhruv | track/solver-presolve | S1 merged | Nidhi | Done |
 | S5 | Rohan | track/frontend-contracts | — | Nidhi | Not started |
 | S6 | Nidhi | track/data-class-tt | S2 merged | Rohan | Not started |
 | S7 | Nidhi | track/data-lab-faculty | S6 merged | Rohan | Not started |
