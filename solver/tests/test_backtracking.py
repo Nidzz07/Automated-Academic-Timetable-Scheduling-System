@@ -745,7 +745,30 @@ class TestInfeasible:
         assert not result.solved, (
             "K3 with 2 slots should be infeasible"
         )
-        assert result.nodes_explored > 0
+        # Pigeonhole proves it before any search (solver/presolve.py).
+        assert result.certificate is not None
+        assert result.certificate.check == "cohort_load"
+        assert result.nodes_explored == 0
+
+    def test_odd_cycle_in_two_slots_exhausts_the_search(self) -> None:
+        """C5 in 2 slots: every clique fits and Hall holds, but no 2-colouring
+        exists, so pre-solve passes and only the search can refute it."""
+        from solver.slots import all_slots
+
+        ids = [f"s{i}" for i in range(5)]
+        unavail = [{"day": s.day, "period": s.period} for s in all_slots()
+                   if s not in {SlotId(0, 0), SlotId(0, 1)}]
+        payload = _payload(
+            sessions=[_session(s, faculty=f"f{s}", cohort=f"c{s}") for s in ids],
+            edges=[_edge(ids[i], ids[(i + 1) % 5], "COHORT") for i in range(5)],
+            faculty_availability=[_faculty_avail(f"f{s}", unavail) for s in ids],
+        )
+        result = _solve_checked(build_conflict_graph(payload), payload)
+        assert result.outcome == "infeasible"
+        assert result.certificate is None
+        assert result.nodes_explored > 1
+        entry = result.to_solution_dict()["diagnosis"]["minimal_conflicting_set"][0]
+        assert entry["kind"] == "UNSATISFIABLE_DOMAIN"  # the search-exhaustion placeholder
 
 
 # ======================================================================
@@ -1032,13 +1055,16 @@ class TestRegressionFixedSlotVsAvailability:
         )
         assert not _solve_checked(build_conflict_graph(payload), payload).solved
 
-    def test_infeasible_result_keeps_placeholder_diagnosis_shape(self) -> None:
+    def test_infeasible_result_carries_presolve_certificate(self) -> None:
+        """s1 has no free slot, so pre-solve's faculty pigeonhole proves it.
+        (The search-exhaustion placeholder is covered in TestInfeasible.)"""
         payload = self._repro()
         sol = _solve_checked(build_conflict_graph(payload), payload).to_solution_dict()
         assert sol["status"] == "infeasible"
         entry = sol["diagnosis"]["minimal_conflicting_set"][0]
-        assert entry["constraint_id"] == "unplaced.s1"
-        assert entry["kind"] == "UNSATISFIABLE_DOMAIN"
+        assert entry["constraint_id"] == "presolve.faculty_load.f1"
+        assert entry["kind"] == "FACULTY_CLASH"
+        assert entry["entity_ids"] == ["s1", "f1"]
 
 
 class TestRegressionMultiPeriodOccupancy:
