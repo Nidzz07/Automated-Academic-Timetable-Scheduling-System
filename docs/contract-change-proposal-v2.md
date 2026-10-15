@@ -865,49 +865,6 @@ before `solver/scoring.py` implements it. Nidhi and Rohan may add a comment but 
 | 7 | **ROADMAP clarification (NOT a schema change):** `FAC_LOAD_IMBALANCE` measures each faculty member's T/P-weighted load spread across the days of the week; cross-faculty total load moves to Phase 4 substitution ordering | none (no contract version change) | n/a | Agree 2026-10-06 | n/a |
 | 8 | **Proposed 2026-10-12, needs three Agrees. Not implemented.** `ingestion`: the three period fields (`observed_sessions[].period`, `lab_blocks[].start_period`, `pinned_blocks[].period`) move from the teaching-order axis `$defs/teaching_period` (0..7) to the edge-list wall-clock axis `$defs/period` (0..9, ROADMAP §5 P0–P9); each year's lunch is recorded as a `pinned_blocks` entry with `kind = break` and that year's cohort. `edge_list_v1` and `solution` unchanged: per-year lunch is expressed there as data (see *Row 8 assessment* below). | `ingestion.v2` amendment if agreed before any producer emits `ingestion.v2` (S6 `class_tt.py` is the first); otherwise `ingestion.v3` |  |  |  |
 
+2026-10-11 — Ownership corrected (ROADMAP D1). Row 7 is the Track A owner's rule; Dhruv agreed on 2026-10-11. Signature cells above are left as originally recorded (D17).
+
 ### Row 8 assessment — per-year lunch (ROADMAP D6), 2026-10-12
-
-D6: periods P0–P9 Mon–Fri; P2 is a coffee break for everyone; lunch is P5 for SE and P4 for TE. D7: a lab
-block may span the coffee break but never a lunch period. The EVEN class timetable agrees: the full-width
-BREAK row is `1.15-2.15` on the SE-Comp A grid and `12.15-1.15` on the TE-Comp A grid. The wall-clock times
-are the same as `solver/slots.py` `PERIOD_TIMES`; only *which* periods each year teaches in differs.
-
-**`edge_list_v1` — expressible as data, no change.**
-
-- `slot_grid.teaching_periods` is payload data; its `default` is annotation-only, and its description says
-  "an institution with a different break layout can still use this contract". Set it to
-  `[0, 1, 3, 4, 5, 6, 7, 8, 9]`: only P2 is closed for everyone.
-- `slot_grid.adjacency` is payload data too: `[[0,1],[1,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9]]`. It keeps
-  `[1,3]` (a lab may span the coffee break) and drops the canonical `[4,6]`, which spans the SE lunch (D7).
-- `pinned_occupancy[]` (`day`, `period`, `faculty_ids`, `room_ids`, `cohort_ids`) already covers breaks
-  ("MDM, HSS, LLC, activity, project, exams, breaks"). For each day, pin P5 for every SE cohort id and P4 for
-  every TE cohort id. A lab block for a year then cannot use that year's lunch period, and no adjacency pair
-  skips over it, so it cannot span lunch (D7).
-- Each year keeps 8 teaching periods a day, 40 a week.
-- Two caveats for the exporter (S9), not the contract:
-  - `solver.graph.slot_is_open` matches a pin by exact `cohort_id`. The pin must therefore list every cohort
-    of that year: division, batch, combined and elective cohorts.
-  - `pinned_occupancy` carries no kind, so a lunch pin can surface as `PINNED_BLOCK` in a MUS. H7 says lunch is
-    never used, so the backend must refuse `RELAX_PINNED_BLOCK` on a lunch slot. This is the same pattern as
-    refusing absence-derived slots (§8.1). `MANUAL` stays available.
-
-**`ingestion_v1` — not expressible; this is the contract change.** `$defs/teaching_period` is "0..7 - the
-eight schedulable hours of CONTEXT.md section 3.2, counted in teaching order with the two breaks excluded".
-On that axis index 3 is 12.15–13.15 and index 4 is 14.15–15.15, so a TE session at 13.15–14.15 (P5) has no
-index. Reading the index per year would change the field's meaning, which §0 classes as a new version.
-Moving the three period fields to the wall-clock axis has three effects:
-
-- It makes every D6 cell expressible.
-- It removes the teaching-order axis ("axis 2" in `solver/slots.py`) from the contracts.
-- It matches `edge_list_v1` and `solution`, which already use the wall-clock axis.
-
-`ingestion.v2` has no producer yet, so the cheapest moment to make this change is before S6.
-
-**Not a contract change, but needed before D6 can be solved (S8, Track A).**
-
-- `solver/slots.py` hard-codes `TEACHING_PERIODS = [0, 1, 3, 4, 6, 7, 8, 9]` and `LUNCH_PERIOD = 5`.
-- `is_adjacent` compares positions in that constant.
-- `solver.graph.slot_is_open` uses the constant `is_teaching_period`.
-- `solver.validate._check_grid` raises on any `slot_grid` other than the canonical one.
-
-The solver must read `teaching_periods` and `adjacency` from the payload first.

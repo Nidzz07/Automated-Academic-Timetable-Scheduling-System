@@ -57,6 +57,18 @@ Agents: read this file and CLAUDE.md before any task. §1 (ownership) and §3 (d
 | D20 | Faculty initials are stored in the DB table faculty_initials (migration 0004) instead of a YAML file. | Nidhi | 2026-10-03 |
 | D21 | Infeasibility: polynomial pre-solve checks (counting and Hall/Hopcroft–Karp matching) run before search; the search has a time budget. A timeout is reported as "timeout", never as "infeasible". | Team | 2026-10-11 |
 | D22 | v1 contracts are frozen. v2 (proposal rows 1–7, signed 2026-10-06) is used only once contracts/*_v2 files are on main. | Team | 2026-10-06 |
+| D23 | Tutorials: as the real EVEN timetable shows (PCS in SE, DevOps in TE), a tutorial is held once for the whole division, 1 h, in a classroom. Supersedes D9. | Real timetable (S6) | 2026-10-15 |
+| D24 | Items excluded by D3 that appear in the real timetable (electives such as NLP, BDA, DL; MDM theory and labs; STUDENT ACTIVITY) are frozen at their current day and periods. They block the division and all its batches, their teacher and their room. The solver never moves them. | Team | 2026-10-15 |
+| D25 | SRD (TE, mostly ML, in no legend): full name [Dr. Dholay Surekha Rajesh - Associate Professor]. Treated as one CE faculty member identified by the initials "SRD" until named. | Team | 2026-10-15 |
+| D26 | FOM - II (SE, always parallel with SMCS): [Foundation of Mathematics - It is a subject taught to DSE students]. Default: it is an alternative to SMCS for part of each division, so SMCS and FOM - II are both frozen at their current slots (D24). | Team | 2026-10-15 |
+| D27 | Lab 509: lab_capacities.yaml (CE lab, 2 batches) wins over classrooms.xlsx (capacity 20) and the "509 new CSE" label. [CONFIRM] | Nidhi | 2026-10-15 |
+| D28 | Lab 505 (in the EVEN lab timetable, not in classrooms.xlsx) is not used for generation in v1. Its current CE practicals are rescheduled into the D8 labs. [CONFIRM] | Nidhi | 2026-10-15 |
+| D29 | Rooms seen in the timetables but outside D8/D10 (for example 403-A, 403 B; 601 used as a lab) are recorded and reported, not used for generation. | Team | 2026-10-15 |
+| D30 | Room names are normalised: "607-B" = 607B; "703-A"/"703-B" = the two sub-rooms of 703 (D8). Sub-room labels beyond a lab's declared split (603-7, 606-4, 606-5) are reported and mapped to the parent lab. | Team | 2026-10-15 |
+| D31 | v2 proposal row 8 (wall-clock period axis 0–9; each year's lunch as a pinned break) is folded into ingestion.v2. Signed by all three on [15th October 2026]. | Team | [15th October 2026] |
+| D32 | Process: only Nidhi edits ROADMAP §7/§8 (weekly status sync). Every other PR adds exactly one dated entry to docs/CURRENT-PROGRESS.md and edits only its own track's row. | Team | 2026-10-15 |
+| D33 | A solver timeout is never an infeasible solution. The API reports it as a job status (S13); no contract carries it. | Team | 2026-10-15 |
+| D34 | Quality rule IDs are exactly S-GAP, S-B2B, S-LOAD16, FAC_LOAD_IMBALANCE (§6). Quality is computed only by the solver; the frontend only displays it. | Team | 2026-10-15 |
 
 ## 4. Real data inventory (data/real/ unless stated)
 | File | What it gives | Status |
@@ -111,7 +123,7 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 
 ### Phase 1 — Data model, graph, grid UI
 - B: [x] models (3NF), department scoping, cohort polymorphism · [~] reference seed: T/P loads missing (S7) · [~] faculty_initials table: needs human verification · [ ] constraint derivation / export (S9)
-- A: [x] conflict graph, O(1) adjacency · [~] Welsh-Powell: fix awaiting merge (S1) · [x] graph tests with networkx cross-check · [ ] chromatic lower bound (optional)
+- A: [x] conflict graph, O(1) adjacency · [x] Welsh-Powell: fix awaiting merge (S1) · [x] graph tests with networkx cross-check · [ ] chromatic lower bound (optional)
 - C: [x] scaffold, grid, lab, combined and pinned cells · [~] TS types from schemas (S5)
 - Exit: [ ] real solver output rendered in the browser (S12)
 
@@ -140,12 +152,14 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 ## 8. Sequence of work
 | Step | Owner | Branch | Depends on | Reviewer | Status |
 |---|---|---|---|---|---|
-| S1 | Nidhi | track/solver-baseline | — | Dhruv | In progress |
-| S2 | Nidhi | chore/docs-truth | S1 merged | Dhruv + Rohan | Not started |
-| S3 | Nidhi | contracts/v2-schemas | S2 merged | all three | Not started |
-| S4 | Dhruv | track/solver-presolve | S1 merged | Nidhi | Done |
-| S5 | Rohan | track/frontend-contracts | — | Nidhi | Not started |
-| S6 | Nidhi | track/data-class-tt | S2 merged | Rohan | Not started |
+| S1 | Nidhi | track/solver-baseline | — | Dhruv | Done (PR #18) |
+| S2 | Nidhi | chore/docs-truth | S1 merged | Dhruv + Rohan | In review |
+| S3 | Nidhi | contracts/v2-schemas | S2 merged | all three | In review |
+| S3b | Nidhi | contracts/v2-schemas | row 8 signed | all three | In progress |
+| S4 | Dhruv | track/solver-presolve | S1 merged | Nidhi | In review |
+| S4b | Dhruv | track/solver-presolve | — | Nidhi | In progress |
+| S5 | Rohan | track/frontend-contracts | — | Nidhi | In review |
+| S6 | Nidhi | track/data-class-tt | S2 merged | Rohan | In review |
 | S7 | Nidhi | track/data-lab-faculty | S6 merged | Rohan | Not started |
 | S8 | Dhruv | track/solver-v2-grid | S3 merged, S4 merged | Nidhi | Not started |
 | S9 | Nidhi | track/data-seed-export | S7 merged, S3 merged | Rohan | Not started |
@@ -245,3 +259,4 @@ Tags as in the old plan: [S] = should (cut only if behind schedule, note the cut
 
 ## 13. Changelog
 - 2026-10-11: New roadmap. Ownership corrected (D1). Real-data decisions D2–D22 recorded. Sequence S1–S16 defined.
+- 2026-10-15: D23–D34 added (real-timetable findings, row 8, process).
