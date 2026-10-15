@@ -11,7 +11,7 @@ import {
   useDraggable,
   useDroppable,
 } from '@dnd-kit/core';
-import { SolvedSolution, DayIndex } from '@/types/solution';
+import { SolvedSolution, DayIndex } from '@/adapters/solution';
 import {
   DAYS,
   TEACHING_PERIODS,
@@ -21,7 +21,7 @@ import {
   buildEnrichedLabBlocks,
   getPinnedBlocks,
   EnrichedSession,
-} from '@/lib/timetableData';
+} from '@/adapters/timetable';
 import { ParallelLabBlock } from './ParallelLabBlock';
 import { CombinedLectureBlock } from './CombinedLectureBlock';
 import { PinnedBlock } from './PinnedBlock';
@@ -51,7 +51,7 @@ export interface TimetableGridProps {
     sessionId: string,
     targetDay: DayIndex,
     targetTeachingPeriod: number
-  ) => Promise<any> | void;
+  ) => Promise<void> | void;
 }
 
 /**

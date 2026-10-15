@@ -5,6 +5,7 @@ import App from '@/App';
 describe('Role-Differentiated Views (Phase 2 Track C)', () => {
   it('renders administrator role by default with drag-enabled capabilities, department scope, and admin controls', async () => {
     render(<App />);
+    await screen.findByTestId('timetable-grid');
 
     // Assert Administrator role is active
     expect(screen.getByTestId('role-button-administrator')).toBeInTheDocument();
@@ -31,6 +32,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
 
   it('renders coordinator role with drag-enabled capabilities and department management', async () => {
     render(<App />);
+    await screen.findByTestId('timetable-grid');
 
     // Switch to coordinator role
     fireEvent.click(screen.getByTestId('role-button-coordinator'));
@@ -46,6 +48,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
 
   it('differentiates faculty role: READ-ONLY, own sessions only, shows T/P workload formula, hides admin telemetry', async () => {
     render(<App />);
+    await screen.findByTestId('timetable-grid');
 
     // Switch to faculty role
     fireEvent.click(screen.getByTestId('role-button-faculty'));
@@ -78,6 +81,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
 
   it('differentiates student role: STRICTLY READ-ONLY, division-specific schedule, hides quality penalties', async () => {
     render(<App />);
+    await screen.findByTestId('timetable-grid');
 
     // Switch to student role
     fireEvent.click(screen.getByTestId('role-button-student'));

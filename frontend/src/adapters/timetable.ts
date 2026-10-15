@@ -1,7 +1,27 @@
-import { SolvedSolution, DayIndex, PeriodIndex, SessionAssignment } from '@/types/solution';
-import solvedFixture from '@/fixtures/solution_v1.solved.example.json';
-import edgeListFixture from '@/fixtures/edge_list_v1.example.json';
-import ingestionFixture from '@/fixtures/ingestion_v1.example.json';
+/**
+ * Edge-list / ingestion / solution contracts -> grid view models.
+ */
+
+import {
+  SolvedSolution,
+  DayIndex,
+  PeriodIndex,
+  SessionAssignment,
+  parseSolution,
+  isSolvedSolution,
+} from '@/adapters/solution';
+import { validateContract } from '@/api/contractValidation';
+import type { ChronosEdgeListContractV1 } from '@/types/generated/edge_list_v1.schema';
+import solvedExample from '@contracts/examples/solution_v1.solved.example.json';
+import edgeListExample from '@contracts/examples/edge_list_v1.example.json';
+import ingestionExample from '@contracts/examples/ingestion_v1.example.json';
+
+export type EdgeListSession = ChronosEdgeListContractV1['sessions'][number];
+type LabBlock = ChronosEdgeListContractV1['lab_blocks'][number];
+
+// shortcut: metadata comes from the contract examples; swap for API-served edge-list/ingestion payloads at S13
+const edgeListFixture = validateContract('edge_list', edgeListExample);
+const ingestionFixture = validateContract('ingestion', ingestionExample);
 
 export interface PeriodSlot {
   /** Teaching period index: 0..7 */
@@ -169,8 +189,8 @@ class TimetableMetadataStore {
   private faculty = new Map<string, { initials: string; name: string }>();
   private rooms = new Map<string, string>();
   private cohorts = new Map<string, { label: string; isCombined: boolean; description?: string }>();
-  private edgeSessions = new Map<string, (typeof edgeListFixture.sessions)[0]>();
-  private labBlocks = new Map<string, (typeof edgeListFixture.lab_blocks)[0]>();
+  private edgeSessions = new Map<string, EdgeListSession>();
+  private labBlocks = new Map<string, LabBlock>();
 
   constructor() {
     this.init();
@@ -184,7 +204,8 @@ class TimetableMetadataStore {
 
     // Index faculty from ingestion fixture
     ingestionFixture.faculty.forEach(f => {
-      this.faculty.set(f.id, { initials: f.initials, name: f.full_name });
+      // ingestion_v1 allows null initials (UNRESOLVED_FACULTY_INITIALS); never guess them
+      this.faculty.set(f.id, { initials: f.initials ?? 'Unresolved', name: f.full_name });
     });
 
     // Index rooms from edge_list and ingestion
@@ -254,10 +275,12 @@ class TimetableMetadataStore {
 export const metadataStore = new TimetableMetadataStore();
 
 /**
- * Returns typed solved solution fixture directly from contracts/examples
+ * Returns the solved solution example from contracts/examples, validated against solution_v1
  */
 export function getSolvedSolutionFixture(): SolvedSolution {
-  return solvedFixture as unknown as SolvedSolution;
+  const solution = parseSolution(solvedExample);
+  if (!isSolvedSolution(solution)) throw new Error('solution_v1.solved.example.json is not solved');
+  return solution;
 }
 
 /**
@@ -298,7 +321,7 @@ export function buildEnrichedSessions(solution: SolvedSolution = getSolvedSoluti
       facultyName: faculty.name,
       cohortLabel: cohort.label,
       cohortSize: edgeSession?.cohort_size ?? 0,
-      sessionType: (edgeSession?.session_type as "theory" | "lab") ?? "theory",
+      sessionType: edgeSession?.session_type ?? "theory",
       isCombinedDivision: isCombined,
       combinedCohortText: isCombined ? `${cohort.label} (${edgeSession?.cohort_size ?? 0} students)` : undefined,
       isPinned,

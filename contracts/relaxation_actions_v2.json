@@ -1,0 +1,37 @@
+{
+  "FACULTY_CLASH": [
+    "MANUAL"
+  ],
+  "COHORT_CLASH": [
+    "MANUAL"
+  ],
+  "ROOM_CLASH": [
+    "MANUAL"
+  ],
+  "ROOM_OCCUPANCY": [
+    "RECLASSIFY_ROOM",
+    "MANUAL"
+  ],
+  "ROOM_CAPACITY": [
+    "MANUAL"
+  ],
+  "ROOM_TYPE": [
+    "RECLASSIFY_ROOM",
+    "MANUAL"
+  ],
+  "FACULTY_UNAVAILABLE": [
+    "RELAX_FACULTY_AVAILABILITY",
+    "MANUAL"
+  ],
+  "PINNED_BLOCK": [
+    "RELAX_PINNED_BLOCK",
+    "MANUAL"
+  ],
+  "LAB_CONTIGUITY": [
+    "MANUAL"
+  ],
+  "FIXED_SLOT": [
+    "UNFIX_SLOT",
+    "MANUAL"
+  ]
+}

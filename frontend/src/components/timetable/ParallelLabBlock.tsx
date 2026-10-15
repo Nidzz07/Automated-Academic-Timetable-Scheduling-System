@@ -1,5 +1,5 @@
 import React from 'react';
-import { EnrichedLabBlock } from '@/lib/timetableData';
+import { EnrichedLabBlock } from '@/adapters/timetable';
 import { Badge } from '@/components/ui/badge';
 import { Layers, Clock, DoorOpen, User, BookOpen } from 'lucide-react';
 

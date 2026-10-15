@@ -12,6 +12,7 @@ describe('Drag-and-Drop Interaction and Revert-on-Reject Flow', () => {
 
   it('performs a successful drag: applies provisionally, confirmed by backend, updates grid placement', async () => {
     render(<App />);
+    await screen.findByTestId('timetable-grid');
 
     // sess-0006 is initially on Day 2 (Wednesday), Teaching Period 2 (11:15 - 12:15)
     const initialCell = screen.getByTestId('grid-cell-2-2');
@@ -42,6 +43,7 @@ describe('Drag-and-Drop Interaction and Revert-on-Reject Flow', () => {
 
   it('performs a rejected drag: reverts cleanly to exact prior state and preserves UI selection', async () => {
     render(<App />);
+    await screen.findByTestId('timetable-grid');
 
     // 1. Initial State: sess-0006 is on Day 2 (Wednesday), Period 2
     const originalCell = screen.getByTestId('grid-cell-2-2');
@@ -92,6 +94,7 @@ describe('Drag-and-Drop Interaction and Revert-on-Reject Flow', () => {
 
   it('reverts and surfaces custom reason when backend reject mode is simulated', async () => {
     render(<App />);
+    await screen.findByTestId('timetable-grid');
 
     // Enable simulated rejection via the UI button
     const toggleRejectBtn = screen.getByTestId('toggle-reject-mode-button');

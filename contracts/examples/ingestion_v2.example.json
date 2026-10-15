@@ -1,0 +1,71 @@
+{
+  "schema_version": "ingestion.v2",
+  "source_file": "CE_Class_Time_Table-ODD_sem_25-26.docx",
+  "semester": {
+    "code": "ODD",
+    "academic_year": "2025-2026",
+    "term": "Term I, Academic Year 2025-2026"
+  },
+  "departments": [
+    { "id": "dept-ce", "code": "CE", "name": "Computer Engineering" }
+  ],
+  "programmes": [
+    { "id": "prog-ce-btech", "department_id": "dept-ce", "code": "BTECH", "name": "B.Tech Computer Engineering" }
+  ],
+  "divisions": [
+    { "id": "div-be-comp-ab", "programme_id": "prog-ce-btech", "semester_number": 7, "label": "BE Comp- A & B", "strength": null }
+  ],
+  "batches": [],
+  "rooms": [],
+  "faculty": [
+    {
+      "id": "fac-swapnali-kurhade",
+      "department_id": "dept-ce",
+      "full_name": "Prof. Swapnali Kurhade",
+      "theory_hours": null,
+      "practical_hours": null,
+      "total_hours": null
+    },
+    {
+      "id": "fac-suhas-kakade",
+      "department_id": "dept-ce",
+      "full_name": "Prof. Suhas Kakade",
+      "theory_hours": null,
+      "practical_hours": null,
+      "total_hours": null
+    }
+  ],
+  "faculty_initials": [
+    {
+      "faculty_id": "fac-swapnali-kurhade",
+      "initials": "SK",
+      "division_id": "div-be-comp-ab",
+      "source": "legend",
+      "is_ambiguous": true,
+      "legend_ref": "ODD t18 BE Comp- A & B"
+    },
+    {
+      "faculty_id": "fac-suhas-kakade",
+      "initials": "SK",
+      "division_id": "div-be-comp-ab",
+      "source": "legend",
+      "is_ambiguous": true,
+      "legend_ref": "ODD t18 BE Comp- A & B"
+    }
+  ],
+  "subjects": [],
+  "qualifications": [],
+  "cohorts": [],
+  "observed_sessions": [],
+  "lab_blocks": [],
+  "pinned_blocks": [],
+  "anomalies": [
+    {
+      "severity": "warning",
+      "code": "AMBIGUOUS_FACULTY_INITIALS",
+      "message": "The BE Comp- A & B initials legend gives 'SK' to two people, Prof. Swapnali Kurhade and Prof. Suhas Kakade. Both are kept as candidates; a cell in this division reading 'SK' cannot be attributed to one of them from the document.",
+      "source_file": "CE_Class_Time_Table-ODD_sem_25-26.docx",
+      "source_cell": "SK"
+    }
+  ]
+}
