@@ -1,4 +1,4 @@
-"""Validation tests for the v2 contracts (docs/contract-change-proposal-v2.md, rows 1-6).
+"""Validation tests for the v2 contracts (docs/contract-change-proposal-v2.md, rows 1-6 and 8).
 
 Mirrors ``test_schemas.py``: each v2 schema is a legal, closed JSON Schema; each v2
 example validates; a malformed variant of each example is rejected. On top of that
@@ -7,6 +7,8 @@ placeholder kinds, the infeasible branch that forbids anything timetable-shaped,
 ``diagnosis.method``, the typed relaxation and its verification, the quality
 block's per-rule status, the faculty-resolution states - and runs the cross-field
 rules JSON Schema cannot state (proposal sections 1, 2, 6, 8.3) as plain tests.
+Row 8 adds the wall-clock period axis of ROADMAP section 5 and the D6 grid
+example, which validates against the frozen ``edge_list_v1``.
 """
 
 from __future__ import annotations
@@ -28,14 +30,21 @@ EXAMPLES_DIR = CONTRACTS_DIR / "examples"
 SCHEMA_FILES = {
     "ingestion": "ingestion_v2.schema.json",
     "solution": "solution_v2.schema.json",
+    "edge_list": "edge_list_v1.schema.json",
 }
 RELAXATION_MAP = "relaxation_actions_v2.json"
 
 INGESTION = "ingestion_v2.example.json"
 SOLVED = "solution_v2.solved.example.json"
 INFEASIBLE = "solution_v2.infeasible.example.json"
+D6_GRID = "edge_list_v1.d6_grid.example.json"
 
-EXAMPLE_FILES = {INGESTION: "ingestion", SOLVED: "solution", INFEASIBLE: "solution"}
+EXAMPLE_FILES = {
+    INGESTION: "ingestion",
+    SOLVED: "solution",
+    INFEASIBLE: "solution",
+    D6_GRID: "edge_list",
+}
 
 RETIRED_KINDS = ["UNSATISFIABLE_DOMAIN", "INFEASIBLE_INSTANCE"]
 
@@ -334,6 +343,11 @@ def _verified_without_runtime(payload: Any) -> Any:
     return payload
 
 
+def _lunch_pin_without_cohorts(payload: Any) -> Any:
+    del payload["pinned_occupancy"][0]["cohort_ids"]
+    return payload
+
+
 def _slot_ref_with_extra_field(payload: Any) -> Any:
     payload["diagnosis"]["minimal_conflicting_set"][1]["slots"][0]["label"] = "Mon 10.00"
     return payload
@@ -376,6 +390,7 @@ MALFORMED: list[tuple[str, str, Mutator]] = [
     ("infeasible:manual-action-claimed-verified", INFEASIBLE, _manual_action_claimed_verified),
     ("infeasible:verified-without-runtime", INFEASIBLE, _verified_without_runtime),
     ("infeasible:slot-ref-with-extra-field", INFEASIBLE, _slot_ref_with_extra_field),
+    ("d6-grid:lunch-pin-without-cohorts", D6_GRID, _lunch_pin_without_cohorts),
 ]
 
 
@@ -677,3 +692,105 @@ def test_example_relaxation_is_permitted_for_its_kind() -> None:
         if entry["constraint_id"] == relaxation["constraint_id"]
     )
     assert relaxation["action"]["action_type"] in relaxation_map()[kind]
+
+
+# --------------------------------------------------------------------------
+# 7. proposal row 8: wall-clock period axis 0..9 and per-year lunch (ROADMAP D6)
+# --------------------------------------------------------------------------
+
+# ROADMAP section 5 / row 8 assessment: only P2 is closed for everyone; [4, 6] would span SE lunch.
+D6_TEACHING_PERIODS = [0, 1, 3, 4, 5, 6, 7, 8, 9]
+D6_ADJACENCY = [[0, 1], [1, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9]]
+SE_LUNCH, TE_LUNCH, COFFEE = 5, 4, 2
+
+
+def test_every_ingestion_period_field_is_on_the_wall_clock_axis() -> None:
+    doc = schema("ingestion")
+    props = doc["properties"]
+    refs = [
+        props["observed_sessions"]["items"]["properties"]["period"]["$ref"],
+        props["lab_blocks"]["items"]["properties"]["start_period"]["$ref"],
+        props["pinned_blocks"]["items"]["properties"]["period"]["$ref"],
+    ]
+    assert refs == ["#/$defs/period"] * 3
+    assert "teaching_period" not in doc["$defs"]
+    period = doc["$defs"]["period"]
+    assert (period["minimum"], period["maximum"]) == (0, 9)
+
+
+@pytest.mark.parametrize(("period", "valid"), [(0, True), (5, True), (9, True), (10, False)])
+def test_observed_session_period_range(period: int, valid: bool) -> None:
+    """P5 (13:15-14:15) is a TE teaching hour; it had no index on the old 0..7 axis."""
+    session = _session(cohort_id="coh-te-t1", period=period, source_cell="TEST / SK / 13.15")
+    assert is_valid("ingestion", _with_session(session)) is valid
+
+
+@pytest.mark.parametrize(("start", "valid"), [(1, True), (8, True), (10, False)])
+def test_lab_block_start_period_range(start: int, valid: bool) -> None:
+    payload = example(INGESTION)
+    payload["lab_blocks"] = [
+        {
+            "id": "lab-t1",
+            "division_id": "div-be-comp-ab",
+            "day": 0,
+            "start_period": start,
+            "duration_periods": 2,
+            "parallel_session_ids": [],
+        }
+    ]
+    assert is_valid("ingestion", payload) is valid
+
+
+def _break(cohort_id: str | None, period: int) -> dict[str, Any]:
+    return {
+        "id": f"brk-{cohort_id}-{period}",
+        "label": "BREAK",
+        "cohort_id": cohort_id,
+        "day": 0,
+        "period": period,
+        "duration_periods": 1,
+        "kind": "break",
+    }
+
+
+def test_coffee_and_per_year_lunch_are_pinned_breaks() -> None:
+    payload = example(INGESTION)
+    payload["pinned_blocks"] = [
+        _break(None, COFFEE),
+        _break("coh-se-t1", SE_LUNCH),
+        _break("coh-te-t1", TE_LUNCH),
+    ]
+    assert_valid("ingestion", payload)
+
+
+def test_se_session_in_its_lunch_is_not_a_schema_error() -> None:
+    """Pins a known limit: a session's year is reached only through cohort -> division ->
+    semester_number, a cross-field join JSON Schema cannot express. Rejecting an SE session
+    at P5 is a validator rule (S7), not a schema rule."""
+    payload = _with_session(_session(cohort_id="coh-se-t1", period=SE_LUNCH))
+    payload["pinned_blocks"] = [_break("coh-se-t1", SE_LUNCH)]
+    assert is_valid("ingestion", payload)
+
+
+def test_d6_grid_example_matches_the_row_8_assessment() -> None:
+    payload = example(D6_GRID)
+    grid = payload["slot_grid"]
+    assert (grid["days"], grid["periods_per_day"]) == (5, 10)
+    assert grid["teaching_periods"] == D6_TEACHING_PERIODS
+    assert grid["adjacency"] == D6_ADJACENCY
+
+    se_cohorts = {"coh-div-se-a", "coh-batch-se-a-a", "coh-batch-se-a-b"}
+    lunches = {
+        (pin["day"], pin["period"]): set(pin["cohort_ids"]) for pin in payload["pinned_occupancy"]
+    }
+    for day in range(5):
+        assert lunches[(day, SE_LUNCH)] == se_cohorts
+        assert lunches[(day, TE_LUNCH)] == {"coh-div-te-a"}
+    assert len(lunches) == 10
+
+    sessions = {s["id"]: s for s in payload["sessions"]}
+    (block,) = payload["lab_blocks"]
+    assert len(block["session_ids"]) == 2
+    assert {sessions[i]["cohort_id"] for i in block["session_ids"]} < se_cohorts
+    # a TE lecture fixed at P5 is legal: P5 is a teaching period, the TE lunch is P4
+    assert sessions["sess-te-a-ce307-l"]["fixed_slot"] == {"day": 0, "period": 5}

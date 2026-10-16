@@ -1,0 +1,101 @@
+{
+  "schema_version": "edge_list.v1",
+  "slot_grid": {
+    "days": 5,
+    "periods_per_day": 10,
+    "teaching_periods": [0, 1, 3, 4, 5, 6, 7, 8, 9],
+    "adjacency": [
+      [0, 1],
+      [1, 3],
+      [3, 4],
+      [4, 5],
+      [5, 6],
+      [6, 7],
+      [7, 8],
+      [8, 9]
+    ]
+  },
+  "sessions": [
+    {
+      "id": "sess-se-a-ce206-l",
+      "subject_id": "subj-ce206",
+      "faculty_id": "fac-0001",
+      "cohort_id": "coh-div-se-a",
+      "session_type": "theory",
+      "duration_periods": 1,
+      "cohort_size": 80,
+      "requires_lab": false,
+      "fixed_slot": null
+    },
+    {
+      "id": "sess-te-a-ce307-l",
+      "subject_id": "subj-ce307",
+      "faculty_id": "fac-0002",
+      "cohort_id": "coh-div-te-a",
+      "session_type": "theory",
+      "duration_periods": 1,
+      "cohort_size": 80,
+      "requires_lab": false,
+      "fixed_slot": { "day": 0, "period": 5 }
+    },
+    {
+      "id": "sess-se-a-a-ce206-p",
+      "subject_id": "subj-ce206",
+      "faculty_id": "fac-0003",
+      "cohort_id": "coh-batch-se-a-a",
+      "session_type": "lab",
+      "duration_periods": 2,
+      "cohort_size": 20,
+      "requires_lab": true,
+      "fixed_slot": null
+    },
+    {
+      "id": "sess-se-a-b-ce207-p",
+      "subject_id": "subj-ce207",
+      "faculty_id": "fac-0004",
+      "cohort_id": "coh-batch-se-a-b",
+      "session_type": "lab",
+      "duration_periods": 2,
+      "cohort_size": 20,
+      "requires_lab": true,
+      "fixed_slot": null
+    }
+  ],
+  "edges": [
+    { "u": "sess-se-a-ce206-l", "v": "sess-se-a-a-ce206-p", "reason": "COHORT" },
+    { "u": "sess-se-a-ce206-l", "v": "sess-se-a-b-ce207-p", "reason": "COHORT" }
+  ],
+  "rooms": [
+    { "id": "room-601", "code": "601", "capacity": 80, "is_lab": false, "parent_room_id": null },
+    { "id": "room-701", "code": "701", "capacity": 80, "is_lab": false, "parent_room_id": null },
+    { "id": "room-702", "code": "702", "capacity": 60, "is_lab": true, "parent_room_id": null },
+    { "id": "room-702-a", "code": "702-A", "capacity": 20, "is_lab": true, "parent_room_id": "room-702" },
+    { "id": "room-702-b", "code": "702-B", "capacity": 20, "is_lab": true, "parent_room_id": "room-702" }
+  ],
+  "faculty_availability": [
+    { "faculty_id": "fac-0001", "unavailable_slots": [] },
+    { "faculty_id": "fac-0002", "unavailable_slots": [] },
+    { "faculty_id": "fac-0003", "unavailable_slots": [] },
+    { "faculty_id": "fac-0004", "unavailable_slots": [] }
+  ],
+  "lab_blocks": [
+    {
+      "id": "labblk-se-a-1",
+      "session_ids": ["sess-se-a-a-ce206-p", "sess-se-a-b-ce207-p"],
+      "duration_periods": 2,
+      "must_be_contiguous": true
+    }
+  ],
+  "pinned_occupancy": [
+    { "day": 0, "period": 5, "faculty_ids": [], "room_ids": [], "cohort_ids": ["coh-div-se-a", "coh-batch-se-a-a", "coh-batch-se-a-b"] },
+    { "day": 1, "period": 5, "faculty_ids": [], "room_ids": [], "cohort_ids": ["coh-div-se-a", "coh-batch-se-a-a", "coh-batch-se-a-b"] },
+    { "day": 2, "period": 5, "faculty_ids": [], "room_ids": [], "cohort_ids": ["coh-div-se-a", "coh-batch-se-a-a", "coh-batch-se-a-b"] },
+    { "day": 3, "period": 5, "faculty_ids": [], "room_ids": [], "cohort_ids": ["coh-div-se-a", "coh-batch-se-a-a", "coh-batch-se-a-b"] },
+    { "day": 4, "period": 5, "faculty_ids": [], "room_ids": [], "cohort_ids": ["coh-div-se-a", "coh-batch-se-a-a", "coh-batch-se-a-b"] },
+    { "day": 0, "period": 4, "faculty_ids": [], "room_ids": [], "cohort_ids": ["coh-div-te-a"] },
+    { "day": 1, "period": 4, "faculty_ids": [], "room_ids": [], "cohort_ids": ["coh-div-te-a"] },
+    { "day": 2, "period": 4, "faculty_ids": [], "room_ids": [], "cohort_ids": ["coh-div-te-a"] },
+    { "day": 3, "period": 4, "faculty_ids": [], "room_ids": [], "cohort_ids": ["coh-div-te-a"] },
+    { "day": 4, "period": 4, "faculty_ids": [], "room_ids": [], "cohort_ids": ["coh-div-te-a"] }
+  ]
+}
