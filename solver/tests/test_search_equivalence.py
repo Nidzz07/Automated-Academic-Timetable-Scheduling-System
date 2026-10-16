@@ -6,6 +6,9 @@
 * Room symmetry breaking: identical solutions (and so identical
   satisfiability) with and without it.
 * Time budget: running out is ``"timeout"``, never ``"infeasible"``.
+* S8, the grid read from the payload: on the canonical grid, search, pre-solve
+  and Welsh-Powell give exactly the answers the hard-coded grid gave, checked
+  against digests recorded from the pre-S8 code.
 
 Instances: the 400 seeded property instances and the synthetic presets
 (``large`` only in the symmetry test - the eager reference takes ~40 s on it;
@@ -15,6 +18,8 @@ of docs/solver-baseline-2026-10-06.md).
 
 from __future__ import annotations
 
+import hashlib
+import json
 import random
 from typing import Any
 
@@ -23,6 +28,7 @@ import pytest
 import solver.backtracking as bt
 from solver.backtracking import LabBlock, _placement_ok, _SolverState, backtrack_solve
 from solver.benchmarks.synthetic import PRESETS, generate
+from solver.colouring import welsh_powell
 from solver.graph import build_conflict_graph
 from solver.slots import SlotId
 from solver.tests.test_backtracking import _edge, _faculty_avail, _payload, _session
@@ -170,3 +176,58 @@ def test_exhausted_budget_is_timeout_not_infeasible() -> None:
 def test_generous_budget_changes_nothing() -> None:
     for edge_list in [_odd_cycle(), *_presets("small")]:
         assert _outcome(edge_list, time_limit_s=60) == _outcome(edge_list)
+
+
+# ----------------------------------------------------------------------
+# S8: the grid comes from the payload - same answers on the canonical grid
+# ----------------------------------------------------------------------
+
+#: SHA-256 of the fingerprints below, recorded on 2026-10-17 by running
+#: ``_fingerprint`` as defined here on the pre-S8 code (main @ 744c712, where
+#: solver.slots hard-coded the canonical grid). The same under any PYTHONHASHSEED.
+_PRE_S8_DIGESTS = {
+    "property": "494ec6e8540818ad9b292ec2e2613b2d76823d00a51c9f62888b5d962479ab7b",
+    "property_subclass": "b478200793c01651a1a2fc0b85f24400b4e02a9de25d3815928d5aeee2c5eabc",
+    "small": "60b4022c7c835af5f83cab7f9b531f72dae963ebedb41c8e87b0f168c30acdb0",
+    "medium": "03f9a34d3e6db67a0d3d1f335387a634f37e4f083815cad999f1b70a2eee0a8d",
+    "large": "868e16c8e0cd665d50c761462a395b4d8511f5d841b6a78d07fb3e1f57500eb8",
+    "infeasible": "5f5a5fa6541f0dc4cd5e63fd644c73b70e82cc3d99f0865dfe1568bb3f0c2b6a",
+}
+
+
+def _fingerprint(edge_list: dict[str, Any]) -> list[Any]:
+    """Every answer for one instance: search, pre-solve certificate, Welsh-Powell."""
+    graph = build_conflict_graph(edge_list)
+    r = backtrack_solve(graph, edge_list)
+    cert = r.certificate
+    colours, uncoloured = welsh_powell(graph)
+    return [
+        r.outcome,
+        sorted([sid, s.day, s.period] for sid, s in r.assignment.items()),
+        sorted([sid, rid] for sid, rid in r.room_assignment.items()),
+        r.nodes_explored,
+        list(r.unplaced_sessions),
+        None if cert is None else [cert.check, cert.kind, list(cert.session_ids),
+                                   cert.resource, cert.reason],
+        sorted([sid, s.day, s.period] for sid, s in colours.items()),
+        list(uncoloured),
+    ]
+
+
+def test_payload_grid_gives_the_pre_s8_answers_on_the_canonical_grid() -> None:
+    groups = {
+        "property": _property_instances(),
+        "property_subclass": [
+            generate_instance(random.Random(SEED + i), multi_period=False, blocks=False,
+                              fixed=False)
+            for i in range(N_INSTANCES)
+        ],
+        **{name: _presets(name) for name in ("small", "medium", "large", "infeasible")},
+    }
+    digests = {
+        name: hashlib.sha256(
+            json.dumps([_fingerprint(e) for e in group], sort_keys=True).encode()
+        ).hexdigest()
+        for name, group in groups.items()
+    }
+    assert digests == _PRE_S8_DIGESTS
