@@ -61,11 +61,11 @@ Agents: read this file and CLAUDE.md before any task. §1 (ownership) and §3 (d
 | D24 | Items excluded by D3 that appear in the real timetable (electives such as NLP, BDA, DL; MDM theory and labs; STUDENT ACTIVITY) are frozen at their current day and periods. They block the division and all its batches, their teacher and their room. The solver never moves them. | Team | 2026-10-15 |
 | D25 | SRD (TE, mostly ML, in no legend): full name [Dr. Dholay Surekha Rajesh - Associate Professor]. Treated as one CE faculty member identified by the initials "SRD" until named. | Team | 2026-10-15 |
 | D26 | FOM - II (SE, always parallel with SMCS): [Foundation of Mathematics - It is a subject taught to DSE students]. Default: it is an alternative to SMCS for part of each division, so SMCS and FOM - II are both frozen at their current slots (D24). | Team | 2026-10-15 |
-| D27 | Lab 509: lab_capacities.yaml (CE lab, 2 batches) wins over classrooms.xlsx (capacity 20) and the "509 new CSE" label. [CONFIRM] | Nidhi | 2026-10-15 |
-| D28 | Lab 505 (in the EVEN lab timetable, not in classrooms.xlsx) is not used for generation in v1. Its current CE practicals are rescheduled into the D8 labs. [CONFIRM] | Nidhi | 2026-10-15 |
+| D27 | Lab 509: lab_capacities.yaml (CE lab, 2 batches) wins over classrooms.xlsx (capacity 20) and the "509 new CSE" label. | Nidhi | 2026-10-15 |
+| D28 | Lab 505 (in the EVEN lab timetable, not in classrooms.xlsx) is not used for generation in v1. Its current CE practicals are rescheduled into the D8 labs. | Nidhi | 2026-10-15 |
 | D29 | Rooms seen in the timetables but outside D8/D10 (for example 403-A, 403 B; 601 used as a lab) are recorded and reported, not used for generation. | Team | 2026-10-15 |
 | D30 | Room names are normalised: "607-B" = 607B; "703-A"/"703-B" = the two sub-rooms of 703 (D8). Sub-room labels beyond a lab's declared split (603-7, 606-4, 606-5) are reported and mapped to the parent lab. | Team | 2026-10-15 |
-| D31 | v2 proposal row 8 (wall-clock period axis 0–9; each year's lunch as a pinned break) is folded into ingestion.v2. Signed by all three on [15th October 2026]. | Team | [15th October 2026] |
+| D31 | v2 proposal row 8 (wall-clock period axis 0–9; each year's lunch as a pinned break) is folded into ingestion.v2. Signed by all three on 2026-10-15. | Team | 2026-10-15 |
 | D32 | Process: only Nidhi edits ROADMAP §7/§8 (weekly status sync). Every other PR adds exactly one dated entry to docs/CURRENT-PROGRESS.md and edits only its own track's row. | Team | 2026-10-15 |
 | D33 | A solver timeout is never an infeasible solution. The API reports it as a job status (S13); no contract carries it. | Team | 2026-10-15 |
 | D34 | Quality rule IDs are exactly S-GAP, S-B2B, S-LOAD16, FAC_LOAD_IMBALANCE (§6). Quality is computed only by the solver; the frontend only displays it. | Team | 2026-10-15 |

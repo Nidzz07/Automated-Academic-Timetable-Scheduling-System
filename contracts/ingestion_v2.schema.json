@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://chronos.spit.ac.in/contracts/ingestion_v2.schema.json",
   "title": "Chronos Ingestion Contract v2",
-  "description": "The canonical intermediate JSON that a source parser (.docx class / lab / faculty timetables, classrooms.xlsx) emits and that the database seeder consumes. It is a faithful record of what was observed in one source file, including its data-quality defects: nothing is silently repaired, every defect is reported in `anomalies`. Revision v2 (docs/contract-change-proposal-v2.md change 1, signed 2026-10-06): faculty initials are division-scoped and may be ambiguous, so they live in `faculty_initials`, and every observed session carries exactly one faculty-resolution state. Frozen contract 1 of 3 (CONTEXT.md section 5) - changing it requires agreement from all three track owners.",
+  "description": "The canonical intermediate JSON that a source parser (.docx class / lab / faculty timetables, classrooms.xlsx) emits and that the database seeder consumes. It is a faithful record of what was observed in one source file, including its data-quality defects: nothing is silently repaired, every defect is reported in `anomalies`. Revision v2 (docs/contract-change-proposal-v2.md change 1, signed 2026-10-06): faculty initials are division-scoped and may be ambiguous, so they live in `faculty_initials`, and every observed session carries exactly one faculty-resolution state. Amended by proposal row 8 (signed 2026-10-15): every period field is on the wall-clock axis 0..9 and each year's lunch is a pinned break. Frozen contract 1 of 3 (CONTEXT.md section 5) - changing it requires agreement from all three track owners.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -607,7 +607,7 @@
             "$ref": "#/$defs/day"
           },
           "period": {
-            "$ref": "#/$defs/teaching_period"
+            "$ref": "#/$defs/period"
           },
           "duration_periods": {
             "description": "Number of consecutive teaching periods; 2 for the usual double lab period.",
@@ -698,7 +698,7 @@
             "$ref": "#/$defs/day"
           },
           "start_period": {
-            "$ref": "#/$defs/teaching_period"
+            "$ref": "#/$defs/period"
           },
           "duration_periods": {
             "type": "integer",
@@ -715,7 +715,7 @@
       }
     },
     "pinned_blocks": {
-      "description": "Immovable occupancy the solver may not schedule into: MDM, HSS, LLC, student activity, major project, exams and breaks.",
+      "description": "Immovable occupancy the solver may not schedule into: MDM, HSS, LLC, student activity, major project, exams and breaks. Breaks (proposal row 8, ROADMAP D6): the coffee break is one entry per day with kind 'break', period 2 and cohort_id null; a year's lunch is one entry per day per division cohort of that year with kind 'break' and period 5 (SE) or 4 (TE).",
       "type": "array",
       "items": {
         "type": "object",
@@ -739,7 +739,7 @@
             "minLength": 1
           },
           "cohort_id": {
-            "description": "The cohort held by this block, or null when it blocks the slot institute-wide (a break).",
+            "description": "The cohort held by this block, or null when it blocks the slot institute-wide (the P2 coffee break). A lunch break is per year, so it names a division cohort of that year, never null.",
             "type": [
               "string",
               "null"
@@ -750,7 +750,7 @@
             "$ref": "#/$defs/day"
           },
           "period": {
-            "$ref": "#/$defs/teaching_period"
+            "$ref": "#/$defs/period"
           },
           "duration_periods": {
             "type": "integer",
@@ -838,11 +838,11 @@
       "minimum": 0,
       "maximum": 4
     },
-    "teaching_period": {
-      "description": "Teaching-slot index within a day, 0..7 - the eight schedulable hours of CONTEXT.md section 3.2, counted in teaching order with the two breaks excluded. The edge-list contract re-indexes these onto its wall-clock grid via slot_grid.teaching_periods.",
+    "period": {
+      "description": "Index on the wall-clock period axis, 0..9 = P0..P9 of ROADMAP section 5 (P0 09:00-10:00 .. P9 17:15-18:15), breaks included. The same axis as edge_list_v1 and solution_v2 `period`, so no re-indexing is needed. P2 (11:00-11:15) is the coffee break for every year; lunch is per year (ROADMAP D6: P5 for SE, P4 for TE). Breaks are recorded in pinned_blocks with kind 'break'.",
       "type": "integer",
       "minimum": 0,
-      "maximum": 7
+      "maximum": 9
     }
   }
 }
