@@ -46,8 +46,11 @@ A LabBlock's N parallel batch sessions are one composite decision variable.
 The solver picks a ``(start_slot, room_for_each_session)`` tuple for the
 whole block from the intersection of the members' domains.  If any session
 in the block cannot be placed, the entire block assignment backtracks.
-Double-period contiguity uses ``solver.slots.is_adjacent``, which correctly
-treats periods 1 and 3 as adjacent across the short break.
+Double-period contiguity follows the payload grid's adjacency
+(:meth:`solver.slots.SlotGrid.is_adjacent`), so a block spans the short break
+(periods 1 and 3) where the grid joins them.  A year's lunch (ROADMAP D6) is
+pinned occupancy for that year's cohorts, so a block that would cover it has a
+closed period and is never a candidate.
 
 **Sub-room awareness.**
 Two sessions may share a physical room in the same slot if they occupy
@@ -94,12 +97,16 @@ when a smaller-id room of the same class is also unused that day - see
 
 **Time budget.**  ``time_limit_s`` stops the search and reports
 ``outcome == "timeout"``, never infeasible: running out of time proves nothing.
-``solution_v1`` has no status for that, so :meth:`BacktrackResult.to_solution_dict`
-refuses to serialise a timeout.
+Neither solution contract has a status for that (ROADMAP D33: it is an API job
+status), so :meth:`BacktrackResult.to_solution_dict` and
+:meth:`BacktrackResult.to_solution_v2_dict` refuse to serialise a timeout.
 
-**Infeasible results from the search carry a PLACEHOLDER diagnosis.**
+**Infeasible results from the search carry a PLACEHOLDER diagnosis in v1.**
 See :func:`_placeholder_diagnosis`.  It is not a minimal unsatisfiable
-subset; ``solver/mus.py`` does not exist yet.
+subset; ``solver/mus.py`` does not exist yet.  ``solution.v2`` says what the
+result is: ``method = "search_exhaustion"``, no conflicting set, and the
+deepest consistent partial placement the search reached (proposal rows 2, 5).
+A pre-solve certificate has no v2 ``method`` yet (proposed contract row 9).
 
 Stdlib only — ``solver/`` must never import ``networkx`` or any
 non-stdlib package (CONTEXT.md rule 3).
@@ -113,12 +120,13 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 from solver.graph import ConflictGraph, Session, available_slots_for, slot_is_open
-from solver.slots import DAYS, TEACHING_PERIODS, SlotId, is_adjacent
+from solver.slots import SlotGrid, SlotId
 
 if TYPE_CHECKING:
     from solver.presolve import Certificate
 
 __all__ = [
+    "QUALITY_RULE_IDS",
     "BacktrackResult",
     "LabBlock",
     "Room",
@@ -127,6 +135,9 @@ __all__ = [
     "parse_lab_blocks",
     "parse_rooms",
 ]
+
+#: ROADMAP D34: the quality rule ids, in section 6 order.
+QUALITY_RULE_IDS: tuple[str, ...] = ("S-GAP", "S-B2B", "S-LOAD16", "FAC_LOAD_IMBALANCE")
 
 
 # ---------------------------------------------------------------------------
@@ -181,12 +192,58 @@ class BacktrackResult:
     timed_out: bool = False
     # set when pre-solve proved the instance infeasible before any search
     certificate: Certificate | None = None
+    # the deepest consistent partial placement the search reached (start, room)
+    # - the first reached among equally deep ones (solution.v2, proposal row 2)
+    partial_assignment: dict[str, SlotId] = field(default_factory=dict)
+    partial_rooms: dict[str, str] = field(default_factory=dict)
 
     @property
     def outcome(self) -> Literal["solved", "infeasible", "timeout"]:
         if self.solved:
             return "solved"
         return "timeout" if self.timed_out else "infeasible"
+
+    def _metadata(self, total_sessions: int | None, runtime_ms: float) -> dict[str, Any]:
+        """The ``metadata`` block, identical in both solution contracts."""
+        tot = (
+            total_sessions
+            if total_sessions is not None
+            else (len(self.assignment) + len(self.unplaced_sessions))
+        )
+        slots_used = (
+            len({s for slots in self.occupied.values() for s in slots})
+            if self.solved
+            else None
+        )
+        return {
+            "algorithm": "backtracking(forward-checking, mrv)",
+            "runtime_ms": max(0.0, float(runtime_ms)),
+            "sessions_total": tot,
+            "sessions_assigned": len(self.assignment),
+            "slots_used": slots_used,
+            "backtracks": self.nodes_explored,
+        }
+
+    def _placements(
+        self, starts: dict[str, SlotId], rooms: dict[str, str]
+    ) -> list[dict[str, Any]]:
+        """Contract placements by session id; a sub-room is named under its parent."""
+        items: list[dict[str, Any]] = []
+        for sid, slot in sorted(starts.items()):
+            r_id = rooms.get(sid, "")
+            parent_id: str = r_id
+            sub_id: str | None = None
+            if r_id in self.rooms and self.rooms[r_id].parent_room_id is not None:
+                parent_id = self.rooms[r_id].parent_room_id or r_id
+                sub_id = r_id
+            items.append({
+                "session_id": sid,
+                "day": slot.day,
+                "period": slot.period,
+                "room_id": parent_id,
+                "sub_room_id": sub_id,
+            })
+        return items
 
     def to_solution_dict(
         self,
@@ -205,42 +262,10 @@ class BacktrackResult:
         """
         if self.timed_out:
             raise ValueError("solution_v1 has no status for a search timeout")
-        tot = (
-            total_sessions
-            if total_sessions is not None
-            else (len(self.assignment) + len(self.unplaced_sessions))
-        )
-        slots_used = (
-            len({s for slots in self.occupied.values() for s in slots})
-            if self.solved
-            else None
-        )
-
-        metadata: dict[str, Any] = {
-            "algorithm": "backtracking(forward-checking, mrv)",
-            "runtime_ms": max(0.0, float(runtime_ms)),
-            "sessions_total": tot,
-            "sessions_assigned": len(self.assignment),
-            "slots_used": slots_used,
-            "backtracks": self.nodes_explored,
-        }
+        metadata = self._metadata(total_sessions, runtime_ms)
 
         if self.solved:
-            items: list[dict[str, Any]] = []
-            for sid, slot in sorted(self.assignment.items()):
-                r_id = self.room_assignment.get(sid, "")
-                parent_id: str = r_id
-                sub_id: str | None = None
-                if r_id in self.rooms and self.rooms[r_id].parent_room_id is not None:
-                    parent_id = self.rooms[r_id].parent_room_id or r_id
-                    sub_id = r_id
-                items.append({
-                    "session_id": sid,
-                    "day": slot.day,
-                    "period": slot.period,
-                    "room_id": parent_id,
-                    "sub_room_id": sub_id,
-                })
+            items = self._placements(self.assignment, self.room_assignment)
 
             # !!! PLACEHOLDER QUALITY — NOT A SCORE !!!
             # No scoring has run: solver/scoring.py does not exist yet. 100.0 with
@@ -275,6 +300,98 @@ class BacktrackResult:
             "diagnosis": diag,
             "metadata": metadata,
         }
+
+    def to_solution_v2_dict(
+        self,
+        *,
+        total_sessions: int | None = None,
+        runtime_ms: float = 0.0,
+        displaced: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Serialise this result into a dict matching ``contracts/solution_v2.schema.json``.
+
+        Solved: the assignment, the quality block of :func:`_unscored_quality`
+        (every ROADMAP D34 rule ``not_evaluated`` until scoring exists, S10) and
+        ``displaced``.  Infeasible after a search: ``method =
+        "search_exhaustion"`` - the complete search proved it but explained
+        nothing - so the conflicting set is empty and no relaxation is offered;
+        ``partial_placement`` is the deepest consistent partial the search
+        reached and ``metadata.sessions_assigned`` counts it (proposal row 2).
+
+        Raises:
+            ValueError: on a timeout (ROADMAP D33: a job status, never a
+                contract payload), and on a pre-solve certificate.  A
+                certificate is a proof that is neither a minimal unsatisfiable
+                subset nor search exhaustion, so v2's ``diagnosis.method`` has
+                no honest value for it (proposed contract row 9);
+                :meth:`to_solution_dict` still reports it under v1.
+        """
+        if self.timed_out:
+            raise ValueError("solution.v2 has no status for a search timeout (ROADMAP D33)")
+        if self.certificate is not None:
+            raise ValueError(
+                "solution.v2 has no diagnosis.method for a pre-solve certificate: it is "
+                "neither a MUS nor search exhaustion (proposed contract row 9)"
+            )
+        metadata = self._metadata(total_sessions, runtime_ms)
+        if self.solved:
+            return {
+                "schema_version": "solution.v2",
+                "status": "solved",
+                "assignment": self._placements(self.assignment, self.room_assignment),
+                "quality": _unscored_quality(),
+                "displaced": displaced if displaced is not None else [],
+                "metadata": metadata,
+            }
+        metadata["sessions_assigned"] = len(self.partial_assignment)
+        everyone = [*self.assignment, *self.unplaced_sessions]
+        return {
+            "schema_version": "solution.v2",
+            "status": "infeasible",
+            "diagnosis": {
+                "method": "search_exhaustion",
+                "minimal_conflicting_set": [],
+                "partial_placement": self._placements(
+                    self.partial_assignment, self.partial_rooms
+                ),
+                "unplaced_session_ids": [
+                    sid for sid in everyone if sid not in self.partial_assignment
+                ],
+            },
+            "metadata": metadata,
+        }
+
+
+def _unscored_quality() -> dict[str, Any]:
+    """!!! NOT A SCORE !!!  The ``solution.v2`` quality block until scoring exists.
+
+    ``solver/scoring.py`` and ``solver/rules/quality_rules.yaml`` arrive in S10,
+    so every rule of ROADMAP D34 is ``not_evaluated`` and
+    ``not_evaluated_rule_ids`` lists all four: the payload itself says the score
+    covers nothing.  The contract still requires three numbers or strings that
+    only a loaded rule set can supply, so these are stand-ins, not data:
+
+    * ``score`` 100.0 - 100 minus the penalties of the evaluated rules, the
+      arithmetic of both contract examples, taken over no rules;
+    * ``weight`` 0.0 - no rule set is loaded, so no weight is configured;
+    * ``rules_version`` ``"none"`` - there is no quality_rules.yaml to read a
+      version from.
+
+    S10 replaces all three with the YAML's values.
+    """
+    reason = (
+        "Not evaluated: quality scoring has not been built yet, so no rule set is "
+        "loaded and this rule has no configured weight (0 is shown in its place)."
+    )
+    return {
+        "score": 100.0,
+        "rules_version": "none",
+        "breakdown": [
+            {"rule_id": rule_id, "status": "not_evaluated", "weight": 0.0, "reason": reason}
+            for rule_id in QUALITY_RULE_IDS
+        ],
+        "not_evaluated_rule_ids": list(QUALITY_RULE_IDS),
+    }
 
 
 def _placeholder_diagnosis(unplaced: list[str]) -> dict[str, Any]:
@@ -433,6 +550,9 @@ class _SolverState:
     break_symmetry: bool = True
     deadline: float | None = None  # time.perf_counter() value
 
+    # Deepest consistent partial placement so far: (start slots, rooms).
+    deepest: tuple[dict[str, SlotId], dict[str, str]] = field(default_factory=lambda: ({}, {}))
+
 
 def _build_room_hierarchy(rooms: dict[str, Room]) -> tuple[
     dict[str, list[str]],  # children_of
@@ -449,24 +569,27 @@ def _build_room_hierarchy(rooms: dict[str, Room]) -> tuple[
 
 
 def _contiguous_start_slots(
+    grid: SlotGrid,
     duration: int,
 ) -> list[tuple[SlotId, ...]]:
     """Return all valid chains of contiguous teaching-period slots.
 
-    A chain of length *duration* is valid when every consecutive pair
-    satisfies ``is_adjacent``.  This correctly handles the short-break span
-    (period 1 → period 3) and blocks spanning lunch.
+    A chain of length *duration* is valid when every consecutive pair is
+    joined by the payload grid's adjacency (``grid.is_adjacent``).  That
+    spans a break the grid joins across (period 1 → period 3) and never a gap
+    it leaves unjoined.
     """
+    periods = grid.teaching_periods
     result: list[tuple[SlotId, ...]] = []
-    for day in range(DAYS):
-        for start_idx in range(len(TEACHING_PERIODS)):
-            chain = [SlotId(day, TEACHING_PERIODS[start_idx])]
+    for day in range(grid.days):
+        for start_idx in range(len(periods)):
+            chain = [SlotId(day, periods[start_idx])]
             for offset in range(1, duration):
                 next_idx = start_idx + offset
-                if next_idx >= len(TEACHING_PERIODS):
+                if next_idx >= len(periods):
                     break
-                candidate = SlotId(day, TEACHING_PERIODS[next_idx])
-                if is_adjacent(chain[-1], candidate):
+                candidate = SlotId(day, periods[next_idx])
+                if grid.is_adjacent(chain[-1], candidate):
                     chain.append(candidate)
                 else:
                     break
@@ -504,7 +627,7 @@ def _new_state(graph: ConflictGraph, payload: dict[str, Any]) -> _SolverState:
 
     chains: dict[tuple[SlotId, int], tuple[SlotId, ...]] = {}
     for duration in {s.duration_periods for s in graph.sessions.values()}:
-        for chain in _contiguous_start_slots(duration):
+        for chain in _contiguous_start_slots(graph.grid, duration):
             chains[(chain[0], duration)] = chain
 
     state = _SolverState(
@@ -671,6 +794,20 @@ def _unassign(state: _SolverState, sid: str) -> None:
         del state.room_occupancy[(s, room_id)]
     day = state.slot_assignment.pop(sid).day
     state.day_use[(room_id, day)] -= 1
+
+
+def _note_depth(state: _SolverState) -> None:
+    """Keep the current partial placement if it is the deepest yet.
+
+    The deepest node of the depth-first search tree reached so far
+    (backtracking, Design and Analysis of Algorithms CE207).  Called once
+    every placement of a step has passed its checks, so the partial is
+    consistent.  Only a strictly deeper one replaces the record, so among
+    equally deep partials the first reached in the deterministic search order
+    is kept (``solution.v2`` ``partial_placement``, proposal row 2).
+    """
+    if len(state.slot_assignment) > len(state.deepest[0]):
+        state.deepest = (dict(state.slot_assignment), dict(state.room_assignment))
 
 
 def _symmetric_duplicate(
@@ -975,6 +1112,7 @@ def _solve_session(state: _SolverState, sid: str) -> bool:
 
         trail_start = len(state.trail)
         _assign(state, sid, start, room_id, slots)
+        _note_depth(state)
 
         if _forward_check(state, sid) and _solve(state):
             return True
@@ -994,6 +1132,7 @@ def _solve_block(state: _SolverState, block: LabBlock) -> bool:
             slots = _occupied_slots(state, sid, start)
             assert slots is not None  # start came from the member's domain
             _assign(state, sid, start, room_id, slots)
+        _note_depth(state)
 
         if all(_forward_check(state, sid) for sid in block.session_ids) and _solve(state):
             return True
@@ -1091,4 +1230,6 @@ def backtrack_solve(
         occupied=dict(state.occupied),
         timed_out=timed_out,
         certificate=certificate,
+        partial_assignment=state.deepest[0],
+        partial_rooms=state.deepest[1],
     )

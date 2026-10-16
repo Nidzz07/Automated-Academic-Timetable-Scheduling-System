@@ -350,11 +350,39 @@ class TestMalformed:
         with pytest.raises(ValueError, match="unknown room"):
             validate_solution(el, _solution(("a", 0, 0, "nowhere")))
 
-    def test_non_canonical_grid(self) -> None:
+    def test_malformed_grid(self) -> None:
         el = _edge_list([_session("a")])
-        el["slot_grid"]["adjacency"] = [[0, 1]]
+        el["slot_grid"]["adjacency"] = [[0, 3]]  # period 1 teaches in between
         with pytest.raises(ValueError, match="adjacency"):
             validate_solution(el, _solution(("a", 0, 0, "r1")))
+
+    def test_slot_off_the_grid(self) -> None:
+        el = _edge_list([_session("a")])
+        el["slot_grid"]["days"] = 3
+        with pytest.raises(ValueError, match="off the slot grid"):
+            validate_solution(el, _solution(("a", 4, 0, "r1")))
+
+
+class TestPayloadGrid:
+    """Any well-formed grid is checked against - its own adjacency, not the canonical one."""
+
+    def test_a_pair_the_grid_leaves_out_breaks_contiguity(self) -> None:
+        el = _edge_list([_session("a", duration=2)])
+        assert validate_solution(el, _solution(("a", 0, 1, "r1"))) == []
+        el["slot_grid"]["adjacency"] = [[0, 1]]
+        [v] = validate_solution(el, _solution(("a", 0, 1, "r1")))
+        assert (v.kind, v.slots) == ("LAB_CONTIGUITY", (SlotId(0, 1),))
+
+    def test_a_period_the_canonical_grid_closes_can_teach(self) -> None:
+        """D6: P5 teaches (TE), so a double from P4 runs into P5, not across it to P6."""
+        el = _edge_list([_session("a", "f1", "c1", duration=2), _session("b", "f2", "c1")],
+                        edges=[("a", "b", "COHORT")])
+        el["slot_grid"]["teaching_periods"] = [0, 1, 3, 4, 5, 6, 7, 8, 9]
+        el["slot_grid"]["adjacency"] = [[0, 1], [1, 3], [3, 4], [4, 5], [5, 6], [6, 7],
+                                        [7, 8], [8, 9]]
+        assert validate_solution(el, _solution(("a", 0, 4, "r1"), ("b", 0, 6, "r2"))) == []
+        [v] = validate_solution(el, _solution(("a", 0, 4, "r1"), ("b", 0, 5, "r2")))
+        assert (v.kind, v.slots) == ("COHORT_CLASH", (SlotId(0, 5),))
 
 
 # ======================================================================
@@ -367,12 +395,10 @@ def _load(rel: str) -> dict[str, Any]:
 
 
 class TestCommittedExamples:
-    @pytest.mark.parametrize("folder", ["contracts/examples", "frontend/src/fixtures"])
-    def test_solved_example_is_conflict_free(self, folder: str) -> None:
-        if not (REPO / folder / "solution_v1.solved.example.json").exists():
-            pytest.skip(f"{folder} has no solved example")
-        edge_list = _load(f"{folder}/edge_list_v1.example.json")
-        solution = _load(f"{folder}/solution_v1.solved.example.json")
+    def test_solved_example_is_conflict_free(self) -> None:
+        """contracts/examples only: the frontend imports these since PR #22."""
+        edge_list = _load("contracts/examples/edge_list_v1.example.json")
+        solution = _load("contracts/examples/solution_v1.solved.example.json")
         assert validate_solution(edge_list, solution) == []
 
     def test_violation_to_dict(self) -> None:

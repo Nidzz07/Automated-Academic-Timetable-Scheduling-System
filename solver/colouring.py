@@ -13,10 +13,12 @@ checks:
 
 * **Every occupied period, not just the start.**  A session of
   ``duration_periods = n`` starting at a slot occupies that slot and the next
-  ``n - 1`` teaching periods (:func:`solver.slots.is_adjacent`, so a double may
-  span the short break or lunch).  A start whose chain would run off the end of
-  the day is not a colour at all.  Every occupied period must be open for the
-  session's faculty and cohort (:func:`solver.graph.slot_is_open`), and must be
+  ``n - 1`` teaching periods, each joined to the one before by the payload's
+  adjacency (:meth:`solver.slots.SlotGrid.is_adjacent`, so a double may span a
+  break the grid lets it span).  A start whose chain would run off the end of
+  the day, or across a gap the grid does not join, is not a colour at all.
+  Every occupied period must be open for the session's faculty and cohort
+  (:func:`solver.graph.slot_is_open`), and must be
   disjoint from every period an already-coloured neighbour occupies.
 * **Lab blocks are one unit.**  The members of a lab block are coloured
   together, with one shared start; the block's degree is the number of
@@ -52,16 +54,14 @@ outside the stdlib (CONTEXT.md rule 3).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import pairwise
 
 from solver.graph import ConflictGraph, Session, available_slots_for, slot_is_open
-from solver.slots import TEACHING_PERIODS, SlotId
+from solver.slots import SlotGrid, SlotId
 
 __all__ = [
     "welsh_powell",
 ]
-
-#: Position of each teaching period in teaching order.
-_POSITION: dict[int, int] = {period: i for i, period in enumerate(TEACHING_PERIODS)}
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,16 +74,17 @@ class _Unit:
     tie_break: str
 
 
-def _chain(start: SlotId, duration: int) -> tuple[SlotId, ...] | None:
+def _chain(grid: SlotGrid, start: SlotId, duration: int) -> tuple[SlotId, ...] | None:
     """The *duration* teaching-adjacent slots from *start*, or None if the day
-    runs out first.  Consecutive teaching periods are adjacent by definition
-    (:func:`solver.slots.is_adjacent` measures position in teaching order)."""
-    first = _POSITION.get(start.period)
-    if first is None or first + duration > len(TEACHING_PERIODS):
+    runs out, or reaches a gap the grid's adjacency does not join, first."""
+    periods = grid.teaching_periods
+    if start.period not in periods:
         return None
-    return tuple(
-        SlotId(start.day, TEACHING_PERIODS[i]) for i in range(first, first + duration)
-    )
+    first = periods.index(start.period)
+    chain = tuple(SlotId(start.day, p) for p in periods[first:first + duration])
+    if len(chain) < duration or not all(grid.is_adjacent(a, b) for a, b in pairwise(chain)):
+        return None
+    return chain
 
 
 def _units(graph: ConflictGraph) -> list[_Unit]:
@@ -119,7 +120,7 @@ def _occupancy_if_open(
     start: SlotId,
 ) -> tuple[SlotId, ...] | None:
     """Slots *session* occupies from *start*, if every one is open for it."""
-    slots = _chain(start, session.duration_periods)
+    slots = _chain(graph.grid, start, session.duration_periods)
     if slots is None:
         return None
     if not all(slot_is_open(graph, session, slot) for slot in slots):

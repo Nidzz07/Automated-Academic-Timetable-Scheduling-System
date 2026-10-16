@@ -4,13 +4,19 @@ The point of interest is the drift guard: :data:`solver.slots.TEACHING_PERIODS`
 is checked against the value frozen in ``contracts/edge_list_v1.schema.json`` by
 reading the schema, never by restating the list here. A duplicated literal would
 agree with itself forever and catch nothing.
+
+Since S8 the canonical constants are a test helper and the solver reads each
+payload's grid through :class:`~solver.slots.SlotGrid`; the last section checks
+both halves of that.
 """
 
 from __future__ import annotations
 
+import ast
 import json
 from dataclasses import FrozenInstanceError
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -23,6 +29,7 @@ from solver.slots import (
     SHORT_BREAK_PERIOD,
     SLOT_COUNT,
     TEACHING_PERIODS,
+    SlotGrid,
     SlotId,
     all_slots,
     from_index,
@@ -32,6 +39,7 @@ from solver.slots import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EDGE_LIST_SCHEMA = REPO_ROOT / "contracts" / "edge_list_v1.schema.json"
+D6_EXAMPLE = REPO_ROOT / "contracts" / "examples" / "edge_list_v1.d6_grid.example.json"
 
 
 def schema_slot_grid() -> dict:
@@ -167,10 +175,24 @@ def test_slot_id_rejects_a_day_outside_the_week(day: int) -> None:
         SlotId(day, 0)
 
 
-@pytest.mark.parametrize("period", [-1, 10, 42])
-def test_slot_id_rejects_a_period_off_the_wall_clock_axis(period: int) -> None:
+def test_slot_id_rejects_a_negative_period() -> None:
     with pytest.raises(ValueError):
-        SlotId(0, period)
+        SlotId(0, -1)
+
+
+@pytest.mark.parametrize("period", [10, 42])
+def test_the_grid_bounds_the_period(period: int) -> None:
+    """SlotId takes any wall-clock index; the payload's grid refuses one off its axis."""
+    assert SlotId(0, period).period == period
+    with pytest.raises(ValueError, match="off the slot grid"):
+        _canonical_grid().slot(0, period)
+
+
+def test_slot_names_its_clock_time_without_a_break_label() -> None:
+    """Under D6 P5 is lunch for SE but a teaching hour for TE, so no label is printed."""
+    assert str(SlotId(0, LUNCH_PERIOD)) == "Monday 13.15-14.15"
+    assert str(SlotId(4, 1)) == "Friday 10.00-11.00"
+    assert str(SlotId(2, 11)) == "Wednesday period 11"
 
 
 def test_break_periods_are_constructible() -> None:
@@ -312,3 +334,92 @@ def test_dense_index_is_not_the_ingestion_period_axis() -> None:
     assert slot_index(SlotId(0, 3)) == 2  # Monday, third teaching hour
     assert slot_index(SlotId(1, 3)) == 10  # Tuesday, same hour, different index
     assert slot_index(SlotId(4, 9)) == 39
+
+
+# --------------------------------------------------------------------------
+# SlotGrid - the payload's grid, which the solver reads (S8)
+# --------------------------------------------------------------------------
+
+
+def _raw_grid(**overrides: Any) -> dict[str, Any]:
+    """The schema's default ``slot_grid`` payload, with *overrides*."""
+    grid = schema_slot_grid()
+    return {**{key: grid[key]["default"] for key in grid}, **overrides}
+
+
+def _canonical_grid() -> SlotGrid:
+    return SlotGrid.from_payload(_raw_grid())
+
+
+def test_canonical_payload_grid_agrees_with_the_test_helpers() -> None:
+    grid = _canonical_grid()
+    assert (grid.days, grid.periods_per_day) == (DAYS, PERIODS_PER_DAY)
+    assert grid.all_slots() == all_slots()
+    for a in all_slots():
+        for b in all_slots():
+            assert grid.is_adjacent(a, b) == is_adjacent(a, b)
+
+
+def test_d6_grid_teaches_p5_and_joins_it_both_ways() -> None:
+    """ROADMAP D6: only P2 closes for everyone; each year's lunch is a pin, not a gap."""
+    payload = json.loads(D6_EXAMPLE.read_text(encoding="utf-8"))
+    grid = SlotGrid.from_payload(payload["slot_grid"])
+    assert grid.is_teaching_period(5) and not grid.is_teaching_period(SHORT_BREAK_PERIOD)
+    assert grid.is_adjacent(SlotId(0, 4), SlotId(0, 5))
+    assert grid.is_adjacent(SlotId(0, 5), SlotId(0, 6))
+    assert grid.is_adjacent(SlotId(0, 1), SlotId(0, 3))  # across the coffee break
+    assert not grid.is_adjacent(SlotId(0, 4), SlotId(0, 6))  # P5 teaches between them
+    assert len(grid.all_slots()) == 5 * 9
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"days": 3},
+        {"periods_per_day": 12, "teaching_periods": [0, 1, 3, 10, 11],
+         "adjacency": [[0, 1], [10, 11]]},
+        {"adjacency": []},
+        {"teaching_periods": [9, 0, 1], "adjacency": [[0, 1], [1, 9]]},
+    ],
+    ids=["three-days", "twelve-periods", "no-adjacency", "unsorted-teaching-periods"],
+)
+def test_any_well_formed_grid_is_accepted(overrides: dict[str, Any]) -> None:
+    grid = SlotGrid.from_payload(_raw_grid(**overrides))
+    assert list(grid.teaching_periods) == sorted(grid.teaching_periods)
+    assert len(grid.all_slots()) == grid.days * len(grid.teaching_periods)
+    assert {(a.period, b.period) for a in grid.all_slots() for b in grid.all_slots()
+            if a.day == b.day == 0 and a.period < b.period and grid.is_adjacent(a, b)
+            } == {tuple(pair) for pair in _raw_grid(**overrides)["adjacency"]}
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"days": 0}, "days"),
+        ({"days": 6}, "days"),
+        ({"periods_per_day": 0}, "periods_per_day"),
+        ({"teaching_periods": [0, 0, 1], "adjacency": [[0, 1]]}, "teaching_periods"),
+        ({"teaching_periods": [0, 1, 10], "adjacency": [[0, 1]]}, "teaching_periods"),
+        ({"adjacency": [[0, 3]]}, "adjacency"),
+        ({"adjacency": [[3, 1]]}, "adjacency"),
+        ({"adjacency": [[1, 2]]}, "adjacency"),
+    ],
+    ids=["no-days", "saturday", "no-periods", "duplicate-period", "period-off-the-axis",
+         "pair-skips-a-teaching-period", "pair-backwards", "pair-into-a-break"],
+)
+def test_a_malformed_grid_is_refused(overrides: dict[str, Any], match: str) -> None:
+    with pytest.raises(ValueError, match=match):
+        SlotGrid.from_payload(_raw_grid(**overrides))
+
+
+def test_no_solver_module_reads_the_canonical_grid() -> None:
+    """The canonical grid is a test helper: solver modules take only SlotId and SlotGrid."""
+    for name in ("graph", "backtracking", "colouring", "presolve", "validate"):
+        tree = ast.parse((REPO_ROOT / "solver" / f"{name}.py").read_text(encoding="utf-8"))
+        imported = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module == "solver.slots":
+                imported.update(alias.name for alias in node.names)
+            assert not (isinstance(node, ast.Import)
+                        and any(alias.name == "solver.slots" for alias in node.names)), name
+        assert imported <= {"SlotGrid", "SlotId"}, (name, imported)
