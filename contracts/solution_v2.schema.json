@@ -176,15 +176,16 @@
       ],
       "properties": {
         "method": {
-          "description": "mus: a minimal unsatisfiable subset was extracted. search_exhaustion: complete search proved no timetable exists, but no explanation was extracted.",
+          "description": "mus: a minimal unsatisfiable subset was extracted. search_exhaustion: complete search proved no timetable exists, but no explanation was extracted. presolve: a pre-solve certificate proved the instance jointly unsatisfiable before any search; the constraints it names are not minimal (proposal row 9).",
           "type": "string",
           "enum": [
             "mus",
-            "search_exhaustion"
+            "search_exhaustion",
+            "presolve"
           ]
         },
         "minimal_conflicting_set": {
-          "description": "The minimal unsatisfiable subset: constraints that cannot all hold at once, and from which removing any one restores satisfiability. Present and empty when method is search_exhaustion.",
+          "description": "The minimal unsatisfiable subset: constraints that cannot all hold at once, and from which removing any one restores satisfiability. Present and empty when method is search_exhaustion. When method is presolve: the constraints the certificate proves jointly unsatisfiable, not minimal.",
           "type": "array",
           "items": {
             "type": "object",
@@ -229,7 +230,7 @@
           }
         },
         "suggested_relaxation": {
-          "description": "The smallest single change that restores feasibility - the constraint to drop or loosen, stated the way a coordinator would act on it. Required when method is mus, forbidden when method is search_exhaustion.",
+          "description": "The smallest single change that restores feasibility - the constraint to drop or loosen, stated the way a coordinator would act on it. Required when method is mus or presolve, forbidden when method is search_exhaustion.",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -473,7 +474,7 @@
           ]
         },
         "partial_placement": {
-          "description": "Diagnostic only - NOT a timetable. The deepest consistent partial assignment the search reached before proving infeasibility: the partial with the most sessions placed, ties going to the first reached in the solver's deterministic search order. Never to be published, scored or edited.",
+          "description": "Diagnostic only - NOT a timetable. The deepest consistent partial assignment the search reached before proving infeasibility: the partial with the most sessions placed, ties going to the first reached in the solver's deterministic search order. Empty when method is presolve: no search ran. Never to be published, scored or edited.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/placement"
@@ -530,6 +531,32 @@
             "properties": {
               "minimal_conflicting_set": {
                 "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "description": "A pre-solve certificate names at least one constraint and a relaxation, but no search ran: nothing is placed, so every session is unplaced.",
+          "if": {
+            "properties": {
+              "method": {
+                "const": "presolve"
+              }
+            },
+            "required": [
+              "method"
+            ]
+          },
+          "then": {
+            "required": [
+              "suggested_relaxation"
+            ],
+            "properties": {
+              "minimal_conflicting_set": {
+                "minItems": 1
+              },
+              "partial_placement": {
+                "maxItems": 0
               }
             }
           }

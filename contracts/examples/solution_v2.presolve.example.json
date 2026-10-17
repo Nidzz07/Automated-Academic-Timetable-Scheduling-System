@@ -1,0 +1,88 @@
+{
+  "schema_version": "solution.v2",
+  "status": "infeasible",
+  "diagnosis": {
+    "method": "presolve",
+    "minimal_conflicting_set": [
+      {
+        "constraint_id": "presolve.cohort_load.d00",
+        "kind": "COHORT_CLASH",
+        "description": "Cohort d00 must be taught 40 periods (39 sessions that cannot overlap) but only 39 periods are free for them.",
+        "entity_ids": [
+          "s0000", "s0001", "s0002", "s0003", "s0004", "s0012", "s0013", "s0014",
+          "s0015", "s0016", "s0017", "s0018", "s0019", "s0020", "s0021", "s0022",
+          "s0023", "s0024", "s0025", "s0026", "s0027", "s0028", "s0029", "s0030",
+          "s0031", "s0032", "s0033", "s0034", "s0035", "s0036", "s0037", "s0038",
+          "s0039", "s0040", "s0041", "s0042", "s0043", "s0044", "s0045", "d00"
+        ],
+        "slots": [
+          { "day": 0, "period": 0 },
+          { "day": 0, "period": 1 },
+          { "day": 0, "period": 3 },
+          { "day": 0, "period": 4 },
+          { "day": 0, "period": 6 },
+          { "day": 0, "period": 7 },
+          { "day": 0, "period": 8 },
+          { "day": 0, "period": 9 },
+          { "day": 1, "period": 0 },
+          { "day": 1, "period": 1 },
+          { "day": 1, "period": 3 },
+          { "day": 1, "period": 4 },
+          { "day": 1, "period": 6 },
+          { "day": 1, "period": 7 },
+          { "day": 1, "period": 8 },
+          { "day": 1, "period": 9 },
+          { "day": 2, "period": 0 },
+          { "day": 2, "period": 1 },
+          { "day": 2, "period": 3 },
+          { "day": 2, "period": 4 },
+          { "day": 2, "period": 6 },
+          { "day": 2, "period": 7 },
+          { "day": 2, "period": 8 },
+          { "day": 2, "period": 9 },
+          { "day": 3, "period": 0 },
+          { "day": 3, "period": 1 },
+          { "day": 3, "period": 3 },
+          { "day": 3, "period": 4 },
+          { "day": 3, "period": 6 },
+          { "day": 3, "period": 7 },
+          { "day": 3, "period": 8 },
+          { "day": 4, "period": 0 },
+          { "day": 4, "period": 1 },
+          { "day": 4, "period": 3 },
+          { "day": 4, "period": 4 },
+          { "day": 4, "period": 6 },
+          { "day": 4, "period": 7 },
+          { "day": 4, "period": 8 },
+          { "day": 4, "period": 9 }
+        ]
+      }
+    ],
+    "suggested_relaxation": {
+      "constraint_id": "presolve.cohort_load.d00",
+      "description": "Pre-solve check 'cohort_load' failed for d00: move or drop one of the listed sessions, or free more slots or rooms for them.",
+      "action": {
+        "action_type": "MANUAL",
+        "params": {}
+      },
+      "verification": { "status": "not_attempted", "runtime_ms": null }
+    },
+    "partial_placement": [],
+    "unplaced_session_ids": [
+      "s0000", "s0001", "s0002", "s0003", "s0004", "s0005", "s0006", "s0007",
+      "s0008", "s0009", "s0010", "s0011", "s0012", "s0013", "s0014", "s0015",
+      "s0016", "s0017", "s0018", "s0019", "s0020", "s0021", "s0022", "s0023",
+      "s0024", "s0025", "s0026", "s0027", "s0028", "s0029", "s0030", "s0031",
+      "s0032", "s0033", "s0034", "s0035", "s0036", "s0037", "s0038", "s0039",
+      "s0040", "s0041", "s0042", "s0043", "s0044", "s0045"
+    ]
+  },
+  "metadata": {
+    "algorithm": "backtracking(forward-checking, mrv)",
+    "runtime_ms": 32.0,
+    "sessions_total": 46,
+    "sessions_assigned": 0,
+    "slots_used": null,
+    "backtracks": 0
+  }
+}
