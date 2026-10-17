@@ -1,0 +1,30 @@
+# Time grid for v1: ROADMAP section 5 as data (decision D6).
+# Source: ROADMAP D6, and the times printed in the first column of
+# data/real/CE_Class_Time_Table-EVEN_sem_25-26.docx (read there as a 12-hour clock: "1.15" = 13:15).
+# A test checks this file against the ROADMAP section 5 table.
+#
+# period : wall-clock period index, P0..P9 (the axis of edge_list_v1 and ingestion.v2).
+# Lunch is per year (D6), not global. The coffee break is the same for every year.
+
+version: 1
+source: "ROADMAP D6 and section 5; times as printed in CE_Class_Time_Table-EVEN_sem_25-26.docx"
+
+days: [Monday, Tuesday, Wednesday, Thursday, Friday]
+
+periods:
+  - {period: 0, start: "09:00", end: "10:00"}
+  - {period: 1, start: "10:00", end: "11:00"}
+  - {period: 2, start: "11:00", end: "11:15"}
+  - {period: 3, start: "11:15", end: "12:15"}
+  - {period: 4, start: "12:15", end: "13:15"}
+  - {period: 5, start: "13:15", end: "14:15"}
+  - {period: 6, start: "14:15", end: "15:15"}
+  - {period: 7, start: "15:15", end: "16:15"}
+  - {period: 8, start: "16:15", end: "17:15"}
+  - {period: 9, start: "17:15", end: "18:15"}
+
+coffee_period: 2
+
+lunch_period:
+  SE: 5
+  TE: 4

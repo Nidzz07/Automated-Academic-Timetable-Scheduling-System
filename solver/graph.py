@@ -27,6 +27,10 @@ database or ORM imports (rule 2).
 
 What the graph builder *does* verify:
 
+* the ``slot_grid`` is well-formed (:meth:`solver.slots.SlotGrid.from_payload`)
+  and every fixed, unavailable or pinned slot lies on it - the graph carries
+  that grid, and every later stage reads days, teaching periods and adjacency
+  from it,
 * every edge endpoint is a known session id,
 * a session's ``faculty_id`` has a matching ``faculty_availability`` entry,
 * there are no duplicate session ids,
@@ -46,7 +50,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from solver.slots import SlotId, all_slots, is_teaching_period
+from solver.slots import SlotGrid, SlotId
 
 __all__ = [
     "ConflictGraph",
@@ -101,6 +105,8 @@ class ConflictGraph:
     because infeasibility diagnosis needs it.
     """
 
+    #: The payload's slot grid: the only source of days, teaching periods and adjacency.
+    grid: SlotGrid
     sessions: dict[str, Session] = field(default_factory=dict)
     edges: list[Edge] = field(default_factory=list)
     adjacency: dict[str, dict[str, set[str]]] = field(default_factory=dict)
@@ -139,10 +145,10 @@ class ConflictGraph:
 # ---------------------------------------------------------------------------
 
 
-def _parse_slot(raw: dict[str, Any] | None) -> SlotId | None:
+def _parse_slot(grid: SlotGrid, raw: dict[str, Any] | None) -> SlotId | None:
     if raw is None:
         return None
-    return SlotId(day=raw["day"], period=raw["period"])
+    return grid.slot(raw["day"], raw["period"])
 
 
 def build_conflict_graph(payload: dict[str, Any]) -> ConflictGraph:
@@ -159,9 +165,10 @@ def build_conflict_graph(payload: dict[str, Any]) -> ConflictGraph:
     Raises
     ------
     ValueError
-        If the payload violates a structural invariant.
+        If the payload violates a structural invariant, including a malformed
+        ``slot_grid`` or a slot that lies off it.
     """
-    graph = ConflictGraph()
+    graph = ConflictGraph(grid=SlotGrid.from_payload(payload["slot_grid"]))
 
     # ---- sessions → vertices -----------------------------------------
 
@@ -178,7 +185,7 @@ def build_conflict_graph(payload: dict[str, Any]) -> ConflictGraph:
             duration_periods=raw["duration_periods"],
             cohort_size=raw["cohort_size"],
             requires_lab=raw["requires_lab"],
-            fixed_slot=_parse_slot(raw["fixed_slot"]),
+            fixed_slot=_parse_slot(graph.grid, raw["fixed_slot"]),
         )
         graph.adjacency[sid] = {}
 
@@ -206,7 +213,7 @@ def build_conflict_graph(payload: dict[str, Any]) -> ConflictGraph:
         fid = entry["faculty_id"]
         slots: set[SlotId] = set()
         for raw_slot in entry["unavailable_slots"]:
-            slots.add(SlotId(day=raw_slot["day"], period=raw_slot["period"]))
+            slots.add(graph.grid.slot(raw_slot["day"], raw_slot["period"]))
         graph.faculty_unavailable[fid] = slots
 
     # Verify every session's faculty has an availability entry.
@@ -221,7 +228,7 @@ def build_conflict_graph(payload: dict[str, Any]) -> ConflictGraph:
     # Store per-slot sets of consumed faculty / room / cohort ids.
 
     for pin in payload["pinned_occupancy"]:
-        slot = SlotId(day=pin["day"], period=pin["period"])
+        slot = graph.grid.slot(pin["day"], pin["period"])
         bucket = graph.pinned_slots.setdefault(
             slot,
             {"faculty_ids": set(), "room_ids": set(), "cohort_ids": set()},
@@ -263,12 +270,13 @@ def slot_is_open(
 ) -> bool:
     """True when *slot* is free for *session*'s faculty and cohort.
 
-    Checks the teaching grid, faculty unavailability, and pinned occupancy of
-    the session's faculty or cohort. It does **not** look at ``fixed_slot``:
-    that restricts where a session may *start*, which is a separate question
-    from whether a slot is open at all.
+    Checks the payload's teaching grid, faculty unavailability, and pinned
+    occupancy of the session's faculty or cohort (a year's lunch, a frozen
+    elective). It does **not** look at ``fixed_slot``: that restricts where a
+    session may *start*, which is a separate question from whether a slot is
+    open at all.
     """
-    if not is_teaching_period(slot.period):
+    if not graph.grid.is_teaching_period(slot.period):
         return False
     if slot in graph.faculty_unavailable.get(session.faculty_id, set()):
         return False
@@ -306,7 +314,7 @@ def available_slots_for(
     """
     return [
         slot
-        for slot in all_slots()
+        for slot in graph.grid.all_slots()
         if (session.fixed_slot is None or slot == session.fixed_slot)
         and slot_is_open(graph, session, slot)
     ]

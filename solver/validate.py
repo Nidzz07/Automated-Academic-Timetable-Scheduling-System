@@ -9,7 +9,7 @@ conflict-free, so it is written to share nothing with the search:
 * It imports **nothing** from ``solver.backtracking``, ``solver.colouring`` or
   ``solver.graph``. A bug in the search's helpers cannot hide in the checker,
   because the checker has its own. Only ``solver.slots`` (the slot vocabulary
-  and :func:`~solver.slots.is_adjacent`) is shared.
+  and the payload's grid, :class:`~solver.slots.SlotGrid`) is shared.
 * It reads plain dicts, not the solver's dataclasses, so it can check a
   timetable that came from anywhere: the backtracker, Welsh-Powell, a
   drag-and-drop edit in the frontend, or a hand-written fixture. It will back
@@ -21,10 +21,11 @@ Occupancy
 A placement occupies **every** period of its session, not only the first.
 ``solution_v1`` defines ``period`` as the starting period: a session of
 ``duration_periods = n`` occupies that period and the next ``n - 1`` periods in
-*teaching* order. Consecutive occupied slots must satisfy
-:func:`~solver.slots.is_adjacent`, so a double lab starting at period 1 occupies
-periods 1 and 3 (across the short break), and one starting at period 9 has no
-second period that day.
+*teaching* order. The grid is the edge list's own ``slot_grid``, and consecutive
+occupied slots must be joined by its adjacency
+(:meth:`~solver.slots.SlotGrid.is_adjacent`): on SPIT's grid a double lab
+starting at period 1 occupies periods 1 and 3 (across the short break), and one
+starting at period 9 has no second period that day.
 
 Checks and their ``kind``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -61,8 +62,9 @@ A violation is a timetable breaking a constraint someone could relax. A
 payload that is not a timetable for this instance at all - an unknown or
 duplicated session id, a session missing from a solved assignment, an unknown
 room, a ``sub_room_id`` that is not a sub-room of ``room_id``, a start period
-on a break - raises :class:`ValueError` instead. The teaching grid is not a
-constraint kind (proposal section 5.1): nothing can relax it.
+on a break, a malformed slot grid or a slot off it - raises
+:class:`ValueError` instead. The teaching grid is not a constraint kind
+(proposal section 5.1): nothing can relax it.
 
 Pure stdlib, plain data in and out.
 """
@@ -70,16 +72,9 @@ Pure stdlib, plain data in and out.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from itertools import pairwise
 from typing import Any
 
-from solver.slots import (
-    PERIODS_PER_DAY,
-    TEACHING_PERIODS,
-    SlotId,
-    is_adjacent,
-    is_teaching_period,
-)
+from solver.slots import SlotGrid, SlotId
 
 __all__ = [
     "KINDS",
@@ -164,42 +159,29 @@ def _sort_key(v: Violation) -> tuple[Any, ...]:
 # ---------------------------------------------------------------------------
 
 
-def _check_grid(edge_list: dict[str, Any]) -> None:
-    """Refuse a payload whose slot grid is not the one ``solver.slots`` encodes.
+def _check_grid(edge_list: dict[str, Any]) -> SlotGrid:
+    """The edge list's own slot grid: days, teaching periods and adjacency.
 
-    Occupancy is derived from :func:`~solver.slots.is_adjacent`, which knows only
-    the canonical SPIT grid. Validating against a different grid would silently
-    check the wrong periods, so it is an error instead.
+    Any well-formed grid is checked against, the canonical one or another
+    (ROADMAP D6 opens P5 to TE and pins each year's lunch). A malformed one
+    raises (:meth:`~solver.slots.SlotGrid.from_payload`): occupancy cannot be
+    derived from it.
     """
-    grid = edge_list["slot_grid"]
-    if grid["periods_per_day"] != PERIODS_PER_DAY or sorted(grid["teaching_periods"]) != sorted(
-        TEACHING_PERIODS
-    ):
-        raise ValueError(
-            "slot_grid differs from the canonical grid in solver.slots; "
-            "validate_solution cannot check it"
-        )
-    declared = {tuple(pair) for pair in grid["adjacency"]}
-    canonical = set(pairwise(TEACHING_PERIODS))
-    if declared != canonical:
-        raise ValueError(
-            "slot_grid.adjacency differs from teaching-order adjacency in solver.slots; "
-            "validate_solution cannot check it"
-        )
+    return SlotGrid.from_payload(edge_list["slot_grid"])
 
 
-def _occupied(start: SlotId, duration: int) -> tuple[list[SlotId], bool]:
+def _occupied(grid: SlotGrid, start: SlotId, duration: int) -> tuple[list[SlotId], bool]:
     """Slots a placement starting at *start* occupies, and whether it fits.
 
     Walks forward in teaching order from *start*. Returns the slots that exist
     (at least *start*) and ``True`` only when all *duration* periods exist and
-    each consecutive pair satisfies :func:`~solver.slots.is_adjacent`.
+    each consecutive pair is joined by the grid's adjacency.
     """
     slots = [start]
-    later = [p for p in TEACHING_PERIODS if p > start.period]
+    later = [p for p in grid.teaching_periods if p > start.period]
     for period in later[: duration - 1]:
         candidate = SlotId(start.day, period)
-        if not is_adjacent(slots[-1], candidate):
+        if not grid.is_adjacent(slots[-1], candidate):
             break
         slots.append(candidate)
     return slots, len(slots) == duration
@@ -228,7 +210,7 @@ def validate_slot_placements(
     Raises:
         ValueError: on a malformed input (see the module docstring).
     """
-    _check_grid(edge_list)
+    grid = _check_grid(edge_list)
     sessions: dict[str, dict[str, Any]] = {}
     for raw in edge_list["sessions"]:
         if raw["id"] in sessions:
@@ -247,11 +229,11 @@ def validate_slot_placements(
 
     for sid in sorted(sessions):
         day, period = starts[sid]
-        start = SlotId(day, period)
-        if not is_teaching_period(start.period):
+        start = grid.slot(day, period)
+        if not grid.is_teaching_period(start.period):
             raise ValueError(f"session {sid!r} starts on non-teaching period {period}")
         duration = sessions[sid]["duration_periods"]
-        slots, fits = _occupied(start, duration)
+        slots, fits = _occupied(grid, start, duration)
         occupied[sid] = slots
         if not fits:
             violations.append(
@@ -286,7 +268,7 @@ def validate_slot_placements(
     unavailable: dict[str, set[SlotId]] = {}
     for entry in edge_list["faculty_availability"]:
         unavailable.setdefault(entry["faculty_id"], set()).update(
-            SlotId(s["day"], s["period"]) for s in entry["unavailable_slots"]
+            grid.slot(s["day"], s["period"]) for s in entry["unavailable_slots"]
         )
     for sid in sorted(sessions):
         fid = sessions[sid]["faculty_id"]
@@ -306,7 +288,7 @@ def validate_slot_placements(
     pinned_faculty: dict[SlotId, set[str]] = {}
     pinned_cohort: dict[SlotId, set[str]] = {}
     for pin in edge_list["pinned_occupancy"]:
-        slot = SlotId(pin["day"], pin["period"])
+        slot = grid.slot(pin["day"], pin["period"])
         pinned_faculty.setdefault(slot, set()).update(pin["faculty_ids"])
         pinned_cohort.setdefault(slot, set()).update(pin["cohort_ids"])
     for sid in sorted(sessions):
@@ -357,7 +339,7 @@ def validate_slot_placements(
         fixed = sessions[sid]["fixed_slot"]
         if fixed is None:
             continue
-        want = SlotId(fixed["day"], fixed["period"])
+        want = grid.slot(fixed["day"], fixed["period"])
         got = SlotId(*starts[sid])
         if want != got:
             violations.append(
@@ -393,6 +375,7 @@ def validate_solution(
     if solution["status"] != "solved":
         return []
 
+    grid = _check_grid(edge_list)
     sessions = {raw["id"]: raw for raw in edge_list["sessions"]}
     rooms: dict[str, dict[str, Any]] = {}
     for raw in edge_list["rooms"]:
@@ -428,7 +411,7 @@ def validate_solution(
     violations = validate_slot_placements(edge_list, starts)
 
     occupied: dict[str, list[SlotId]] = {
-        sid: _occupied(SlotId(*starts[sid]), sessions[sid]["duration_periods"])[0]
+        sid: _occupied(grid, SlotId(*starts[sid]), sessions[sid]["duration_periods"])[0]
         for sid in starts
     }
 
@@ -464,7 +447,7 @@ def validate_solution(
     # ---- pinned rooms --------------------------------------------------------
     pinned_rooms: dict[SlotId, set[str]] = {}
     for pin in edge_list["pinned_occupancy"]:
-        pinned_rooms.setdefault(SlotId(pin["day"], pin["period"]), set()).update(
+        pinned_rooms.setdefault(grid.slot(pin["day"], pin["period"]), set()).update(
             pin["room_ids"]
         )
     for sid in sorted(occupied):

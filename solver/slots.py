@@ -9,9 +9,13 @@ timetable that is off by a break, so they are spelled out here:
 
 1. **Wall-clock period index, 0..9** - the axis this module uses, and the one
    frozen by ``contracts/edge_list_v1.schema.json`` as ``slot_grid.periods_per_day
-   = 10``. It counts every hour of the day *including* the two breaks. Index 2 is
-   the 11.00-11.15 short break and index 5 is the 13.15-14.15 lunch break; neither
-   can hold a session. This is the single source of truth for the solver.
+   = 10``. It counts every hour of the day *including* the breaks. Which of those
+   periods can hold a session, and which run on into the next, is the payload's
+   ``slot_grid``, read into a :class:`SlotGrid`. On the schema's default grid
+   index 2 is the 11.00-11.15 short break and index 5 the 13.15-14.15 lunch; under
+   ROADMAP D6 only index 2 closes for everyone, and each year's lunch (P5 SE, P4
+   TE) arrives as pinned occupancy. This is the single source of truth for the
+   solver.
 
 2. **Teaching-order index, 0..7** - used *only* by
    ``contracts/ingestion_v1.schema.json`` for its ``period`` field, where it
@@ -29,13 +33,20 @@ timetable that is off by a break, so they are spelled out here:
 Adjacency is the reason axis 1 cannot simply be "hours since 09.00". A double lab
 such as ``ET Lab /DDA /509 (10.00 -12.00)`` runs from period 1 to period 3, across
 the short break. Those two periods are adjacent *in teaching order* while their
-raw indices differ by 2, so :func:`is_adjacent` compares positions within
-:data:`TEACHING_PERIODS` rather than the numbers themselves.
+raw indices differ by 2, so adjacency is the payload's list of pairs
+(:meth:`SlotGrid.is_adjacent`), never the difference of the numbers.
+
+**The canonical grid is a test helper.** :data:`TEACHING_PERIODS`, :data:`DAYS`,
+:data:`PERIODS_PER_DAY`, :func:`is_adjacent`, :func:`all_slots` and the dense index
+describe the schema's ``default`` grid. Tests and the synthetic generator use them
+to build payloads; no solver module reads them (``test_slots.py`` checks this).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import pairwise
+from typing import Any
 
 __all__ = [
     "DAYS",
@@ -47,6 +58,7 @@ __all__ = [
     "BREAK_LABELS",
     "PERIOD_TIMES",
     "SLOT_COUNT",
+    "SlotGrid",
     "SlotId",
     "is_adjacent",
     "all_slots",
@@ -61,11 +73,12 @@ DAYS = 5
 
 DAY_NAMES = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
 
-#: Length of the wall-clock period axis, breaks included. Mirrors
-#: ``slot_grid.periods_per_day`` in the edge-list contract.
+#: Length of the wall-clock period axis, breaks included, on the canonical grid.
+#: Mirrors the ``slot_grid.periods_per_day`` default in the edge-list contract.
 PERIODS_PER_DAY = 10
 
-#: Wall-clock period indices that can hold a session.
+#: Wall-clock period indices that can hold a session on the canonical grid - a
+#: test helper; the solver reads each payload's ``teaching_periods``.
 #:
 #: This must stay literally equal to ``slot_grid.teaching_periods`` in
 #: ``contracts/edge_list_v1.schema.json``; ``tests/test_slots.py`` reads the
@@ -76,7 +89,8 @@ TEACHING_PERIODS: list[int] = [0, 1, 3, 4, 6, 7, 8, 9]
 #: but it does sit between two adjacent ones.
 SHORT_BREAK_PERIOD = 2
 
-#: The 13.15-14.15 lunch break.
+#: The 13.15-14.15 lunch break of the canonical grid. Under ROADMAP D6 lunch is
+#: per year (P5 SE, P4 TE) and reaches the solver as pinned occupancy.
 LUNCH_PERIOD = 5
 
 BREAK_LABELS: dict[int, str] = {
@@ -115,10 +129,11 @@ _TEACHING_POSITION: dict[int, int] = {
 class SlotId:
     """One (day, period) slot on the wall-clock grid.
 
-    ``period`` is a wall-clock index in 0..9, matching the edge-list contract.
-    Break periods (2 and 5) are constructible - the grid contains them - but they
-    are never teaching slots, so they are absent from :func:`all_slots` and
-    rejected by :func:`slot_index`.
+    ``period`` is a wall-clock index (0..9 on SPIT's grid), matching the
+    edge-list contract; the payload's :class:`SlotGrid` bounds it
+    (:meth:`SlotGrid.slot`). Break periods are constructible - the grid contains
+    them - but they are never teaching slots, so they are absent from
+    :meth:`SlotGrid.all_slots`.
     """
 
     day: int
@@ -131,22 +146,100 @@ class SlotId:
             raise TypeError(f"period must be an int, got {type(self.period).__name__}")
         if not 0 <= self.day < DAYS:
             raise ValueError(f"day must be in 0..{DAYS - 1} (Monday..Friday), got {self.day}")
-        if not 0 <= self.period < PERIODS_PER_DAY:
+        if self.period < 0:
             raise ValueError(
-                f"period must be a wall-clock index in 0..{PERIODS_PER_DAY - 1}, "
-                f"got {self.period}. Note this is the wall-clock axis including "
-                f"breaks, not the ingestion contract's teaching-order 0..7."
+                f"period must be a wall-clock index, 0 or more, got {self.period}. "
+                f"Note this is the wall-clock axis including breaks, not the "
+                f"ingestion_v1 contract's teaching-order 0..7."
             )
 
     def __str__(self) -> str:
-        start, end = PERIOD_TIMES[self.period]
-        label = BREAK_LABELS.get(self.period)
-        suffix = f" [{label}]" if label else ""
-        return f"{DAY_NAMES[self.day]} {start}-{end}{suffix}"
+        # No break label: under D6 whether P4 or P5 is lunch depends on the year.
+        times = PERIOD_TIMES.get(self.period)
+        when = f"{times[0]}-{times[1]}" if times else f"period {self.period}"
+        return f"{DAY_NAMES[self.day]} {when}"
+
+
+@dataclass(frozen=True, slots=True)
+class SlotGrid:
+    """The payload's ``slot_grid``: the slots a session may take, and which run on.
+
+    Every solver module reads days, teaching periods and adjacency from here,
+    never from the canonical constants. ``adjacency`` holds ordered pairs
+    ``(a, b)``: teaching period ``b`` comes straight after ``a`` and a
+    multi-period session may run on from ``a`` into ``b``. So each day's
+    teaching periods form disjoint paths (Discrete Structures, CE201), and a
+    multi-period placement is a walk along one of them.
+    """
+
+    days: int
+    periods_per_day: int
+    teaching_periods: tuple[int, ...]  # ascending
+    adjacency: frozenset[tuple[int, int]]
+
+    @classmethod
+    def from_payload(cls, raw: dict[str, Any]) -> SlotGrid:
+        """Read and check an edge-list ``slot_grid``.
+
+        Well-formed means: 1..5 days (the contract's Monday..Friday axis);
+        distinct teaching periods inside ``0..periods_per_day - 1``; and each
+        adjacency pair two teaching periods with no teaching period between
+        them, the earlier first. Any such grid is accepted, including one that
+        leaves a pair out so that no session runs across that gap.
+
+        Raises:
+            ValueError: on any other grid.
+        """
+        days, per_day = raw["days"], raw["periods_per_day"]
+        if not 1 <= days <= DAYS:
+            raise ValueError(f"slot_grid.days must be 1..{DAYS} (Monday..Friday), got {days}")
+        if per_day < 1:
+            raise ValueError(f"slot_grid.periods_per_day must be at least 1, got {per_day}")
+        teaching = sorted(raw["teaching_periods"])
+        if len(set(teaching)) != len(teaching) or not all(0 <= p < per_day for p in teaching):
+            raise ValueError(
+                f"slot_grid.teaching_periods must be distinct periods in 0..{per_day - 1}, "
+                f"got {raw['teaching_periods']}"
+            )
+        follows = dict(pairwise(teaching))
+        pairs = {(a, b) for a, b in raw["adjacency"]}
+        for a, b in sorted(pairs):
+            if follows.get(a) != b:
+                raise ValueError(
+                    f"slot_grid.adjacency pair {[a, b]} is not two consecutive teaching periods"
+                )
+        return cls(days, per_day, tuple(teaching), frozenset(pairs))
+
+    def is_teaching_period(self, period: int) -> bool:
+        """True when this wall-clock period can hold a session."""
+        return period in self.teaching_periods
+
+    def is_adjacent(self, a: SlotId, b: SlotId) -> bool:
+        """True when ``a`` and ``b`` fall on one day and an adjacency pair joins them."""
+        return a.day == b.day and (
+            (a.period, b.period) in self.adjacency or (b.period, a.period) in self.adjacency
+        )
+
+    def all_slots(self) -> list[SlotId]:
+        """Every teaching slot of the week, day-major and period-minor."""
+        return [SlotId(day, period) for day in range(self.days) for period in self.teaching_periods]
+
+    def slot(self, day: int, period: int) -> SlotId:
+        """``SlotId(day, period)``, refused when it lies off this grid.
+
+        Raises:
+            ValueError: if the day or period is outside the grid.
+        """
+        if not (0 <= day < self.days and 0 <= period < self.periods_per_day):
+            raise ValueError(
+                f"slot (day {day}, period {period}) is off the slot grid "
+                f"({self.days} days x {self.periods_per_day} periods)"
+            )
+        return SlotId(day, period)
 
 
 def is_teaching_period(period: int) -> bool:
-    """True when this wall-clock period can hold a session."""
+    """True when this wall-clock period can hold a session on the canonical grid."""
     return period in _TEACHING_POSITION
 
 
@@ -159,7 +252,8 @@ def period_label(period: int) -> str:
 
 
 def is_adjacent(a: SlotId, b: SlotId) -> bool:
-    """True when ``a`` and ``b`` are consecutive teaching slots on the same day.
+    """True when ``a`` and ``b`` are consecutive teaching slots on the same day
+    of the canonical grid (a test helper; the solver uses :meth:`SlotGrid.is_adjacent`).
 
     Adjacency is measured by position within :data:`TEACHING_PERIODS`, not by the
     raw difference of the period numbers. That is what lets a double lab span a
@@ -180,7 +274,7 @@ def is_adjacent(a: SlotId, b: SlotId) -> bool:
 
 
 def all_slots() -> list[SlotId]:
-    """Every schedulable slot in the week, day-major and period-minor.
+    """Every schedulable slot of the canonical grid's week, day-major and period-minor.
 
     Ordering is day 0's teaching periods in :data:`TEACHING_PERIODS` order, then
     day 1's, and so on, which makes the result index-aligned with
