@@ -40,6 +40,17 @@ def test_decisions_applied(built) -> None:
     srd = [a for a in anomalies if a.category == "initials_not_in_division_legend"
            and a.message.startswith("SRD ")]
     assert len(srd) == 4 and {a.resolution for a in srd} == {"D25"}
+    # D38: every other initial missing from its division's legend.
+    assert _resolutions(anomalies, "initials_not_in_division_legend") == {"D25", "D38"}
+    assert _resolutions(anomalies, "initials_resolved_d38") == {"D38"}
+    assert _resolutions(anomalies, "frozen_d44") == {"D44"}
+    assert len([a for a in anomalies if a.category == "frozen_d44"]) == 20
+    assert _resolutions(anomalies, "out_of_scope_in_lab") == {"D35"}
+    assert _resolutions(anomalies, "frozen_out_of_scope") == {"D35"}
+    assert _resolutions(anomalies, "frozen_faculty_tt_mdm") == {"D24"}
+    assert _resolutions(anomalies, "frozen_exam") == {"D37"}
+    assert _resolutions(anomalies, "faculty_day_off") == {"D36"}
+    assert _resolutions(anomalies, "unknown_room_usage") == {"D42"}
 
 
 def test_lecture_rooms(built) -> None:
@@ -49,7 +60,8 @@ def test_lecture_rooms(built) -> None:
     assert rooms == {"room 002": "D10", "room 202": "D29", "room 203": "D10", "room 307": "D29",
                      "room 508": "D10"}
     [total] = [a for a in anomalies if a.category == "lecture_room_total"]
-    assert total.message.startswith("62 of 64 ")
+    # D44 freezes the PCS tutorials; D42 makes 605 and 609 classrooms.
+    assert total.message.startswith("53 of 60 ")
 
 
 def test_json_counts(built) -> None:

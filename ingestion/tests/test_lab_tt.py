@@ -12,17 +12,20 @@ import pytest
 from ingestion.class_tt import ClassTimetable, FacultyIndex, faculty_index, parse_class_timetable
 from ingestion.docx_reader import logical_cells, open_document, walk_body
 from ingestion.lab_tt import (
+    D38_INITIALS,
     LAB_FILE,
     Inventory,
     LabTimetable,
     cross_check,
     d25_member,
+    d38_member,
     division_key,
     label_key,
     normalise_room,
     parse_lab_timetable,
     room_inventory,
 )
+from ingestion.seed_reference import SeedBlocked
 
 
 @pytest.fixture(scope="module")
@@ -62,9 +65,13 @@ def test_inventory_is_d8_labs_plus_d10_classrooms(inventory: Inventory) -> None:
     assert labs == {"509": 2, "603": 3, "604": 1, "606": 2, "607B": 1, "608": 1, "702": 3,
                     "703": 2, "507": 1}
     assert sum(labs.values()) == 16  # D8
+    # D42: 605 and 609 read 'unsure' but seat 80, so they are classrooms.
     assert {r.code: r.room_type for r in inventory.classrooms()} == {
-        "601": "class", "605": "unknown", "609": "unknown", "701": "class",
+        "601": "class", "605": "class", "609": "class", "701": "class",
     }
+    assert {f.location: f.resolution for f in inventory.findings
+            if f.category == "unknown_room_usage"} == {
+        "classrooms.xlsx 605": "D42", "classrooms.xlsx 609": "D42"}
     assert "607A" not in inventory.rooms  # D8: M.Tech only
 
 
@@ -165,6 +172,33 @@ def test_elective_takes_class_resolution_and_d25(lab: LabTimetable, faculty: Fac
     assert d25_member(faculty) == "Surekha Dholay"
 
 
+def test_d38_resolves_division_and_mdm_cells(lab: LabTimetable) -> None:
+    e = _cell(lab, "606-5", "Thursday", 3)  # IS, missing from the SE-Comp D legend
+    assert (e.faculty_status, e.faculty_candidates) == ("resolved_d38", ["Isha Sawalkar"])
+    mdm = _cell(lab, "603-7", "Monday", 7)  # 'MDM-DBMS /RS': no division printed
+    assert (mdm.faculty_status, mdm.faculty_candidates) == ("resolved_d38", ["Rupali Sawant"])
+    assert _cell(lab, "702-A", "Wednesday", 7).faculty_candidates == ["Soni Bhambar"]
+    assert {f.category for f in lab.findings if f.resolution == "D38"} == {
+        "initials_resolved_d38"}
+    # Only the exam block's NR is left: an exam is not a session (D37).
+    [left] = [f for f in lab.findings if f.category == "initials_unresolved"]
+    assert left.location == "t5 603-2 Wed P3-P4"
+
+
+def test_d38_checks_subject_and_legends(faculty: FacultyIndex) -> None:
+    assert len(D38_INITIALS) == 9
+    assert d38_member("SE", "AGN", "OS", faculty) == "Amey Ganesh Nile"
+    # AGN does not teach SPCC per Faculty___Subjects.xlsx: nothing is resolved.
+    assert d38_member("SE", "AGN", "SPCC", faculty) is None
+    # SM is Sudeep Mali only in TE (D38: initials are scoped by year).
+    assert d38_member("SE", "SM", "Devop", faculty) is None
+    assert d38_member("TE", "SM", "Devop", faculty) == "Sudeep Mali"
+    scope = next(s for s in faculty.by_scope if s.semester_number == 4)
+    other = FacultyIndex({scope: {"AGN": ["Someone Else"]}}, faculty.ce_faculty)
+    with pytest.raises(SeedBlocked, match="D38 SE AGN"):
+        d38_member("SE", "AGN", "OS", other)
+
+
 def test_bracketed_room_is_recorded_not_used(lab: LabTimetable) -> None:
     e = _cell(lab, "607-B", "Friday", 0)
     assert e.room_override_raw == "608"
@@ -187,6 +221,8 @@ def test_beyond_split_and_d28_d29_reported(lab: LabTimetable) -> None:
     assert by_category["subroom_beyond_split"] == {"D30"}
     assert by_category["room_not_generation"] == {"D28", "D29"}
     assert by_category["lab_in_classroom"] == {"D29"}
+    assert by_category["out_of_scope_in_lab"] == {"D35"}
+    assert by_category["exam_block"] == {"D37"}
 
 
 # --------------------------------------------------------------------------- #
