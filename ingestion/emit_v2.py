@@ -14,16 +14,26 @@ What goes in:
   timetable has one; initials from the SE/TE legends, plus SRD per D25;
 - observed sessions: every in-scope lecture and tutorial (one per division,
   D23) and practical (one per batch), and every frozen item that has a teacher:
-  electives and FOM - II (D24, D26, merged across grids), SMCS (D26) and the
-  MDM labs of the lab timetable (D24);
+  electives and FOM - II (D24, D26, merged across grids), SMCS (D26), AS201 PCS
+  (D44: its teachers are not in Faculty___Subjects.xlsx) and the MDM labs of the
+  lab timetable (D24). Initials missing from a division's legend resolve per
+  D25 and D38; no session may be left without a teacher;
 - lab blocks: one per class-timetable cell of in-scope practicals;
 - pinned blocks: the coffee break (P2, once per day), each year's lunch (row 8:
   one per division per day) and the label-only frozen items (MDM, HSS, LLC,
   student activity, major project).
 
-ingestion.v2 cannot mark a session as frozen, so the ids of every frozen
-session and pinned block are written beside the payload to
-``data/generated/ingestion_v2_even.frozen.json``.
+ingestion.v2 cannot mark a session as frozen, and has no place for a teacher or
+room on a pinned block, for faculty unavailability or for name aliases. Those go
+beside the payload to ``data/generated/ingestion_v2_even.frozen.json`` (D39),
+read by ``ingestion.seed_even``:
+
+- ``frozen``: the ids of every frozen session and pinned block, with the decision;
+- ``blocks``: occupancy outside the SE/TE grids (:mod:`ingestion.out_of_scope`):
+  out-of-scope sessions (D35), faculty-page MDM items (D24), exam blocks (D37);
+- ``unavailability``: printed faculty unavailability (D36);
+- ``faculty``: each member's source and name aliases (D45: the
+  Faculty___Subjects.xlsx spelling is the name, legend spellings are aliases).
 
 Validator rule beyond the schema: no session may occupy its own year's lunch.
 
@@ -37,6 +47,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -47,6 +58,7 @@ from ingestion.anomalies import (
     SMCS,
     Sources,
     frozen_groups,
+    is_d44,
     load_sources,
 )
 from ingestion.class_tt import (
@@ -61,6 +73,8 @@ from ingestion.class_tt import (
 from ingestion.initials_legend import extract_legends, name_key
 from ingestion.lab_tt import (
     D25_INITIALS,
+    D25_NAME,
+    RESOLVED,
     RoomRef,
     class_resolution,
     d25_member,
@@ -68,8 +82,14 @@ from ingestion.lab_tt import (
     load_lab_capacities,
     normalise_room,
 )
-from ingestion.seed_legends import legend_scope
-from ingestion.seed_reference import DEPARTMENT_CODE, DEPARTMENT_NAME, REPO_ROOT
+from ingestion.seed_legends import aliases, legend_scope, resolve_legend_names
+from ingestion.seed_reference import (
+    DEPARTMENT_CODE,
+    DEPARTMENT_NAME,
+    EXTRA_FACULTY_NAME,
+    REPO_ROOT,
+    parse_faculty_subjects,
+)
 
 SCHEMA_PATH = REPO_ROOT / "contracts" / "ingestion_v2.schema.json"
 DEFAULT_JSON = REPO_ROOT / "data" / "generated" / "ingestion_v2_even.json"
@@ -123,6 +143,10 @@ class Builder:
     frozen: list[dict] = field(default_factory=list)
     subjects: dict[str, dict] = field(default_factory=dict)
     cohorts: dict[str, dict] = field(default_factory=dict)
+    #: D38 resolutions as manual faculty_initials rows, in first-seen order.
+    d38_initials: list[dict] = field(default_factory=list)
+    #: session id -> (source, division id or None) of the initials row resolving it.
+    resolved_by: dict[str, tuple[str, str | None]] = field(default_factory=dict)
 
     # ------------------------------------------------------------------ ids
     def division_id(self, key: str) -> str:
@@ -149,8 +173,9 @@ class Builder:
         )
         p["semester"] = {"code": "EVEN", "academic_year": "2025-2026", "term": "Term: II (Even)"}
         p["departments"] = [{"id": "dept-ce", "code": DEPARTMENT_CODE, "name": DEPARTMENT_NAME}]
+        # Code as seed_legends writes it, so the seeder finds the same Programme row.
         p["programmes"] = [
-            {"id": "prog-ce-btech", "department_id": "dept-ce", "code": "BTECH", "name": "B.Tech"}
+            {"id": "prog-ce-btech", "department_id": "dept-ce", "code": "B.Tech", "name": "B.Tech"}
         ]
         self._divisions()
         self._rooms()
@@ -166,6 +191,7 @@ class Builder:
         self._mdm_labs()
         self._lab_blocks()
         self._pinned()
+        p["faculty_initials"] += self.d38_initials
         p["subjects"] = list(self.subjects.values())
         p["cohorts"] = list(self.cohorts.values())
         p["qualifications"] = self._qualifications()
@@ -289,9 +315,19 @@ class Builder:
             row["session_type"] = "both"
         return sid
 
-    def faculty_fields(self, status: str | None, candidates: list[str],
-                       initials: str | None) -> dict:
-        if status in ("resolved", "resolved_d25"):
+    def faculty_fields(self, sid: str, status: str | None, candidates: list[str],
+                       initials: str | None, division: str | None = None) -> dict:
+        """``division``: the division key whose legend the initials were read in."""
+        division_id = self.division_id(division) if division else None
+        if status == "resolved_d38":
+            row = {"faculty_id": self.faculty_id(candidates[0]), "initials": initials,
+                   "division_id": division_id, "source": "manual", "is_ambiguous": False,
+                   "legend_ref": None}
+            if row not in self.d38_initials:
+                self.d38_initials.append(row)
+        if status in RESOLVED:
+            self.resolved_by[sid] = ("legend", division_id) if status == "resolved" else \
+                ("manual", None if status == "resolved_d25" else division_id)
             return {"faculty_initials_raw": initials, "faculty_id": self.faculty_id(candidates[0])}
         if status == "ambiguous":
             return {"faculty_initials_raw": initials, "faculty_id": None,
@@ -326,19 +362,21 @@ class Builder:
             key = division_key(e.division)
             sid = f"obs-t{e.table}-r{e.row}-c{e.col}-l{e.line}"
             practical = e.session_type == "practical"
+            # A frozen batch practical holds its batch only, not the division (D44).
             cohort = self.batch_cohort(key, e.batch) if practical else self.division_cohort(key)
-            frozen = e.scheme_code == SMCS
+            frozen = "D26" if e.scheme_code == SMCS else "D44" if is_d44(e, s) else None
             room = normalise_room(e.room_raw, inv) if e.room_raw else None
             self.add_session(
                 sid, "frozen" if frozen else e.session_type,
                 self.subject(e.subject_raw, e.scheme_code, "lab" if practical else "theory"),
-                self.faculty_fields(*class_resolution(e, s.faculty), e.faculty_initials_raw),
+                self.faculty_fields(sid, *class_resolution(e, s.faculty), e.faculty_initials_raw,
+                                    key),
                 cohort, room, e.day, e.periods, "lab" if practical else "theory", e.raw,
             )
             if frozen:
-                self.frozen.append({"id": sid, "kind": "observed_session", "resolution": "D26",
+                self.frozen.append({"id": sid, "kind": "observed_session", "resolution": frozen,
                                     "label": e.raw})
-            if practical:
+            elif practical:
                 self.practicals.setdefault((e.table, e.row, e.col), []).append((sid, e))
 
         for group in frozen_groups(s.class_tt, s.lab):
@@ -352,7 +390,8 @@ class Builder:
             room = normalise_room(group.room_raw, inv) if group.room_raw else None
             self.add_session(
                 sid, "frozen", self.subject(e.subject_raw, None, "lab" if practical else "theory"),
-                self.faculty_fields(*class_resolution(e, s.faculty), e.faculty_initials_raw),
+                self.faculty_fields(sid, *class_resolution(e, s.faculty), e.faculty_initials_raw,
+                                    division_key(e.division)),
                 self.group_cohort(label, keys), room, e.day, e.periods,
                 "lab" if practical else "theory", e.raw,
             )
@@ -385,12 +424,14 @@ class Builder:
                 raise InstanceError(f"{le.where}: MDM cell with no initials")
             self.add_session(
                 sid, "frozen", self.subject(le.subject_raw or le.raw, None, "lab"),
-                self.faculty_fields(le.faculty_status, le.faculty_candidates,
+                self.faculty_fields(sid, le.faculty_status, le.faculty_candidates,
                                     le.faculty_initials_raw),
                 self.group_cohort(le.subject_raw or le.raw, keys, sid.removeprefix("obs-")),
                 ref, le.day, le.periods,
                 "lab", le.raw,
             )
+            if le.faculty_status == "resolved":  # read through a BE / M.Tech legend
+                self.resolved_by[sid] = ("legend", le.audience)
             self.frozen.append({"id": sid, "kind": "observed_session", "resolution": "D24",
                                 "label": le.raw})
 
@@ -548,15 +589,21 @@ def reference_errors(payload: dict) -> list[str]:
     return problems
 
 
+def teacherless(payload: dict) -> list[str]:
+    """D38: every observed session must have a teacher once D25 and D38 apply."""
+    return [f"{row['id']} ({row['source_cell']!r}): '{row['faculty_initials_raw']}' resolves "
+            "to nobody" for row in payload["observed_sessions"] if row["faculty_id"] is None]
+
+
 def validate(payload: dict) -> None:
-    """Schema, references and the lunch rule. Raises :class:`InstanceError`."""
+    """Schema, references, the lunch rule and D38. Raises :class:`InstanceError`."""
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     problems = [
         f"/{'/'.join(map(str, e.absolute_path))}: {e.message}"
         for e in Draft202012Validator(schema).iter_errors(payload)
     ]
     if not problems:
-        problems = reference_errors(payload) + lunch_violations(payload)
+        problems = reference_errors(payload) + lunch_violations(payload) + teacherless(payload)
     if problems:
         raise InstanceError(f"{len(problems)} problem(s):\n  " + "\n  ".join(problems))
 
@@ -572,6 +619,77 @@ class Instance:
     kinds: dict[str, str]
     frozen: list[dict]
     sources: Sources
+    #: Side-file sections the contract cannot hold (see the module docstring).
+    blocks: list[dict] = field(default_factory=list)
+    unavailability: list[dict] = field(default_factory=list)
+    faculty_meta: list[dict] = field(default_factory=list)
+    resolved_by: dict[str, tuple[str, str | None]] = field(default_factory=dict)
+
+    def side_file(self, payload_name: str) -> dict:
+        return {
+            "generated_by": "python -m ingestion.emit_v2",
+            "payload": payload_name,
+            "note": "what ingestion.v2 cannot hold (D39): frozen ids (D24, D26, D44); blocks "
+                    "outside the SE/TE grids (D35, D24, D37); unavailability (D36); faculty "
+                    "source and aliases (D45)",
+            "frozen": self.frozen,
+            "blocks": self.blocks,
+            "unavailability": self.unavailability,
+            "faculty": self.faculty_meta,
+        }
+
+
+_BLOCK_KIND = {"D35": "out_of_scope", "D24": "mdm", "D37": "exam"}
+
+
+def side_blocks(b: Builder) -> list[dict]:
+    """The D35 / D24 / D37 blocks, in payload ids. Periods must form one block."""
+    out = []
+    for blk in b.s.blocks:
+        start, duration = blk.periods[0], len(blk.periods)
+        if covered(start, duration) != blk.periods:
+            raise InstanceError(f"{blk.first.id}: periods {blk.periods} are not one block")
+        room_id, sub_room_id = b.room_ids(blk.room)
+        out.append({
+            "id": blk.first.id, "kind": _BLOCK_KIND[blk.resolution],
+            "resolution": blk.resolution,
+            "label": " || ".join(ln.raw for ln in blk.lines),
+            "day": DAYS.index(blk.first.day), "period": start, "duration_periods": duration,
+            "faculty_id": b.faculty_id(blk.teacher) if blk.teacher else None,
+            "room_id": room_id, "sub_room_id": sub_room_id,
+            "sources": [f"{ln.source} {ln.where}" for ln in blk.lines],
+        })
+    return out
+
+
+def unavailability(b: Builder) -> list[dict]:
+    """D36: a printed 'PHD Day OFF' makes every period of that day unavailable."""
+    periods = [p for p in PERIOD_TIMES if p != COFFEE_PERIOD]
+    return [
+        {"faculty_id": b.faculty_id(page.member), "day": DAYS.index(day), "periods": periods,
+         "label": "PHD Day OFF", "resolution": "D36",
+         "source": f"{b.s.faculty_tt.source} t{page.table} {page.name_raw}"}
+        for page in b.s.faculty_tt.pages if page.member for day in page.days_off
+    ]
+
+
+def faculty_meta(b: Builder) -> list[dict]:
+    """Source and aliases of each member (D45: legend spellings are aliases)."""
+    sheet = {f.full_name for f in parse_faculty_subjects()}
+    legends = extract_legends(EVEN_CLASS_FILE)
+    spellings = aliases(resolve_legend_names(legends, sorted(b.s.faculty.ce_faculty)))
+    by_member: dict[str, list[dict]] = {}
+    for spelling, member in spellings.items():
+        by_member.setdefault(member, []).append({"alias": spelling, "source": "legend"})
+    by_member.setdefault(d25_member(b.s.faculty), []).append(
+        {"alias": D25_NAME, "source": "manual"})  # the name D25 gives
+    return [
+        {"id": row["id"], "full_name": row["full_name"],
+         "source": "spreadsheet" if row["full_name"] in sheet
+         else "manual" if row["full_name"] == EXTRA_FACULTY_NAME else "legend",
+         "aliases": by_member.get(row["full_name"], [])}
+        for row in b.payload["faculty"]
+    ]
 
 
 def build(sources: Sources | None = None) -> Instance:
@@ -579,7 +697,8 @@ def build(sources: Sources | None = None) -> Instance:
     b = Builder(s)
     payload = b.build()
     validate(payload)
-    return Instance(payload, b.kinds, b.frozen, s)
+    return Instance(payload, b.kinds, b.frozen, s, side_blocks(b), unavailability(b),
+                    faculty_meta(b), b.resolved_by)
 
 
 def summary(inst: Instance) -> dict[str, object]:
@@ -601,10 +720,14 @@ def summary(inst: Instance) -> dict[str, object]:
     lab_demand = sum(row["duration_periods"] for row in sessions
                      if inst.kinds[row["id"]] == "practical")
     frozen_rows = [row for row in sessions if inst.kinds[row["id"]] == "frozen"]
-    frozen_class = sum(row["duration_periods"] for row in frozen_rows
-                       if row["room_id"] in class_ids)
+    # Frozen sessions and blocks alike hold a room (a sub-room: one batch place).
+    held = frozen_rows + inst.blocks
+    frozen_class = sum(row["duration_periods"] for row in held if row["room_id"] in class_ids)
     frozen_lab = sum(row["duration_periods"] * (1 if row["sub_room_id"] else places[row["room_id"]])
-                     for row in frozen_rows if row["room_id"] in places)
+                     for row in held if row["room_id"] in places)
+    by_resolution = Counter(f["resolution"] for f in inst.frozen
+                            if f["kind"] == "observed_session")
+    blocks_by = Counter(blk["resolution"] for blk in inst.blocks)
     resolution = {"resolved": 0, "ambiguous": 0, "unresolved": 0}
     for row in sessions:
         state = "resolved" if row["faculty_id"] else \
@@ -617,12 +740,18 @@ def summary(inst: Instance) -> dict[str, object]:
         "sessions_faculty": resolution,
         "lab_blocks": len(p["lab_blocks"]),
         "frozen_sessions": len(frozen_rows),
+        "frozen_sessions_by_decision": dict(sorted(by_resolution.items())),
         "frozen_pinned_blocks": sum(f["kind"] == "pinned_block" for f in inst.frozen),
+        "side_blocks_by_decision": dict(sorted(blocks_by.items())),
+        "side_blocks_with_teacher": sum(blk["faculty_id"] is not None for blk in inst.blocks),
+        "side_blocks_with_room": sum(blk["room_id"] is not None for blk in inst.blocks),
+        "faculty_unavailable_slots": sum(len(u["periods"]) for u in inst.unavailability),
         "break_pinned_blocks": sum(b["kind"] == "break" for b in p["pinned_blocks"]),
         "faculty": len(p["faculty"]),
         "faculty_with_load_line": sum(f["total_hours"] is not None or f["theory_hours"] is not None
                                       or f["practical_hours"] is not None for f in p["faculty"]),
         "faculty_initials_rows": len(p["faculty_initials"]),
+        "faculty_initials_manual": sum(r["source"] == "manual" for r in p["faculty_initials"]),
         "rooms": {"class": len(class_ids), "unknown": len(unknown_ids), "lab": len(places),
                   "sub_rooms": sum(len(r["sub_rooms"]) for r in rooms.values())},
         "classroom_periods": {
@@ -654,12 +783,7 @@ def main(argv: list[str] | None = None) -> None:
     inst = build()
     args.json.parent.mkdir(parents=True, exist_ok=True)
     args.json.write_text(dumps(inst.payload), encoding="utf-8")
-    args.frozen.write_text(dumps({
-        "generated_by": "python -m ingestion.emit_v2",
-        "payload": args.json.name,
-        "note": "ingestion.v2 has no frozen flag; these ids are frozen at their slots (D24, D26)",
-        "frozen": inst.frozen,
-    }), encoding="utf-8")
+    args.frozen.write_text(dumps(inst.side_file(args.json.name)), encoding="utf-8")
     print(f"wrote {args.json}\nwrote {args.frozen}")
     print(dumps(summary(inst)), end="")
 

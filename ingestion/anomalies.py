@@ -18,10 +18,11 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from ingestion.class_tt import (
+    COFFEE_PERIOD,
     EVEN_CLASS_FILE,
     ClassTimetable,
     Entry,
@@ -32,20 +33,26 @@ from ingestion.class_tt import (
 )
 from ingestion.faculty import FacultyTimetable, parse_faculty_timetable
 from ingestion.lab_tt import (
+    D38_INITIALS,
     LAB_CAPACITIES_YAML,
     NEEDS_HUMAN,
     Finding,
     Inventory,
     LabTimetable,
+    RoomRef,
+    attributed,
     canonical_group,
+    class_resolution,
     cross_check,
+    division_key,
     label_key,
     normalise_room,
     parse_lab_timetable,
     room_inventory,
 )
+from ingestion.out_of_scope import Block, Frozen, blocks
 from ingestion.scheme import SCHEME_YAML, TeachingScheme, load_scheme
-from ingestion.seed_reference import CLASSROOMS_XLSX, REPO_ROOT
+from ingestion.seed_reference import CLASSROOMS_XLSX, REPO_ROOT, parse_faculty_subjects
 
 DEFAULT_REPORT = Path(__file__).resolve().parent / "anomaly_report.txt"
 DEFAULT_JSON = REPO_ROOT / "data" / "generated" / "anomalies_even.json"
@@ -77,6 +84,11 @@ class Sources:
     lab: LabTimetable
     cross: list[Finding]
     faculty_tt: FacultyTimetable
+    #: D44: "CE faculty" for D3 - Faculty___Subjects.xlsx, into which D25 and D38 resolve.
+    ce_faculty: frozenset[str] = frozenset()
+    #: Occupancy outside the SE/TE grids (D35, D37, faculty-page MDM per D24).
+    blocks: list[Block] = field(default_factory=list)
+    block_findings: list[Finding] = field(default_factory=list)
 
 
 def load_sources() -> Sources:
@@ -87,12 +99,58 @@ def load_sources() -> Sources:
     lab = parse_lab_timetable(class_tt=class_tt, faculty=faculty, inventory=inventory)
     cross = cross_check(class_tt, lab)
     faculty_tt = parse_faculty_timetable(class_tt, lab, faculty)
-    return Sources(scheme, faculty, inventory, class_tt, lab, cross, faculty_tt)
+    s = Sources(scheme, faculty, inventory, class_tt, lab, cross, faculty_tt,
+                frozenset(f.full_name for f in parse_faculty_subjects()))
+    s.blocks, s.block_findings = blocks(class_tt, lab, faculty_tt, faculty, inventory,
+                                        s.ce_faculty, frozen_seen(s), teaching_slots(s))
+    return s
 
 
-def is_frozen(e: Entry) -> bool:
-    """D24: every D3-excluded item in the grid; D26: FOM - II and SMCS."""
-    return e.excluded or e.scheme_code == SMCS
+def teacher(e: Entry, s: Sources) -> str | None:
+    """The one person a class-timetable line names (D25, D38 applied), or None."""
+    return attributed(*class_resolution(e, s.faculty))
+
+
+def is_d44(e: Entry, s: Sources) -> bool:
+    """D44: an in-scope line whose teacher is not CE faculty is frozen (AS201 PCS)."""
+    name = teacher(e, s) if e.subject_raw and not e.excluded else None
+    return name is not None and name not in s.ce_faculty
+
+
+def is_frozen(e: Entry, s: Sources) -> bool:
+    """D24: every D3-excluded item in the grid; D26: FOM - II and SMCS; D44."""
+    return e.excluded or e.scheme_code == SMCS or is_d44(e, s)
+
+
+def _generation_room(raw: str | None, inv: Inventory) -> RoomRef | None:
+    ref = normalise_room(raw, inv) if raw else None
+    return ref if ref and ref.room else None
+
+
+def frozen_seen(s: Sources) -> list[Frozen]:
+    """Every frozen SE/TE line of the class and lab timetables, for matching."""
+    out = [Frozen(teacher(e, s), e.faculty_initials_raw, e.day,
+                  frozenset(p for p in e.periods if p != COFFEE_PERIOD), e.subject_raw,
+                  _generation_room(e.room_raw, s.inventory))
+           for e in s.class_tt.entries if e.subject_raw and is_frozen(e, s)]
+    out += [Frozen(attributed(le.faculty_status, le.faculty_candidates), le.faculty_initials_raw,
+                   le.day, frozenset(le.teaching_periods), le.subject_raw or le.raw,
+                   RoomRef(le.room_label, le.room, le.sub_room) if le.room else None)
+            for le in s.lab.entries if le.kind in ("elective", "mdm")]
+    return out
+
+
+def teaching_slots(s: Sources) -> dict[tuple[str, str], set[int]]:
+    """(teacher, day) -> periods the class and lab timetables give them in SE/TE."""
+    out: dict[tuple[str, str], set[int]] = {}
+    for e in s.class_tt.entries:
+        if e.subject_raw and (name := teacher(e, s)):
+            out.setdefault((name, e.day), set()).update(e.periods)
+    for le in s.lab.entries:
+        if le.kind in ("practical", "elective") and (
+                name := attributed(le.faculty_status, le.faculty_candidates)):
+            out.setdefault((name, le.day), set()).update(le.periods)
+    return out
 
 
 # --------------------------------------------------------------------------- #
@@ -109,11 +167,14 @@ _CLASS_RESOLUTION = {
 }
 
 
-def _class_resolution(kind: str, detail: str) -> str:
+def _class_resolution(kind: str, division: str, detail: str) -> str:
     if kind in ("unmatched_subject", "parallel_division_sessions") and FOM_II in detail:
         return "D26"
-    if kind == "initials_not_in_division_legend" and detail.startswith("SRD "):
-        return "D25"
+    if kind == "initials_not_in_division_legend":
+        if detail.startswith("SRD "):
+            return "D25"
+        if ((division_key(division) or "")[:2], detail.split()[0]) in D38_INITIALS:
+            return "D38"
     return _CLASS_RESOLUTION.get(kind, NEEDS_HUMAN)
 
 
@@ -135,7 +196,7 @@ def lecture_rooms(s: Sources) -> list[Anomaly]:
         division_wide = e.subject_raw and not e.batch and not e.elective_group
         if e.room_raw is None or not (e.session_type in ("lecture", "tutorial") or division_wide):
             continue
-        (frozen if is_frozen(e) else in_scope)[e.room_raw] += e.duration
+        (frozen if is_frozen(e, s) else in_scope)[e.room_raw] += e.duration
     out: list[Anomaly] = []
     removed = 0
     for raw in sorted(set(in_scope) | set(frozen)):
@@ -237,7 +298,7 @@ def collect(s: Sources) -> list[Anomaly]:
     class_file = EVEN_CLASS_FILE.name
     for a in s.class_tt.anomalies:
         out.append(Anomaly(a.kind, class_file, f"{a.division} {a.where}", a.detail,
-                           _class_resolution(a.kind, a.detail)))
+                           _class_resolution(a.kind, a.division, a.detail)))
     for e in s.class_tt.entries:
         if e.excluded:
             out.append(_exclusion(e))
@@ -245,6 +306,11 @@ def collect(s: Sources) -> list[Anomaly]:
             out.append(Anomaly("frozen_d26", class_file, f"{e.division} {e.where}",
                                f"{e.raw!r}: SMCS runs parallel to FOM - II; frozen at its slot",
                                "D26"))
+        elif is_d44(e, s):
+            out.append(Anomaly("frozen_d44", class_file, f"{e.division} {e.where}",
+                               f"{e.raw!r}: {teacher(e, s)} is not in Faculty___Subjects.xlsx, "
+                               "so not CE faculty; frozen at its slot with its cohort, teacher "
+                               "and room", "D44"))
     out += lecture_rooms(s)
     for g in frozen_groups(s.class_tt, s.lab):
         if g.note:
@@ -259,6 +325,8 @@ def collect(s: Sources) -> list[Anomaly]:
     out += [Anomaly(f.category, both, f.location, f.message, f.resolution) for f in s.cross]
     out += [Anomaly(f.category, s.faculty_tt.source, f.location, f.message, f.resolution)
             for f in s.faculty_tt.findings]
+    out += [Anomaly(f.category, "EVEN class + lab + faculty timetables", f.location, f.message,
+                    f.resolution) for f in s.block_findings]
     return out
 
 

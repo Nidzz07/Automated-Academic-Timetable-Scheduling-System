@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from functools import cache
 from pathlib import Path
 
 import yaml
@@ -55,7 +56,7 @@ from ingestion.class_tt import (
 from ingestion.docx_reader import logical_cells, open_document, paragraph_text, walk_body
 from ingestion.initials_legend import name_key, normalise_whitespace
 from ingestion.seed_legends import LegendScope
-from ingestion.seed_reference import SeedBlocked, parse_classrooms
+from ingestion.seed_reference import SeedBlocked, parse_classrooms, parse_faculty_subjects
 from ingestion.survey import REAL_DIR
 
 LAB_FILE = REAL_DIR / "Lab CE_Time_Table-Even_sem_25-26.docx"
@@ -86,6 +87,28 @@ class Finding:
 D25_INITIALS = "SRD"
 D25_NAME = "Dr. Dholay Surekha Rajesh"
 
+#: D38: initials missing from their own division's legend, by year ("SE"/"TE";
+#: None for the MDM lab cells, which name no division). Each must be the one
+#: person those initials name in the year's legends (all EVEN legends for None),
+#: and must teach the subject per Faculty___Subjects.xlsx; :func:`d38_member`
+#: checks both and resolves nothing otherwise.
+D38_INITIALS: dict[tuple[str | None, str], str] = {
+    ("SE", "AGN"): "Amey Ganesh Nile",
+    ("TE", "AGN"): "Amey Ganesh Nile",
+    ("SE", "PBB"): "Prasenjit Bhavathankar",
+    ("SE", "NR"): "Nataasha Raul",
+    ("SE", "IS"): "Isha Sawalkar",
+    ("TE", "SM"): "Sudeep Mali",
+    ("TE", "AT"): "Anuj Tawari",
+    (None, "RS"): "Rupali Sawant",
+    (None, "SB"): "Soni Bhambar",
+}
+#: D38 "RS = Rupali Sawant (MDM-DBMS lab)": the lab timetable's 'MDM-DBMS' is
+#: the 'MDM-I Lab' Faculty___Subjects.xlsx lists for her. Other subjects match
+#: the spreadsheet code by subject_key (both sides in that form here).
+D38_SUBJECT_CODES = {"MDMDBMS": "MDMILAB"}
+_YEAR_SEMESTER = {"SE": 4, "TE": 6}
+
 _DIV_KEY = re.compile(r"\b(SE|TE)\W*COMP\W*([A-D])\b", re.IGNORECASE)
 #: The form division_key returns.
 _KEY = re.compile(r"(SE|TE)-[A-D]")
@@ -104,6 +127,39 @@ def d25_member(faculty: FacultyIndex) -> str:
     if len(found) != 1:
         raise SeedBlocked(f"D25 name {D25_NAME!r} matches {found} in the faculty list, not one")
     return found[0]
+
+
+@cache
+def _spreadsheet_subjects() -> dict[str, frozenset[str]]:
+    return {f.full_name: frozenset(map(subject_key, f.subject_codes))
+            for f in parse_faculty_subjects()}
+
+
+def d38_member(
+    year: str | None, initials: str | None, subject: str | None, faculty: FacultyIndex
+) -> str | None:
+    """The person D38 names for these initials, or ``None``.
+
+    Raises :class:`SeedBlocked` when the year's legends name anyone else under
+    the initials, since D38 then no longer describes the files. ``None`` when
+    D38 has no entry, or the person does not teach ``subject`` per
+    Faculty___Subjects.xlsx (the session then stays unresolved and is reported).
+    """
+    person = D38_INITIALS.get((year, initials or ""))
+    if person is None:
+        return None
+    named = {
+        n for scope, by_init in faculty.by_scope.items()
+        if scope.term.value == "EVEN"
+        and (year is None or scope.semester_number == _YEAR_SEMESTER[year])
+        for n in by_init.get(initials or "", ())
+    }
+    if named != {person}:
+        raise SeedBlocked(f"D38 {year} {initials} = {person}, but the legends name {named}")
+    key = subject_key(subject or "")
+    if D38_SUBJECT_CODES.get(key, key) not in _spreadsheet_subjects().get(person, ()):
+        return None
+    return person
 
 
 def legend_scopes(faculty: FacultyIndex) -> dict[str, LegendScope]:
@@ -127,11 +183,12 @@ def resolve(
     audience: str | None,
     faculty: FacultyIndex,
     scopes: dict[str, LegendScope],
+    subject: str | None = None,
 ) -> tuple[str, list[str]]:
     """``(status, candidates)`` for initials seen with an audience key.
 
-    status: resolved | ambiguous | resolved_d25 | not_in_division_legend |
-    no_division | missing.
+    status: resolved | ambiguous | resolved_d25 | resolved_d38 |
+    not_in_division_legend | no_division | missing.
     """
     if initials is None:
         return "missing", []
@@ -141,19 +198,30 @@ def resolve(
         return ("resolved" if len(candidates) == 1 else "ambiguous"), list(candidates)
     if initials == D25_INITIALS:
         return "resolved_d25", [d25_member(faculty)]
+    # D38 covers SE/TE division cells and cells naming no audience (MDM labs).
+    year = audience[:2] if audience and _KEY.fullmatch(audience) else None
+    if (year or audience is None) and (member := d38_member(year, initials, subject, faculty)):
+        return "resolved_d38", [member]
     return ("not_in_division_legend" if scope else "no_division"), []
 
 
 def class_resolution(e: Entry, faculty: FacultyIndex) -> tuple[str | None, list[str]]:
-    """A class-timetable entry's faculty resolution, with D25 applied to "SRD"."""
-    if e.faculty_status == "not_in_division_legend" and e.faculty_initials_raw == D25_INITIALS:
-        return "resolved_d25", [d25_member(faculty)]
+    """A class-timetable entry's faculty resolution, with D25 applied to "SRD"
+    and D38 to the initials it lists."""
+    if e.faculty_status == "not_in_division_legend":
+        if e.faculty_initials_raw == D25_INITIALS:
+            return "resolved_d25", [d25_member(faculty)]
+        if member := d38_member(e.year, e.faculty_initials_raw, e.subject_raw, faculty):
+            return "resolved_d38", [member]
     return e.faculty_status, list(e.faculty_candidates)
+
+
+RESOLVED = ("resolved", "resolved_d25", "resolved_d38")
 
 
 def attributed(status: str | None, candidates: list[str]) -> str | None:
     """The one faculty member a resolution names, or ``None``."""
-    return candidates[0] if status in ("resolved", "resolved_d25") else None
+    return candidates[0] if status in RESOLVED else None
 
 
 # --------------------------------------------------------------------------- #
@@ -197,6 +265,8 @@ _ROOM_TYPE = {
 }
 #: D10: the 6th and 7th floors belong to CE.
 _CE_FLOORS = ("6", "7")
+#: D42: an 'unsure' room (605, 609) is a classroom only if it seats a division.
+D42_MIN_CAPACITY = 80
 
 
 def load_lab_capacities(path: Path = LAB_CAPACITIES_YAML) -> dict:
@@ -277,11 +347,15 @@ def room_inventory() -> Inventory:
             continue
         room_type = _ROOM_TYPE[r.used_as]
         if room_type == "unknown":
+            used = r.capacity >= D42_MIN_CAPACITY
             findings.append(Finding(
                 "unknown_room_usage", f"classrooms.xlsx {r.code}",
-                f"room {r.code} 'used as' reads '{r.used_as}': emitted as room_type unknown",
-                NEEDS_HUMAN,
+                f"room {r.code} 'used as' reads '{r.used_as}', capacity {r.capacity}: "
+                + ("used as a classroom" if used else "not used"), "D42",
             ))
+            if not used:
+                continue
+            room_type = "class"
         rooms[r.code] = InventoryRoom(r.code, r.capacity, room_type, r.used_as, r.separation, 1, ())
     return Inventory(rooms, frozenset(rows), findings)
 
@@ -578,11 +652,13 @@ def _parse_table(
                  f"but names room '{entry.room_override_raw}' in brackets; the table's room "
                  "is kept")
         if entry.kind == "exam":
-            flag("exam_block", entry.where, f"{entry.raw!r}: an exam block, not a weekly session")
+            flag("exam_block", entry.where,
+                 f"{entry.raw!r}: an exam block, frozen room occupancy of {label} at its slot",
+                 "D37")
         elif entry.kind == "out_of_scope":
             flag("out_of_scope_in_lab", entry.where,
-                 f"{entry.raw!r} ({entry.audience}) occupies {label}; D2 puts it out of scope "
-                 "and D24 freezes only D3 items, so it is not blocked")
+                 f"{entry.raw!r} ({entry.audience}) occupies {label}; out of scope (D2), frozen "
+                 "with its room and CE teacher", "D35")
         elif entry.kind == "mdm":
             flag("frozen_in_lab", entry.where,
                  f"{entry.raw!r}: MDM in {label}, frozen with its teacher and room", "D24")
@@ -627,13 +703,23 @@ def _resolve_faculty(out: LabTimetable, class_tt: ClassTimetable, faculty: Facul
         else:
             audience = entry.division or entry.audience
             entry.faculty_status, entry.faculty_candidates = resolve(
-                entry.faculty_initials_raw, audience, faculty, scopes
+                entry.faculty_initials_raw, audience, faculty, scopes, entry.subject_raw
             )
-        if entry.faculty_status in ("not_in_division_legend", "no_division", "missing"):
+        if entry.faculty_status in ("not_in_division_legend", "no_division", "missing",
+                                    "resolved_d38"):
             unresolved.setdefault(
                 (entry.faculty_initials_raw or "<none>", entry.faculty_status), []
             ).append(entry.where)
     for (initials, status), wheres in unresolved.items():
+        if status == "resolved_d38":
+            [member] = {e.faculty_candidates[0] for e in out.entries
+                        if e.faculty_status == status and e.faculty_initials_raw == initials}
+            out.findings.append(Finding(
+                "initials_resolved_d38", ", ".join(wheres),
+                f"{initials} x{len(wheres)}: not in the cell's division legend (or no division "
+                f"printed); resolved to {member}", "D38",
+            ))
+            continue
         out.findings.append(Finding(
             "initials_unresolved", ", ".join(wheres),
             f"{initials} x{len(wheres)}: {status.replace('_', ' ')}. Not resolved.",

@@ -1033,3 +1033,67 @@ def test_0004_downgrade_refuses_to_drop_legend_mappings(migration_config):
 
     with pytest.raises(RuntimeError, match="1 legend-sourced faculty"):
         command.downgrade(cfg, "0003_subject_type_null")
+
+
+# ---------------------------------------------------------------------------
+# migration 0005
+# ---------------------------------------------------------------------------
+
+
+def _seed_semester_timetable(url: str) -> None:
+    _run(url, "INSERT INTO institute (id, code, name) VALUES (1, 'SPIT', 'SPIT')")
+    _run(url, "INSERT INTO department (id, institute_id, code, name) VALUES (1, 1, 'CE', 'CE')")
+    _run(url, "INSERT INTO programme (id, department_id, code, name) "
+              "VALUES (1, 1, 'B.Tech', 'B.Tech')")
+    _run(url, "INSERT INTO semester (id, department_id, programme_id, number, term_code, "
+              "academic_year) VALUES (1, 1, 1, 4, 'EVEN', '2025-2026')")
+    _run(url, "INSERT INTO timetable (id, department_id, semester_id, name, status) "
+              "VALUES (1, 1, 1, 'SE only', 'draft')")
+
+
+def test_0005_keeps_semester_timetables_and_allows_term_wide_ones(migration_config):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "0004_faculty_initials")
+    _seed_semester_timetable(url)
+    command.upgrade(cfg, "0005_instance_seed")
+
+    assert _rows(url, "SELECT semester_id, term_code FROM timetable") == [(1, None)]
+    _run(url, "INSERT INTO timetable (id, department_id, term_code, academic_year, name, status) "
+              "VALUES (2, 1, 'EVEN', '2025-2026', 'SE+TE', 'observed')")
+    with pytest.raises(IntegrityError, match="semester_or_term"):
+        _run(url, "INSERT INTO timetable (id, department_id, name, status) "
+                  "VALUES (3, 1, 'nowhere', 'draft')")
+    _run(url, "INSERT INTO pinned_block (department_id, timetable_id, label, day, period, "
+              "duration_periods, kind) VALUES (1, 2, 'DCS', 1, 5, 1, 'out_of_scope')")
+
+
+def test_0005_downgrade_refuses_to_drop_instance_data(migration_config):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "head")
+    _seed_semester_timetable(url)
+    _run(url, "INSERT INTO timetable (id, department_id, term_code, academic_year, name, status) "
+              "VALUES (2, 1, 'EVEN', '2025-2026', 'SE+TE', 'observed')")
+
+    with pytest.raises(RuntimeError, match="1 term-wide timetables"):
+        command.downgrade(cfg, "0004_faculty_initials")
+
+
+def test_0005_downgrade_rebuilds_pinned_kind_without_out_of_scope(migration_config):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "head")
+    _seed_semester_timetable(url)
+    _run(url, "INSERT INTO pinned_block (department_id, label, day, period, duration_periods, "
+              "kind) VALUES (1, 'HSS', 0, 3, 1, 'hss')")
+
+    command.downgrade(cfg, "0004_faculty_initials")
+
+    assert _rows(url, "SELECT kind::text FROM pinned_block") == [("hss",)]
+    assert [k for (k,) in _rows(url, "SELECT unnest(enum_range(NULL::pinned_kind))::text")] == [
+        "mdm", "hss", "llc", "activity", "project", "exam", "break"]
+    command.upgrade(cfg, "head")
