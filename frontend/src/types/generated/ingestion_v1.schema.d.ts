@@ -7,14 +7,23 @@
 
 /**
  * Stable string identifier, unique within its collection in this payload.
+ *
+ * This interface was referenced by `ChronosIngestionContractV1`'s JSON-Schema
+ * via the `definition` "id".
  */
 export type Id = string;
 /**
  * Teaching day index, Monday=0 .. Friday=4.
+ *
+ * This interface was referenced by `ChronosIngestionContractV1`'s JSON-Schema
+ * via the `definition` "day".
  */
 export type Day = number;
 /**
  * Teaching-slot index within a day, 0..7 - the eight schedulable hours of CONTEXT.md section 3.2, counted in teaching order with the two breaks excluded. The edge-list contract re-indexes these onto its wall-clock grid via slot_grid.teaching_periods.
+ *
+ * This interface was referenced by `ChronosIngestionContractV1`'s JSON-Schema
+ * via the `definition` "teaching_period".
  */
 export type TeachingPeriod = number;
 

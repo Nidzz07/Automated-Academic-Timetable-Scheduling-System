@@ -16,7 +16,7 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
     <div
       data-testid="parallel-lab-block"
       data-block-id={labBlock.blockId}
-      data-duration-periods={labBlock.durationPeriods}
+      data-duration-periods={labBlock.periods.length}
       className="relative flex flex-col h-full w-full rounded-xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent p-2.5 shadow-sm transition-all hover:border-emerald-500/70 hover:shadow-md dark:from-emerald-950/30 dark:via-teal-950/20 dark:border-emerald-500/30"
     >
       {/* Block Header */}
@@ -26,16 +26,17 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
             <Layers className="h-3 w-3" />
           </span>
           <span className="font-semibold text-xs tracking-tight text-emerald-900 dark:text-emerald-200">
-            Parallel Lab Block (Double Period)
+            Parallel Lab Block
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           <Badge variant="success" className="text-[10px] px-1.5 py-0 h-4 font-mono font-medium">
             <Clock className="w-2.5 h-2.5 mr-1 inline" />
-            2 Periods (10:00 – 12:15)
+            {labBlock.periods.length} periods (P{labBlock.periods[0]}–P
+            {labBlock.periods[labBlock.periods.length - 1]})
           </Badge>
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-emerald-400 text-emerald-800 dark:text-emerald-300">
-            4 Batches Parallel
+            {labBlock.sessions.length} batches in parallel
           </Badge>
         </div>
       </div>
@@ -97,7 +98,9 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
       </div>
 
       <div className="mt-1 text-[10px] text-emerald-800/80 dark:text-emerald-300/80 text-center font-medium">
-        Straddles 11:00 Short Break · Both periods contiguous
+        {labBlock.spannedBreaks.length
+          ? `Spans break ${labBlock.spannedBreaks.map((p) => `P${p}`).join(', ')} · periods contiguous in teaching order`
+          : 'Periods contiguous'}
       </div>
     </div>
   );

@@ -2,16 +2,20 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EnrichedSession } from '@/adapters/timetable';
+import { QualityRule } from '@/adapters/solution';
 import { School, BookOpen, Clock, Activity, CheckCircle } from 'lucide-react';
 
 interface FacultyWorkloadCardProps {
   facultyInitials: string;
   facultySessions: EnrichedSession[];
+  /** The solver's S-LOAD16 entry (D11, D34); the only source of a load status */
+  loadRule?: QualityRule;
 }
 
 export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
   facultyInitials,
   facultySessions,
+  loadRule,
 }) => {
   // Compute Theory (T) and Practical (P) hours
   let theoryHours = 0;
@@ -46,14 +50,14 @@ export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <CardTitle className="text-sm font-bold">
-                  Faculty Individual View: Prof. {facultyInitials}
+                  Faculty Individual View: {facultyInitials}
                 </CardTitle>
                 <Badge variant="outline" className="font-mono text-[10px]">
                   {facultyName || 'Department Faculty'}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Institutional Workload Formula: Theory / Practical (T/P) Weighted Workload
+                Theory / practical hours placed in this timetable
               </p>
             </div>
           </div>
@@ -100,10 +104,14 @@ export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
           <div className="rounded-lg border border-border/60 bg-background/60 p-2">
             <div className="text-[10px] text-muted-foreground flex items-center gap-1">
               <CheckCircle className="h-3 w-3 text-emerald-500" />
-              Status
+              S-LOAD16 (solver)
             </div>
-            <div className="font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
-              Normal Load (Within 5–18h)
+            <div data-testid="load-status" className="font-semibold text-foreground mt-0.5">
+              {!loadRule
+                ? 'not reported by the solver'
+                : loadRule.status === 'not_evaluated'
+                  ? 'not evaluated'
+                  : loadRule.explanation}
             </div>
           </div>
         </div>

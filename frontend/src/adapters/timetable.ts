@@ -1,130 +1,91 @@
 /**
  * Edge-list / ingestion / solution contracts -> grid view models.
+ *
+ * The week (days, periods, breaks, lunch), rooms and pinned blocks come from the edge list
+ * the solution was solved for; no period, time, break or label of the SPIT grid is
+ * restated here. Periods are on the contract's wall-clock axis and shown as P0, P1, ...
  */
 
 import {
   SolvedSolution,
   DayIndex,
-  PeriodIndex,
   SessionAssignment,
   parseSolution,
   isSolvedSolution,
 } from '@/adapters/solution';
 import { validateContract } from '@/api/contractValidation';
 import type { ChronosEdgeListContractV1 } from '@/types/generated/edge_list_v1.schema';
-import solvedExample from '@contracts/examples/solution_v1.solved.example.json';
+import solvedExample from '@contracts/examples/solution_v2.solved.example.json';
 import edgeListExample from '@contracts/examples/edge_list_v1.example.json';
 import ingestionExample from '@contracts/examples/ingestion_v1.example.json';
 
-export type EdgeListSession = ChronosEdgeListContractV1['sessions'][number];
-type LabBlock = ChronosEdgeListContractV1['lab_blocks'][number];
+export type EdgeList = ChronosEdgeListContractV1;
+export type EdgeListSession = EdgeList['sessions'][number];
 
-// shortcut: metadata comes from the contract examples; swap for API-served edge-list/ingestion payloads at S13
-const edgeListFixture = validateContract('edge_list', edgeListExample);
-const ingestionFixture = validateContract('ingestion', ingestionExample);
+// shortcut: names and labels come from the ingestion example; swap for API-served ingestion data at S13
+const ingestion = validateContract('ingestion', ingestionExample);
+const subjects = new Map(ingestion.subjects.map((s) => [s.id, s]));
+const faculty = new Map(ingestion.faculty.map((f) => [f.id, f]));
+const cohorts = new Map(ingestion.cohorts.map((c) => [c.id, c]));
 
-export interface PeriodSlot {
-  /** Teaching period index: 0..7 */
-  teachingPeriod: number;
-  /** Wall-clock period index matching contract: 0, 1, 3, 4, 6, 7, 8, 9 */
-  wallClockPeriod: number;
-  /** Time range label */
-  timeLabel: string;
-  /** Wall-clock start and end */
-  startTime: string;
-  endTime: string;
-  /** Whether there is a break preceding this period */
-  precedingBreak?: {
-    label: string;
-    time: string;
+/** Day names in contract day-index order (schema: Monday=0 .. Friday=4). */
+export const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+export interface WeekGrid {
+  days: DayIndex[];
+  /** Every wall-clock period of a day; `teaching: false` is a break for everyone. */
+  periods: Array<{ period: number; teaching: boolean }>;
+  /** Teaching periods in teaching order. */
+  teachingPeriods: number[];
+}
+
+export function buildWeekGrid(edgeList: EdgeList): WeekGrid {
+  const { days, periods_per_day, teaching_periods } = edgeList.slot_grid;
+  return {
+    days: Array.from({ length: days }, (_, d) => d),
+    periods: Array.from({ length: periods_per_day }, (_, p) => ({
+      period: p,
+      teaching: teaching_periods.includes(p),
+    })),
+    teachingPeriods: [...teaching_periods].sort((a, b) => a - b),
   };
 }
 
-export const TEACHING_PERIODS: PeriodSlot[] = [
-  {
-    teachingPeriod: 0,
-    wallClockPeriod: 0,
-    timeLabel: "09:00 – 10:00",
-    startTime: "09:00",
-    endTime: "10:00",
-  },
-  {
-    teachingPeriod: 1,
-    wallClockPeriod: 1,
-    timeLabel: "10:00 – 11:00",
-    startTime: "10:00",
-    endTime: "11:00",
-  },
-  {
-    teachingPeriod: 2,
-    wallClockPeriod: 3,
-    timeLabel: "11:15 – 12:15",
-    startTime: "11:15",
-    endTime: "12:15",
-    precedingBreak: {
-      label: "Short Break",
-      time: "11:00 – 11:15",
-    },
-  },
-  {
-    teachingPeriod: 3,
-    wallClockPeriod: 4,
-    timeLabel: "12:15 – 13:15",
-    startTime: "12:15",
-    endTime: "13:15",
-  },
-  {
-    teachingPeriod: 4,
-    wallClockPeriod: 6,
-    timeLabel: "14:15 – 15:15",
-    startTime: "14:15",
-    endTime: "15:15",
-    precedingBreak: {
-      label: "Lunch Break",
-      time: "13:15 – 14:15",
-    },
-  },
-  {
-    teachingPeriod: 5,
-    wallClockPeriod: 7,
-    timeLabel: "15:15 – 16:15",
-    startTime: "15:15",
-    endTime: "16:15",
-  },
-  {
-    teachingPeriod: 6,
-    wallClockPeriod: 8,
-    timeLabel: "16:15 – 17:15",
-    startTime: "16:15",
-    endTime: "17:15",
-  },
-  {
-    teachingPeriod: 7,
-    wallClockPeriod: 9,
-    timeLabel: "17:15 – 18:15",
-    startTime: "17:15",
-    endTime: "18:15",
-  },
-];
+/** The periods a session starting at `start` occupies: `duration` periods in teaching order. */
+export function occupiedPeriods(grid: WeekGrid, start: number, duration: number): number[] {
+  const i = grid.teachingPeriods.indexOf(start);
+  return i < 0 ? [start] : grid.teachingPeriods.slice(i, i + duration);
+}
 
-export const DAYS: Array<{ day: DayIndex; label: string; short: string }> = [
-  { day: 0, label: "Monday", short: "Mon" },
-  { day: 1, label: "Tuesday", short: "Tue" },
-  { day: 2, label: "Wednesday", short: "Wed" },
-  { day: 3, label: "Thursday", short: "Thu" },
-  { day: 4, label: "Friday", short: "Fri" },
-];
+export function getFaculty(id: string) {
+  const f = faculty.get(id);
+  // ingestion_v1 allows null initials (UNRESOLVED_FACULTY_INITIALS); never guess them
+  return f
+    ? { initials: f.initials ?? 'Unresolved', name: f.full_name }
+    : { initials: id.replace('fac-', '').toUpperCase(), name: 'Faculty' };
+}
 
-/**
- * Maps wall-clock period to teaching period index (0..7).
- */
-export function wallClockToTeachingPeriod(wallClockPeriod: number): number {
-  const match = TEACHING_PERIODS.find(p => p.wallClockPeriod === wallClockPeriod);
-  if (match) return match.teachingPeriod;
-  // Fallback for adjacent period mapping
-  if (wallClockPeriod === 2) return 1; // short break adjacent to period 1
-  if (wallClockPeriod === 5) return 3; // lunch break adjacent to period 3
-  return 0;
+export function getCohortLabel(id: string): string {
+  return cohorts.get(id)?.label ?? id.replace('coh-', '');
+}
+
+/** Same cohort, or two ingestion cohorts that share a batch (division ⊃ batch, combined ⊃ division). */
+export function cohortsOverlap(a: string, b: string): boolean {
+  if (a === b) return true;
+  const ma = cohorts.get(a)?.member_batch_ids;
+  const mb = cohorts.get(b)?.member_batch_ids;
+  return !!ma && !!mb && ma.some((m) => mb.includes(m));
+}
+
+/** Every cohort the edge list names (sessions and pinned occupancy), for filters. */
+export function cohortOptions(edgeList: EdgeList): Array<{ id: string; label: string }> {
+  const ids = new Set([
+    ...edgeList.sessions.map((s) => s.cohort_id),
+    ...edgeList.pinned_occupancy.flatMap((p) => p.cohort_ids),
+  ]);
+  return [...ids]
+    .map((id) => ({ id, label: getCohortLabel(id) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /**
@@ -133,15 +94,21 @@ export function wallClockToTeachingPeriod(wallClockPeriod: number): number {
 export interface EnrichedSession {
   sessionId: string;
   day: DayIndex;
-  wallClockPeriod: PeriodIndex;
-  teachingPeriod: number;
-  durationPeriods: number; // e.g. 2 for double lab block
+  /** Start period on the wall-clock axis */
+  wallClockPeriod: number;
+  /** Every period the session occupies (start + duration-1 more in teaching order) */
+  periods: number[];
+  durationPeriods: number;
+  roomId: string;
+  subRoomId: string | null;
   roomCode: string;
   subRoomCode: string | null;
   subjectCode: string;
   subjectName: string;
+  facultyId: string;
   facultyInitials: string;
   facultyName: string;
+  cohortId: string;
   cohortLabel: string;
   cohortSize: number;
   sessionType: "theory" | "lab";
@@ -159,173 +126,100 @@ export interface EnrichedSession {
 export interface EnrichedLabBlock {
   blockId: string;
   day: DayIndex;
-  startTeachingPeriod: number;
-  durationPeriods: number; // usually 2
-  timeRange: string;
-  divisionLabel: string;
+  /** Periods the block occupies, in teaching order */
+  periods: number[];
+  /** Non-teaching periods the block straddles (e.g. a break between its two periods) */
+  spannedBreaks: number[];
   sessions: EnrichedSession[];
 }
 
 /**
- * Institutional pinned block representation
+ * One pinned_occupancy entry.
  */
-export interface EnrichedPinnedBlock {
-  id: string;
-  label: string;
-  kind: string;
+export interface EnrichedPin {
+  key: string;
   day: DayIndex;
-  teachingPeriod: number;
-  durationPeriods: number;
-  roomCode: string;
-  cohortLabel: string;
-  description: string;
+  period: number;
+  /**
+   * Holds cohorts only, no teacher and no room. A frozen item holds its teacher and room too
+   * (D24), so this is a year's lunch, pinned per division cohort (D6, D31).
+   * shortcut: edge_list_v1 pins carry no kind; switch to the kind once a contract carries it.
+   */
+  isLunch: boolean;
+  cohortIds: string[];
+  cohortLabels: string[];
+  roomCodes: string[];
+  facultyInitials: string[];
+}
+
+export function getExampleEdgeList(): EdgeList {
+  return validateContract('edge_list', edgeListExample);
 }
 
 /**
- * Repository of metadata parsed from reference fixtures
- */
-class TimetableMetadataStore {
-  private subjects = new Map<string, { code: string; name: string }>();
-  private faculty = new Map<string, { initials: string; name: string }>();
-  private rooms = new Map<string, string>();
-  private cohorts = new Map<string, { label: string; isCombined: boolean; description?: string }>();
-  private edgeSessions = new Map<string, EdgeListSession>();
-  private labBlocks = new Map<string, LabBlock>();
-
-  constructor() {
-    this.init();
-  }
-
-  private init() {
-    // Index subjects from ingestion fixture
-    ingestionFixture.subjects.forEach(s => {
-      this.subjects.set(s.id, { code: s.code, name: s.name });
-    });
-
-    // Index faculty from ingestion fixture
-    ingestionFixture.faculty.forEach(f => {
-      // ingestion_v1 allows null initials (UNRESOLVED_FACULTY_INITIALS); never guess them
-      this.faculty.set(f.id, { initials: f.initials ?? 'Unresolved', name: f.full_name });
-    });
-
-    // Index rooms from edge_list and ingestion
-    edgeListFixture.rooms.forEach(r => {
-      this.rooms.set(r.id, r.code);
-    });
-
-    // Index cohorts
-    ingestionFixture.cohorts.forEach(c => {
-      this.cohorts.set(c.id, {
-        label: c.label,
-        isCombined: c.cohort_type === "combined",
-        description: c.cohort_type === "combined" ? "Combined Division Cohort" : undefined,
-      });
-    });
-
-    // Index edge sessions
-    edgeListFixture.sessions.forEach(s => {
-      this.edgeSessions.set(s.id, s);
-    });
-
-    // Index lab blocks
-    edgeListFixture.lab_blocks.forEach(lb => {
-      this.labBlocks.set(lb.id, lb);
-    });
-  }
-
-  public getSubject(id: string) {
-    return this.subjects.get(id) ?? { code: id.replace('subj-', '').toUpperCase(), name: 'Subject' };
-  }
-
-  public getFaculty(id: string) {
-    return this.faculty.get(id) ?? { initials: id.replace('fac-', '').toUpperCase(), name: 'Faculty' };
-  }
-
-  public getRoomCode(roomId: string, subRoomId: string | null) {
-    if (subRoomId) {
-      // Look up sub-room code if available, else derive clean label
-      const cleanSub = subRoomId.replace('room-', '').toUpperCase();
-      return cleanSub;
-    }
-    return this.rooms.get(roomId) ?? roomId.replace('room-', '');
-  }
-
-  public getCohort(id: string) {
-    return this.cohorts.get(id) ?? {
-      label: id.replace('coh-', ''),
-      isCombined: id.includes('comb'),
-      description: id.includes('comb') ? 'Combined Division Cohort' : undefined,
-    };
-  }
-
-  public getEdgeSession(sessionId: string) {
-    return this.edgeSessions.get(sessionId);
-  }
-
-  public getLabBlockForSession(sessionId: string) {
-    for (const lb of this.labBlocks.values()) {
-      if (lb.session_ids.includes(sessionId)) {
-        return lb;
-      }
-    }
-    return null;
-  }
-}
-
-export const metadataStore = new TimetableMetadataStore();
-
-/**
- * Returns the solved solution example from contracts/examples, validated against solution_v1
+ * Returns the solved solution example from contracts/examples (solution.v2)
  */
 export function getSolvedSolutionFixture(): SolvedSolution {
   const solution = parseSolution(solvedExample);
-  if (!isSolvedSolution(solution)) throw new Error('solution_v1.solved.example.json is not solved');
+  if (!isSolvedSolution(solution)) throw new Error('solution_v2.solved.example.json is not solved');
   return solution;
 }
 
 /**
- * Build enriched sessions from the solution contract assignment and metadata
+ * Build enriched sessions from placements and the edge list they were solved for
  */
-export function buildEnrichedSessions(solution: SolvedSolution = getSolvedSolutionFixture()): EnrichedSession[] {
-  return solution.assignment.map((item: SessionAssignment) => {
-    const edgeSession = metadataStore.getEdgeSession(item.session_id);
-    const subject = metadataStore.getSubject(edgeSession?.subject_id ?? '');
-    const faculty = metadataStore.getFaculty(edgeSession?.faculty_id ?? '');
-    const cohort = metadataStore.getCohort(edgeSession?.cohort_id ?? '');
-    const labBlock = metadataStore.getLabBlockForSession(item.session_id);
+export function buildEnrichedSessions(
+  assignment: SessionAssignment[],
+  edgeList: EdgeList
+): EnrichedSession[] {
+  const grid = buildWeekGrid(edgeList);
+  const rooms = new Map(edgeList.rooms.map((r) => [r.id, r]));
+  const edgeSessions = new Map(edgeList.sessions.map((s) => [s.id, s]));
 
-    const isCombined = cohort.isCombined || (edgeSession?.cohort_id?.includes('comb') ?? false);
+  return assignment.map((item) => {
+    const edgeSession = edgeSessions.get(item.session_id);
+    const subject = subjects.get(edgeSession?.subject_id ?? '');
+    const fac = getFaculty(edgeSession?.faculty_id ?? '');
+    const cohortId = edgeSession?.cohort_id ?? '';
+    const cohortLabel = getCohortLabel(cohortId);
+    const labBlock = edgeList.lab_blocks.find((lb) => lb.session_ids.includes(item.session_id));
+
+    const isCombined = cohorts.get(cohortId)?.cohort_type === 'combined' || cohortId.includes('comb');
     const isPinned = edgeSession?.fixed_slot !== null && edgeSession?.fixed_slot !== undefined;
 
     // Extract batch if batch cohort
     let batchLabel: string | undefined;
-    if (edgeSession?.cohort_id.includes('batch')) {
-      const parts = edgeSession.cohort_id.split('-');
+    if (cohortId.includes('batch')) {
+      const parts = cohortId.split('-');
       batchLabel = `Batch ${parts[parts.length - 1].toUpperCase()}`;
     }
 
     const duration = edgeSession?.duration_periods ?? 1;
-    const teachingPeriod = wallClockToTeachingPeriod(item.period);
+    const subRoomCode = item.sub_room_id ? rooms.get(item.sub_room_id)?.code ?? item.sub_room_id : null;
 
     return {
       sessionId: item.session_id,
       day: item.day,
       wallClockPeriod: item.period,
-      teachingPeriod,
+      periods: occupiedPeriods(grid, item.period, duration),
       durationPeriods: duration,
-      roomCode: metadataStore.getRoomCode(item.room_id, item.sub_room_id),
-      subRoomCode: item.sub_room_id ? metadataStore.getRoomCode(item.room_id, item.sub_room_id) : null,
-      subjectCode: subject.code,
-      subjectName: subject.name,
-      facultyInitials: faculty.initials,
-      facultyName: faculty.name,
-      cohortLabel: cohort.label,
+      roomId: item.room_id,
+      subRoomId: item.sub_room_id,
+      roomCode: subRoomCode ?? rooms.get(item.room_id)?.code ?? item.room_id,
+      subRoomCode,
+      subjectCode: subject?.code ?? (edgeSession?.subject_id ?? '').replace('subj-', '').toUpperCase(),
+      subjectName: subject?.name ?? 'Subject',
+      facultyId: edgeSession?.faculty_id ?? '',
+      facultyInitials: fac.initials,
+      facultyName: fac.name,
+      cohortId,
+      cohortLabel,
       cohortSize: edgeSession?.cohort_size ?? 0,
       sessionType: edgeSession?.session_type ?? "theory",
       isCombinedDivision: isCombined,
-      combinedCohortText: isCombined ? `${cohort.label} (${edgeSession?.cohort_size ?? 0} students)` : undefined,
+      combinedCohortText: isCombined ? `${cohortLabel} (${edgeSession?.cohort_size ?? 0} students)` : undefined,
       isPinned,
-      pinnedReason: isPinned ? "Fixed Pre-allocated Slot (Faculty availability constraint)" : undefined,
+      pinnedReason: isPinned ? "Fixed slot in the edge list (fixed_slot)" : undefined,
       labBlockId: labBlock?.id,
       batchLabel,
     };
@@ -333,62 +227,37 @@ export function buildEnrichedSessions(solution: SolvedSolution = getSolvedSoluti
 }
 
 /**
- * Returns grouped parallel lab blocks (e.g. 4 parallel batches in 1 double slot)
+ * Returns grouped parallel lab blocks (all members of one edge-list lab block)
  */
 export function buildEnrichedLabBlocks(sessions: EnrichedSession[]): EnrichedLabBlock[] {
   const blockMap = new Map<string, EnrichedSession[]>();
+  sessions.forEach((sess) => {
+    if (sess.labBlockId) blockMap.set(sess.labBlockId, [...(blockMap.get(sess.labBlockId) ?? []), sess]);
+  });
 
-  sessions.forEach(sess => {
-    if (sess.labBlockId) {
-      const existing = blockMap.get(sess.labBlockId) ?? [];
-      existing.push(sess);
-      blockMap.set(sess.labBlockId, existing);
+  return [...blockMap].map(([blockId, blockSessions]) => {
+    const { day, periods } = blockSessions[0];
+    const spannedBreaks: number[] = [];
+    for (let p = periods[0] + 1; p < periods[periods.length - 1]; p++) {
+      if (!periods.includes(p)) spannedBreaks.push(p);
     }
+    return { blockId, day, periods, spannedBreaks, sessions: blockSessions };
   });
-
-  const blocks: EnrichedLabBlock[] = [];
-  blockMap.forEach((blockSessions, blockId) => {
-    const first = blockSessions[0];
-    blocks.push({
-      blockId,
-      day: first.day,
-      startTeachingPeriod: first.teachingPeriod,
-      durationPeriods: first.durationPeriods,
-      timeRange: "10:00 – 12:15 (Spans Short Break)",
-      divisionLabel: "SE-Comp B Labs (Batches A, B, C, D)",
-      sessions: blockSessions,
-    });
-  });
-
-  return blocks;
 }
 
 /**
- * Returns institutional pinned blocks from contracts (MDM, HSS, etc.)
+ * Returns the edge list's pinned_occupancy as grid view models
  */
-export function getPinnedBlocks(): EnrichedPinnedBlock[] {
-  return [
-    {
-      id: "pin-0001",
-      label: "MDM - I THEORY",
-      kind: "Multidisciplinary Minor (MDM)",
-      day: 3, // Thursday
-      teachingPeriod: 3, // Period 3 (12:15 - 13:15 / wall-clock 4)
-      durationPeriods: 1,
-      roomCode: "508",
-      cohortLabel: "SE-Comp B",
-      description: "Immovable Institutional Occupancy — Multidisciplinary Minor",
-    },
-    {
-      id: "pin-0002",
-      label: "HSS II",
-      kind: "Humanities & Social Sciences (HSS)",
-      day: 2, // Wednesday
-      teachingPeriod: 5, // Period 5 (15:15 - 16:15 / wall-clock 7)
-      durationPeriods: 1,
-      roomCode: "002",
-      cohortLabel: "SE-Comp C",
-      description: "Immovable Institutional Occupancy — Humanities",
-    },
-  ];
+export function buildPins(edgeList: EdgeList): EnrichedPin[] {
+  const rooms = new Map(edgeList.rooms.map((r) => [r.id, r.code]));
+  return edgeList.pinned_occupancy.map((p, i) => ({
+    key: `pin-${p.day}-${p.period}-${i}`,
+    day: p.day,
+    period: p.period,
+    isLunch: p.faculty_ids.length === 0 && p.room_ids.length === 0 && p.cohort_ids.length > 0,
+    cohortIds: p.cohort_ids,
+    cohortLabels: p.cohort_ids.map(getCohortLabel),
+    roomCodes: p.room_ids.map((id) => rooms.get(id) ?? id),
+    facultyInitials: p.faculty_ids.map((id) => getFaculty(id).initials),
+  }));
 }

@@ -147,9 +147,22 @@ export type ChronosSolutionContractV1 = {
 };
 /**
  * Stable opaque string identifier, matching the ids supplied in the edge-list payload.
+ *
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "id".
  */
 export type Id = string;
 /**
  * Teaching day index, Monday=0 .. Friday=4.
+ *
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "day".
  */
 export type Day = number;
+/**
+ * Index on the edge-list wall-clock period axis.
+ *
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "period".
+ */
+export type Period = number;

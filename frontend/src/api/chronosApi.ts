@@ -1,7 +1,8 @@
 /**
  * Chronos API Client interface and mock implementation.
  * 
- * Every solution payload is validated against contracts/solution_v1.schema.json
+ * Every solution payload is validated against contracts/solution_v1.schema.json or
+ * solution_v2.schema.json, and every edge list against edge_list_v1.schema.json
  * (see contractValidation.ts); an invalid one throws ContractValidationError.
  * Swapping in the real backend later is a change of implementation,
  * not of call sites.
@@ -18,14 +19,30 @@ import {
   isSolvedSolution,
   isInfeasibleSolution,
 } from '@/adapters/solution';
-import solvedFixture from '@contracts/examples/solution_v1.solved.example.json';
-import infeasibleFixture from '@contracts/examples/solution_v1.infeasible.example.json';
-import { metadataStore, wallClockToTeachingPeriod } from '@/adapters/timetable';
+import { validateContract } from '@/api/contractValidation';
+import solvedFixture from '@contracts/examples/solution_v2.solved.example.json';
+import infeasibleFixture from '@contracts/examples/solution_v2.infeasible.example.json';
+import edgeListExample from '@contracts/examples/edge_list_v1.example.json';
+import d6GridEdgeList from '@contracts/examples/edge_list_v1.d6_grid.example.json';
+import {
+  DAY_NAMES,
+  EdgeList,
+  cohortsOverlap,
+  getCohortLabel,
+  getExampleEdgeList,
+  getFaculty,
+} from '@/adapters/timetable';
+
+/**
+ * Edge lists the mock serves. 'example' is the instance the solution examples were solved
+ * for; 'd6_grid' shows the D6 grid (per-year lunch as pinned occupancy) and has no solution.
+ */
+export const EDGE_LIST_INSTANCES = { example: edgeListExample, d6_grid: d6GridEdgeList };
+export type EdgeListInstance = keyof typeof EDGE_LIST_INSTANCES;
 
 export interface MoveSessionRequest {
   sessionId: string;
   targetDay: DayIndex;
-  targetTeachingPeriod: number; // 0..7
   targetWallClockPeriod: PeriodIndex;
   targetRoomId?: string;
   targetSubRoomId?: string | null;
@@ -53,6 +70,11 @@ export interface ChronosApiClient {
    * Fetch current timetable. Returns either SolvedSolution or InfeasibleSolution.
    */
   getTimetable(id?: string): Promise<SolutionContract>;
+
+  /**
+   * Fetch an instance's edge list (grid, rooms, sessions, pinned occupancy).
+   */
+  getEdgeList(instance?: EdgeListInstance): Promise<EdgeList>;
 
   /**
    * Request solver to generate a timetable.
@@ -120,6 +142,10 @@ export class MockChronosApiClient implements ChronosApiClient {
     return this.getSolvedSolution();
   }
 
+  public async getEdgeList(instance: EdgeListInstance = 'example'): Promise<EdgeList> {
+    return validateContract('edge_list', JSON.parse(JSON.stringify(EDGE_LIST_INSTANCES[instance])));
+  }
+
   public async generateTimetable(): Promise<SolutionContract> {
     // Simulate brief solver runtime
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -132,14 +158,14 @@ export class MockChronosApiClient implements ChronosApiClient {
   public async getSolvedSolution(): Promise<SolvedSolution> {
     // Deep clone of the solved example, validated like any API payload
     const solution = parseSolution(JSON.parse(JSON.stringify(solvedFixture)));
-    if (!isSolvedSolution(solution)) throw new Error('Expected a solved solution_v1 payload');
+    if (!isSolvedSolution(solution)) throw new Error('Expected a solved solution payload');
     return solution;
   }
 
   public async getInfeasibleSolution(): Promise<InfeasibleSolution> {
     // Deep clone of the infeasible example, validated like any API payload
     const solution = parseSolution(JSON.parse(JSON.stringify(infeasibleFixture)));
-    if (!isInfeasibleSolution(solution)) throw new Error('Expected an infeasible solution_v1 payload');
+    if (!isInfeasibleSolution(solution)) throw new Error('Expected an infeasible solution payload');
     return solution;
   }
 
@@ -178,11 +204,14 @@ export class MockChronosApiClient implements ChronosApiClient {
       };
     }
 
-    const edgeSession = metadataStore.getEdgeSession(req.sessionId);
+    // The solution examples were solved for the example instance
+    const edgeList = getExampleEdgeList();
+    const edgeSession = edgeList.sessions.find((s) => s.id === req.sessionId);
+    const slotLabel = `${DAY_NAMES[req.targetDay]} P${req.targetWallClockPeriod}`;
 
     // 3. Reject if the session itself is fixed / pinned
     if (edgeSession?.fixed_slot !== null && edgeSession?.fixed_slot !== undefined) {
-      const reason = `Cannot move session '${req.sessionId}': session is pinned to fixed slot (Faculty availability constraint).`;
+      const reason = `Cannot move session '${req.sessionId}': session is pinned to a fixed slot (fixed_slot in the edge list).`;
       return {
         success: false,
         rejectionReason: reason,
@@ -195,33 +224,30 @@ export class MockChronosApiClient implements ChronosApiClient {
       };
     }
 
-    // 4. Reject if target slot conflicts with institutional pinned blocks
-    // Thursday (day 3) period 3 (12:15) is MDM
-    if (req.targetDay === 3 && req.targetTeachingPeriod === 3) {
-      const reason = `Slot conflict: Thursday 12:15–13:15 is reserved for pinned institutional block 'MDM - I THEORY'.`;
+    // 4. Reject if pinned occupancy at the target holds the session's cohort, teacher or room
+    const roomId = currentSolution.assignment[sessionIndex].room_id;
+    const pin = edgeList.pinned_occupancy.find(
+      (p) =>
+        p.day === req.targetDay &&
+        p.period === req.targetWallClockPeriod &&
+        ((!!edgeSession && p.cohort_ids.some((c) => cohortsOverlap(c, edgeSession.cohort_id))) ||
+          (!!edgeSession && p.faculty_ids.includes(edgeSession.faculty_id)) ||
+          p.room_ids.includes(roomId))
+    );
+    if (pin) {
+      const held = [
+        ...pin.cohort_ids.map(getCohortLabel),
+        ...pin.room_ids.map((id) => `room ${edgeList.rooms.find((r) => r.id === id)?.code ?? id}`),
+      ].join(', ');
+      const reason = `Slot conflict: ${slotLabel} is held by pinned occupancy (${held}).`;
       return {
         success: false,
         rejectionReason: reason,
         violatedConstraint: {
-          constraint_id: 'pin-0001',
-          kind: 'PINNED_BLOCK_CLASH',
+          constraint_id: `pinned.${req.targetDay}.${req.targetWallClockPeriod}`,
+          kind: 'PINNED_BLOCK',
           description: reason,
-          entity_ids: ['pin-0001', req.sessionId],
-        },
-      };
-    }
-
-    // Wednesday (day 2) period 5 (15:15) is HSS II
-    if (req.targetDay === 2 && req.targetTeachingPeriod === 5) {
-      const reason = `Slot conflict: Wednesday 15:15–16:15 is reserved for pinned institutional block 'HSS II'.`;
-      return {
-        success: false,
-        rejectionReason: reason,
-        violatedConstraint: {
-          constraint_id: 'pin-0002',
-          kind: 'PINNED_BLOCK_CLASH',
-          description: reason,
-          entity_ids: ['pin-0002', req.sessionId],
+          entity_ids: [...pin.cohort_ids, ...pin.room_ids, ...pin.faculty_ids, req.sessionId],
         },
       };
     }
@@ -231,21 +257,20 @@ export class MockChronosApiClient implements ChronosApiClient {
     if (facultyId) {
       for (const other of currentSolution.assignment) {
         if (other.session_id === req.sessionId) continue;
-        const otherEdge = metadataStore.getEdgeSession(other.session_id);
-        const otherTeachingPeriod = wallClockToTeachingPeriod(other.period);
+        const otherEdge = edgeList.sessions.find((s) => s.id === other.session_id);
 
         if (
           other.day === req.targetDay &&
-          otherTeachingPeriod === req.targetTeachingPeriod &&
+          other.period === req.targetWallClockPeriod &&
           otherEdge?.faculty_id === facultyId
         ) {
-          const faculty = metadataStore.getFaculty(facultyId);
+          const faculty = getFaculty(facultyId);
           const reason = `Faculty clash: ${faculty.initials} (${faculty.name}) is already scheduled for session '${other.session_id}' on this slot.`;
           return {
             success: false,
             rejectionReason: reason,
             violatedConstraint: {
-              constraint_id: `clash.fac.${facultyId}.${req.targetDay}.${req.targetTeachingPeriod}`,
+              constraint_id: `clash.fac.${facultyId}.${req.targetDay}.${req.targetWallClockPeriod}`,
               kind: 'FACULTY_CLASH',
               description: reason,
               entity_ids: [facultyId, req.sessionId, other.session_id],
@@ -273,10 +298,6 @@ export class MockChronosApiClient implements ChronosApiClient {
       ...currentSolution,
       assignment: updatedAssignment,
       displaced: Array.from(new Set([...currentSolution.displaced, req.sessionId])),
-      metadata: {
-        ...currentSolution.metadata,
-        runtime_ms: Number((currentSolution.metadata.runtime_ms + 1.2).toFixed(1)),
-      },
     };
 
     parseSolution(updatedSolution);

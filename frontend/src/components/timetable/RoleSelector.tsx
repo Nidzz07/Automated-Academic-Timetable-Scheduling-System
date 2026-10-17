@@ -10,6 +10,10 @@ interface RoleSelectorProps {
   onFacultyChange: (faculty: string) => void;
   selectedStudentDivision: string;
   onStudentDivisionChange: (division: string) => void;
+  /** Faculty initials placed in the timetable (from the payload) */
+  facultyOptions: string[];
+  /** Cohorts named in the edge list */
+  cohortOptions: Array<{ id: string; label: string }>;
 }
 
 const ROLE_ICONS: Record<UserRole, React.ComponentType<{ className?: string }>> = {
@@ -26,6 +30,8 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
   onFacultyChange,
   selectedStudentDivision,
   onStudentDivisionChange,
+  facultyOptions,
+  cohortOptions,
 }) => {
   const caps = ROLE_CAPABILITIES[currentRole];
 
@@ -112,11 +118,11 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
               onChange={(e) => onFacultyChange(e.target.value)}
               className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
             >
-              <option value="AGN">Prof. AGN (Dr. Abha N. — OS)</option>
-              <option value="NR">Prof. NR (DAA / Algorithms)</option>
-              <option value="JS">Prof. JS (CCN / Networks)</option>
-              <option value="DN">Prof. DN (PCS / Systems)</option>
-              <option value="KKD">Prof. KKD (Operating Systems)</option>
+              {facultyOptions.map((initials) => (
+                <option key={initials} value={initials}>
+                  {initials}
+                </option>
+              ))}
             </select>
           </div>
         )}
@@ -127,15 +133,18 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
             data-testid="student-division-selector"
             className="flex items-center gap-2 shrink-0 bg-muted/40 px-2.5 py-1 rounded-lg border border-border/60"
           >
-            <span className="font-semibold text-foreground">Enrolled Division:</span>
+            <span className="font-semibold text-foreground">Cohort:</span>
             <select
               aria-label="Select student division"
               value={selectedStudentDivision}
               onChange={(e) => onStudentDivisionChange(e.target.value)}
               className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
             >
-              <option value="coh-div-se-b">SE-Comp Division B</option>
-              <option value="coh-div-se-c">SE-Comp Division C</option>
+              {cohortOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
             </select>
           </div>
         )}

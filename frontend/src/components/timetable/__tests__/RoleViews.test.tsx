@@ -73,6 +73,15 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     expect(formulaBadge).toBeInTheDocument();
     expect(formulaBadge.textContent).toMatch(/\d+T \+ \d+P = \d+ hrs\/wk/);
 
+    // Persona options are the faculty initials placed in the payload; no invented names or titles
+    const facultySelect = screen.getByLabelText('Select faculty persona') as HTMLSelectElement;
+    expect([...facultySelect.options].map((o) => o.text)).toEqual(['AGN', 'DN', 'JS', 'KKD', 'NR']);
+    expect(screen.queryByText(/Abha|Dr\.|Prof\./)).not.toBeInTheDocument();
+
+    // Load status comes only from the solver's S-LOAD16, which this payload did not evaluate
+    expect(screen.getByTestId('load-status')).toHaveTextContent('not evaluated');
+    expect(screen.queryByText(/Normal Load|5–18h/)).not.toBeInTheDocument();
+
     // 3. MUST HIDE ADMIN TELEMETRY & CONTROLS
     expect(screen.queryByTestId('toggle-outcome-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('toggle-reject-mode-button')).not.toBeInTheDocument();
@@ -83,8 +92,11 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     render(<App />);
     await screen.findByTestId('timetable-grid');
 
-    // Switch to student role
+    // Switch to student role, viewing SE-Comp C (the default is the first cohort the payload names)
     fireEvent.click(screen.getByTestId('role-button-student'));
+    fireEvent.change(screen.getByLabelText('Select student division'), {
+      target: { value: 'coh-div-se-c' },
+    });
 
     // 1. MUST BE READ-ONLY
     expect(screen.getByTestId('capability-badge-readonly')).toHaveTextContent(/Read-Only View/i);
@@ -98,7 +110,10 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
 
     // 2. MUST SEE OWN DIVISION COHORT
     expect(screen.getByTestId('student-division-selector')).toBeInTheDocument();
-    expect(screen.getByText(/SE-Comp Division B/i)).toBeInTheDocument();
+    // Options are the cohorts named in the edge list, labelled from the payload
+    const cohortSelect = screen.getByLabelText('Select student division') as HTMLSelectElement;
+    expect([...cohortSelect.options].map((o) => o.text)).toContain('SE-Comp B');
+    expect(screen.queryByText(/SE-Comp Division B/i)).not.toBeInTheDocument();
 
     // 3. MUST HIDE ADMIN QUALITY SCORE & TELEMETRY
     expect(screen.queryByText(/Solver Quality Evaluation/i)).not.toBeInTheDocument();

@@ -1,11 +1,15 @@
 import React from 'react';
-import { QualityEvaluation, SolutionMetadata } from '@/adapters/solution';
+import { QualityView, SolutionMetadata } from '@/adapters/solution';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Cpu, Timer, ShieldCheck, Activity } from 'lucide-react';
 
+/**
+ * The solver's quality flags (S-GAP, S-B2B, S-LOAD16, FAC_LOAD_IMBALANCE; ROADMAP D34).
+ * Displayed exactly as the solver reported them; nothing is computed here.
+ */
 interface QualityScoreCardProps {
-  quality: QualityEvaluation;
+  quality: QualityView;
   metadata: SolutionMetadata;
 }
 
@@ -25,20 +29,31 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
               <CardTitle className="text-base font-bold">Solver Quality Evaluation</CardTitle>
               <p className="text-xs text-muted-foreground">
                 Itemised breakdown per quality_rules.yaml
+                {quality.rulesVersion !== null && ` · rules version ${quality.rulesVersion}`}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-baseline gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
-              <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                Score:
-              </span>
-              <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                {quality.score}
-              </span>
-              <span className="text-xs text-muted-foreground">/ 100</span>
-            </div>
+            {quality.score === null ? (
+              <Badge variant="outline" data-testid="quality-score-unavailable" className="text-[11px]">
+                Score not available until rules are evaluated
+              </Badge>
+            ) : (
+              <div className="flex items-baseline gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
+                <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                  Score:
+                </span>
+                <span data-testid="quality-score" className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                  {quality.score}
+                </span>
+              </div>
+            )}
+            {quality.score !== null && quality.notEvaluatedRuleIds.length > 0 && (
+              <Badge variant="warning" data-testid="quality-partial" className="text-[10px]">
+                Partial: {quality.notEvaluatedRuleIds.join(', ')} not evaluated
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -69,7 +84,7 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
             <div>
               <div className="text-[10px] text-muted-foreground">Placement</div>
               <div className="font-semibold">
-                {metadata.sessions_assigned} / {metadata.sessions_total} (100%)
+                {metadata.sessions_assigned} / {metadata.sessions_total}
               </div>
             </div>
           </div>
@@ -91,9 +106,10 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
             Penalty Rule Contributions
           </div>
           <div className="space-y-2">
-            {quality.breakdown.map((item) => (
+            {quality.rules.map((item) => (
               <div
                 key={item.rule_id}
+                data-testid={`quality-rule-${item.rule_id}`}
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 rounded-md border border-border/40 bg-card p-2 text-xs"
               >
                 <div className="flex-1">
@@ -101,20 +117,31 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
                     <span className="font-mono font-semibold text-foreground">
                       {item.rule_id}
                     </span>
-                    <Badge variant="outline" className="text-[10px] py-0">
-                      weight: {item.weight}
-                    </Badge>
-                    <Badge variant="destructive" className="text-[10px] py-0">
-                      -{item.penalty.toFixed(1)} pts
-                    </Badge>
+                    {item.status === 'evaluated' ? (
+                      <>
+                        <Badge variant="outline" className="text-[10px] py-0">
+                          weight: {item.weight}
+                        </Badge>
+                        <Badge variant="destructive" data-testid="rule-penalty" className="text-[10px] py-0">
+                          -{item.penalty.toFixed(1)} pts
+                        </Badge>
+                      </>
+                    ) : (
+                      <Badge variant="outline" data-testid="rule-not-evaluated" className="text-[10px] py-0">
+                        not evaluated
+                      </Badge>
+                    )}
                   </div>
+                  {/* The solver names the affected faculty, division and slots here */}
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {item.explanation}
+                    {item.status === 'evaluated' ? item.explanation : item.reason}
                   </p>
                 </div>
-                <div className="font-mono text-[11px] text-muted-foreground shrink-0 sm:text-right">
-                  raw: {item.raw}
-                </div>
+                {item.status === 'evaluated' && (
+                  <div className="font-mono text-[11px] text-muted-foreground shrink-0 sm:text-right">
+                    raw: {item.raw}
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -5,7 +5,12 @@
  */
 
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ChronosApiClient, MoveSessionRequest, chronosApiClient } from '@/api/chronosApi';
+import {
+  ChronosApiClient,
+  EdgeListInstance,
+  MoveSessionRequest,
+  chronosApiClient,
+} from '@/api/chronosApi';
 import { ContractValidationError } from '@/api/contractValidation';
 import { SolvedSolution } from '@/adapters/solution';
 
@@ -18,6 +23,18 @@ export function useTimetableQuery(client: ChronosApiClient = chronosApiClient) {
     // The cache is the edited timetable (moves write into it); only refetch on request.
     staleTime: Infinity,
     // A payload that breaks the contract will break it again; don't retry it.
+    retry: (failures, error) => !(error instanceof ContractValidationError) && failures < 3,
+  });
+}
+
+export function useEdgeListQuery(
+  instance: EdgeListInstance = 'example',
+  client: ChronosApiClient = chronosApiClient
+) {
+  return useQuery({
+    queryKey: ['edge-list', instance],
+    queryFn: () => client.getEdgeList(instance),
+    staleTime: Infinity,
     retry: (failures, error) => !(error instanceof ContractValidationError) && failures < 3,
   });
 }

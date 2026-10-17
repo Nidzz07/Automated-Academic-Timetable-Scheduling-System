@@ -1,5 +1,6 @@
 import React from 'react';
-import { InfeasibleSolution } from '@/adapters/solution';
+import { InfeasibleSolution, toDiagnosisView } from '@/adapters/solution';
+import { DAY_NAMES } from '@/adapters/timetable';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,9 @@ import {
   Info,
 } from 'lucide-react';
 
+const slotText = (slots: Array<{ day: number; period: number }>) =>
+  slots.map((s) => `${DAY_NAMES[s.day]} P${s.period}`).join(', ');
+
 interface InfeasibilityDiagnosisPanelProps {
   infeasibleSolution: InfeasibleSolution;
   onApplyRelaxation?: (constraintId: string) => void;
@@ -25,8 +29,10 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
   onApplyRelaxation,
   onSwitchToSolved,
 }) => {
-  const { diagnosis, metadata } = infeasibleSolution;
-  const { minimal_conflicting_set, suggested_relaxation } = diagnosis;
+  const { metadata } = infeasibleSolution;
+  const diagnosis = toDiagnosisView(infeasibleSolution);
+  const { minimal_conflicting_set, suggested_relaxation, partial_placement, unplaced_session_ids } = diagnosis;
+  const method = diagnosis.methodLabel;
 
   return (
     <div
@@ -47,14 +53,11 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
               <Badge variant="destructive" className="font-mono text-[10px] uppercase">
                 Status: INFEASIBLE
               </Badge>
-              <Badge variant="outline" className="font-mono text-[10px]">
-                MUS Extraction
+              <Badge variant="outline" data-testid="diagnosis-method" className="font-mono text-[10px]">
+                {method.badge}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              The hand-written solver core proved no conflict-free assignment exists under the current constraints.
-              A Minimal Unsatisfiable Subset (MUS) has been isolated.
-            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">{method.text}</p>
           </div>
         </div>
 
@@ -110,7 +113,8 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
         </div>
       </div>
 
-      {/* Minimal Conflicting Subset (MUS) */}
+      {/* Minimal Conflicting Subset (MUS); empty when the method is search exhaustion */}
+      {minimal_conflicting_set.length > 0 && (
       <Card className="border-rose-500/30 bg-card/80">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -162,6 +166,15 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                   {constraint.description}
                 </p>
 
+                {constraint.slots.length > 0 && (
+                  <p
+                    data-testid={`constraint-slots-${constraint.constraint_id}`}
+                    className="text-[11px] font-mono text-muted-foreground"
+                  >
+                    Cells: {slotText(constraint.slots)}
+                  </p>
+                )}
+
                 {/* Entity IDs tag pills */}
                 <div className="flex flex-wrap items-center gap-1 pt-1">
                   <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-0.5">
@@ -181,8 +194,10 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
           </div>
         </CardContent>
       </Card>
+      )}
 
-      {/* Suggested Relaxation */}
+      {/* Suggested Relaxation (absent when the method is search exhaustion) */}
+      {suggested_relaxation && (
       <div
         data-testid="suggested-relaxation"
         className="rounded-xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent p-4 shadow-sm"
@@ -207,6 +222,14 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
             <p className="text-xs text-foreground font-medium pt-1">
               {suggested_relaxation.description}
             </p>
+            {suggested_relaxation.action_type && suggested_relaxation.verification && (
+              <p data-testid="relaxation-action" className="text-[11px] font-mono text-muted-foreground">
+                Action: {suggested_relaxation.action_type} · verification:{' '}
+                {suggested_relaxation.verification.status}
+                {suggested_relaxation.verification.runtime_ms !== null &&
+                  ` (${suggested_relaxation.verification.runtime_ms} ms)`}
+              </p>
+            )}
           </div>
 
           {onApplyRelaxation && (
@@ -222,6 +245,29 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
           )}
         </div>
       </div>
+      )}
+
+      {/* Deepest partial placement: diagnostic only, never a timetable */}
+      {partial_placement && unplaced_session_ids && (
+        <div
+          data-testid="partial-placement"
+          className="rounded-xl border border-border/60 bg-background/60 p-3 text-xs space-y-1"
+        >
+          <div className="font-bold text-foreground">
+            Partial placement (diagnostic only — not a timetable): {partial_placement.length} placed,{' '}
+            {unplaced_session_ids.length} unplaced
+          </div>
+          <p className="font-mono text-[11px] text-muted-foreground">
+            Placed:{' '}
+            {partial_placement
+              .map((p) => `${p.session_id} (${DAY_NAMES[p.day]} P${p.period})`)
+              .join(', ') || 'none'}
+          </p>
+          <p data-testid="unplaced-sessions" className="font-mono text-[11px] text-muted-foreground">
+            Unplaced: {unplaced_session_ids.join(', ')}
+          </p>
+        </div>
+      )}
     </div>
   );
 };
