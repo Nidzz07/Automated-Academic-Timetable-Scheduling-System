@@ -5,6 +5,7 @@ networkx==3.3              # validation / baseline colouring comparison only
 python-docx==1.1.2         # class / lab / faculty timetable .docx parsing
 openpyxl==3.1.5            # classrooms.xlsx room inventory parsing
 jsonschema==4.23.0         # validates payloads against the frozen contracts/
+PyYAML==6.0.3              # teaching_scheme.yaml, time_grid.yaml, lab_capacities.yaml
 
 # --- Backend: API ---
 fastapi==0.115.0

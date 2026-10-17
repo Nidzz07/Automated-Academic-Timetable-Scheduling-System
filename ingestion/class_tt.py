@@ -9,8 +9,9 @@ parallel batch practicals yields four entries. Every entry keeps its raw text
 and grid position, and every decision about it is recorded on it:
 
 - **time**: the wall-clock rows the cell covers are mapped to periods P0-P9
-  using ROADMAP section 5; ``duration`` counts only the year's teaching
-  periods, so a block spanning the coffee break is still a 2-period block.
+  using ROADMAP section 5 (``data/reference/time_grid.yaml``); ``duration``
+  counts only the year's teaching periods, so a block spanning the coffee
+  break is still a 2-period block.
 - **subject**: matched to a scheme code through :data:`SUBJECT_ALIASES`
   only, within the division's own semester. Anything else is *unmatched*.
 - **faculty**: initials are resolved with the same division-scoped legend
@@ -36,9 +37,10 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+import yaml
 from lxml.etree import _Element
 
-from ingestion.docx_reader import logical_cells, open_document, walk_body
+from ingestion.docx_reader import GridCell, logical_cells, open_document, walk_body
 from ingestion.initials_legend import extract_legends, normalise_whitespace
 from ingestion.scheme import Course, TeachingScheme, load_scheme
 from ingestion.seed_legends import (
@@ -64,25 +66,19 @@ DEFAULT_JSON = REPO_ROOT / "data" / "generated" / "class_tt_even.json"
 # Grid (ROADMAP section 5, D6)
 # --------------------------------------------------------------------------- #
 
-DAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+TIME_GRID_YAML = REPO_ROOT / "data" / "reference" / "time_grid.yaml"
+with TIME_GRID_YAML.open(encoding="utf-8") as _handle:
+    _GRID = yaml.safe_load(_handle)
 
+DAYS: tuple[str, ...] = tuple(_GRID["days"])
 #: Wall-clock period -> (start, end), 24-hour clock.
 PERIOD_TIMES: dict[int, tuple[str, str]] = {
-    0: ("09:00", "10:00"),
-    1: ("10:00", "11:00"),
-    2: ("11:00", "11:15"),
-    3: ("11:15", "12:15"),
-    4: ("12:15", "13:15"),
-    5: ("13:15", "14:15"),
-    6: ("14:15", "15:15"),
-    7: ("15:15", "16:15"),
-    8: ("16:15", "17:15"),
-    9: ("17:15", "18:15"),
+    p["period"]: (p["start"], p["end"]) for p in _GRID["periods"]
 }
 _PERIOD_BY_TIMES = {times: period for period, times in PERIOD_TIMES.items()}
-COFFEE_PERIOD = 2
+COFFEE_PERIOD: int = _GRID["coffee_period"]
 #: Lunch is per year (D6).
-LUNCH_PERIOD = {"SE": 5, "TE": 4}
+LUNCH_PERIOD: dict[str, int] = dict(_GRID["lunch_period"])
 
 _TIME = re.compile(r"(\d{1,2})[.:](\d{2})\s*-\s*(\d{1,2})[.:](\d{2})")
 
@@ -100,6 +96,30 @@ def period_of(time_text: str) -> int | None:
     if match is None:
         return None
     return _PERIOD_BY_TIMES.get((_clock(match[1], match[2]), _clock(match[3], match[4])))
+
+
+def time_rows(
+    cells: list[GridCell],
+) -> tuple[dict[int, int], dict[int, str], list[tuple[int, str]]]:
+    """Read a grid's time column: row -> period, row -> printed time, off-grid rows.
+
+    Shared by the class, lab and faculty grids, which all put the time in column 0.
+    """
+    row_period: dict[int, int] = {}
+    row_time: dict[int, str] = {}
+    off_grid: list[tuple[int, str]] = []
+    for c in cells:
+        if c.col or not c.row:
+            continue
+        raw = normalise_whitespace(c.text)
+        period = period_of(raw)
+        if period is None:
+            off_grid.append((c.row, raw))
+        for r in range(c.row, c.row + c.row_span):
+            row_time[r] = raw
+            if period is not None:
+                row_period[r] = period
+    return row_period, row_time, off_grid
 
 
 # --------------------------------------------------------------------------- #
@@ -352,19 +372,9 @@ def _parse_grid(
     if [days[k] for k in sorted(days)] != list(DAYS):
         flag("grid_shape", f"t{index}", f"day header reads {list(days.values())}")
 
-    row_period: dict[int, int] = {}
-    row_time: dict[int, str] = {}
-    for c in cells:
-        if c.col or not c.row:
-            continue
-        raw = normalise_whitespace(c.text)
-        period = period_of(raw)
-        if period is None:
-            flag("time_off_grid", f"t{index} r{c.row}", f"time {raw!r} fits no ROADMAP §5 period")
-        for r in range(c.row, c.row + c.row_span):
-            row_time[r] = raw
-            if period is not None:
-                row_period[r] = period
+    row_period, row_time, off_grid = time_rows(cells)
+    for r, raw in off_grid:
+        flag("time_off_grid", f"t{index} r{r}", f"time {raw!r} fits no ROADMAP §5 period")
     missing = sorted(set(PERIOD_TIMES) - set(row_period.values()))
     if missing:
         flag("time_off_grid", f"t{index}", f"no time row for {', '.join(f'P{p}' for p in missing)}")
