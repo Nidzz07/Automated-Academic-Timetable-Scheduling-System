@@ -2,7 +2,10 @@
 
 Every check gets a minimal instance it rejects and a neighbouring one it
 passes.  A rejection must also reach ``backtrack_solve`` as an infeasible
-``solution_v1`` result carrying the certificate, with no search.
+``solution_v1`` result carrying the certificate, with no search.  Under
+``solution.v2`` it is refused (no ``diagnosis.method`` fits a certificate,
+proposed contract row 9), and its v2 entry and relaxation are checked part by
+part against the schema.
 """
 
 from __future__ import annotations
@@ -30,6 +33,7 @@ from solver.tests.test_backtracking import (
     _room,
     _session,
 )
+from solver.tests.test_solution_v2 import assert_v2_certificate_fields
 
 SOLUTION_V1 = Draft202012Validator(json.loads(
     (Path(__file__).resolve().parents[2] / "contracts" / "solution_v1.schema.json")
@@ -60,6 +64,11 @@ def _assert_rejected(payload: dict[str, Any], check: str, kind: str) -> Certific
     solution = result.to_solution_dict()
     SOLUTION_V1.validate(solution)
     assert solution["diagnosis"]["minimal_conflicting_set"][0]["description"] == cert.reason
+    with pytest.raises(ValueError, match="row 9"):
+        result.to_solution_v2_dict()
+    fields = cert.to_v2_fields()
+    assert_v2_certificate_fields(fields)
+    assert fields["minimal_conflicting_set"][0]["kind"] == kind
     return cert
 
 
@@ -73,6 +82,7 @@ def test_room_type_rejected_and_passed() -> None:
     cert = _assert_rejected(_payload(lab, rooms=[_room("r1", capacity=60)]),
                             "room_suitability", "ROOM_TYPE")
     assert cert.session_ids == ("s1",)
+    assert cert.slots == ()  # not about a time
     assert _check(_payload(lab, rooms=[_room("L", capacity=60, is_lab=True)])) is None
 
 
@@ -99,6 +109,7 @@ def _faculty_pair(*open_slots: SlotId) -> dict[str, Any]:
 def test_faculty_load_rejected_and_passed() -> None:
     cert = _assert_rejected(_faculty_pair(A), "faculty_load", "FACULTY_CLASH")
     assert (cert.resource, cert.session_ids) == ("f1", ("s1", "s2"))
+    assert cert.slots == (A,)  # every slot the group can use
     assert _check(_faculty_pair(A, B)) is None
 
 
@@ -138,6 +149,7 @@ def _fixed_lab_block(sub_rooms: int) -> dict[str, Any]:
 def test_lab_capacity_rejected_and_passed() -> None:
     cert = _assert_rejected(_fixed_lab_block(2), "lab_capacity", "ROOM_OCCUPANCY")
     assert cert.session_ids == ("m0", "m1", "m2") and cert.resource == "slot.0.0"
+    assert cert.slots == (SlotId(0, 0),)
     assert _check(_fixed_lab_block(3)) is None
 
 
@@ -167,6 +179,7 @@ def _three_with_two_pinned(reason: str, fixed_to_same: bool) -> dict[str, Any]:
 def test_hall_rejected_and_passed(reason: str, check: str, kind: str) -> None:
     cert = _assert_rejected(_three_with_two_pinned(reason, True), check, kind)
     assert cert.session_ids == ("s0", "s1")  # the violator, not the whole group
+    assert cert.slots == (A,)  # the only slot the violator can use
     assert _check(_three_with_two_pinned(reason, False)) is None
 
 

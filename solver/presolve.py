@@ -59,7 +59,10 @@ class Certificate:
     """Why the instance is infeasible, found before any search.
 
     ``kind`` is the ``solution.v2`` closed constraint kind the check maps to;
-    under v1 it is just the free-text ``kind`` string.
+    under v1 it is just the free-text ``kind`` string.  ``slots`` are the cells
+    the proof is about, on the wall-clock axis: every slot the group can use
+    (load, Hall), the period the forced labs share (lab capacity), none for
+    room suitability, which is not about a time.
     """
 
     check: str
@@ -67,6 +70,7 @@ class Certificate:
     session_ids: tuple[str, ...]
     resource: str
     reason: str
+    slots: tuple[SlotId, ...] = ()
 
     def to_diagnosis(self) -> dict[str, Any]:
         """The certificate in ``solution_v1``'s ``diagnosis`` shape.
@@ -89,6 +93,34 @@ class Certificate:
                     f"Pre-solve check '{self.check}' failed for {self.resource}: move or "
                     "drop one of the listed sessions, or free more slots or rooms for them."
                 ),
+            },
+        }
+
+    def to_v2_fields(self) -> dict[str, Any]:
+        """``minimal_conflicting_set`` and ``suggested_relaxation`` in ``solution.v2`` shape.
+
+        The entry carries the closed ``kind`` and structured ``slots``.  The
+        relaxation is MANUAL with verification ``not_attempted``: solution_v2
+        lets only MANUAL go out unverified, and no verification solve exists
+        before ``solver/relaxation.py`` (S14).  MANUAL is permitted for every
+        kind in ``contracts/relaxation_actions_v2.json``.  So the solver never
+        suggests RELAX_PINNED_BLOCK here - and could not do it safely anyway:
+        ``edge_list_v1`` pins carry no kind, so a year's lunch, which the
+        backend refuses to relax (Row 8 assessment), looks like any other pin.
+
+        Not emitted yet: ``diagnosis.method`` has no value for a pre-solve
+        proof (proposed contract row 9), so ``to_solution_v2_dict`` refuses it.
+        """
+        v1 = self.to_diagnosis()
+        (entry,) = v1["minimal_conflicting_set"]
+        return {
+            "minimal_conflicting_set": [
+                {**entry, "slots": [{"day": s.day, "period": s.period} for s in self.slots]},
+            ],
+            "suggested_relaxation": {
+                **v1["suggested_relaxation"],
+                "action": {"action_type": "MANUAL", "params": {}},
+                "verification": {"status": "not_attempted", "runtime_ms": None},
             },
         }
 
@@ -169,14 +201,16 @@ def _load(
 ) -> Certificate | None:
     """Pigeonhole (CE201): pairwise-conflicting sessions occupy disjoint periods."""
     need = sum(state.graph.sessions[s].duration_periods for s in clique)
-    have = len(set().union(*(reach[s] for s in clique)))
+    free: set[SlotId] = set().union(*(reach[s] for s in clique))
+    have = len(free)
     if need <= have:
         return None
     kind = "FACULTY_CLASH" if group == "faculty" else "COHORT_CLASH"
     reason = (f"{group.capitalize()} {resource} must be taught {need} periods "
               f"({len(clique)} sessions that cannot overlap) but only {have} periods are "
               "free for them.")
-    return Certificate(f"{group}_load", kind, tuple(sorted(clique)), resource, reason)
+    return Certificate(f"{group}_load", kind, tuple(sorted(clique)), resource, reason,
+                       tuple(sorted(free)))
 
 
 # v2 kind: ROOM_OCCUPANCY (with ROOM_TYPE: only lab rooms count).
@@ -213,7 +247,7 @@ def _lab_capacity(state: _SolverState) -> Certificate | None:
             reason = (f"At {slot}, {len(sessions)} lab sessions have no other possible "
                       f"slot but only {capacity} lab rooms can be used in parallel.")
             return Certificate("lab_capacity", "ROOM_OCCUPANCY", tuple(sorted(sessions)),
-                               f"slot.{slot.day}.{slot.period}", reason)
+                               f"slot.{slot.day}.{slot.period}", reason, (slot,))
     return None
 
 
@@ -260,7 +294,8 @@ def _hall(
               f"{len(left)} periods that cannot overlap but can only use {len(right)} "
               f"slots ({free}).")
     kind = "FACULTY_CLASH" if group == "faculty" else "COHORT_CLASH"
-    return Certificate(f"hall_{group}", kind, sessions, resource, reason)
+    return Certificate(f"hall_{group}", kind, sessions, resource, reason,
+                       tuple(slots[v] for v in sorted(right)))
 
 
 def hopcroft_karp(adj: list[list[int]], n_right: int) -> list[int]:
