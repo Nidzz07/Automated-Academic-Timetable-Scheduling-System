@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { InfeasibilityDiagnosisPanel } from '../InfeasibilityDiagnosisPanel';
 import infeasibleFixture from '@contracts/examples/solution_v1.infeasible.example.json';
+import infeasibleV2Fixture from '@contracts/examples/solution_v2.infeasible.example.json';
 import { parseSolution, isInfeasibleSolution } from '@/adapters/solution';
 
 describe('Infeasibility Diagnosis Panel', () => {
@@ -71,5 +72,52 @@ describe('Infeasibility Diagnosis Panel', () => {
     expect(
       within(relaxationBox).getByText(/The room inventory records its usage as 'unsure'/i)
     ).toBeInTheDocument();
+
+    // solution.v1 states no method and carries no partial placement
+    expect(screen.getByTestId('diagnosis-method')).toHaveTextContent(/Method not stated/i);
+    expect(screen.queryByTestId('partial-placement')).not.toBeInTheDocument();
+  });
+});
+
+describe('Infeasibility Diagnosis Panel (solution.v2)', () => {
+  const parse = (raw: unknown) => {
+    const sol = parseSolution(raw);
+    if (!isInfeasibleSolution(sol)) throw new Error('expected an infeasible payload');
+    return sol;
+  };
+
+  it('shows the mus method, constraint cells, the typed relaxation with its verification and the partial placement', () => {
+    render(<InfeasibilityDiagnosisPanel infeasibleSolution={parse(infeasibleV2Fixture)} />);
+
+    expect(screen.getByTestId('diagnosis-method')).toHaveTextContent('MUS Extraction');
+    expect(screen.getByTestId('constraint-kind-ROOM_OCCUPANCY')).toBeInTheDocument();
+    expect(screen.getByTestId('constraint-slots-lab-rooms.monday-10.00')).toHaveTextContent(
+      'Cells: Monday P1, Monday P3'
+    );
+    expect(screen.queryByTestId('constraint-slots-labblk-0001.contiguity')).not.toBeInTheDocument();
+    expect(screen.getByTestId('relaxation-action')).toHaveTextContent(
+      'Action: RECLASSIFY_ROOM · verification: restored (212.4 ms)'
+    );
+
+    const partial = screen.getByTestId('partial-placement');
+    expect(partial).toHaveTextContent(/diagnostic only — not a timetable\): 4 placed, 4 unplaced/i);
+    expect(partial).toHaveTextContent('sess-0005 (Tuesday P0)');
+    expect(screen.getByTestId('unplaced-sessions')).toHaveTextContent(
+      'Unplaced: sess-0001, sess-0002, sess-0003, sess-0004'
+    );
+  });
+
+  it('shows search exhaustion with no conflicting set and no relaxation', () => {
+    const raw = JSON.parse(JSON.stringify(infeasibleV2Fixture));
+    raw.diagnosis.method = 'search_exhaustion';
+    raw.diagnosis.minimal_conflicting_set = [];
+    delete raw.diagnosis.suggested_relaxation;
+    render(<InfeasibilityDiagnosisPanel infeasibleSolution={parse(raw)} onApplyRelaxation={() => {}} />);
+
+    expect(screen.getByTestId('diagnosis-method')).toHaveTextContent('Search Exhaustion');
+    expect(screen.getByText(/no explanation was extracted/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('minimal-conflicting-set')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('suggested-relaxation')).not.toBeInTheDocument();
+    expect(screen.getByTestId('partial-placement')).toBeInTheDocument();
   });
 });

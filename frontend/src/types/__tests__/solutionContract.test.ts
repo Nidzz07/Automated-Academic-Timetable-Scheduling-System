@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import solvedFixture from '@contracts/examples/solution_v1.solved.example.json';
 import infeasibleFixture from '@contracts/examples/solution_v1.infeasible.example.json';
+import solvedV2Fixture from '@contracts/examples/solution_v2.solved.example.json';
+import infeasibleV2Fixture from '@contracts/examples/solution_v2.infeasible.example.json';
 import {
   SolvedSolution,
   InfeasibleSolution,
@@ -47,14 +49,27 @@ describe('Solution Contract v1 TypeScript Typing', () => {
     expect(infeasible.schema_version).toBe('solution.v1');
     expect(infeasible.status).toBe('infeasible');
     expect(infeasible.diagnosis.minimal_conflicting_set.length).toBe(3);
-    expect(infeasible.diagnosis.suggested_relaxation.constraint_id).toBe('lab-rooms.monday-10.00');
+    expect(infeasible.diagnosis.suggested_relaxation?.constraint_id).toBe('lab-rooms.monday-10.00');
     expect(infeasible.metadata.algorithm).toBeDefined();
+  });
+
+  it('types and validates the solution.v2 fixtures', () => {
+    const solved = parseSolved(solvedV2Fixture);
+    const infeasible = parseInfeasible(infeasibleV2Fixture);
+    expect(solved.schema_version).toBe('solution.v2');
+    expect(infeasible.schema_version).toBe('solution.v2');
+    if (infeasible.schema_version === 'solution.v2') {
+      expect(infeasible.diagnosis.method).toBe('mus');
+      expect(infeasible.diagnosis.unplaced_session_ids).toHaveLength(4);
+    }
   });
 
   it('enforces discriminated union exhaustiveness', () => {
     const payloads: SolutionContract[] = [
       parseSolved(solvedFixture),
       parseInfeasible(infeasibleFixture),
+      parseSolved(solvedV2Fixture),
+      parseInfeasible(infeasibleV2Fixture),
     ];
 
     payloads.forEach((payload) => {

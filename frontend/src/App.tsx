@@ -8,6 +8,7 @@ import { RoleSelector } from '@/components/timetable/RoleSelector';
 import { FacultyWorkloadCard } from '@/components/timetable/FacultyWorkloadCard';
 import { InfeasibilityDiagnosisPanel } from '@/components/timetable/InfeasibilityDiagnosisPanel';
 import { RejectionAlert } from '@/components/timetable/RejectionAlert';
+import { FreeRoomsPanel, RoomTimetable } from '@/components/timetable/RoomViews';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserRole, ROLE_CAPABILITIES } from '@/types/roles';
@@ -16,18 +17,24 @@ import {
   SolvedSolution,
   isSolvedSolution,
   isInfeasibleSolution,
+  toQualityView,
   DayIndex,
 } from '@/adapters/solution';
 import {
   buildEnrichedSessions,
+  cohortOptions,
+  EdgeList,
   EnrichedSession,
-  DAYS,
-  TEACHING_PERIODS,
-  wallClockToTeachingPeriod,
+  DAY_NAMES,
 } from '@/adapters/timetable';
-import { chronosApiClient } from '@/api/chronosApi';
+import { chronosApiClient, EdgeListInstance } from '@/api/chronosApi';
 import { ContractValidationError } from '@/api/contractValidation';
-import { timetableQueryKey, useMoveSessionMutation, useTimetableQuery } from '@/api/queries';
+import {
+  timetableQueryKey,
+  useEdgeListQuery,
+  useMoveSessionMutation,
+  useTimetableQuery,
+} from '@/api/queries';
 
 export function App() {
   // One client per App mount, so every render (and every test) starts with an empty cache.
@@ -40,27 +47,43 @@ export function App() {
 }
 
 function TimetableApp() {
+  const [instance, setInstance] = useState<EdgeListInstance>('example');
   const timetable = useTimetableQuery();
+  const edgeList = useEdgeListQuery(instance);
 
-  if (timetable.isPending || timetable.isError) {
+  if (timetable.isPending || timetable.isError || edgeList.isPending || edgeList.isError) {
+    const error = timetable.error ?? edgeList.error;
     return (
       <div className="min-h-screen bg-background text-foreground">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {timetable.isPending ? (
+          {error ? (
+            <TimetableLoadError
+              error={error}
+              onRetry={() => {
+                timetable.refetch();
+                edgeList.refetch();
+              }}
+            />
+          ) : (
             <Card role="status" data-testid="timetable-loading">
               <CardHeader>
                 <CardTitle>Loading timetable…</CardTitle>
               </CardHeader>
             </Card>
-          ) : (
-            <TimetableLoadError error={timetable.error} onRetry={() => timetable.refetch()} />
           )}
         </div>
       </div>
     );
   }
 
-  return <TimetableWorkspace solution={timetable.data} />;
+  return (
+    <TimetableWorkspace
+      solution={timetable.data}
+      edgeList={edgeList.data}
+      instance={instance}
+      onInstanceChange={setInstance}
+    />
+  );
 }
 
 function TimetableLoadError({ error, onRetry }: { error: Error; onRetry: () => void }) {
@@ -70,7 +93,7 @@ function TimetableLoadError({ error, onRetry }: { error: Error; onRetry: () => v
       <CardHeader>
         <CardTitle>
           {isContractError
-            ? `Timetable payload failed ${error.contract}_v1 contract validation`
+            ? `Timetable payload failed ${error.schema} contract validation`
             : 'Could not load the timetable'}
         </CardTitle>
         {!isContractError && <CardDescription>{error.message}</CardDescription>}
@@ -91,11 +114,19 @@ function TimetableLoadError({ error, onRetry }: { error: Error; onRetry: () => v
   );
 }
 
-function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
+interface TimetableWorkspaceProps {
+  solution: SolutionContract;
+  edgeList: EdgeList;
+  instance: EdgeListInstance;
+  onInstanceChange: (instance: EdgeListInstance) => void;
+}
+
+function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: TimetableWorkspaceProps) {
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('administrator');
-  const [selectedFaculty, setSelectedFaculty] = useState<string>('AGN');
-  const [selectedStudentDivision, setSelectedStudentDivision] = useState<string>('coh-div-se-b');
+  // Persona choices default to the first option the payload offers
+  const [facultyChoice, setSelectedFaculty] = useState<string | null>(null);
+  const [studentChoice, setSelectedStudentDivision] = useState<string | null>(null);
   const [cohortFilter, setCohortFilter] = useState<string>('all');
   const [showQualityCard, setShowQualityCard] = useState<boolean>(true);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -121,6 +152,9 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
 
   const caps = ROLE_CAPABILITIES[currentRole];
 
+  // The solution examples were solved for the example instance; the D6 instance has no solution
+  const isExample = instance === 'example';
+
   // Helper to toggle between solved timetable and infeasible diagnosis
   const handleToggleOutcome = async () => {
     chronosApiClient.setSimulatedOutcome(isSolvedSolution(solution) ? 'infeasible' : 'solved');
@@ -144,15 +178,23 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
 
   // Enriched sessions if solved
   const allSessions = useMemo(() => {
-    if (!isSolvedSolution(solution)) return [];
-    return buildEnrichedSessions(solution);
-  }, [solution]);
+    if (!isExample || !isSolvedSolution(solution)) return [];
+    return buildEnrichedSessions(solution.assignment, edgeList);
+  }, [solution, edgeList, isExample]);
 
   // Selected session lookup
   const selectedSession = useMemo<EnrichedSession | null>(() => {
     if (!selectedSessionId || !allSessions.length) return null;
     return allSessions.find((s) => s.sessionId === selectedSessionId) ?? null;
   }, [selectedSessionId, allSessions]);
+
+  const facultyOptions = useMemo(
+    () => [...new Set(allSessions.map((s) => s.facultyInitials))].sort(),
+    [allSessions]
+  );
+  const cohorts = useMemo(() => cohortOptions(edgeList), [edgeList]);
+  const selectedFaculty = facultyChoice ?? facultyOptions[0] ?? '';
+  const selectedStudentDivision = studentChoice ?? cohorts[0]?.id ?? 'all';
 
   // Compute sessions for selected faculty (for faculty role view)
   const facultySessions = useMemo(() => {
@@ -192,11 +234,7 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
    * Optimistic drag-and-drop handler with clean revert-on-reject.
    * Restores exact prior state including the session's original slot and UI selection.
    */
-  const handleMoveSession = async (
-    sessionId: string,
-    targetDay: DayIndex,
-    targetTeachingPeriod: number
-  ) => {
+  const handleMoveSession = async (sessionId: string, targetDay: DayIndex, targetPeriod: number) => {
     // Only drag-enabled roles may move sessions
     if (!caps.canDragAndDrop) {
       return;
@@ -211,21 +249,17 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
 
     const originalDay = currentAssignment.day;
     const originalPeriod = currentAssignment.period;
-    const originalTeachingPeriod = wallClockToTeachingPeriod(originalPeriod);
 
     // If dropped on same slot, no-op
-    if (originalDay === targetDay && originalTeachingPeriod === targetTeachingPeriod) {
+    if (originalDay === targetDay && originalPeriod === targetPeriod) {
       return;
     }
 
     // 1. CAPTURE EXACT PRIOR STATE
     const priorSolution: SolvedSolution = JSON.parse(JSON.stringify(solution));
     const priorSelectedSessionId = selectedSessionId;
-    const originalDayName = DAYS.find((d) => d.day === originalDay)?.label ?? `Day ${originalDay}`;
-    const originalSlotLabel = `${originalDayName} Period ${originalTeachingPeriod + 1} (${TEACHING_PERIODS[originalTeachingPeriod]?.timeLabel ?? ''})`;
-
-    const targetWallClockPeriod =
-      TEACHING_PERIODS[targetTeachingPeriod]?.wallClockPeriod ?? targetTeachingPeriod;
+    const originalSlotLabel = `${DAY_NAMES[originalDay]} P${originalPeriod}`;
+    const targetWallClockPeriod = targetPeriod;
 
     // 2. APPLY PROVISIONALLY (OPTIMISTIC)
     setProvisionalSessionId(sessionId);
@@ -254,7 +288,6 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
         request: {
           sessionId,
           targetDay,
-          targetTeachingPeriod,
           targetWallClockPeriod,
         },
         current: priorSolution,
@@ -315,6 +348,12 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
         <TimetableHeader
           cohortFilter={cohortFilter}
           onCohortFilterChange={setCohortFilter}
+          cohortOptions={cohorts}
+          instance={instance}
+          onInstanceChange={(next) => {
+            setCohortFilter('all');
+            onInstanceChange(next);
+          }}
           showQualityCard={showQualityCard}
           onToggleQualityCard={() => setShowQualityCard((prev) => !prev)}
           darkMode={darkMode}
@@ -334,6 +373,8 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
           onFacultyChange={setSelectedFaculty}
           selectedStudentDivision={selectedStudentDivision}
           onStudentDivisionChange={setSelectedStudentDivision}
+          facultyOptions={facultyOptions}
+          cohortOptions={cohorts}
         />
 
         {/* Rejection Alert Banner (when an optimistic move is rejected) */}
@@ -351,11 +392,12 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
           <FacultyWorkloadCard
             facultyInitials={selectedFaculty}
             facultySessions={facultySessions}
+            loadRule={toQualityView(solution).rules.find((r) => r.rule_id === 'S-LOAD16')}
           />
         )}
 
         {/* Infeasible Diagnosis Panel (When solver outcome is infeasible) */}
-        {isInfeasibleSolution(solution) && (
+        {isExample && isInfeasibleSolution(solution) && (
           <InfeasibilityDiagnosisPanel
             infeasibleSolution={solution}
             onApplyRelaxation={handleToggleOutcome}
@@ -364,15 +406,15 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
         )}
 
         {/* Quality Score & Rules Breakdown (Admin / Coordinator only) */}
-        {caps.showQualityScore && isSolvedSolution(solution) && showQualityCard && (
+        {isExample && caps.showQualityScore && isSolvedSolution(solution) && showQualityCard && (
           <QualityScoreCard
-            quality={solution.quality}
+            quality={toQualityView(solution)}
             metadata={solution.metadata}
           />
         )}
 
         {/* Empty state: solver returned a solved timetable with no sessions */}
-        {isSolvedSolution(solution) && solution.assignment.length === 0 && (
+        {isExample && isSolvedSolution(solution) && solution.assignment.length === 0 && (
           <Card data-testid="timetable-empty">
             <CardHeader>
               <CardTitle>No sessions scheduled</CardTitle>
@@ -381,20 +423,30 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
           </Card>
         )}
 
-        {/* Main 8-Period x 5-Day Weekly Grid (Rendered when solved) */}
-        {isSolvedSolution(solution) && solution.assignment.length > 0 && roleFilteredSolution && (
+        {/* Main Weekly Grid (the edge list's periods and days; rendered when solved) */}
+        {(!isExample ||
+          (isSolvedSolution(solution) && solution.assignment.length > 0 && roleFilteredSolution)) && (
           <main className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
               <span className="font-semibold text-foreground">
-                Weekly Timetable Schedule (8 Teaching Periods · 5 Days) — {caps.title} View
+                Weekly Timetable Schedule ({edgeList.slot_grid.teaching_periods.length} Teaching Periods ·{' '}
+                {edgeList.slot_grid.days} Days) — {caps.title} View
               </span>
               <span className="font-mono text-[11px]">
                 {caps.canDragAndDrop ? 'Interactive: Drag Sessions to Reschedule' : 'Read-Only Schedule'}
               </span>
             </div>
 
+            {!isExample && (
+              <p data-testid="no-solution-note" className="px-1 text-xs text-muted-foreground">
+                No solution is published for this instance; the grid shows its periods, breaks and
+                pinned occupancy only.
+              </p>
+            )}
+
             <TimetableGrid
-              solution={roleFilteredSolution}
+              edgeList={edgeList}
+              solution={isExample ? roleFilteredSolution : null}
               cohortFilter={effectiveCohortFilter}
               showPinnedBlocks={currentRole !== 'faculty'}
               canDragAndDrop={caps.canDragAndDrop}
@@ -407,6 +459,14 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
               onMoveSession={handleMoveSession}
             />
           </main>
+        )}
+
+        {/* Room timetable and free rooms (whole-department roles; ROADMAP D15) */}
+        {caps.viewScope === 'all' && (!isExample || isSolvedSolution(solution)) && (
+          <section key={instance} className="grid gap-5 lg:grid-cols-2">
+            <RoomTimetable edgeList={edgeList} sessions={allSessions} />
+            <FreeRoomsPanel edgeList={edgeList} sessions={allSessions} />
+          </section>
         )}
 
         {/* Session Details Modal */}
@@ -424,7 +484,7 @@ function TimetableWorkspace({ solution }: { solution: SolutionContract }) {
             Track C (Frontend & Validation) — Phase 2: Role-Differentiated Views, Mock API & dnd-kit Drag-and-Drop.
           </p>
           <p className="text-[11px] font-mono text-muted-foreground/80">
-            Validated against Frozen Contract 3 (solution_v1.schema.json) · Hand-written deterministic solver integration
+            Validated against Frozen Contract 3 (solution_v1 / solution_v2 schemas) · Hand-written deterministic solver integration
           </p>
         </footer>
       </div>

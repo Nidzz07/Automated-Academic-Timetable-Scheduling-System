@@ -13,13 +13,15 @@ import {
 } from '@dnd-kit/core';
 import { SolvedSolution, DayIndex } from '@/adapters/solution';
 import {
-  DAYS,
-  TEACHING_PERIODS,
-  PeriodSlot,
+  DAY_NAMES,
+  EdgeList,
+  buildWeekGrid,
+  getExampleEdgeList,
   getSolvedSolutionFixture,
   buildEnrichedSessions,
   buildEnrichedLabBlocks,
-  getPinnedBlocks,
+  buildPins,
+  cohortsOverlap,
   EnrichedSession,
 } from '@/adapters/timetable';
 import { ParallelLabBlock } from './ParallelLabBlock';
@@ -28,13 +30,20 @@ import { PinnedBlock } from './PinnedBlock';
 import { SessionCell } from './SessionCell';
 import { Calendar, Clock, Coffee, Utensils } from 'lucide-react';
 
+type MoveHandler = (sessionId: string, targetDay: DayIndex, targetPeriod: number) => void;
+
 export interface TimetableGridProps {
   /**
-   * The solved solution contract payload.
-   * Defaults to contracts/examples/solution_v1.solved.example.json.
+   * The edge list the solution was solved for: days, periods, breaks, rooms, pinned occupancy.
+   * Defaults to contracts/examples/edge_list_v1.example.json.
    */
-  solution?: SolvedSolution;
-  /** Optional cohort filter, e.g. 'all' | 'coh-div-se-b' | 'coh-div-se-c' */
+  edgeList?: EdgeList;
+  /**
+   * The solved solution contract payload; null shows the grid with no sessions.
+   * Defaults to contracts/examples/solution_v2.solved.example.json.
+   */
+  solution?: SolvedSolution | null;
+  /** Cohort filter: 'all' or a cohort id; overlapping cohorts (batches of a division) are shown */
   cohortFilter?: string;
   /** Optional click handler when a session card is selected */
   onSelectSession?: (sessionId: string) => void;
@@ -46,12 +55,8 @@ export interface TimetableGridProps {
   selectedSessionId?: string | null;
   /** Session ID currently being optimistically validated */
   provisionalSessionId?: string | null;
-  /** Handler invoked when a session is dropped onto a slot */
-  onMoveSession?: (
-    sessionId: string,
-    targetDay: DayIndex,
-    targetTeachingPeriod: number
-  ) => Promise<void> | void;
+  /** Handler invoked when a session is dropped onto a slot (wall-clock period) */
+  onMoveSession?: MoveHandler;
 }
 
 /**
@@ -59,23 +64,19 @@ export interface TimetableGridProps {
  */
 interface DroppableGridCellProps {
   day: DayIndex;
-  teachingPeriod: number;
+  period: number;
   rowSpan?: number;
   spansAdjacent?: boolean;
   canDragAndDrop?: boolean;
   className?: string;
   activeDragSessionId?: string | null;
-  onMoveSession?: (
-    sessionId: string,
-    targetDay: DayIndex,
-    targetTeachingPeriod: number
-  ) => void;
+  onMoveSession?: MoveHandler;
   children: React.ReactNode;
 }
 
 const DroppableGridCell: React.FC<DroppableGridCellProps> = ({
   day,
-  teachingPeriod,
+  period,
   rowSpan = 1,
   spansAdjacent = false,
   canDragAndDrop = true,
@@ -84,17 +85,17 @@ const DroppableGridCell: React.FC<DroppableGridCellProps> = ({
   onMoveSession,
   children,
 }) => {
-  const slotId = `slot-${day}-${teachingPeriod}`;
+  const slotId = `slot-${day}-${period}`;
   const { setNodeRef, isOver } = useDroppable({
     id: slotId,
     disabled: !canDragAndDrop,
-    data: { day, teachingPeriod },
+    data: { day, period },
   });
 
   return (
     <td
       ref={setNodeRef}
-      data-testid={`grid-cell-${day}-${teachingPeriod}`}
+      data-testid={`grid-cell-${day}-${period}`}
       data-slot-id={slotId}
       data-is-over={isOver ? 'true' : 'false'}
       rowSpan={rowSpan}
@@ -104,7 +105,7 @@ const DroppableGridCell: React.FC<DroppableGridCellProps> = ({
         if (!canDragAndDrop) return;
         const sessionId = e.dataTransfer?.getData('text/plain') || activeDragSessionId;
         if (sessionId && onMoveSession) {
-          onMoveSession(sessionId, day, teachingPeriod);
+          onMoveSession(sessionId, day, period);
         }
       }}
       onDragOver={(e) => {
@@ -117,13 +118,13 @@ const DroppableGridCell: React.FC<DroppableGridCellProps> = ({
       {canDragAndDrop && (
         <button
           type="button"
-          data-testid={`drop-slot-${day}-${teachingPeriod}`}
-          aria-label={`Drop into Day ${day} Period ${teachingPeriod}`}
+          data-testid={`drop-slot-${day}-${period}`}
+          aria-label={`Drop into ${DAY_NAMES[day]} P${period}`}
           className="sr-only"
           onClick={(e) => {
             const sid = e.currentTarget.getAttribute('data-session-id') || activeDragSessionId;
             if (sid && onMoveSession) {
-              onMoveSession(sid, day, teachingPeriod);
+              onMoveSession(sid, day, period);
             }
           }}
         />
@@ -190,6 +191,7 @@ const DraggableSessionItem: React.FC<DraggableSessionItemProps> = ({
 };
 
 export const TimetableGrid: React.FC<TimetableGridProps> = ({
+  edgeList = getExampleEdgeList(),
   solution = getSolvedSolutionFixture(),
   cohortFilter = 'all',
   onSelectSession,
@@ -211,63 +213,40 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     useSensor(KeyboardSensor)
   );
 
-  // 1. Build enriched sessions from the solution fixture
-  const sessions = useMemo(() => buildEnrichedSessions(solution), [solution]);
+  // 1. Days, periods and breaks from the edge list's slot_grid
+  const grid = useMemo(() => buildWeekGrid(edgeList), [edgeList]);
 
-  // 2. Extract parallel lab blocks
-  const labBlocks = useMemo(() => buildEnrichedLabBlocks(sessions), [sessions]);
+  // 2. Build enriched sessions from the solution's placements
+  const sessions = useMemo(
+    () => buildEnrichedSessions(solution?.assignment ?? [], edgeList),
+    [solution, edgeList]
+  );
 
-  // 3. Extract institutional pinned blocks
-  const pinnedBlocks = useMemo(() => getPinnedBlocks(), []);
+  const filteredSessions = useMemo(
+    () =>
+      cohortFilter === 'all'
+        ? sessions
+        : sessions.filter((s) => cohortsOverlap(s.cohortId, cohortFilter)),
+    [sessions, cohortFilter]
+  );
 
-  // Filter sessions if cohortFilter is active
-  const filteredSessions = useMemo(() => {
-    if (cohortFilter === 'all') return sessions;
-    return sessions.filter((s) => {
-      if (cohortFilter === 'coh-div-se-b') {
-        return (
-          s.cohortLabel.includes('SE-Comp B') ||
-          s.cohortLabel.includes('SE A & B')
-        );
-      }
-      if (cohortFilter === 'coh-div-se-c') {
-        return (
-          s.cohortLabel.includes('SE-Comp C') ||
-          s.cohortLabel.includes('SE C & D')
-        );
-      }
-      // Direct cohort id or label match
-      return s.cohortLabel.includes(cohortFilter);
-    });
-  }, [sessions, cohortFilter]);
+  // 3. Parallel lab blocks of the sessions in view
+  const filteredLabBlocks = useMemo(() => buildEnrichedLabBlocks(filteredSessions), [filteredSessions]);
 
-  // Filter lab blocks
-  const filteredLabBlocks = useMemo(() => {
-    if (cohortFilter === 'all') return labBlocks;
-    return labBlocks.filter((lb) => {
-      if (cohortFilter === 'coh-div-se-b') return lb.divisionLabel.includes('SE-Comp B');
-      if (cohortFilter === 'coh-div-se-c') return lb.divisionLabel.includes('SE-Comp C');
-      return true;
-    });
-  }, [labBlocks, cohortFilter]);
-
-  // Filter pinned blocks
-  const filteredPinnedBlocks = useMemo(() => {
+  // 4. Pinned occupancy (frozen items and each year's lunch) holding a cohort in view
+  const filteredPins = useMemo(() => {
     if (!showPinnedBlocks) return [];
-    if (cohortFilter === 'all') return pinnedBlocks;
-    return pinnedBlocks.filter((pb) => {
-      if (cohortFilter === 'coh-div-se-b') return pb.cohortLabel.includes('SE-Comp B');
-      if (cohortFilter === 'coh-div-se-c') return pb.cohortLabel.includes('SE-Comp C');
-      return true;
-    });
-  }, [pinnedBlocks, cohortFilter, showPinnedBlocks]);
+    const pins = buildPins(edgeList);
+    if (cohortFilter === 'all') return pins;
+    return pins.filter((p) => p.cohortIds.some((c) => cohortsOverlap(c, cohortFilter)));
+  }, [edgeList, cohortFilter, showPinnedBlocks]);
 
-  // Track multi-period occupancy to avoid rendering duplicate cells in covered periods
+  // Cells under a multi-period lab block (break rows included) are covered by its rowSpan
   const coveredSlots = useMemo(() => {
     const set = new Set<string>();
     filteredLabBlocks.forEach((lb) => {
-      for (let p = 1; p < lb.durationPeriods; p++) {
-        set.add(`${lb.day}-${lb.startTeachingPeriod + p}`);
+      for (let p = lb.periods[0] + 1; p <= lb.periods[lb.periods.length - 1]; p++) {
+        set.add(`${lb.day}-${p}`);
       }
     });
     return set;
@@ -288,11 +267,8 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     const match = overId.match(/^slot-(\d+)-(\d+)$/);
     if (!match) return;
 
-    const targetDay = Number(match[1]) as DayIndex;
-    const targetTeachingPeriod = Number(match[2]);
-
     if (onMoveSession) {
-      onMoveSession(sessionId, targetDay, targetTeachingPeriod);
+      onMoveSession(sessionId, Number(match[1]) as DayIndex, Number(match[2]));
     }
   };
 
@@ -318,163 +294,155 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
               <th className="w-36 p-3.5 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground border-r border-border/60">
                 <div className="flex items-center justify-center gap-1.5">
                   <Clock className="h-4 w-4 text-primary" />
-                  <span>Period / Time</span>
+                  <span>Period</span>
                 </div>
               </th>
-              {DAYS.map((d) => (
+              {grid.days.map((day) => (
                 <th
-                  key={d.day}
-                  data-testid={`day-header-${d.day}`}
+                  key={day}
+                  data-testid={`day-header-${day}`}
                   className="p-3.5 text-center text-xs font-bold uppercase tracking-wider text-foreground border-r last:border-r-0 border-border/60"
                 >
                   <div className="flex items-center justify-center gap-1.5">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{d.label}</span>
+                    <span>{DAY_NAMES[day]}</span>
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
 
-          {/* Table Body: 8 Teaching Periods */}
+          {/* Table Body: every wall-clock period of the edge list's slot_grid */}
           <tbody className="divide-y divide-border/60">
-            {TEACHING_PERIODS.map((period: PeriodSlot) => {
-              const hasBreak = !!period.precedingBreak;
-
-              return (
-                <React.Fragment key={`period-group-${period.teachingPeriod}`}>
-                  {/* Preceding Break Banner if applicable */}
-                  {hasBreak && (
-                    <tr
-                      key={`break-${period.teachingPeriod}`}
-                      data-testid={`break-row-${period.precedingBreak?.label.toLowerCase().replace(/\s+/g, '-')}`}
-                      className="bg-muted/30 border-y border-dashed border-border/70"
-                    >
-                      <td className="p-2 text-center text-[11px] font-mono font-semibold text-muted-foreground border-r border-border/60 bg-muted/40">
-                        <span className="inline-flex items-center gap-1">
-                          {period.precedingBreak?.label.includes('Short') ? (
-                            <Coffee className="h-3 w-3 text-amber-500" />
-                          ) : (
-                            <Utensils className="h-3 w-3 text-orange-500" />
-                          )}
-                          {period.precedingBreak?.time}
-                        </span>
-                      </td>
+            {grid.periods.map(({ period, teaching }) =>
+              !teaching ? (
+                // Not a teaching period for anyone: a break row (lab blocks may straddle it)
+                <tr
+                  key={period}
+                  data-testid={`break-row-${period}`}
+                  className="bg-muted/30 border-y border-dashed border-border/70"
+                >
+                  <td className="p-2 text-center text-[11px] font-mono font-semibold text-muted-foreground border-r border-border/60 bg-muted/40">
+                    <span className="inline-flex items-center gap-1">
+                      <Coffee className="h-3 w-3 text-amber-500" />P{period}
+                    </span>
+                  </td>
+                  {grid.days.map((day) =>
+                    coveredSlots.has(`${day}-${period}`) ? null : (
                       <td
-                        colSpan={5}
+                        key={day}
                         className="p-1.5 text-center text-xs font-medium tracking-wide text-muted-foreground bg-muted/20"
                       >
-                        <span className="inline-flex items-center gap-2">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500/70" />
-                          {period.precedingBreak?.label.toUpperCase()} — (Non-Schedulable Window)
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500/70" />
-                        </span>
+                        Break
                       </td>
-                    </tr>
+                    )
                   )}
+                </tr>
+              ) : (
+                <tr
+                  key={period}
+                  data-testid={`period-row-${period}`}
+                  className="hover:bg-muted/10 transition-colors"
+                >
+                  {/* Period Column */}
+                  <td className="p-3 text-center border-r border-border/60 bg-muted/20 align-top">
+                    <div className="font-bold text-xs text-foreground">P{period}</div>
+                  </td>
 
-                  {/* Period Row */}
-                  <tr
-                    key={`period-${period.teachingPeriod}`}
-                    data-testid={`period-row-${period.teachingPeriod}`}
-                    className="hover:bg-muted/10 transition-colors"
-                  >
-                    {/* Period Time Column */}
-                    <td className="p-3 text-center border-r border-border/60 bg-muted/20 align-top">
-                      <div className="font-bold text-xs text-foreground">
-                        Period {period.teachingPeriod + 1}
-                      </div>
-                      <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
-                        {period.timeLabel}
-                      </div>
-                      <div className="text-[9px] text-muted-foreground/70 font-mono mt-1">
-                        Grid slot #{period.teachingPeriod}
-                      </div>
-                    </td>
+                  {/* Day Cells */}
+                  {grid.days.map((day) => {
+                    const slotKey = `${day}-${period}`;
 
-                    {/* Day Cells */}
-                    {DAYS.map((d) => {
-                      const slotKey = `${d.day}-${period.teachingPeriod}`;
+                    // If this slot is covered by a multi-period spanning lab block, skip rendering cell
+                    if (coveredSlots.has(slotKey)) {
+                      return null;
+                    }
 
-                      // If this slot is covered by a multi-period spanning lab block, skip rendering cell
-                      if (coveredSlots.has(slotKey)) {
-                        return null;
-                      }
+                    // A parallel lab block starting in this slot
+                    const labBlock = filteredLabBlocks.find(
+                      (lb) => lb.day === day && lb.periods[0] === period
+                    );
+                    const lastPeriod = labBlock ? labBlock.periods[labBlock.periods.length - 1] : period;
 
-                      // Check for a parallel lab block starting in this slot
-                      const labBlock = filteredLabBlocks.find(
-                        (lb) => lb.day === d.day && lb.startTeachingPeriod === period.teachingPeriod
-                      );
+                    // Sessions starting in this slot (lab-block members render inside their block)
+                    const cellSessions = filteredSessions.filter(
+                      (s) => s.day === day && s.wallClockPeriod === period && !s.labBlockId
+                    );
 
-                      // Check for institutional pinned blocks in this slot
-                      const pinnedBlock = filteredPinnedBlocks.find(
-                        (pb) => pb.day === d.day && pb.teachingPeriod === period.teachingPeriod
-                      );
+                    // Pinned occupancy and lunch in this slot
+                    const cellPins = filteredPins.filter((p) => p.day === day && p.period === period);
 
-                      // Check for sessions in this slot (non-lab-block or single sessions)
-                      const session = filteredSessions.find(
-                        (s) =>
-                          s.day === d.day &&
-                          s.teachingPeriod === period.teachingPeriod &&
-                          !s.labBlockId
-                      );
+                    return (
+                      <DroppableGridCell
+                        key={slotKey}
+                        day={day}
+                        period={period}
+                        rowSpan={lastPeriod - period + 1}
+                        spansAdjacent={!!labBlock}
+                        canDragAndDrop={canDragAndDrop}
+                        activeDragSessionId={activeDragSessionId}
+                        onMoveSession={onMoveSession}
+                        className={labBlock ? 'bg-emerald-500/5' : ''}
+                      >
+                        {/* 1. Multi-period Parallel Lab Block Case */}
+                        {labBlock && (
+                          <ParallelLabBlock labBlock={labBlock} onSelectSession={onSelectSession} />
+                        )}
 
-                      return (
-                        <DroppableGridCell
-                          key={slotKey}
-                          day={d.day}
-                          teachingPeriod={period.teachingPeriod}
-                          rowSpan={labBlock ? labBlock.durationPeriods : 1}
-                          spansAdjacent={!!labBlock}
-                          canDragAndDrop={canDragAndDrop}
-                          activeDragSessionId={activeDragSessionId}
-                          onMoveSession={onMoveSession}
-                          className={labBlock ? 'bg-emerald-500/5' : ''}
-                        >
-                          {/* 1. Double-period Parallel Lab Block Case */}
-                          {labBlock && (
-                            <ParallelLabBlock
-                              labBlock={labBlock}
-                              onSelectSession={onSelectSession}
-                            />
-                          )}
+                        {/* 2 & 3. Draggable Session (Combined Lecture or Standard Theory) */}
+                        {cellSessions.map((session) => (
+                          <DraggableSessionItem
+                            key={session.sessionId}
+                            session={session}
+                            canDragAndDrop={canDragAndDrop}
+                            isProvisional={session.sessionId === provisionalSessionId}
+                            isSelected={session.sessionId === selectedSessionId}
+                            onSelect={() => onSelectSession?.(session.sessionId)}
+                          />
+                        ))}
 
-                          {/* 2. Institutional Pinned Block Case */}
-                          {!labBlock && pinnedBlock && (
-                            <PinnedBlock
-                              id={pinnedBlock.id}
-                              label={pinnedBlock.label}
-                              kind={pinnedBlock.kind}
-                              roomCode={pinnedBlock.roomCode}
-                              cohortLabel={pinnedBlock.cohortLabel}
-                              description={pinnedBlock.description}
-                            />
-                          )}
-
-                          {/* 3 & 4. Draggable Session (Combined Lecture or Standard Theory) */}
-                          {!labBlock && !pinnedBlock && session && (
-                            <DraggableSessionItem
-                              session={session}
-                              canDragAndDrop={canDragAndDrop}
-                              isProvisional={session.sessionId === provisionalSessionId}
-                              isSelected={session.sessionId === selectedSessionId}
-                              onSelect={() => onSelectSession?.(session.sessionId)}
-                            />
-                          )}
-
-                          {/* Empty / Unscheduled Slot */}
-                          {!labBlock && !pinnedBlock && !session && (
-                            <div className="flex h-16 w-full items-center justify-center rounded-lg border border-dashed border-border/40 text-[10px] text-muted-foreground/40 font-mono select-none">
-                              {canDragAndDrop ? 'Drop session here' : 'Free Slot'}
+                        {/* 4. Pinned occupancy: a year's lunch, or a frozen item */}
+                        {cellPins.map((pin) =>
+                          pin.isLunch ? (
+                            <div
+                              key={pin.key}
+                              data-testid={`lunch-cell-${day}-${period}`}
+                              className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-orange-400/50 bg-orange-500/10 p-2 text-xs font-semibold text-orange-800 dark:text-orange-300"
+                            >
+                              <Utensils className="h-3 w-3" />
+                              <span>Lunch</span>
+                              {cohortFilter === 'all' && (
+                                <span className="font-normal">· {pin.cohortLabels.join(', ')}</span>
+                              )}
                             </div>
-                          )}
-                        </DroppableGridCell>
-                      );
-                    })}
-                  </tr>
-                </React.Fragment>
-              );
-            })}
+                          ) : (
+                            <PinnedBlock
+                              key={pin.key}
+                              id={pin.key}
+                              label="Pinned occupancy"
+                              kind={
+                                pin.facultyInitials.length
+                                  ? `Faculty: ${pin.facultyInitials.join(', ')}`
+                                  : undefined
+                              }
+                              roomCode={pin.roomCodes.join(', ') || undefined}
+                              cohortLabel={pin.cohortLabels.join(', ') || undefined}
+                            />
+                          )
+                        )}
+
+                        {/* Empty / Unscheduled Slot */}
+                        {!labBlock && cellSessions.length === 0 && cellPins.length === 0 && (
+                          <div className="flex h-16 w-full items-center justify-center rounded-lg border border-dashed border-border/40 text-[10px] text-muted-foreground/40 font-mono select-none">
+                            {canDragAndDrop ? 'Drop session here' : 'Free Slot'}
+                          </div>
+                        )}
+                      </DroppableGridCell>
+                    );
+                  })}
+                </tr>
+              )
+            )}
           </tbody>
         </table>
       </div>

@@ -95,7 +95,7 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
               {session.durationPeriods} teaching period{session.durationPeriods > 1 ? 's' : ''}
             </div>
             <div className="text-[11px] text-muted-foreground font-mono">
-              Starting period index: {session.teachingPeriod}
+              Starts at P{session.wallClockPeriod}
             </div>
           </div>
         </div>

@@ -7,14 +7,23 @@
 
 /**
  * Index on the wall-clock period axis, 0..slot_grid.periods_per_day-1. Break periods are valid indices but are absent from slot_grid.teaching_periods.
+ *
+ * This interface was referenced by `ChronosEdgeListContractV1`'s JSON-Schema
+ * via the `definition` "period".
  */
 export type Period = number;
 /**
  * Stable opaque string identifier. The solver never parses it and never assumes it is a database key.
+ *
+ * This interface was referenced by `ChronosEdgeListContractV1`'s JSON-Schema
+ * via the `definition` "id".
  */
 export type Id = string;
 /**
  * Teaching day index, Monday=0 .. Friday=4.
+ *
+ * This interface was referenced by `ChronosEdgeListContractV1`'s JSON-Schema
+ * via the `definition` "day".
  */
 export type Day = number;
 

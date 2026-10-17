@@ -19,6 +19,7 @@ function makeWrapper() {
 function stubClient(overrides: Partial<ChronosApiClient>): ChronosApiClient {
   return {
     getTimetable: vi.fn(),
+    getEdgeList: vi.fn(),
     generateTimetable: vi.fn(),
     moveSession: vi.fn(),
     getSolvedSolution: vi.fn(),
@@ -55,7 +56,7 @@ describe('useMoveSessionMutation', () => {
     const { result } = renderHook(() => useMoveSessionMutation(stubClient({ moveSession })), {
       wrapper: makeWrapper(),
     });
-    const request = { sessionId: 'sess-0006', targetDay: 0, targetTeachingPeriod: 4, targetWallClockPeriod: 6 };
+    const request = { sessionId: 'sess-0006', targetDay: 0, targetWallClockPeriod: 6 };
 
     let outcome: unknown;
     await act(async () => {

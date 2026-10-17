@@ -14,15 +14,15 @@ describe('Drag-and-Drop Interaction and Revert-on-Reject Flow', () => {
     render(<App />);
     await screen.findByTestId('timetable-grid');
 
-    // sess-0006 is initially on Day 2 (Wednesday), Teaching Period 2 (11:15 - 12:15)
-    const initialCell = screen.getByTestId('grid-cell-2-2');
+    // sess-0006 is initially on Day 2 (Wednesday), P3
+    const initialCell = screen.getByTestId('grid-cell-2-3');
     expect(within(initialCell).getByTestId('session-cell-sess-0006')).toBeInTheDocument();
 
-    // Target cell: Day 0 (Monday), Teaching Period 4 (14:15 - 15:15)
-    const targetCell = screen.getByTestId('grid-cell-0-4');
+    // Target cell: Day 0 (Monday), P6
+    const targetCell = screen.getByTestId('grid-cell-0-6');
     expect(within(targetCell).queryByTestId('session-cell-sess-0006')).not.toBeInTheDocument();
 
-    // Trigger drop of sess-0006 onto Monday Period 4
+    // Trigger drop of sess-0006 onto Monday P6
     fireEvent.drop(targetCell, {
       dataTransfer: {
         getData: () => 'sess-0006',
@@ -45,8 +45,8 @@ describe('Drag-and-Drop Interaction and Revert-on-Reject Flow', () => {
     render(<App />);
     await screen.findByTestId('timetable-grid');
 
-    // 1. Initial State: sess-0006 is on Day 2 (Wednesday), Period 2
-    const originalCell = screen.getByTestId('grid-cell-2-2');
+    // 1. Initial State: sess-0006 is on Day 2 (Wednesday), P3
+    const originalCell = screen.getByTestId('grid-cell-2-3');
     const sessCard = within(originalCell).getByTestId('session-cell-sess-0006');
     expect(sessCard).toBeInTheDocument();
 
@@ -60,8 +60,8 @@ describe('Drag-and-Drop Interaction and Revert-on-Reject Flow', () => {
     // Assert session is marked as selected in UI state
     expect(screen.getByTestId('session-cell-sess-0006')).toHaveAttribute('data-selected', 'true');
 
-    // 3. Target an invalid slot: Day 3 (Thursday), Period 3 (occupied by pinned MDM block)
-    const conflictCell = screen.getByTestId('grid-cell-3-3');
+    // 3. Target an invalid slot: Wednesday P7, pinned_occupancy for SE-Comp C in room 002
+    const conflictCell = screen.getByTestId('grid-cell-2-7');
     expect(within(conflictCell).getByTestId('pinned-block')).toBeInTheDocument();
 
     // 4. Trigger drag-and-drop onto the conflicting slot
@@ -78,10 +78,10 @@ describe('Drag-and-Drop Interaction and Revert-on-Reject Flow', () => {
 
     // Assert the readable reason surfaced comes from the mock backend response
     const reasonEl = screen.getByTestId('rejection-reason');
-    expect(reasonEl).toHaveTextContent(/reserved for pinned institutional block 'MDM - I THEORY'/i);
+    expect(reasonEl).toHaveTextContent(/Wednesday P7 is held by pinned occupancy/i);
 
     // 6. EXACT PRIOR STATE RESTORED:
-    // a. sess-0006 must be back in its original slot (Day 2 Period 1)
+    // a. sess-0006 must be back in its original slot (Wednesday P3)
     expect(within(originalCell).getByTestId('session-cell-sess-0006')).toBeInTheDocument();
 
     // b. Conflicting slot must NOT contain sess-0006
@@ -101,9 +101,9 @@ describe('Drag-and-Drop Interaction and Revert-on-Reject Flow', () => {
     fireEvent.click(toggleRejectBtn);
     expect(toggleRejectBtn).toHaveTextContent(/Reject Moves: ON/i);
 
-    // Attempt to drop sess-0006 onto Monday Period 4
-    const originalCell = screen.getByTestId('grid-cell-2-2');
-    const targetCell = screen.getByTestId('grid-cell-0-4');
+    // Attempt to drop sess-0006 onto Monday P6
+    const originalCell = screen.getByTestId('grid-cell-2-3');
+    const targetCell = screen.getByTestId('grid-cell-0-6');
 
     fireEvent.drop(targetCell, {
       dataTransfer: {

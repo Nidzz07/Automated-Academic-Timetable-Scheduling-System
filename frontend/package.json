@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "gen:types": "json2ts -i \"../contracts/*_v1.schema.json\" -o src/types/generated --additionalProperties false",
+    "gen:types": "json2ts -i \"../contracts/*.schema.json\" -o src/types/generated --additionalProperties false --unreachableDefinitions",
     "prebuild": "npm run gen:types",
     "build": "tsc && vite build",
     "preview": "vite preview",

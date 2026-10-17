@@ -2,6 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserRole, ROLE_CAPABILITIES } from '@/types/roles';
+import type { EdgeListInstance } from '@/api/chronosApi';
 import {
   CalendarDays,
   Filter,
@@ -16,6 +17,10 @@ import {
 interface TimetableHeaderProps {
   cohortFilter: string;
   onCohortFilterChange: (filter: string) => void;
+  /** Cohorts named in the edge list */
+  cohortOptions: Array<{ id: string; label: string }>;
+  instance: EdgeListInstance;
+  onInstanceChange: (instance: EdgeListInstance) => void;
   showQualityCard: boolean;
   onToggleQualityCard: () => void;
   darkMode: boolean;
@@ -30,6 +35,9 @@ interface TimetableHeaderProps {
 export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
   cohortFilter,
   onCohortFilterChange,
+  cohortOptions,
+  instance,
+  onInstanceChange,
   showQualityCard,
   onToggleQualityCard,
   darkMode,
@@ -88,8 +96,21 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
               >
                 <option value="all">All Divisions & Cohorts</option>
-                <option value="coh-div-se-b">SE-Comp B (Labs & Combined)</option>
-                <option value="coh-div-se-c">SE-Comp C (Lectures & Combined)</option>
+                {cohortOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <span className="font-semibold text-muted-foreground">Instance:</span>
+              <select
+                aria-label="Select instance"
+                value={instance}
+                onChange={(e) => onInstanceChange(e.target.value as EdgeListInstance)}
+                className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
+              >
+                <option value="example">Example instance</option>
+                <option value="d6_grid">D6 grid example (no solution)</option>
               </select>
             </div>
           )}
@@ -167,7 +188,7 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
           <div className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-xs border border-emerald-500 bg-emerald-500/20" />
             <span className="text-muted-foreground">
-              <strong className="text-foreground">Lab Block</strong> (Double-Period 4 Batches)
+              <strong className="text-foreground">Lab Block</strong> (Parallel Batches)
             </span>
           </div>
 

@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { TimetableGrid } from '../TimetableGrid';
 import { getSolvedSolutionFixture } from '@/adapters/timetable';
-import { SolvedSolution, InfeasibleSolution, SolutionContract } from '@/adapters/solution';
+import { SolvedSolution, SolutionContract } from '@/adapters/solution';
+import { validateContract } from '@/api/contractValidation';
+import d6GridExample from '@contracts/examples/edge_list_v1.d6_grid.example.json';
 
 describe('TimetableGrid Component', () => {
-  it('renders an 8-period x 5-day week grid from the static fixture', () => {
+  it('renders the edge list\'s 8 teaching periods x 5 days, with its break periods as break rows', () => {
     const fixture = getSolvedSolutionFixture();
     render(<TimetableGrid solution={fixture} />);
 
@@ -19,14 +21,13 @@ describe('TimetableGrid Component', () => {
     expect(screen.getByTestId('day-header-3')).toHaveTextContent(/thursday/i);
     expect(screen.getByTestId('day-header-4')).toHaveTextContent(/friday/i);
 
-    // Assert 8 teaching periods
-    for (let p = 0; p < 8; p++) {
-      expect(screen.getByTestId(`period-row-${p}`)).toBeInTheDocument();
+    // edge_list_v1.example.json: teaching_periods [0, 1, 3, 4, 6, 7, 8, 9] of 10
+    for (const p of [0, 1, 3, 4, 6, 7, 8, 9]) {
+      expect(screen.getByTestId(`period-row-${p}`)).toHaveTextContent(`P${p}`);
     }
-
-    // Assert break rows are present
-    expect(screen.getByTestId('break-row-short-break')).toBeInTheDocument();
-    expect(screen.getByTestId('break-row-lunch-break')).toBeInTheDocument();
+    expect(screen.getByTestId('break-row-2')).toBeInTheDocument();
+    expect(screen.getByTestId('break-row-5')).toBeInTheDocument();
+    expect(screen.queryByText(/\d\d:\d\d/)).not.toBeInTheDocument();
   });
 
   it('renders Case 1: A double-period lab block spanning two adjacent periods', () => {
@@ -38,15 +39,16 @@ describe('TimetableGrid Component', () => {
     expect(labBlock).toBeInTheDocument();
     expect(labBlock).toHaveAttribute('data-duration-periods', '2');
 
-    // The cell holding this lab block must have rowSpan = 2 and spans adjacent flag
+    // The cell spans P1, the P2 break row and P3: rowSpan 3
     const cell = screen.getByTestId('grid-cell-0-1');
-    expect(cell).toHaveAttribute('data-rowspan', '2');
+    expect(cell).toHaveAttribute('data-rowspan', '3');
     expect(cell).toHaveAttribute('data-spans-adjacent', 'true');
     expect(cell).toContainElement(labBlock);
 
-    // The banner indicates it spans 2 periods and straddles the short break
-    expect(within(labBlock).getByText(/2 Periods \(10:00 – 12:15\)/i)).toBeInTheDocument();
-    expect(within(labBlock).getByText(/Straddles 11:00 Short Break/i)).toBeInTheDocument();
+    // The banner states its periods and the break it straddles, from the edge list
+    expect(within(labBlock).getByText(/2 periods \(P1–P3\)/i)).toBeInTheDocument();
+    expect(within(labBlock).getByText(/4 batches in parallel/i)).toBeInTheDocument();
+    expect(within(labBlock).getByText(/Spans break P2/i)).toBeInTheDocument();
   });
 
   it('renders Case 2: Four parallel batch sessions occupying the same lab slot in different sub-rooms', () => {
@@ -119,24 +121,21 @@ describe('TimetableGrid Component', () => {
     const fixture = getSolvedSolutionFixture();
     render(<TimetableGrid solution={fixture} />);
 
-    // Institutional pinned block (e.g. MDM - I THEORY)
-    const pinnedBlocks = screen.getAllByTestId('pinned-block');
-    expect(pinnedBlocks.length).toBeGreaterThanOrEqual(1);
+    // pinned_occupancy Thursday P4: room 508, SE-Comp B (the edge list carries no label)
+    expect(screen.getAllByTestId('pinned-block')).toHaveLength(2);
+    const pinned = within(screen.getByTestId('grid-cell-3-4')).getByTestId('pinned-block');
 
-    const mdmBlock = pinnedBlocks.find((el) => el.getAttribute('data-pinned-id') === 'pin-0001');
-    expect(mdmBlock).toBeDefined();
+    // Must carry pinned badges and distinct immovable indicators
+    expect(within(pinned).getByText(/PINNED BLOCK/i)).toBeInTheDocument();
+    expect(within(pinned).getByText(/Immovable/i)).toBeInTheDocument();
+    expect(within(pinned).getByText(/Pinned occupancy/i)).toBeInTheDocument();
+    expect(within(pinned).getByText(/Room 508/i)).toBeInTheDocument();
+    expect(within(pinned).getByText(/Cohort: SE-Comp B/i)).toBeInTheDocument();
+    expect(screen.queryByText(/MDM/i)).not.toBeInTheDocument();
 
-    if (mdmBlock) {
-      // Must carry pinned badges and distinct immovable indicators
-      expect(within(mdmBlock).getByText(/PINNED BLOCK/i)).toBeInTheDocument();
-      expect(within(mdmBlock).getByText(/Immovable/i)).toBeInTheDocument();
-      expect(within(mdmBlock).getByText(/MDM - I THEORY/i)).toBeInTheDocument();
-      expect(within(mdmBlock).getByText(/Room 508/i)).toBeInTheDocument();
-
-      // Must have distinct styling (bg-pinned-pattern and border-slate)
-      expect(mdmBlock.className).toContain('bg-pinned-pattern');
-      expect(mdmBlock.className).toContain('border-slate');
-    }
+    // Must have distinct styling (bg-pinned-pattern and border-slate)
+    expect(pinned.className).toContain('bg-pinned-pattern');
+    expect(pinned.className).toContain('border-slate');
 
     // Fixed pre-allocated solver session (sess-0008, ET Theory) also renders with fixed badge
     const sess8 = screen.getByTestId('session-cell-sess-0008');
@@ -145,22 +144,46 @@ describe('TimetableGrid Component', () => {
     expect(sess8.className).toContain('bg-pinned-pattern');
   });
 
-  it('validates TypeScript contract types mirror solution_v1.schema.json', () => {
+  it('validates TypeScript contract types mirror solution_v2.schema.json', () => {
     const solved: SolvedSolution = getSolvedSolutionFixture();
-    expect(solved.schema_version).toBe('solution.v1');
+    expect(solved.schema_version).toBe('solution.v2');
     expect(solved.status).toBe('solved');
     expect(Array.isArray(solved.assignment)).toBe(true);
     expect(solved.assignment.length).toBe(8);
-    expect(solved.quality.score).toBe(93.2);
+    expect(solved.quality.score).toBe(99.0);
 
-    // Type checking: an invalid status or missing assignment causes compile error
+    // Type checking: a solved payload always carries an assignment
     const testUnion: SolutionContract = solved;
-    if (testUnion.status === 'solved') {
-      expect(testUnion.assignment).toBeDefined();
-    } else {
-      // Infeasible type test
-      const infeasible: InfeasibleSolution = testUnion;
-      expect(infeasible.diagnosis).toBeDefined();
+    expect(testUnion.status === 'solved' && testUnion.assignment).toBeTruthy();
+  });
+});
+
+describe('TimetableGrid on the D6 grid example (edge_list_v1.d6_grid.example.json)', () => {
+  const d6 = validateContract('edge_list', d6GridExample);
+
+  it('shows SE-Comp A with lunch at P5 every day and P4 as a teaching period', () => {
+    render(<TimetableGrid edgeList={d6} solution={null} cohortFilter="coh-div-se-a" />);
+    expect(screen.getByTestId('break-row-2')).toBeInTheDocument();
+    expect(screen.getByTestId('period-row-4')).toBeInTheDocument();
+    expect(screen.getByTestId('period-row-5')).toBeInTheDocument();
+    for (const day of [0, 1, 2, 3, 4]) {
+      expect(screen.getByTestId(`lunch-cell-${day}-5`)).toHaveTextContent('Lunch');
+      expect(screen.queryByTestId(`lunch-cell-${day}-4`)).not.toBeInTheDocument();
     }
+  });
+
+  it('shows TE-Comp A with lunch at P4 every day, not P5', () => {
+    render(<TimetableGrid edgeList={d6} solution={null} cohortFilter="coh-div-te-a" />);
+    for (const day of [0, 1, 2, 3, 4]) {
+      expect(screen.getByTestId(`lunch-cell-${day}-4`)).toHaveTextContent('Lunch');
+      expect(screen.queryByTestId(`lunch-cell-${day}-5`)).not.toBeInTheDocument();
+    }
+  });
+
+  it('shows both years\' lunches, each naming its cohorts, when unfiltered', () => {
+    render(<TimetableGrid edgeList={d6} solution={null} />);
+    expect(screen.getByTestId('lunch-cell-0-4')).toHaveTextContent('div-te-a');
+    expect(screen.getByTestId('lunch-cell-0-5')).toHaveTextContent('div-se-a');
+    expect(screen.queryAllByTestId('pinned-block')).toHaveLength(0);
   });
 });
