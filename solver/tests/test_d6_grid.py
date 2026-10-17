@@ -30,7 +30,11 @@ from solver.colouring import welsh_powell
 from solver.graph import build_conflict_graph
 from solver.slots import SlotGrid, SlotId
 from solver.tests.test_backtracking import _payload, _room, _session
-from solver.tests.test_solution_v2 import SOLUTION_V2, assert_v2_certificate_fields
+from solver.tests.test_solution_v2 import (
+    SOLUTION_V2,
+    assert_quality_block,
+    assert_v2_certificate_fields,
+)
 from solver.validate import validate_slot_placements, validate_solution
 
 D6_EXAMPLE = (Path(__file__).resolve().parents[2] / "contracts" / "examples"
@@ -107,6 +111,7 @@ def _solved(edge_list: dict[str, Any]) -> BacktrackResult:
     solution = result.to_solution_v2_dict()
     SOLUTION_V2.validate(solution)
     assert validate_solution(edge_list, solution) == []
+    assert_quality_block(solution["quality"])
     return result
 
 

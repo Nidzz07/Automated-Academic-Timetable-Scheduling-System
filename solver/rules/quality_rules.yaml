@@ -1,0 +1,28 @@
+# Quality rules scored by solver/scoring.py (ROADMAP section 6 and D34; contract v2 row 6).
+# Data, not code (CONTEXT.md rule 4): change a weight here and bump `version`, no code change.
+# The loader refuses any rule id outside D34, a missing or repeated rule, and any unknown key
+# or parameter. score = 100 - sum(weight * raw), so a timetable breaking no soft rule scores 100.
+# Weights are design parameters chosen in S10, not SPIT facts; each carries its one-line reason.
+version: "1"
+rules:
+  - id: S-GAP
+    description: Idle teaching periods between a cohort's first and last class of a day (D13).
+    # Largest, as D13 asks: one gap idles a whole cohort for an hour, the strong soft rule.
+    weight: 2.0
+    parameters: {}
+  - id: S-B2B
+    description: Consecutive teaching periods a faculty member teaches with no break (D14).
+    # Half of S-GAP: D14 penalises one teacher's lost break, a smaller harm than a cohort's idle hour.
+    weight: 1.0
+    parameters: {}
+  - id: S-LOAD16
+    description: Faculty members whose weekly load is above the 16 h target (D11).
+    # One point per flagged teacher: who teaches what fixes the load, so it moves every timetable alike.
+    weight: 1.0
+    parameters:
+      threshold_hours: 16  # D11
+  - id: FAC_LOAD_IMBALANCE
+    description: Each faculty member's heaviest minus lightest day of the week, summed (row 7).
+    # Lowest, per hour of spread: it sums over every teacher, and D11 deliberately sets no daily cap.
+    weight: 0.5
+    parameters: {}

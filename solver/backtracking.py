@@ -120,13 +120,13 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
 from solver.graph import ConflictGraph, Session, available_slots_for, slot_is_open
+from solver.scoring import score
 from solver.slots import SlotGrid, SlotId
 
 if TYPE_CHECKING:
     from solver.presolve import Certificate
 
 __all__ = [
-    "QUALITY_RULE_IDS",
     "BacktrackResult",
     "LabBlock",
     "Room",
@@ -135,9 +135,6 @@ __all__ = [
     "parse_lab_blocks",
     "parse_rooms",
 ]
-
-#: ROADMAP D34: the quality rule ids, in section 6 order.
-QUALITY_RULE_IDS: tuple[str, ...] = ("S-GAP", "S-B2B", "S-LOAD16", "FAC_LOAD_IMBALANCE")
 
 
 # ---------------------------------------------------------------------------
@@ -196,6 +193,8 @@ class BacktrackResult:
     # - the first reached among equally deep ones (solution.v2, proposal row 2)
     partial_assignment: dict[str, SlotId] = field(default_factory=dict)
     partial_rooms: dict[str, str] = field(default_factory=dict)
+    # the edge-list payload this result solves; scoring reads it
+    edge_list: dict[str, Any] | None = None
 
     @property
     def outcome(self) -> Literal["solved", "infeasible", "timeout"]:
@@ -268,12 +267,11 @@ class BacktrackResult:
             items = self._placements(self.assignment, self.room_assignment)
 
             # !!! PLACEHOLDER QUALITY — NOT A SCORE !!!
-            # No scoring has run: solver/scoring.py does not exist yet. 100.0 with
-            # an empty breakdown is a hardcoded stand-in, NOT a measured perfect
-            # score. solution_v1 requires `quality.score` to be a number when
-            # status is "solved" and has no way to say "not evaluated", so the
-            # stand-in cannot be removed under v1. solution.v2 (proposal change 6)
-            # adds per-rule status and rules_version; Phase 3 scoring replaces this.
+            # v1 output runs no scoring: 100.0 with an empty breakdown is a
+            # hardcoded stand-in, NOT a measured perfect score, kept so v1
+            # payloads stay as they were. The real score (solver/scoring.py, S10)
+            # is in to_solution_v2_dict, whose quality block carries
+            # rules_version and a status per rule.
             qual = (
                 quality
                 if quality is not None
@@ -310,8 +308,9 @@ class BacktrackResult:
     ) -> dict[str, Any]:
         """Serialise this result into a dict matching ``contracts/solution_v2.schema.json``.
 
-        Solved: the assignment, the quality block of :func:`_unscored_quality`
-        (every ROADMAP D34 rule ``not_evaluated`` until scoring exists, S10) and
+        Solved: the assignment, its quality block scored by
+        :func:`solver.scoring.score` against the edge list it solves (every D34
+        rule evaluated, ``rules_version`` from quality_rules.yaml) and
         ``displaced``.  Infeasible after a search: ``method =
         "search_exhaustion"`` - the complete search proved it but explained
         nothing - so the conflicting set is empty and no relaxation is offered;
@@ -335,11 +334,13 @@ class BacktrackResult:
             )
         metadata = self._metadata(total_sessions, runtime_ms)
         if self.solved:
+            if self.edge_list is None:
+                raise ValueError("scoring needs the edge list this result solves")
             return {
                 "schema_version": "solution.v2",
                 "status": "solved",
                 "assignment": self._placements(self.assignment, self.room_assignment),
-                "quality": _unscored_quality(),
+                "quality": score(self.edge_list, self.assignment),
                 "displaced": displaced if displaced is not None else [],
                 "metadata": metadata,
             }
@@ -360,38 +361,6 @@ class BacktrackResult:
             },
             "metadata": metadata,
         }
-
-
-def _unscored_quality() -> dict[str, Any]:
-    """!!! NOT A SCORE !!!  The ``solution.v2`` quality block until scoring exists.
-
-    ``solver/scoring.py`` and ``solver/rules/quality_rules.yaml`` arrive in S10,
-    so every rule of ROADMAP D34 is ``not_evaluated`` and
-    ``not_evaluated_rule_ids`` lists all four: the payload itself says the score
-    covers nothing.  The contract still requires three numbers or strings that
-    only a loaded rule set can supply, so these are stand-ins, not data:
-
-    * ``score`` 100.0 - 100 minus the penalties of the evaluated rules, the
-      arithmetic of both contract examples, taken over no rules;
-    * ``weight`` 0.0 - no rule set is loaded, so no weight is configured;
-    * ``rules_version`` ``"none"`` - there is no quality_rules.yaml to read a
-      version from.
-
-    S10 replaces all three with the YAML's values.
-    """
-    reason = (
-        "Not evaluated: quality scoring has not been built yet, so no rule set is "
-        "loaded and this rule has no configured weight (0 is shown in its place)."
-    )
-    return {
-        "score": 100.0,
-        "rules_version": "none",
-        "breakdown": [
-            {"rule_id": rule_id, "status": "not_evaluated", "weight": 0.0, "reason": reason}
-            for rule_id in QUALITY_RULE_IDS
-        ],
-        "not_evaluated_rule_ids": list(QUALITY_RULE_IDS),
-    }
 
 
 def _placeholder_diagnosis(unplaced: list[str]) -> dict[str, Any]:
@@ -1232,4 +1201,5 @@ def backtrack_solve(
         certificate=certificate,
         partial_assignment=state.deepest[0],
         partial_rooms=state.deepest[1],
+        edge_list=payload,
     )
