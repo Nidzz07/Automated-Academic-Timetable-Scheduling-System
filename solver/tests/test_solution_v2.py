@@ -3,8 +3,8 @@
 Every payload it produces here is validated against the frozen
 ``contracts/solution_v2.schema.json`` (jsonschema in tests only):
 
-* solved - the assignment, and a quality block listing every ROADMAP D34 rule
-  as ``not_evaluated`` until scoring exists (S10);
+* solved - the assignment and its quality block, every ROADMAP D34 rule
+  evaluated by :mod:`solver.scoring` (S10);
 * infeasible after a search - ``method = "search_exhaustion"``, the deepest
   consistent partial placement (proposal row 2) and the unplaced sessions;
 * a pre-solve certificate and a timeout are refused (proposed contract row 9;
@@ -26,7 +26,7 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
-from solver.backtracking import QUALITY_RULE_IDS, BacktrackResult, backtrack_solve
+from solver.backtracking import BacktrackResult, backtrack_solve
 from solver.benchmarks.synthetic import PRESETS, generate
 from solver.graph import build_conflict_graph
 from solver.slots import SlotId
@@ -68,6 +68,20 @@ def assert_v2_certificate_fields(fields: dict[str, Any]) -> None:
     assert relaxation["verification"] == {"status": "not_attempted", "runtime_ms": None}
 
 
+D34 = ["S-GAP", "S-B2B", "S-LOAD16", "FAC_LOAD_IMBALANCE"]
+
+
+def assert_quality_block(quality: dict[str, Any]) -> None:
+    """Proposal row 6's rules beyond the schema, for a fully scored timetable."""
+    breakdown = quality["breakdown"]
+    assert [e["rule_id"] for e in breakdown] == D34
+    assert {e["status"] for e in breakdown} == {"evaluated"}
+    assert quality["not_evaluated_rule_ids"] == []
+    assert quality["rules_version"] == "1"
+    assert all(e["penalty"] == e["weight"] * e["raw"] for e in breakdown)
+    assert quality["score"] == 100.0 - sum(e["penalty"] for e in breakdown)
+
+
 def _solve(edge_list: dict[str, Any]) -> BacktrackResult:
     return backtrack_solve(build_conflict_graph(edge_list), edge_list)
 
@@ -82,6 +96,7 @@ def _check_v2(edge_list: dict[str, Any], result: BacktrackResult) -> dict[str, A
     if solution["status"] == "solved":
         assert validate_solution(edge_list, solution) == []
         assert solution["assignment"] == result.to_solution_dict()["assignment"]
+        assert_quality_block(solution["quality"])
         return solution
 
     diagnosis = solution["diagnosis"]
@@ -158,13 +173,11 @@ def test_property_instances_through_v2() -> None:
 # ----------------------------------------------------------------------
 
 
-def test_quality_lists_every_d34_rule_as_not_evaluated() -> None:
+def test_quality_evaluates_every_d34_rule() -> None:
+    """The S8 stand-ins (score 100, weight 0, rules_version "none") are gone."""
     quality = _solve(generate(PRESETS["small"], 1)).to_solution_v2_dict()["quality"]
-    assert QUALITY_RULE_IDS == ("S-GAP", "S-B2B", "S-LOAD16", "FAC_LOAD_IMBALANCE")
-    assert [e["rule_id"] for e in quality["breakdown"]] == list(QUALITY_RULE_IDS)
-    assert {e["status"] for e in quality["breakdown"]} == {"not_evaluated"}
-    assert all("raw" not in e and "penalty" not in e and e["reason"] for e in quality["breakdown"])
-    assert quality["not_evaluated_rule_ids"] == list(QUALITY_RULE_IDS)
+    assert_quality_block(quality)
+    assert all(e["explanation"] and "reason" not in e for e in quality["breakdown"])
 
 
 def test_search_exhaustion_keeps_the_first_deepest_partial() -> None:

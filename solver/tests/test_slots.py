@@ -413,8 +413,9 @@ def test_a_malformed_grid_is_refused(overrides: dict[str, Any], match: str) -> N
 
 
 def test_no_solver_module_reads_the_canonical_grid() -> None:
-    """The canonical grid is a test helper: solver modules take only SlotId and SlotGrid."""
-    for name in ("graph", "backtracking", "colouring", "presolve", "validate"):
+    """The canonical grid is a test helper: solver modules take only SlotId and SlotGrid
+    (and DAY_NAMES, the contract's Monday..Friday axis, not grid data)."""
+    for name in ("graph", "backtracking", "colouring", "presolve", "validate", "scoring"):
         tree = ast.parse((REPO_ROOT / "solver" / f"{name}.py").read_text(encoding="utf-8"))
         imported = set()
         for node in ast.walk(tree):
@@ -422,4 +423,4 @@ def test_no_solver_module_reads_the_canonical_grid() -> None:
                 imported.update(alias.name for alias in node.names)
             assert not (isinstance(node, ast.Import)
                         and any(alias.name == "solver.slots" for alias in node.names)), name
-        assert imported <= {"SlotGrid", "SlotId"}, (name, imported)
+        assert imported <= {"SlotGrid", "SlotId", "DAY_NAMES"}, (name, imported)
