@@ -6,7 +6,7 @@
  * scheduled or scored here: this only reads where the solver put things.
  */
 
-import type { EdgeList, EnrichedSession } from '@/adapters/timetable';
+import { EXAMPLE_LABELS, type EdgeList, type EnrichedSession, type Labels } from '@/adapters/timetable';
 
 /** One room or sub-room held in one cell. */
 export interface Occupancy {
@@ -20,7 +20,11 @@ export interface Occupancy {
   sessionId: string | null;
 }
 
-export function roomOccupancies(sessions: EnrichedSession[], edgeList: EdgeList): Occupancy[] {
+export function roomOccupancies(
+  sessions: EnrichedSession[],
+  edgeList: EdgeList,
+  labels: Labels = EXAMPLE_LABELS
+): Occupancy[] {
   const parentOf = new Map(edgeList.rooms.map((r) => [r.id, r.parent_room_id]));
   const placed = sessions.flatMap((s) =>
     s.periods.map((period) => ({
@@ -32,7 +36,7 @@ export function roomOccupancies(sessions: EnrichedSession[], edgeList: EdgeList)
       sessionId: s.sessionId,
     }))
   );
-  const pinned = edgeList.pinned_occupancy.flatMap((p) =>
+  const pinned = edgeList.pinned_occupancy.flatMap((p, i) =>
     p.room_ids.map((id) => {
       const parent = parentOf.get(id) ?? null;
       return {
@@ -40,7 +44,7 @@ export function roomOccupancies(sessions: EnrichedSession[], edgeList: EdgeList)
         subRoomId: parent ? id : null,
         day: p.day,
         period: p.period,
-        label: 'Pinned',
+        label: labels.pin(i)?.label ?? 'Pinned',
         sessionId: null,
       };
     })
@@ -67,7 +71,8 @@ export function freeRoomsAt(
   edgeList: EdgeList,
   occupancies: Occupancy[],
   day: number,
-  period: number
+  period: number,
+  labels: Labels = EXAMPLE_LABELS
 ): FreeRoom[] {
   const here = occupancies.filter((o) => o.day === day && o.period === period);
   return edgeList.rooms
@@ -81,10 +86,10 @@ export function freeRoomsAt(
       return [
         {
           roomId: room.id,
-          code: room.code,
+          code: labels.room(room),
           isLab: room.is_lab,
           capacity: room.capacity,
-          freeSubRoomCodes: free.map((s) => s.code),
+          freeSubRoomCodes: free.map((s) => labels.room(s)),
           subRoomCount: subRooms.length,
         },
       ];

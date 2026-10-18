@@ -26,7 +26,8 @@ interface TimetableHeaderProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   currentRole: UserRole;
-  solutionStatus: 'solved' | 'infeasible';
+  /** null: the instance has no solution yet */
+  solutionStatus: 'solved' | 'infeasible' | null;
   onToggleOutcome?: () => void;
   rejectMoveMode: boolean;
   onToggleRejectMode?: () => void;
@@ -70,9 +71,13 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 <Badge variant="success" data-testid="status-badge-solved" className="text-[10px]">
                   Solved · Conflict-Free
                 </Badge>
-              ) : (
+              ) : solutionStatus === 'infeasible' ? (
                 <Badge variant="destructive" data-testid="status-badge-infeasible" className="text-[10px]">
                   Infeasible Instance
+                </Badge>
+              ) : (
+                <Badge variant="outline" data-testid="status-badge-unsolved" className="text-[10px]">
+                  Not solved yet
                 </Badge>
               )}
             </div>
@@ -111,6 +116,7 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
               >
                 <option value="example">Example instance</option>
                 <option value="d6_grid">D6 grid example (no solution)</option>
+                <option value="even_2025_26">EVEN 2025-26 SE+TE (real)</option>
               </select>
             </div>
           )}

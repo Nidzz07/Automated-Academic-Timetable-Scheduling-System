@@ -23,15 +23,19 @@ import {
 import {
   buildEnrichedSessions,
   cohortOptions,
+  Display,
   EdgeList,
   EnrichedSession,
   DAY_NAMES,
+  labelsFor,
 } from '@/adapters/timetable';
 import { chronosApiClient, EdgeListInstance } from '@/api/chronosApi';
 import { ContractValidationError } from '@/api/contractValidation';
 import {
   timetableQueryKey,
+  useDisplayQuery,
   useEdgeListQuery,
+  useInstanceSolutionQuery,
   useMoveSessionMutation,
   useTimetableQuery,
 } from '@/api/queries';
@@ -50,19 +54,24 @@ function TimetableApp() {
   const [instance, setInstance] = useState<EdgeListInstance>('example');
   const timetable = useTimetableQuery();
   const edgeList = useEdgeListQuery(instance);
+  const display = useDisplayQuery(instance);
+  const published = useInstanceSolutionQuery(instance);
+  const queries = [timetable, edgeList, display, published];
 
-  if (timetable.isPending || timetable.isError || edgeList.isPending || edgeList.isError) {
-    const error = timetable.error ?? edgeList.error;
+  if (
+    timetable.status !== 'success' ||
+    edgeList.status !== 'success' ||
+    display.status !== 'success' ||
+    published.status !== 'success'
+  ) {
+    const error = queries.find((q) => q.error)?.error;
     return (
       <div className="min-h-screen bg-background text-foreground">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           {error ? (
             <TimetableLoadError
               error={error}
-              onRetry={() => {
-                timetable.refetch();
-                edgeList.refetch();
-              }}
+              onRetry={() => queries.forEach((q) => q.refetch())}
             />
           ) : (
             <Card role="status" data-testid="timetable-loading">
@@ -80,6 +89,8 @@ function TimetableApp() {
     <TimetableWorkspace
       solution={timetable.data}
       edgeList={edgeList.data}
+      display={display.data}
+      publishedSolution={published.data}
       instance={instance}
       onInstanceChange={setInstance}
     />
@@ -117,11 +128,22 @@ function TimetableLoadError({ error, onRetry }: { error: Error; onRetry: () => v
 interface TimetableWorkspaceProps {
   solution: SolutionContract;
   edgeList: EdgeList;
+  /** D41 display sidecar; null for the contract examples */
+  display: Display | null;
+  /** The solution published beside a non-example instance's edge list; null when not solved yet */
+  publishedSolution: SolutionContract | null;
   instance: EdgeListInstance;
   onInstanceChange: (instance: EdgeListInstance) => void;
 }
 
-function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: TimetableWorkspaceProps) {
+function TimetableWorkspace({
+  solution,
+  edgeList,
+  display,
+  publishedSolution,
+  instance,
+  onInstanceChange,
+}: TimetableWorkspaceProps) {
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('administrator');
   // Persona choices default to the first option the payload offers
@@ -152,8 +174,13 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
 
   const caps = ROLE_CAPABILITIES[currentRole];
 
-  // The solution examples were solved for the example instance; the D6 instance has no solution
+  // The solution examples were solved for the example instance; other instances show their own
+  // published solution, or none (Not solved yet)
   const isExample = instance === 'example';
+  const shown = isExample ? solution : publishedSolution;
+  const labels = useMemo(() => labelsFor(display), [display]);
+  // The mock validates moves against the example edge list only
+  const canDrag = caps.canDragAndDrop && isExample;
 
   // Helper to toggle between solved timetable and infeasible diagnosis
   const handleToggleOutcome = async () => {
@@ -178,9 +205,9 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
 
   // Enriched sessions if solved
   const allSessions = useMemo(() => {
-    if (!isExample || !isSolvedSolution(solution)) return [];
-    return buildEnrichedSessions(solution.assignment, edgeList);
-  }, [solution, edgeList, isExample]);
+    if (!shown || !isSolvedSolution(shown)) return [];
+    return buildEnrichedSessions(shown.assignment, edgeList, labels);
+  }, [shown, edgeList, labels]);
 
   // Selected session lookup
   const selectedSession = useMemo<EnrichedSession | null>(() => {
@@ -192,9 +219,14 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
     () => [...new Set(allSessions.map((s) => s.facultyInitials))].sort(),
     [allSessions]
   );
-  const cohorts = useMemo(() => cohortOptions(edgeList), [edgeList]);
-  const selectedFaculty = facultyChoice ?? facultyOptions[0] ?? '';
-  const selectedStudentDivision = studentChoice ?? cohorts[0]?.id ?? 'all';
+  const cohorts = useMemo(() => cohortOptions(edgeList, labels), [edgeList, labels]);
+  // A choice made on another instance falls back to this instance's first option
+  const hasCohort = (id: string | null) => cohorts.some((c) => c.id === id);
+  const selectedFaculty =
+    facultyChoice !== null && facultyOptions.includes(facultyChoice) ? facultyChoice : facultyOptions[0] ?? '';
+  const selectedStudentDivision =
+    studentChoice !== null && hasCohort(studentChoice) ? studentChoice : cohorts[0]?.id ?? 'all';
+  const selectedCohortFilter = hasCohort(cohortFilter) ? cohortFilter : 'all';
 
   // Compute sessions for selected faculty (for faculty role view)
   const facultySessions = useMemo(() => {
@@ -210,25 +242,25 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
     if (currentRole === 'faculty') {
       return 'all'; // handled by session filtering or pass-through
     }
-    return cohortFilter;
-  }, [currentRole, selectedStudentDivision, cohortFilter]);
+    return selectedCohortFilter;
+  }, [currentRole, selectedStudentDivision, selectedCohortFilter]);
 
   // If role is faculty, derive solution subset showing only this faculty's sessions
   const roleFilteredSolution = useMemo<SolvedSolution | null>(() => {
-    if (!isSolvedSolution(solution)) return null;
-    if (currentRole !== 'faculty') return solution;
+    if (!shown || !isSolvedSolution(shown)) return null;
+    if (currentRole !== 'faculty') return shown;
 
     // Filter assignments to only those belonging to the selected faculty
     const facultySessionIds = new Set(facultySessions.map((s) => s.sessionId));
-    const filteredAssignments = solution.assignment.filter((a) =>
+    const filteredAssignments = shown.assignment.filter((a) =>
       facultySessionIds.has(a.session_id)
     );
 
     return {
-      ...solution,
+      ...shown,
       assignment: filteredAssignments,
     };
-  }, [solution, currentRole, facultySessions]);
+  }, [shown, currentRole, facultySessions]);
 
   /**
    * Optimistic drag-and-drop handler with clean revert-on-reject.
@@ -236,7 +268,7 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
    */
   const handleMoveSession = async (sessionId: string, targetDay: DayIndex, targetPeriod: number) => {
     // Only drag-enabled roles may move sessions
-    if (!caps.canDragAndDrop) {
+    if (!canDrag) {
       return;
     }
 
@@ -346,7 +378,7 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
       <div className="mx-auto max-w-7xl px-4 py-8 space-y-5 sm:px-6 lg:px-8">
         {/* Header Toolbar */}
         <TimetableHeader
-          cohortFilter={cohortFilter}
+          cohortFilter={selectedCohortFilter}
           onCohortFilterChange={setCohortFilter}
           cohortOptions={cohorts}
           instance={instance}
@@ -359,8 +391,8 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
           currentRole={currentRole}
-          solutionStatus={solution.status}
-          onToggleOutcome={handleToggleOutcome}
+          solutionStatus={shown?.status ?? null}
+          onToggleOutcome={isExample ? handleToggleOutcome : undefined}
           rejectMoveMode={rejectMoveMode}
           onToggleRejectMode={handleToggleRejectMode}
         />
@@ -388,33 +420,33 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
         )}
 
         {/* Faculty Workload View (Visible only to Faculty Role) */}
-        {currentRole === 'faculty' && isSolvedSolution(solution) && (
+        {currentRole === 'faculty' && shown && isSolvedSolution(shown) && (
           <FacultyWorkloadCard
             facultyInitials={selectedFaculty}
             facultySessions={facultySessions}
-            loadRule={toQualityView(solution).rules.find((r) => r.rule_id === 'S-LOAD16')}
+            loadRule={toQualityView(shown).rules.find((r) => r.rule_id === 'S-LOAD16')}
           />
         )}
 
         {/* Infeasible Diagnosis Panel (When solver outcome is infeasible) */}
-        {isExample && isInfeasibleSolution(solution) && (
+        {shown && isInfeasibleSolution(shown) && (
           <InfeasibilityDiagnosisPanel
-            infeasibleSolution={solution}
-            onApplyRelaxation={handleToggleOutcome}
-            onSwitchToSolved={handleToggleOutcome}
+            infeasibleSolution={shown}
+            onApplyRelaxation={isExample ? handleToggleOutcome : undefined}
+            onSwitchToSolved={isExample ? handleToggleOutcome : undefined}
           />
         )}
 
         {/* Quality Score & Rules Breakdown (Admin / Coordinator only) */}
-        {isExample && caps.showQualityScore && isSolvedSolution(solution) && showQualityCard && (
+        {shown && caps.showQualityScore && isSolvedSolution(shown) && showQualityCard && (
           <QualityScoreCard
-            quality={toQualityView(solution)}
-            metadata={solution.metadata}
+            quality={toQualityView(shown)}
+            metadata={shown.metadata}
           />
         )}
 
         {/* Empty state: solver returned a solved timetable with no sessions */}
-        {isExample && isSolvedSolution(solution) && solution.assignment.length === 0 && (
+        {shown && isSolvedSolution(shown) && shown.assignment.length === 0 && (
           <Card data-testid="timetable-empty">
             <CardHeader>
               <CardTitle>No sessions scheduled</CardTitle>
@@ -424,8 +456,7 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
         )}
 
         {/* Main Weekly Grid (the edge list's periods and days; rendered when solved) */}
-        {(!isExample ||
-          (isSolvedSolution(solution) && solution.assignment.length > 0 && roleFilteredSolution)) && (
+        {(!shown || (isSolvedSolution(shown) && shown.assignment.length > 0 && roleFilteredSolution)) && (
           <main className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
               <span className="font-semibold text-foreground">
@@ -433,23 +464,24 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
                 {edgeList.slot_grid.days} Days) — {caps.title} View
               </span>
               <span className="font-mono text-[11px]">
-                {caps.canDragAndDrop ? 'Interactive: Drag Sessions to Reschedule' : 'Read-Only Schedule'}
+                {canDrag ? 'Interactive: Drag Sessions to Reschedule' : 'Read-Only Schedule'}
               </span>
             </div>
 
-            {!isExample && (
+            {!shown && (
               <p data-testid="no-solution-note" className="px-1 text-xs text-muted-foreground">
-                No solution is published for this instance; the grid shows its periods, breaks and
-                pinned occupancy only.
+                Not solved yet. No solution is published for this instance; the grid shows its
+                periods, breaks and pinned occupancy only.
               </p>
             )}
 
             <TimetableGrid
               edgeList={edgeList}
-              solution={isExample ? roleFilteredSolution : null}
+              solution={roleFilteredSolution}
+              labels={labels}
               cohortFilter={effectiveCohortFilter}
               showPinnedBlocks={currentRole !== 'faculty'}
-              canDragAndDrop={caps.canDragAndDrop}
+              canDragAndDrop={canDrag}
               selectedSessionId={selectedSessionId}
               provisionalSessionId={provisionalSessionId}
               onSelectSession={(id) => {
@@ -462,10 +494,10 @@ function TimetableWorkspace({ solution, edgeList, instance, onInstanceChange }: 
         )}
 
         {/* Room timetable and free rooms (whole-department roles; ROADMAP D15) */}
-        {caps.viewScope === 'all' && (!isExample || isSolvedSolution(solution)) && (
+        {caps.viewScope === 'all' && (!shown || isSolvedSolution(shown)) && (
           <section key={instance} className="grid gap-5 lg:grid-cols-2">
-            <RoomTimetable edgeList={edgeList} sessions={allSessions} />
-            <FreeRoomsPanel edgeList={edgeList} sessions={allSessions} />
+            <RoomTimetable edgeList={edgeList} sessions={allSessions} labels={labels} />
+            <FreeRoomsPanel edgeList={edgeList} sessions={allSessions} labels={labels} />
           </section>
         )}
 

@@ -21,8 +21,9 @@ import {
   buildEnrichedSessions,
   buildEnrichedLabBlocks,
   buildPins,
-  cohortsOverlap,
   EnrichedSession,
+  EXAMPLE_LABELS,
+  Labels,
 } from '@/adapters/timetable';
 import { ParallelLabBlock } from './ParallelLabBlock';
 import { CombinedLectureBlock } from './CombinedLectureBlock';
@@ -43,6 +44,8 @@ export interface TimetableGridProps {
    * Defaults to contracts/examples/solution_v2.solved.example.json.
    */
   solution?: SolvedSolution | null;
+  /** Names, pin kinds and clock times for the edge list's ids; defaults to the contract examples' */
+  labels?: Labels;
   /** Cohort filter: 'all' or a cohort id; overlapping cohorts (batches of a division) are shown */
   cohortFilter?: string;
   /** Optional click handler when a session card is selected */
@@ -193,6 +196,7 @@ const DraggableSessionItem: React.FC<DraggableSessionItemProps> = ({
 export const TimetableGrid: React.FC<TimetableGridProps> = ({
   edgeList = getExampleEdgeList(),
   solution = getSolvedSolutionFixture(),
+  labels = EXAMPLE_LABELS,
   cohortFilter = 'all',
   onSelectSession,
   showPinnedBlocks = true,
@@ -218,16 +222,16 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
 
   // 2. Build enriched sessions from the solution's placements
   const sessions = useMemo(
-    () => buildEnrichedSessions(solution?.assignment ?? [], edgeList),
-    [solution, edgeList]
+    () => buildEnrichedSessions(solution?.assignment ?? [], edgeList, labels),
+    [solution, edgeList, labels]
   );
 
   const filteredSessions = useMemo(
     () =>
       cohortFilter === 'all'
         ? sessions
-        : sessions.filter((s) => cohortsOverlap(s.cohortId, cohortFilter)),
-    [sessions, cohortFilter]
+        : sessions.filter((s) => labels.overlap(s.cohortId, cohortFilter)),
+    [sessions, cohortFilter, labels]
   );
 
   // 3. Parallel lab blocks of the sessions in view
@@ -236,10 +240,10 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   // 4. Pinned occupancy (frozen items and each year's lunch) holding a cohort in view
   const filteredPins = useMemo(() => {
     if (!showPinnedBlocks) return [];
-    const pins = buildPins(edgeList);
+    const pins = buildPins(edgeList, labels);
     if (cohortFilter === 'all') return pins;
-    return pins.filter((p) => p.cohortIds.some((c) => cohortsOverlap(c, cohortFilter)));
-  }, [edgeList, cohortFilter, showPinnedBlocks]);
+    return pins.filter((p) => p.cohortIds.some((c) => labels.overlap(c, cohortFilter)));
+  }, [edgeList, cohortFilter, showPinnedBlocks, labels]);
 
   // Cells under a multi-period lab block (break rows included) are covered by its rowSpan
   const coveredSlots = useMemo(() => {
@@ -326,6 +330,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                     <span className="inline-flex items-center gap-1">
                       <Coffee className="h-3 w-3 text-amber-500" />P{period}
                     </span>
+                    {labels.clock(period) && <div className="font-normal">{labels.clock(period)}</div>}
                   </td>
                   {grid.days.map((day) =>
                     coveredSlots.has(`${day}-${period}`) ? null : (
@@ -347,6 +352,11 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                   {/* Period Column */}
                   <td className="p-3 text-center border-r border-border/60 bg-muted/20 align-top">
                     <div className="font-bold text-xs text-foreground">P{period}</div>
+                    {labels.clock(period) && (
+                      <div data-testid={`period-clock-${period}`} className="text-[10px] font-mono text-muted-foreground">
+                        {labels.clock(period)}
+                      </div>
+                    )}
                   </td>
 
                   {/* Day Cells */}
@@ -401,29 +411,30 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                           />
                         ))}
 
-                        {/* 4. Pinned occupancy: a year's lunch, or a frozen item */}
+                        {/* 4. Pinned occupancy, labelled by its display kind (D41): lunch, a frozen item, an exam, ... */}
                         {cellPins.map((pin) =>
-                          pin.isLunch ? (
+                          pin.kind === 'lunch' ? (
                             <div
                               key={pin.key}
                               data-testid={`lunch-cell-${day}-${period}`}
                               className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-orange-400/50 bg-orange-500/10 p-2 text-xs font-semibold text-orange-800 dark:text-orange-300"
                             >
                               <Utensils className="h-3 w-3" />
-                              <span>Lunch</span>
-                              {cohortFilter === 'all' && (
-                                <span className="font-normal">· {pin.cohortLabels.join(', ')}</span>
-                              )}
+                              <span>{pin.label}</span>
                             </div>
                           ) : (
                             <PinnedBlock
                               key={pin.key}
                               id={pin.key}
-                              label="Pinned occupancy"
+                              label={pin.label ?? 'Pinned occupancy'}
                               kind={
-                                pin.facultyInitials.length
-                                  ? `Faculty: ${pin.facultyInitials.join(', ')}`
-                                  : undefined
+                                [
+                                  pin.kind,
+                                  pin.decision,
+                                  pin.facultyInitials.length ? `Faculty: ${pin.facultyInitials.join(', ')}` : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(' · ') || undefined
                               }
                               roomCode={pin.roomCodes.join(', ') || undefined}
                               cohortLabel={pin.cohortLabels.join(', ') || undefined}

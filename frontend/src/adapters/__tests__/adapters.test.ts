@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { ContractValidationError, validateContract } from '@/api/contractValidation';
+import { MockChronosApiClient } from '@/api/chronosApi';
 import {
   DIAGNOSIS_METHOD_LABELS,
   InfeasibleSolution,
@@ -14,15 +15,20 @@ import {
   buildEnrichedSessions,
   buildPins,
   buildWeekGrid,
+  cohortOptions,
   cohortsOverlap,
+  Display,
+  EdgeList,
   getExampleEdgeList,
   getSolvedSolutionFixture,
+  labelsFor,
 } from '../timetable';
 import solvedExample from '@contracts/examples/solution_v1.solved.example.json';
 import infeasibleExample from '@contracts/examples/solution_v1.infeasible.example.json';
 import solvedV2Example from '@contracts/examples/solution_v2.solved.example.json';
 import infeasibleV2Example from '@contracts/examples/solution_v2.infeasible.example.json';
 import d6GridExample from '@contracts/examples/edge_list_v1.d6_grid.example.json';
+import presolveExample from '@contracts/examples/solution_v2.presolve.example.json';
 
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
@@ -145,6 +151,15 @@ describe('diagnosis view', () => {
     expect(view.unplaced_session_ids).toHaveLength(4);
   });
 
+  it('maps the v2 presolve example (row 9): a proven, not minimal, set and every session unplaced', () => {
+    const view = toDiagnosisView(infeasible(presolveExample));
+    expect(view.method).toBe('presolve');
+    expect(view.methodLabel.text).toBe('Proved infeasible by a counting check (not minimal)');
+    expect(view.minimal_conflicting_set.length).toBeGreaterThan(0);
+    expect(view.suggested_relaxation).toMatchObject({ action_type: 'MANUAL' });
+    expect(view.partial_placement).toEqual([]);
+  });
+
   it('maps a v1 diagnosis with no method, no slots and no partial placement', () => {
     const view = toDiagnosisView(infeasible(infeasibleExample));
     expect(view.method).toBeNull();
@@ -195,10 +210,10 @@ describe('timetable adapter', () => {
     ]);
   });
 
-  it('reads pinned blocks from pinned_occupancy, with no label of its own', () => {
+  it('reads pinned blocks from pinned_occupancy, with no kind or label of its own', () => {
     expect(buildPins(edgeList)).toEqual([
-      expect.objectContaining({ day: 3, period: 4, isLunch: false, roomCodes: ['508'], cohortLabels: ['SE-Comp B'] }),
-      expect.objectContaining({ day: 2, period: 7, isLunch: false, roomCodes: ['002'], cohortLabels: ['SE-Comp C'] }),
+      expect.objectContaining({ day: 3, period: 4, kind: null, label: null, roomCodes: ['508'], cohortLabels: ['SE-Comp B'] }),
+      expect.objectContaining({ day: 2, period: 7, kind: null, label: null, roomCodes: ['002'], cohortLabels: ['SE-Comp C'] }),
     ]);
   });
 
@@ -218,12 +233,50 @@ describe('D6 grid from the edge list', () => {
     expect(grid.teachingPeriods).toEqual([0, 1, 3, 4, 5, 6, 7, 8, 9]);
   });
 
-  it('reads each year’s lunch from pinned_occupancy: SE at P5, TE at P4', () => {
-    const lunch = buildPins(d6).filter((p) => p.isLunch);
-    expect(lunch).toHaveLength(10);
-    const se = lunch.filter((p) => p.cohortIds.includes('coh-div-se-a'));
-    const te = lunch.filter((p) => p.cohortIds.includes('coh-div-te-a'));
-    expect(se.map((p) => [p.day, p.period])).toEqual([[0, 5], [1, 5], [2, 5], [3, 5], [4, 5]]);
-    expect(te.map((p) => [p.day, p.period])).toEqual([[0, 4], [1, 4], [2, 4], [3, 4], [4, 4]]);
+  it('calls no pin lunch: it has no display sidecar, and a pin’s shape is not its kind (D41)', () => {
+    const pins = buildPins(d6);
+    expect(pins).toHaveLength(10);
+    expect(pins.every((p) => p.kind === null && p.label === null)).toBe(true);
+  });
+});
+
+describe('the real EVEN 2025-26 instance through its display sidecar (D41)', () => {
+  let edgeList: EdgeList;
+  let display: Display;
+  beforeAll(async () => {
+    const client = new MockChronosApiClient();
+    edgeList = await client.getEdgeList('even_2025_26');
+    display = (await client.getDisplay('even_2025_26'))!;
+  });
+
+  it('labels each pin by its display kind: each year’s lunch, frozen items, exams', () => {
+    const pins = buildPins(edgeList, labelsFor(display));
+    const lunchOf = (cohort: string) =>
+      pins.filter((p) => p.kind === 'lunch' && p.cohortIds.includes(cohort)).map((p) => [p.day, p.period, p.label]);
+    expect(lunchOf('coh-se-a')).toEqual([0, 1, 2, 3, 4].map((d) => [d, 5, 'SE lunch']));
+    expect(lunchOf('coh-te-a')).toEqual([0, 1, 2, 3, 4].map((d) => [d, 4, 'TE lunch']));
+    expect(pins.find((p) => p.day === 1 && p.period === 7 && p.roomCodes.includes('703-A'))).toMatchObject({
+      kind: 'frozen',
+      label: 'MDM-III Lab (CC) /A /SB',
+      decision: 'D24',
+    });
+    expect(pins.find((p) => p.kind === 'exam')?.label).toBe('DAA | LAB EXAM ESE | SE COMP NR');
+  });
+
+  it('takes names, subjects, rooms and clock times from display.json, not the ingestion example', () => {
+    const labels = labelsFor(display);
+    expect(labels.faculty('fac-kailas-devadkar')).toEqual({ initials: display.faculty['fac-kailas-devadkar'], name: display.faculty['fac-kailas-devadkar'] });
+    expect(labels.cohort('coh-se-a')).toBe('SE-Comp A');
+    expect(labels.subject('subj-ce206')).toEqual({ code: 'CE206', name: 'Operating Systems' });
+    expect(labels.room({ id: 'room-607b', code: 'x' })).toBe('607B');
+    expect(labels.clock(0)).toBe('09:00–10:00');
+    expect(labels.clock(2)).toBe('11:00–11:15');
+  });
+
+  it('tells apart the cohorts display.json names alike (every division has batches A–D)', () => {
+    const options = cohortOptions(edgeList, labelsFor(display));
+    expect(options.find((o) => o.id === 'coh-se-a-a')?.label).toBe('A (coh-se-a-a)');
+    expect(options.find((o) => o.id === 'coh-se-a')?.label).toBe('SE-Comp A');
+    expect(new Set(options.map((o) => o.label)).size).toBe(options.length);
   });
 });

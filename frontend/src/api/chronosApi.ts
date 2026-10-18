@@ -26,6 +26,7 @@ import edgeListExample from '@contracts/examples/edge_list_v1.example.json';
 import d6GridEdgeList from '@contracts/examples/edge_list_v1.d6_grid.example.json';
 import {
   DAY_NAMES,
+  Display,
   EdgeList,
   cohortsOverlap,
   getCohortLabel,
@@ -35,10 +36,21 @@ import {
 
 /**
  * Edge lists the mock serves. 'example' is the instance the solution examples were solved
- * for; 'd6_grid' shows the D6 grid (per-year lunch as pinned occupancy) and has no solution.
+ * for; 'd6_grid' shows the D6 grid (per-year lunch as pinned occupancy) and has no solution;
+ * 'even_2025_26' is the real CE EVEN 2025-26 SE+TE instance (S9 export, D41 display sidecar).
  */
 export const EDGE_LIST_INSTANCES = { example: edgeListExample, d6_grid: d6GridEdgeList };
-export type EdgeListInstance = keyof typeof EDGE_LIST_INSTANCES;
+export type EdgeListInstance = keyof typeof EDGE_LIST_INSTANCES | 'even_2025_26';
+
+// Lazy, so the 370 KB edge list loads only when picked; solution.json has no loader until it is solved
+const realEven = import.meta.glob('@instances/even-2025-26/{edge_list,display,solution}.json', {
+  import: 'default',
+});
+
+async function loadRealEven(file: 'edge_list' | 'display' | 'solution'): Promise<unknown> {
+  const load = Object.entries(realEven).find(([path]) => path.endsWith(`/${file}.json`))?.[1];
+  return load ? JSON.parse(JSON.stringify(await load())) : null;
+}
 
 export interface MoveSessionRequest {
   sessionId: string;
@@ -75,6 +87,18 @@ export interface ChronosApiClient {
    * Fetch an instance's edge list (grid, rooms, sessions, pinned occupancy).
    */
   getEdgeList(instance?: EdgeListInstance): Promise<EdgeList>;
+
+  /**
+   * The instance's display sidecar (D41: names, pin kinds and labels, clock times);
+   * null for the contract examples, which have none.
+   */
+  getDisplay(instance: EdgeListInstance): Promise<Display | null>;
+
+  /**
+   * The solution published beside the instance's edge list; null when it is not solved yet.
+   * The example instance's solutions come from getTimetable().
+   */
+  getInstanceSolution(instance: EdgeListInstance): Promise<SolutionContract | null>;
 
   /**
    * Request solver to generate a timetable.
@@ -143,7 +167,25 @@ export class MockChronosApiClient implements ChronosApiClient {
   }
 
   public async getEdgeList(instance: EdgeListInstance = 'example'): Promise<EdgeList> {
+    if (instance === 'even_2025_26') return validateContract('edge_list', await loadRealEven('edge_list'));
     return validateContract('edge_list', JSON.parse(JSON.stringify(EDGE_LIST_INSTANCES[instance])));
+  }
+
+  public async getDisplay(instance: EdgeListInstance): Promise<Display | null> {
+    if (instance !== 'even_2025_26') return null;
+    const display = (await loadRealEven('display')) as Display;
+    const pins = (await this.getEdgeList(instance)).pinned_occupancy.length;
+    // pins[i] describes pinned_occupancy[i]: a sidecar out of step would mislabel every pin
+    if (display.pins.length !== pins) {
+      throw new Error(`display.json has ${display.pins.length} pins for ${pins} pinned_occupancy entries`);
+    }
+    return display;
+  }
+
+  public async getInstanceSolution(instance: EdgeListInstance): Promise<SolutionContract | null> {
+    if (instance !== 'even_2025_26') return null;
+    const solution = await loadRealEven('solution');
+    return solution === null ? null : parseSolution(solution);
   }
 
   public async generateTimetable(): Promise<SolutionContract> {

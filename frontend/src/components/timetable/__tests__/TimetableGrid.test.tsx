@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { TimetableGrid } from '../TimetableGrid';
-import { getSolvedSolutionFixture } from '@/adapters/timetable';
+import { EdgeList, Labels, getSolvedSolutionFixture, labelsFor } from '@/adapters/timetable';
 import { SolvedSolution, SolutionContract } from '@/adapters/solution';
 import { validateContract } from '@/api/contractValidation';
+import { MockChronosApiClient } from '@/api/chronosApi';
 import d6GridExample from '@contracts/examples/edge_list_v1.d6_grid.example.json';
 
 describe('TimetableGrid Component', () => {
@@ -161,29 +162,50 @@ describe('TimetableGrid Component', () => {
 describe('TimetableGrid on the D6 grid example (edge_list_v1.d6_grid.example.json)', () => {
   const d6 = validateContract('edge_list', d6GridExample);
 
-  it('shows SE-Comp A with lunch at P5 every day and P4 as a teaching period', () => {
+  it('shows P4 and P5 as teaching periods and P2 as a break', () => {
     render(<TimetableGrid edgeList={d6} solution={null} cohortFilter="coh-div-se-a" />);
     expect(screen.getByTestId('break-row-2')).toBeInTheDocument();
     expect(screen.getByTestId('period-row-4')).toBeInTheDocument();
     expect(screen.getByTestId('period-row-5')).toBeInTheDocument();
-    for (const day of [0, 1, 2, 3, 4]) {
-      expect(screen.getByTestId(`lunch-cell-${day}-5`)).toHaveTextContent('Lunch');
-      expect(screen.queryByTestId(`lunch-cell-${day}-4`)).not.toBeInTheDocument();
-    }
   });
 
-  it('shows TE-Comp A with lunch at P4 every day, not P5', () => {
-    render(<TimetableGrid edgeList={d6} solution={null} cohortFilter="coh-div-te-a" />);
+  it('draws its pins as pinned occupancy, never as lunch: no display sidecar gives their kind (D41)', () => {
+    render(<TimetableGrid edgeList={d6} solution={null} />);
+    expect(screen.queryAllByTestId(/^lunch-cell-/)).toHaveLength(0);
+    expect(screen.getAllByTestId('pinned-block')).toHaveLength(10);
+  });
+});
+
+describe('TimetableGrid on the real EVEN 2025-26 instance (display.json labels, D41)', () => {
+  let edgeList: EdgeList;
+  let labels: Labels;
+  beforeAll(async () => {
+    const client = new MockChronosApiClient();
+    edgeList = await client.getEdgeList('even_2025_26');
+    labels = labelsFor(await client.getDisplay('even_2025_26'));
+  });
+
+  it('shows SE-Comp A’s lunch at P5 every day and TE-Comp A’s at P4, by display kind', () => {
+    const { unmount } = render(<TimetableGrid edgeList={edgeList} labels={labels} solution={null} cohortFilter="coh-se-a" />);
     for (const day of [0, 1, 2, 3, 4]) {
-      expect(screen.getByTestId(`lunch-cell-${day}-4`)).toHaveTextContent('Lunch');
+      expect(screen.getByTestId(`lunch-cell-${day}-5`)).toHaveTextContent('SE lunch');
+      expect(screen.queryByTestId(`lunch-cell-${day}-4`)).not.toBeInTheDocument();
+    }
+    unmount();
+    render(<TimetableGrid edgeList={edgeList} labels={labels} solution={null} cohortFilter="coh-te-a" />);
+    for (const day of [0, 1, 2, 3, 4]) {
+      expect(screen.getByTestId(`lunch-cell-${day}-4`)).toHaveTextContent('TE lunch');
       expect(screen.queryByTestId(`lunch-cell-${day}-5`)).not.toBeInTheDocument();
     }
   });
 
-  it('shows both years\' lunches, each naming its cohorts, when unfiltered', () => {
-    render(<TimetableGrid edgeList={d6} solution={null} />);
-    expect(screen.getByTestId('lunch-cell-0-4')).toHaveTextContent('div-te-a');
-    expect(screen.getByTestId('lunch-cell-0-5')).toHaveTextContent('div-se-a');
-    expect(screen.queryAllByTestId('pinned-block')).toHaveLength(0);
+  it('labels frozen items by name and shows each period’s clock time', () => {
+    render(<TimetableGrid edgeList={edgeList} labels={labels} solution={null} cohortFilter="coh-se-a" />);
+    const frozen = screen
+      .getAllByTestId('pinned-block')
+      .find((b) => b.textContent?.includes('MDM-III Lab (CC) /A /SB'));
+    expect(frozen).toHaveTextContent('frozen · D24');
+    expect(screen.getByTestId('period-clock-0')).toHaveTextContent('09:00–10:00');
+    expect(screen.getByTestId('period-clock-9')).toHaveTextContent('17:15–18:15');
   });
 });

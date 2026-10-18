@@ -1,12 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import App from '@/App';
 import { FreeRoomsPanel, RoomTimetable } from '../RoomViews';
 import {
   buildEnrichedSessions,
+  cohortOptions,
   getExampleEdgeList,
   getSolvedSolutionFixture,
 } from '@/adapters/timetable';
+import { chronosApiClient } from '@/api/chronosApi';
 
 const edgeList = getExampleEdgeList();
 const assignment = getSolvedSolutionFixture().assignment;
@@ -69,13 +71,74 @@ describe('Room views in the app', () => {
 
     fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: 'd6_grid' } });
     expect(await screen.findByTestId('no-solution-note')).toBeInTheDocument();
-    expect(screen.getByTestId('lunch-cell-0-5')).toHaveTextContent('div-se-a');
-    expect(screen.getByTestId('lunch-cell-0-4')).toHaveTextContent('div-te-a');
     expect(within(screen.getByTestId('free-rooms')).getByTestId('batch-places-702')).toHaveTextContent(
       '2 of 2 batch places free (702-A, 702-B)'
     );
 
     fireEvent.click(screen.getByTestId('role-button-student'));
     expect(screen.queryByTestId('room-timetable')).not.toBeInTheDocument();
+  });
+});
+
+describe('The real EVEN 2025-26 instance in the app', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const openRealInstance = async () => {
+    render(<App />);
+    await screen.findByTestId('timetable-grid');
+    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: 'even_2025_26' } });
+    await screen.findByTestId('period-clock-0');
+  };
+
+  it('says Not solved yet while solution.json is absent, and shows its lunches and pins', async () => {
+    await openRealInstance();
+    expect(screen.getByTestId('no-solution-note')).toHaveTextContent('Not solved yet');
+    expect(screen.getByTestId('status-badge-unsolved')).toHaveTextContent('Not solved yet');
+    expect(screen.queryByTestId('toggle-outcome-button')).not.toBeInTheDocument();
+    expect(screen.getAllByText('SE lunch')).toHaveLength(5);
+    expect(screen.getAllByText('TE lunch')).toHaveLength(5);
+  });
+
+  it('shows pinned rooms in the room timetable and free rooms from display.json', async () => {
+    await openRealInstance();
+    const rooms = screen.getByTestId('room-timetable');
+    fireEvent.change(within(rooms).getByLabelText('Select room'), { target: { value: 'room-703' } });
+    // Tuesday P7: the D24 frozen MDM-III lab holds batch place 703-A
+    expect(within(rooms).getByTestId('room-cell-1-7')).toHaveTextContent('MDM-III Lab (CC) /A /SB (703-A)');
+
+    const free = screen.getByTestId('free-rooms');
+    fireEvent.change(within(free).getByLabelText('Free rooms day'), { target: { value: '1' } });
+    fireEvent.change(within(free).getByLabelText('Free rooms period'), { target: { value: '7' } });
+    expect(within(free).getByTestId('batch-places-703')).toHaveTextContent('1 of 2 batch places free (703-B)');
+    // 603 is held whole by a frozen MDM-DBMS lab, 509 by an out-of-scope M.Tech lab
+    expect(within(free).queryByTestId('free-room-603')).not.toBeInTheDocument();
+    expect(within(free).queryByTestId('free-room-509')).not.toBeInTheDocument();
+  });
+
+  it('resets role selections that do not exist in the instance switched to', async () => {
+    await openRealInstance();
+    fireEvent.click(screen.getByTestId('role-button-student'));
+    fireEvent.change(screen.getByLabelText('Select student division'), { target: { value: 'coh-se-a-a' } });
+    expect(screen.getByLabelText('Select student division')).toHaveValue('coh-se-a-a');
+
+    // back to the example instance (cached, so the workspace keeps its state)
+    fireEvent.click(screen.getByTestId('role-button-administrator'));
+    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: 'example' } });
+    fireEvent.click(screen.getByTestId('role-button-student'));
+
+    const first = cohortOptions(getExampleEdgeList())[0].id;
+    expect(screen.getByLabelText('Select student division')).toHaveValue(first);
+    // the grid is not empty: before the fix it filtered by a cohort the example does not have
+    const grid = screen.getByTestId('timetable-grid');
+    expect(within(grid).getAllByTestId(/^(session-cell-|batch-session-|combined-division-lecture)/).length).toBeGreaterThan(0);
+  });
+
+  it('shows the quality card once a solution is published beside the edge list', async () => {
+    // stand-in payload: only checks the card follows the instance's own solution
+    vi.spyOn(chronosApiClient, 'getInstanceSolution').mockResolvedValue(getSolvedSolutionFixture());
+    await openRealInstance();
+    const rule = getSolvedSolutionFixture().quality.breakdown[0].rule_id;
+    expect(screen.getByTestId(`quality-rule-${rule}`)).toBeInTheDocument();
+    expect(screen.queryByTestId('no-solution-note')).not.toBeInTheDocument();
   });
 });
