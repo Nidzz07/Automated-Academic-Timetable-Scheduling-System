@@ -2,10 +2,8 @@
 
 Every check gets a minimal instance it rejects and a neighbouring one it
 passes.  A rejection must also reach ``backtrack_solve`` as an infeasible
-``solution_v1`` result carrying the certificate, with no search.  Under
-``solution.v2`` it is refused (no ``diagnosis.method`` fits a certificate,
-proposed contract row 9), and its v2 entry and relaxation are checked part by
-part against the schema.
+``solution_v1`` result carrying the certificate, with no search, and as a
+``solution.v2`` result with ``diagnosis.method = "presolve"`` (row 9, D43).
 """
 
 from __future__ import annotations
@@ -33,7 +31,7 @@ from solver.tests.test_backtracking import (
     _room,
     _session,
 )
-from solver.tests.test_solution_v2 import assert_v2_certificate_fields
+from solver.tests.test_solution_v2 import SOLUTION_V2, assert_v2_certificate_fields
 
 SOLUTION_V1 = Draft202012Validator(json.loads(
     (Path(__file__).resolve().parents[2] / "contracts" / "solution_v1.schema.json")
@@ -64,11 +62,11 @@ def _assert_rejected(payload: dict[str, Any], check: str, kind: str) -> Certific
     solution = result.to_solution_dict()
     SOLUTION_V1.validate(solution)
     assert solution["diagnosis"]["minimal_conflicting_set"][0]["description"] == cert.reason
-    with pytest.raises(ValueError, match="row 9"):
-        result.to_solution_v2_dict()
-    fields = cert.to_v2_fields()
-    assert_v2_certificate_fields(fields)
-    assert fields["minimal_conflicting_set"][0]["kind"] == kind
+    v2 = result.to_solution_v2_dict()
+    SOLUTION_V2.validate(v2)
+    assert v2["diagnosis"]["method"] == "presolve"
+    assert_v2_certificate_fields(v2["diagnosis"])
+    assert v2["diagnosis"]["minimal_conflicting_set"][0]["kind"] == kind
     return cert
 
 
