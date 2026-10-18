@@ -1,0 +1,21 @@
+instance,seed,sessions,edges,solved,outcome,bt_ms,bt_nodes,bt_validator,wp_ms,wp_colours,wp_unplaced,wp_validator
+small,1,12,36,True,solved,7.955,11,valid,0.725,5,0,valid
+small,2,12,36,True,solved,7.127,11,valid,0.777,5,0,valid
+small,3,12,36,True,solved,6.809,11,valid,0.728,6,0,valid
+small,4,12,36,True,solved,6.862,11,valid,0.768,5,0,valid
+small,5,12,36,True,solved,6.835,11,valid,0.752,6,0,valid
+medium,1,81,883,True,solved,138.905,58,valid,6.603,22,0,valid
+medium,2,81,883,True,solved,149.107,58,valid,6.386,18,0,valid
+medium,3,81,883,True,solved,133.219,58,valid,6.568,21,0,valid
+medium,4,81,883,True,solved,142.892,58,valid,6.358,21,0,valid
+medium,5,81,883,True,solved,138.199,58,valid,6.317,19,0,valid
+large,1,242,2936,True,solved,1269.291,153,valid,20.256,25,0,valid
+large,2,242,2936,True,solved,1697.982,153,valid,19.924,24,0,valid
+large,3,242,2936,True,solved,2898.404,153,valid,29.54,24,0,valid
+large,4,242,2936,True,solved,2935.643,153,valid,43.099,24,0,valid
+large,5,242,2936,True,solved,2050.984,153,valid,31.014,23,0,valid
+infeasible,1,46,947,False,infeasible (presolve: cohort_load),17.386,0,n/a (not solved),14.747,38,2,n/a (incomplete)
+infeasible,2,46,947,False,infeasible (presolve: cohort_load),12.137,0,n/a (not solved),9.65,38,2,n/a (incomplete)
+infeasible,3,46,947,False,infeasible (presolve: cohort_load),14.142,0,n/a (not solved),9.608,38,2,n/a (incomplete)
+infeasible,4,46,947,False,infeasible (presolve: cohort_load),13.766,0,n/a (not solved),9.483,38,2,n/a (incomplete)
+infeasible,5,46,947,False,infeasible (presolve: cohort_load),15.544,0,n/a (not solved),8.826,38,2,n/a (incomplete)
