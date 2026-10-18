@@ -1,0 +1,944 @@
+{
+  "note": "Not a contract. The real EVEN timetable as printed, per edge_list.json session: printed day and start period; printed room if in the edge list's room set, else null (D10, D29). See docs/real-baseline-even-2025-26.md.",
+  "generated_by": "python -m ingestion.real_baseline",
+  "edge_list": "edge_list.json",
+  "assignment": {
+    "obs-t0-r1-c2-l0": {
+      "day": 1,
+      "period": 0,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t0-r1-c3-l0": {
+      "day": 2,
+      "period": 0,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t0-r2-c2-l0": {
+      "day": 1,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t0-r2-c3-l0": {
+      "day": 2,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t0-r2-c4-l0": {
+      "day": 3,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t0-r4-c1-l0": {
+      "day": 0,
+      "period": 3,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-a"
+    },
+    "obs-t0-r4-c1-l1": {
+      "day": 0,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-2"
+    },
+    "obs-t0-r4-c1-l2": {
+      "day": 0,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t0-r4-c2-l1": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-a"
+    },
+    "obs-t0-r4-c2-l2": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-2"
+    },
+    "obs-t0-r4-c2-l3": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t0-r4-c3-l0": {
+      "day": 2,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t0-r4-c3-l2": {
+      "day": 2,
+      "period": 3,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-a"
+    },
+    "obs-t0-r4-c3-l3": {
+      "day": 2,
+      "period": 3,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    "obs-t0-r4-c4-l0": {
+      "day": 3,
+      "period": 3,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t0-r4-c5-l0": {
+      "day": 4,
+      "period": 3,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t0-r5-c4-l0": {
+      "day": 3,
+      "period": 4,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t0-r5-c5-l0": {
+      "day": 4,
+      "period": 4,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t0-r7-c5-l0": {
+      "day": 4,
+      "period": 6,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    "obs-t0-r7-c5-l1": {
+      "day": 4,
+      "period": 6,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t0-r7-c5-l3": {
+      "day": 4,
+      "period": 6,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-a"
+    },
+    "obs-t10-r1-c5-l0": {
+      "day": 4,
+      "period": 0,
+      "room_id": "room-609",
+      "sub_room_id": null
+    },
+    "obs-t10-r2-c5-l0": {
+      "day": 4,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t10-r4-c5-l0": {
+      "day": 4,
+      "period": 3,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    "obs-t10-r6-c1-l0": {
+      "day": 0,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t10-r6-c2-l0": {
+      "day": 1,
+      "period": 5,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t10-r6-c2-l1": {
+      "day": 1,
+      "period": 5,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    "obs-t10-r6-c2-l2": {
+      "day": 1,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t10-r6-c2-l3": {
+      "day": 1,
+      "period": 5,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t10-r6-c3-l0": {
+      "day": 2,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t10-r6-c4-l0": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    "obs-t10-r6-c4-l1": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t10-r6-c4-l2": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-c"
+    },
+    "obs-t10-r6-c4-l3": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t10-r7-c1-l0": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-b"
+    },
+    "obs-t10-r7-c1-l1": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-b"
+    },
+    "obs-t10-r7-c1-l2": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-2"
+    },
+    "obs-t10-r7-c3-l0": {
+      "day": 2,
+      "period": 6,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t10-r7-c5-l0": {
+      "day": 4,
+      "period": 6,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-c"
+    },
+    "obs-t12-r1-c5-l0": {
+      "day": 4,
+      "period": 0,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t12-r1-c5-l1": {
+      "day": 4,
+      "period": 0,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    "obs-t12-r4-c5-l0": {
+      "day": 4,
+      "period": 3,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t12-r6-c1-l0": {
+      "day": 0,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t12-r6-c2-l0": {
+      "day": 1,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t12-r6-c3-l0": {
+      "day": 2,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t12-r6-c4-l0": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-a"
+    },
+    "obs-t12-r6-c4-l1": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-b"
+    },
+    "obs-t12-r6-c4-l2": {
+      "day": 3,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t12-r6-c4-l3": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-a"
+    },
+    "obs-t12-r7-c1-l0": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t12-r7-c1-l1": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-c"
+    },
+    "obs-t12-r7-c1-l2": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    "obs-t12-r7-c1-l3": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    "obs-t12-r7-c2-l0": {
+      "day": 1,
+      "period": 6,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t12-r7-c3-l0": {
+      "day": 2,
+      "period": 6,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    "obs-t12-r8-c4-l0": {
+      "day": 3,
+      "period": 7,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t12-r8-c4-l1": {
+      "day": 3,
+      "period": 7,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-a"
+    },
+    "obs-t14-r1-c1-l0": {
+      "day": 0,
+      "period": 0,
+      "room_id": "room-609",
+      "sub_room_id": null
+    },
+    "obs-t14-r1-c5-l0": {
+      "day": 4,
+      "period": 0,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-2"
+    },
+    "obs-t14-r1-c5-l1": {
+      "day": 4,
+      "period": 0,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t14-r1-c5-l2": {
+      "day": 4,
+      "period": 0,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t14-r1-c5-l3": {
+      "day": 4,
+      "period": 0,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-b"
+    },
+    "obs-t14-r4-c5-l0": {
+      "day": 4,
+      "period": 3,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t14-r6-c1-l0": {
+      "day": 0,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t14-r6-c2-l0": {
+      "day": 1,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t14-r6-c3-l0": {
+      "day": 2,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t14-r6-c4-l0": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-b"
+    },
+    "obs-t14-r6-c4-l1": {
+      "day": 3,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t14-r6-c4-l2": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    "obs-t14-r6-c4-l3": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    "obs-t14-r7-c1-l0": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t14-r7-c1-l1": {
+      "day": 0,
+      "period": 6,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t14-r7-c1-l2": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    "obs-t14-r7-c1-l3": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    "obs-t14-r7-c3-l0": {
+      "day": 2,
+      "period": 6,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    "obs-t2-r1-c2-l0": {
+      "day": 1,
+      "period": 0,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t2-r1-c3-l0": {
+      "day": 2,
+      "period": 0,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t2-r2-c2-l0": {
+      "day": 1,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t2-r2-c3-l0": {
+      "day": 2,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t2-r2-c4-l0": {
+      "day": 3,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t2-r4-c1-l0": {
+      "day": 0,
+      "period": 3,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-b"
+    },
+    "obs-t2-r4-c1-l1": {
+      "day": 0,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-3"
+    },
+    "obs-t2-r4-c1-l2": {
+      "day": 0,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t2-r4-c2-l1": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-b"
+    },
+    "obs-t2-r4-c2-l2": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-3"
+    },
+    "obs-t2-r4-c2-l3": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t2-r4-c3-l0": {
+      "day": 2,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t2-r4-c3-l2": {
+      "day": 2,
+      "period": 3,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-b"
+    },
+    "obs-t2-r4-c3-l3": {
+      "day": 2,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-3"
+    },
+    "obs-t2-r4-c4-l0": {
+      "day": 3,
+      "period": 3,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t2-r4-c5-l0": {
+      "day": 4,
+      "period": 3,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t2-r5-c4-l0": {
+      "day": 3,
+      "period": 4,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t2-r5-c5-l0": {
+      "day": 4,
+      "period": 4,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t2-r7-c5-l0": {
+      "day": 4,
+      "period": 6,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    "obs-t2-r7-c5-l1": {
+      "day": 4,
+      "period": 6,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t2-r7-c5-l3": {
+      "day": 4,
+      "period": 6,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-b"
+    },
+    "obs-t4-r1-c2-l0": {
+      "day": 1,
+      "period": 0,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t4-r1-c3-l0": {
+      "day": 2,
+      "period": 0,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t4-r1-c3-l1": {
+      "day": 2,
+      "period": 0,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-c"
+    },
+    "obs-t4-r1-c3-l2": {
+      "day": 2,
+      "period": 0,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-a"
+    },
+    "obs-t4-r1-c5-l0": {
+      "day": 4,
+      "period": 0,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t4-r2-c2-l0": {
+      "day": 1,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t4-r2-c4-l0": {
+      "day": 3,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t4-r4-c1-l0": {
+      "day": 0,
+      "period": 3,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t4-r4-c2-l0": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    "obs-t4-r4-c2-l1": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-c"
+    },
+    "obs-t4-r4-c2-l2": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-a"
+    },
+    "obs-t4-r4-c3-l0": {
+      "day": 2,
+      "period": 3,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t4-r4-c4-l0": {
+      "day": 3,
+      "period": 3,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    "obs-t4-r4-c4-l1": {
+      "day": 3,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-2"
+    },
+    "obs-t4-r4-c4-l2": {
+      "day": 3,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t4-r4-c5-l0": {
+      "day": 4,
+      "period": 3,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    "obs-t4-r4-c5-l1": {
+      "day": 4,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-2"
+    },
+    "obs-t4-r4-c5-l2": {
+      "day": 4,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    "obs-t4-r5-c1-l0": {
+      "day": 0,
+      "period": 4,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t4-r5-c3-l0": {
+      "day": 2,
+      "period": 4,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t4-r7-c5-l0": {
+      "day": 4,
+      "period": 6,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t6-r1-c2-l0": {
+      "day": 1,
+      "period": 0,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t6-r1-c3-l0": {
+      "day": 2,
+      "period": 0,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    "obs-t6-r1-c3-l1": {
+      "day": 2,
+      "period": 0,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    "obs-t6-r1-c3-l2": {
+      "day": 2,
+      "period": 0,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-b"
+    },
+    "obs-t6-r1-c5-l0": {
+      "day": 4,
+      "period": 0,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t6-r2-c2-l0": {
+      "day": 1,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t6-r2-c4-l0": {
+      "day": 3,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t6-r4-c1-l0": {
+      "day": 0,
+      "period": 3,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t6-r4-c2-l0": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    "obs-t6-r4-c2-l1": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    "obs-t6-r4-c2-l2": {
+      "day": 1,
+      "period": 3,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-b"
+    },
+    "obs-t6-r4-c3-l0": {
+      "day": 2,
+      "period": 3,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t6-r4-c4-l0": {
+      "day": 3,
+      "period": 3,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    "obs-t6-r4-c4-l1": {
+      "day": 3,
+      "period": 3,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    "obs-t6-r4-c4-l2": {
+      "day": 3,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t6-r4-c5-l0": {
+      "day": 4,
+      "period": 3,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    "obs-t6-r4-c5-l1": {
+      "day": 4,
+      "period": 3,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    "obs-t6-r4-c5-l2": {
+      "day": 4,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    "obs-t6-r5-c1-l0": {
+      "day": 0,
+      "period": 4,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t6-r5-c3-l0": {
+      "day": 2,
+      "period": 4,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t6-r7-c5-l0": {
+      "day": 4,
+      "period": 6,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t8-r1-c5-l0": {
+      "day": 4,
+      "period": 0,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    "obs-t8-r2-c5-l0": {
+      "day": 4,
+      "period": 1,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t8-r4-c5-l0": {
+      "day": 4,
+      "period": 3,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    "obs-t8-r6-c1-l0": {
+      "day": 0,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t8-r6-c2-l0": {
+      "day": 1,
+      "period": 5,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-2"
+    },
+    "obs-t8-r6-c2-l1": {
+      "day": 1,
+      "period": 5,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-c"
+    },
+    "obs-t8-r6-c2-l2": {
+      "day": 1,
+      "period": 5,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-b"
+    },
+    "obs-t8-r6-c2-l3": {
+      "day": 1,
+      "period": 5,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-a"
+    },
+    "obs-t8-r6-c3-l0": {
+      "day": 2,
+      "period": 5,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t8-r6-c4-l0": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-2"
+    },
+    "obs-t8-r6-c4-l1": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-3"
+    },
+    "obs-t8-r6-c4-l2": {
+      "day": 3,
+      "period": 5,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    "obs-t8-r7-c1-l0": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-a"
+    },
+    "obs-t8-r7-c1-l1": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-a"
+    },
+    "obs-t8-r7-c1-l2": {
+      "day": 0,
+      "period": 6,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-3"
+    },
+    "obs-t8-r7-c3-l0": {
+      "day": 2,
+      "period": 6,
+      "room_id": null,
+      "sub_room_id": null
+    },
+    "obs-t8-r7-c5-l0": {
+      "day": 4,
+      "period": 6,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    "obs-t8-r7-c5-l1": {
+      "day": 4,
+      "period": 6,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    }
+  },
+  "unmapped": {}
+}
