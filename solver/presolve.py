@@ -108,8 +108,8 @@ class Certificate:
         ``edge_list_v1`` pins carry no kind, so a year's lunch, which the
         backend refuses to relax (Row 8 assessment), looks like any other pin.
 
-        Not emitted yet: ``diagnosis.method`` has no value for a pre-solve
-        proof (proposed contract row 9), so ``to_solution_v2_dict`` refuses it.
+        ``to_solution_v2_dict`` emits it under ``diagnosis.method = "presolve"``
+        (contract row 9, ROADMAP D43): proven jointly unsatisfiable, not minimal.
         """
         v1 = self.to_diagnosis()
         (entry,) = v1["minimal_conflicting_set"]
