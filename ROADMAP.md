@@ -77,6 +77,7 @@ Agents: read this file and CLAUDE.md before any task. §1 (ownership) and §3 (d
 | D40 | Combined lectures in the real timetable (two divisions together) are scheduled as one lecture per division, since D10 classrooms seat 80. The extra teacher load shows in S-LOAD16. | Team | 2026-10-17 |
 | D41 | Until the API exists (S13), names, pin kinds and labels, and period clock times reach the frontend through data/instances/even-2025-26/display.json, written by the S9 exporter. Not a contract. The UI never infers lunch from a pin's shape. | Team | 2026-10-17 |
 | D42 | Rooms 605 and 609 (6th floor, CE): used as classrooms only if classrooms.xlsx gives a capacity of at least 80; otherwise not used. | Nidhi | 2026-10-17 |
+| D43 | Contract row 9: diagnosis.method "presolve" (proven, not minimal). Signed by all three. | Team | 2026-10-18 |
 | D44 | "CE faculty" for D3 means the people in Faculty___Subjects.xlsx plus D25/D38 resolutions. Teachers found only in timetable legends (Deepak Nair, Sonali Dudhihalli, Suman M., Aman Yadav for AS201 PCS; Asma Tambe for FOM - II) are treated as other-department, so AS201 PCS is frozen at its current slots (D24) instead of rescheduled. | Nidhi | 2026-10-17 |
 | D45 | Faculty name spelling: Faculty___Subjects.xlsx is canonical; legend variants (C. R. Gajbhiye, Vaishnavi Rathod, A. A. Godbole, Amey Nile, P. B. Bhavathankar, Sonali D.) are aliases. seed_legends.py's spelling tables were checked by Nidhi on 2026-10-17 for SE and TE (closes R3 for SE/TE). | Nidhi | 2026-10-17 |
 

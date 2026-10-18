@@ -7,8 +7,9 @@ Every payload it produces here is validated against the frozen
   evaluated by :mod:`solver.scoring` (S10);
 * infeasible after a search - ``method = "search_exhaustion"``, the deepest
   consistent partial placement (proposal row 2) and the unplaced sessions;
-* a pre-solve certificate and a timeout are refused (proposed contract row 9;
-  ROADMAP D33).
+* infeasible by pre-solve - ``method = "presolve"`` (row 9, D43), nothing
+  placed, the certificate's entry and a MANUAL relaxation;
+* a timeout is refused (ROADMAP D33).
 
 The proposal's cross-field rules are checked as plain tests: the partial and the
 unplaced ids partition the sessions, ``sessions_assigned`` counts the partial,
@@ -52,11 +53,9 @@ def v2_part(*path: str) -> Draft202012Validator:
 
 
 def assert_v2_certificate_fields(fields: dict[str, Any]) -> None:
-    """What a pre-solve certificate would carry under v2, checked part by part.
-
-    The whole diagnosis cannot be validated: ``method`` has no value for a
-    certificate yet (proposed contract row 9).
-    """
+    """A pre-solve certificate's v2 entry and relaxation, checked part by part,
+    plus what the schema cannot say: the relaxation names the entry, is legal
+    for its kind, and nothing claims minimality (row 9: proven, not minimal)."""
     diagnosis = ("properties", "diagnosis", "properties")
     (entry,) = fields["minimal_conflicting_set"]
     v2_part(*diagnosis, "minimal_conflicting_set", "items").validate(entry)
@@ -66,6 +65,7 @@ def assert_v2_certificate_fields(fields: dict[str, Any]) -> None:
     assert relaxation["action"]["action_type"] in RELAXATION_MAP[entry["kind"]]
     assert relaxation["action"] == {"action_type": "MANUAL", "params": {}}
     assert relaxation["verification"] == {"status": "not_attempted", "runtime_ms": None}
+    assert "minimal" not in (entry["description"] + relaxation["description"]).lower()
 
 
 D34 = ["S-GAP", "S-B2B", "S-LOAD16", "FAC_LOAD_IMBALANCE"]
@@ -105,6 +105,9 @@ def _check_v2(edge_list: dict[str, Any], result: BacktrackResult) -> dict[str, A
     assert sorted(placed + unplaced) == sorted(ids)
     assert metadata["sessions_assigned"] == len(placed)
     assert metadata["slots_used"] is None
+    if diagnosis["method"] == "presolve":
+        assert placed == [] and unplaced == ids  # no search ran
+        assert_v2_certificate_fields(diagnosis)
     # The partial is conflict-free: lab blocks are placed whole or not at all,
     # and the validator passes it on the instance cut down to what it places.
     blocks = [set(b["session_ids"]) for b in edge_list["lab_blocks"]]
@@ -136,30 +139,30 @@ def test_feasible_presets_through_v2(preset: str, seed: int) -> None:
 
 
 @pytest.mark.parametrize("seed", [1, 2, 3])
-def test_infeasible_preset_is_refused_until_contract_row_9(seed: int) -> None:
-    """Pre-solve proves it (cohort pigeonhole on d00): no honest v2 method exists."""
+def test_infeasible_preset_is_a_presolve_result(seed: int) -> None:
+    """Pre-solve proves it (cohort pigeonhole on d00): method presolve (row 9)."""
     edge_list = generate(PRESETS["infeasible"], seed)
     result = _solve(edge_list)
     assert result.certificate is not None and result.certificate.check == "cohort_load"
-    with pytest.raises(ValueError, match="row 9"):
-        result.to_solution_v2_dict()
-    assert_v2_certificate_fields(result.certificate.to_v2_fields())
+    assert _check_v2(edge_list, result)["diagnosis"]["method"] == "presolve"
+
+
+def test_committed_presolve_example_is_the_infeasible_preset_seed_1() -> None:
+    """contracts/examples/solution_v2.presolve.example.json, reproduced; only the
+    wall-clock runtime is taken from the example."""
+    example = json.loads((REPO / "contracts" / "examples" / "solution_v2.presolve.example.json")
+                         .read_text(encoding="utf-8"))
+    result = _solve(generate(PRESETS["infeasible"], 1))
+    assert result.to_solution_v2_dict(runtime_ms=example["metadata"]["runtime_ms"]) == example
 
 
 def test_property_instances_through_v2() -> None:
-    seen = {"solved": 0, "search_exhaustion": 0, "certificate": 0}
+    seen = {"solved": 0, "search_exhaustion": 0, "presolve": 0}
     non_empty_partials = 0
     for i in range(N_INSTANCES):
         edge_list = generate_instance(random.Random(SEED + i))
-        result = _solve(edge_list)
-        if result.certificate is not None:
-            seen["certificate"] += 1
-            with pytest.raises(ValueError, match="row 9"):
-                result.to_solution_v2_dict()
-            assert_v2_certificate_fields(result.certificate.to_v2_fields())
-            continue
-        solution = _check_v2(edge_list, result)
-        seen["solved" if solution["status"] == "solved" else "search_exhaustion"] += 1
+        solution = _check_v2(edge_list, _solve(edge_list))
+        seen["solved" if solution["status"] == "solved" else solution["diagnosis"]["method"]] += 1
         non_empty_partials += bool(solution.get("diagnosis", {}).get("partial_placement"))
     # The property is only as strong as what it exercised.  Most exhausted
     # searches here fail on their first lab block (a teacher shared inside the

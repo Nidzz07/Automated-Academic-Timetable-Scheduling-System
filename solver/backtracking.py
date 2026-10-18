@@ -106,7 +106,7 @@ See :func:`_placeholder_diagnosis`.  It is not a minimal unsatisfiable
 subset; ``solver/mus.py`` does not exist yet.  ``solution.v2`` says what the
 result is: ``method = "search_exhaustion"``, no conflicting set, and the
 deepest consistent partial placement the search reached (proposal rows 2, 5).
-A pre-solve certificate has no v2 ``method`` yet (proposed contract row 9).
+A pre-solve certificate is ``method = "presolve"`` (contract row 9, D43).
 
 Stdlib only — ``solver/`` must never import ``networkx`` or any
 non-stdlib package (CONTEXT.md rule 3).
@@ -316,22 +316,17 @@ class BacktrackResult:
         nothing - so the conflicting set is empty and no relaxation is offered;
         ``partial_placement`` is the deepest consistent partial the search
         reached and ``metadata.sessions_assigned`` counts it (proposal row 2).
+        Infeasible by pre-solve: ``method = "presolve"`` (row 9, ROADMAP D43)
+        with the certificate's constraint and MANUAL relaxation
+        (:meth:`~solver.presolve.Certificate.to_v2_fields`); no search ran, so
+        nothing is placed and every session is unplaced.
 
         Raises:
             ValueError: on a timeout (ROADMAP D33: a job status, never a
-                contract payload), and on a pre-solve certificate.  A
-                certificate is a proof that is neither a minimal unsatisfiable
-                subset nor search exhaustion, so v2's ``diagnosis.method`` has
-                no honest value for it (proposed contract row 9);
-                :meth:`to_solution_dict` still reports it under v1.
+                contract payload).
         """
         if self.timed_out:
             raise ValueError("solution.v2 has no status for a search timeout (ROADMAP D33)")
-        if self.certificate is not None:
-            raise ValueError(
-                "solution.v2 has no diagnosis.method for a pre-solve certificate: it is "
-                "neither a MUS nor search exhaustion (proposed contract row 9)"
-            )
         metadata = self._metadata(total_sessions, runtime_ms)
         if self.solved:
             if self.edge_list is None:
@@ -346,12 +341,16 @@ class BacktrackResult:
             }
         metadata["sessions_assigned"] = len(self.partial_assignment)
         everyone = [*self.assignment, *self.unplaced_sessions]
+        found = (
+            {"method": "presolve", **self.certificate.to_v2_fields()}
+            if self.certificate is not None
+            else {"method": "search_exhaustion", "minimal_conflicting_set": []}
+        )
         return {
             "schema_version": "solution.v2",
             "status": "infeasible",
             "diagnosis": {
-                "method": "search_exhaustion",
-                "minimal_conflicting_set": [],
+                **found,
                 "partial_placement": self._placements(
                     self.partial_assignment, self.partial_rooms
                 ),

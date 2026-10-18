@@ -217,9 +217,9 @@ def _parse_grid(page: FacultyPage, table: _Element, findings: list[Finding]) -> 
     if page.days_off:
         findings.append(Finding(
             "faculty_day_off", where,
-            f"{page.name_raw} is marked 'PHD Day OFF' on {', '.join(page.days_off)}; D12 assumes "
-            "every member is available in all periods",
-            NEEDS_HUMAN,
+            f"{page.name_raw} is marked 'PHD Day OFF' on {', '.join(page.days_off)}: every "
+            "period of that day is unavailable",
+            "D36",
         ))
 
 

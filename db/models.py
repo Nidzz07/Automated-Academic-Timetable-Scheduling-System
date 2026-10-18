@@ -187,6 +187,8 @@ class PinnedKind(enum.Enum):
     PROJECT = "project"
     EXAM = "exam"
     BREAK = "break"
+    #: A session of an out-of-scope programme holding a CE room or teacher (D35).
+    OUT_OF_SCOPE = "out_of_scope"
 
 
 class TimetableStatus(enum.Enum):
@@ -240,6 +242,16 @@ cohort_division_membership = Table(
         primary_key=True,
         index=True,
     ),
+)
+
+#: The rooms a timetable may use (ROADMAP D8, D10, D42): the generation room set.
+#: Rooms are institute-level, so which of them one department's timetable may
+#: use is a fact about the timetable, not the room.
+timetable_room = Table(
+    "timetable_room",
+    Base.metadata,
+    Column("timetable_id", ForeignKey("timetable.id", ondelete="CASCADE"), primary_key=True),
+    Column("room_id", ForeignKey("room.id", ondelete="CASCADE"), primary_key=True, index=True),
 )
 
 #: Cohort -> Batch membership, the full expansion down to batch level.
@@ -603,6 +615,9 @@ class Cohort(Base):
     division_id: Mapped[int | None] = mapped_column(
         ForeignKey("cohort.id"), nullable=True, index=True
     )
+    #: The id the ingestion payload gave this cohort ('coh-se-a', 'coh-grp-pe-i-a').
+    #: The edge-list exporter uses it as the solver's cohort id.
+    source_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     department: Mapped[Department] = relationship()
     semester: Mapped[Semester | None] = relationship("Semester", foreign_keys=[semester_id])
@@ -696,11 +711,31 @@ class CombinedDivisions(Cohort):
 
 
 class Timetable(Base):
+    """One department timetable.
+
+    Scoped to one semester, or to a whole term: the EVEN 2025-26 timetable
+    covers SE (semester IV) and TE (semester VI) at once, because they share
+    faculty and rooms. A term-wide timetable has no ``semester_id`` and carries
+    ``term_code`` and ``academic_year`` instead.
+    """
+
     __tablename__ = "timetable"
+    __table_args__ = (
+        CheckConstraint(
+            "semester_id IS NOT NULL OR (term_code IS NOT NULL AND academic_year IS NOT NULL)",
+            name="semester_or_term",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     department_id: Mapped[int] = mapped_column(ForeignKey("department.id"), index=True)
-    semester_id: Mapped[int] = mapped_column(ForeignKey("semester.id"), index=True)
+    semester_id: Mapped[int | None] = mapped_column(
+        ForeignKey("semester.id"), nullable=True, index=True
+    )
+    term_code: Mapped[TermCode | None] = mapped_column(
+        SAEnum(TermCode, name="term_code", values_callable=_values), nullable=True
+    )
+    academic_year: Mapped[str | None] = mapped_column(String(16), nullable=True)
     name: Mapped[str] = mapped_column(String(255))
     status: Mapped[TimetableStatus] = mapped_column(
         SAEnum(TimetableStatus, name="timetable_status", values_callable=_values),
@@ -717,6 +752,7 @@ class Timetable(Base):
     sessions: Mapped[list[Session]] = relationship(
         back_populates="timetable", cascade="all, delete-orphan"
     )
+    rooms: Mapped[list[Room]] = relationship(secondary=timetable_room)
 
 
 class LabBlock(Base):
@@ -745,6 +781,8 @@ class LabBlock(Base):
     start_period: Mapped[int] = mapped_column(Integer)
     duration_periods: Mapped[int] = mapped_column(Integer, default=2)
     must_be_contiguous: Mapped[bool] = mapped_column(default=True, server_default="true")
+    #: The ingestion payload's lab-block id ('lab-t0-r4-c1').
+    source_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     sessions: Mapped[list[Session]] = relationship(back_populates="lab_block")
 
@@ -772,6 +810,7 @@ class Session(Base):
             "NOT (room_id IS NOT NULL AND sub_room_id IS NOT NULL)",
             name="room_xor_sub_room",
         ),
+        UniqueConstraint("timetable_id", "source_ref", name="uq_session_timetable_source_ref"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -803,6 +842,11 @@ class Session(Base):
     )
     #: Raw cell text, kept verbatim for traceability back to the .docx.
     source_cell: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    #: The ingestion payload's session id ('obs-t0-r4-c1-l0'), unique per timetable.
+    source_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    #: Null: the solver places it. Otherwise the ROADMAP decision that freezes it at
+    #: its printed slot ('D24', 'D26', 'D44'); the solver then sees it as occupancy.
+    frozen_by: Mapped[str | None] = mapped_column(String(8), nullable=True)
 
     timetable: Mapped[Timetable] = relationship(back_populates="sessions")
     cohort: Mapped[Cohort] = relationship()
@@ -814,11 +858,14 @@ class Session(Base):
 
 
 class PinnedBlock(Base):
-    """Immovable occupancy: MDM, HSS, LLC, activity, project, exams, breaks.
+    """Immovable occupancy: MDM, HSS, LLC, activity, project, exams, breaks, and
+    out-of-scope sessions holding a CE room or teacher (D35).
 
     Carries no solver-assigned fields - it is an input constraint, never an
     output. ``department_id`` is nullable because an institute-wide block (a
-    break) belongs to no single department.
+    break) belongs to no single department. A block may hold a teacher, a room
+    or sub-room, a cohort, or several of them; ``timetable_id`` says which
+    timetable it constrains.
     """
 
     __tablename__ = "pinned_block"
@@ -826,16 +873,31 @@ class PinnedBlock(Base):
         CheckConstraint("day >= 0 AND day <= 4", name="day_range"),
         CheckConstraint("period >= 0 AND period <= 9", name="period_range"),
         CheckConstraint("duration_periods >= 1", name="duration_positive"),
+        CheckConstraint(
+            "NOT (room_id IS NOT NULL AND sub_room_id IS NOT NULL)",
+            name="room_xor_sub_room",
+        ),
+        UniqueConstraint(
+            "timetable_id", "source_ref", name="uq_pinned_block_timetable_source_ref"
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     department_id: Mapped[int | None] = mapped_column(
         ForeignKey("department.id"), nullable=True, index=True
     )
+    timetable_id: Mapped[int | None] = mapped_column(
+        ForeignKey("timetable.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     #: Null when the block holds a slot institute-wide rather than one cohort.
     cohort_id: Mapped[int | None] = mapped_column(
         ForeignKey("cohort.id"), nullable=True, index=True
     )
+    faculty_id: Mapped[int | None] = mapped_column(
+        ForeignKey("faculty.id"), nullable=True, index=True
+    )
+    room_id: Mapped[int | None] = mapped_column(ForeignKey("room.id"), nullable=True)
+    sub_room_id: Mapped[int | None] = mapped_column(ForeignKey("sub_room.id"), nullable=True)
     label: Mapped[str] = mapped_column(String(255))
     day: Mapped[int] = mapped_column(Integer)
     period: Mapped[int] = mapped_column(Integer)
@@ -843,8 +905,44 @@ class PinnedBlock(Base):
     kind: Mapped[PinnedKind] = mapped_column(
         SAEnum(PinnedKind, name="pinned_kind", values_callable=_values)
     )
+    #: The ingestion id ('pin-lunch-se-a-mon', 'oos-t17-r1-c2-l0'), unique per timetable.
+    source_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     cohort: Mapped[Cohort | None] = relationship()
+    faculty: Mapped[Faculty | None] = relationship()
+    room: Mapped[Room | None] = relationship()
+    sub_room: Mapped[SubRoom | None] = relationship()
+
+
+class FacultyUnavailability(Base):
+    """A slot a faculty member cannot teach in, for one timetable (D36).
+
+    From printed unavailability ('PHD Day OFF'), not from a dated absence: that
+    is :class:`AbsenceRecord`.
+    """
+
+    __tablename__ = "faculty_unavailability"
+    __table_args__ = (
+        CheckConstraint("day >= 0 AND day <= 4", name="day_range"),
+        CheckConstraint("period >= 0 AND period <= 9", name="period_range"),
+        UniqueConstraint(
+            "timetable_id", "faculty_id", "day", "period", name="uq_faculty_unavailability_slot"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    timetable_id: Mapped[int] = mapped_column(
+        ForeignKey("timetable.id", ondelete="CASCADE"), index=True
+    )
+    faculty_id: Mapped[int] = mapped_column(
+        ForeignKey("faculty.id", ondelete="CASCADE"), index=True
+    )
+    day: Mapped[int] = mapped_column(Integer)
+    period: Mapped[int] = mapped_column(Integer)
+    #: As printed, e.g. 'PHD Day OFF'.
+    reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    faculty: Mapped[Faculty] = relationship()
 
 
 # ---------------------------------------------------------------------------

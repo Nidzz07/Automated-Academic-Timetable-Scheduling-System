@@ -53,7 +53,7 @@ def test_pages(ft: FacultyTimetable) -> None:
 
 def test_day_off_reported(ft: FacultyTimetable) -> None:
     assert _page(ft, "Swapnali Kurhade").days_off == ["Monday"]
-    assert any(f.category == "faculty_day_off" for f in ft.findings)
+    assert [f.resolution for f in ft.findings if f.category == "faculty_day_off"] == ["D36"]
 
 
 def test_loads_follow_d11_and_d23(ft: FacultyTimetable) -> None:

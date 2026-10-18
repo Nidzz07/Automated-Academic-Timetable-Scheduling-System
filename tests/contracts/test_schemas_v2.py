@@ -1,4 +1,4 @@
-"""Validation tests for the v2 contracts (docs/contract-change-proposal-v2.md, rows 1-6 and 8).
+"""Validation tests for the v2 contracts (docs/contract-change-proposal-v2.md, rows 1-6, 8 and 9).
 
 Mirrors ``test_schemas.py``: each v2 schema is a legal, closed JSON Schema; each v2
 example validates; a malformed variant of each example is rejected. On top of that
@@ -8,7 +8,8 @@ placeholder kinds, the infeasible branch that forbids anything timetable-shaped,
 block's per-rule status, the faculty-resolution states - and runs the cross-field
 rules JSON Schema cannot state (proposal sections 1, 2, 6, 8.3) as plain tests.
 Row 8 adds the wall-clock period axis of ROADMAP section 5 and the D6 grid
-example, which validates against the frozen ``edge_list_v1``.
+example, which validates against the frozen ``edge_list_v1``. Row 9 adds ``method = presolve``
+and an example in the shape ``solver.presolve.Certificate.to_v2_fields()`` gives (synthetic ids).
 """
 
 from __future__ import annotations
@@ -37,12 +38,14 @@ RELAXATION_MAP = "relaxation_actions_v2.json"
 INGESTION = "ingestion_v2.example.json"
 SOLVED = "solution_v2.solved.example.json"
 INFEASIBLE = "solution_v2.infeasible.example.json"
+PRESOLVE = "solution_v2.presolve.example.json"
 D6_GRID = "edge_list_v1.d6_grid.example.json"
 
 EXAMPLE_FILES = {
     INGESTION: "ingestion",
     SOLVED: "solution",
     INFEASIBLE: "solution",
+    PRESOLVE: "solution",
     D6_GRID: "edge_list",
 }
 
@@ -343,6 +346,14 @@ def _verified_without_runtime(payload: Any) -> Any:
     return payload
 
 
+def _presolve_placing_a_session(payload: Any) -> Any:
+    session_id = payload["diagnosis"]["unplaced_session_ids"].pop(0)
+    payload["diagnosis"]["partial_placement"] = [
+        {"session_id": session_id, "day": 0, "period": 0, "room_id": "R00", "sub_room_id": None}
+    ]
+    return payload
+
+
 def _lunch_pin_without_cohorts(payload: Any) -> Any:
     del payload["pinned_occupancy"][0]["cohort_ids"]
     return payload
@@ -390,6 +401,9 @@ MALFORMED: list[tuple[str, str, Mutator]] = [
     ("infeasible:manual-action-claimed-verified", INFEASIBLE, _manual_action_claimed_verified),
     ("infeasible:verified-without-runtime", INFEASIBLE, _verified_without_runtime),
     ("infeasible:slot-ref-with-extra-field", INFEASIBLE, _slot_ref_with_extra_field),
+    ("presolve:empty-conflicting-set", PRESOLVE, _mus_with_empty_set),
+    ("presolve:without-relaxation", PRESOLVE, _mus_without_relaxation),
+    ("presolve:partial-placement-not-empty", PRESOLVE, _presolve_placing_a_session),
     ("d6-grid:lunch-pin-without-cohorts", D6_GRID, _lunch_pin_without_cohorts),
 ]
 
@@ -460,6 +474,17 @@ def test_honest_search_exhaustion_result_validates() -> None:
     diagnosis["minimal_conflicting_set"] = []
     del diagnosis["suggested_relaxation"]
     assert_valid("solution", payload)
+
+
+def test_presolve_example_follows_row_9() -> None:
+    """Row 9: a pre-solve proof places nothing, and no description claims minimality."""
+    diagnosis = example(PRESOLVE)["diagnosis"]
+    assert diagnosis["method"] == "presolve"
+    assert diagnosis["minimal_conflicting_set"] and diagnosis["suggested_relaxation"]
+    assert diagnosis["partial_placement"] == []
+    texts = [entry["description"] for entry in diagnosis["minimal_conflicting_set"]]
+    texts.append(diagnosis["suggested_relaxation"]["description"])
+    assert not any("minimal" in text.lower() for text in texts)
 
 
 def test_manual_action_not_attempted_validates() -> None:
@@ -635,9 +660,10 @@ def test_ingestion_cross_field_rules_catch_a_wrong_flag_and_a_missing_anomaly() 
     assert any("AMBIGUOUS_FACULTY_INITIALS" in e for e in errors)
 
 
-def test_partial_placement_agrees_with_metadata() -> None:
+@pytest.mark.parametrize("filename", [INFEASIBLE, PRESOLVE])
+def test_partial_placement_agrees_with_metadata(filename: str) -> None:
     """Proposal 2.4: partial and unplaced partition the sessions; counts match metadata."""
-    payload = example(INFEASIBLE)
+    payload = example(filename)
     placed = [p["session_id"] for p in payload["diagnosis"]["partial_placement"]]
     unplaced = payload["diagnosis"]["unplaced_session_ids"]
     assert len(placed) == len(set(placed))
@@ -646,8 +672,9 @@ def test_partial_placement_agrees_with_metadata() -> None:
     assert len(placed) + len(unplaced) == payload["metadata"]["sessions_total"]
 
 
-def test_relaxation_names_a_constraint_in_the_set() -> None:
-    diagnosis = example(INFEASIBLE)["diagnosis"]
+@pytest.mark.parametrize("filename", [INFEASIBLE, PRESOLVE])
+def test_relaxation_names_a_constraint_in_the_set(filename: str) -> None:
+    diagnosis = example(filename)["diagnosis"]
     ids = {entry["constraint_id"] for entry in diagnosis["minimal_conflicting_set"]}
     assert diagnosis["suggested_relaxation"]["constraint_id"] in ids
 
@@ -683,8 +710,9 @@ def test_every_automatic_action_relaxes_some_kind() -> None:
     assert set(action_type_enum()) - {"MANUAL"} <= used
 
 
-def test_example_relaxation_is_permitted_for_its_kind() -> None:
-    diagnosis = example(INFEASIBLE)["diagnosis"]
+@pytest.mark.parametrize("filename", [INFEASIBLE, PRESOLVE])
+def test_example_relaxation_is_permitted_for_its_kind(filename: str) -> None:
+    diagnosis = example(filename)["diagnosis"]
     relaxation = diagnosis["suggested_relaxation"]
     kind = next(
         entry["kind"]
