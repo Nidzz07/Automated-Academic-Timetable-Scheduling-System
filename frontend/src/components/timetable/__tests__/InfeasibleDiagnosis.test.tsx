@@ -3,7 +3,22 @@ import { render, screen, within } from '@testing-library/react';
 import { InfeasibilityDiagnosisPanel } from '../InfeasibilityDiagnosisPanel';
 import infeasibleFixture from '@contracts/examples/solution_v1.infeasible.example.json';
 import infeasibleV2Fixture from '@contracts/examples/solution_v2.infeasible.example.json';
+import presolveFixture from '@contracts/examples/solution_v2.presolve.example.json';
 import { parseSolution, isInfeasibleSolution } from '@/adapters/solution';
+
+describe('Infeasibility Diagnosis Panel on a presolve certificate (contract row 9, D43)', () => {
+  it('renders solution_v2.presolve.example.json with the presolve label and its conflicting set', () => {
+    const presolve = parseSolution(presolveFixture);
+    if (!isInfeasibleSolution(presolve)) throw new Error('expected an infeasible payload');
+    render(<InfeasibilityDiagnosisPanel infeasibleSolution={presolve} />);
+
+    expect(screen.getByTestId('diagnosis-method')).toHaveTextContent('Presolve');
+    expect(screen.getByText('Proved infeasible by a counting check (not minimal)')).toBeInTheDocument();
+    for (const c of presolve.diagnosis.minimal_conflicting_set) {
+      expect(screen.getByTestId(`conflicting-constraint-${c.constraint_id}`)).toBeInTheDocument();
+    }
+  });
+});
 
 describe('Infeasibility Diagnosis Panel', () => {
   const infeasibleSolution = parseSolution(infeasibleFixture);

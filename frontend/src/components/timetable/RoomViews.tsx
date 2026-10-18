@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { DAY_NAMES, EdgeList, EnrichedSession, buildWeekGrid } from '@/adapters/timetable';
+import { DAY_NAMES, EXAMPLE_LABELS, EdgeList, EnrichedSession, Labels, buildWeekGrid } from '@/adapters/timetable';
 import { freeRoomsAt, roomOccupancies } from '@/adapters/rooms';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,8 @@ interface RoomViewsProps {
   edgeList: EdgeList;
   /** Placed sessions (from the solution); empty when the instance has no solution */
   sessions: EnrichedSession[];
+  /** Room names, pin labels and clock times; defaults to the contract examples' */
+  labels?: Labels;
 }
 
 const selectClass = 'rounded-md border border-border bg-card px-2 py-1 text-xs font-medium';
@@ -17,12 +19,12 @@ const selectClass = 'rounded-md border border-border bg-card px-2 py-1 text-xs f
 /**
  * Weekly timetable of one room (ROADMAP D15). Sub-room use is shown with the sub-room code.
  */
-export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions }) => {
+export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions, labels = EXAMPLE_LABELS }) => {
   const rooms = edgeList.rooms.filter((r) => r.parent_room_id === null);
   const [roomId, setRoomId] = useState(rooms[0]?.id ?? '');
   const grid = useMemo(() => buildWeekGrid(edgeList), [edgeList]);
-  const occupancies = useMemo(() => roomOccupancies(sessions, edgeList), [sessions, edgeList]);
-  const code = new Map(edgeList.rooms.map((r) => [r.id, r.code]));
+  const occupancies = useMemo(() => roomOccupancies(sessions, edgeList, labels), [sessions, edgeList, labels]);
+  const code = new Map(edgeList.rooms.map((r) => [r.id, labels.room(r)]));
   const inRoom = occupancies.filter((o) => o.roomId === roomId);
 
   return (
@@ -40,7 +42,7 @@ export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions }) 
           >
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.code} ({r.is_lab ? 'lab' : 'classroom'}, {r.capacity})
+                {labels.room(r)} ({r.is_lab ? 'lab' : 'classroom'}, {r.capacity})
               </option>
             ))}
           </select>
@@ -61,7 +63,10 @@ export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions }) 
           <tbody className="divide-y divide-border/60">
             {grid.periods.map(({ period, teaching }) => (
               <tr key={period} className={teaching ? '' : 'bg-muted/30 text-muted-foreground'}>
-                <td className="p-2 font-mono font-semibold">P{period}</td>
+                <td className="p-2 font-mono font-semibold">
+                  P{period}
+                  {labels.clock(period) && <div className="font-normal text-muted-foreground">{labels.clock(period)}</div>}
+                </td>
                 {grid.days.map((day) => {
                   const here = inRoom.filter((o) => o.day === day && o.period === period);
                   return (
@@ -91,12 +96,12 @@ export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions }) 
 /**
  * Rooms free at a chosen day and period; labs list the batch places (sub-rooms) not in use.
  */
-export const FreeRoomsPanel: React.FC<RoomViewsProps> = ({ edgeList, sessions }) => {
+export const FreeRoomsPanel: React.FC<RoomViewsProps> = ({ edgeList, sessions, labels = EXAMPLE_LABELS }) => {
   const grid = useMemo(() => buildWeekGrid(edgeList), [edgeList]);
   const [day, setDay] = useState(0);
   const [period, setPeriod] = useState(grid.teachingPeriods[0] ?? 0);
-  const occupancies = useMemo(() => roomOccupancies(sessions, edgeList), [sessions, edgeList]);
-  const free = freeRoomsAt(edgeList, occupancies, day, period);
+  const occupancies = useMemo(() => roomOccupancies(sessions, edgeList, labels), [sessions, edgeList, labels]);
+  const free = freeRoomsAt(edgeList, occupancies, day, period, labels);
 
   return (
     <Card data-testid="free-rooms" className="border-border/60 bg-card/60">
@@ -122,6 +127,7 @@ export const FreeRoomsPanel: React.FC<RoomViewsProps> = ({ edgeList, sessions })
               {grid.teachingPeriods.map((p) => (
                 <option key={p} value={p}>
                   P{p}
+                  {labels.clock(p) && ` (${labels.clock(p)})`}
                 </option>
               ))}
             </select>

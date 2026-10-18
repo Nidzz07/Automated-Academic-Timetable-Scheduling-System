@@ -39,6 +39,29 @@ export function useEdgeListQuery(
   });
 }
 
+export function useDisplayQuery(
+  instance: EdgeListInstance,
+  client: ChronosApiClient = chronosApiClient
+) {
+  return useQuery({
+    queryKey: ['display', instance],
+    queryFn: () => client.getDisplay(instance),
+    staleTime: Infinity,
+  });
+}
+
+export function useInstanceSolutionQuery(
+  instance: EdgeListInstance,
+  client: ChronosApiClient = chronosApiClient
+) {
+  return useQuery({
+    queryKey: ['instance-solution', instance],
+    queryFn: () => client.getInstanceSolution(instance),
+    staleTime: Infinity,
+    retry: (failures, error) => !(error instanceof ContractValidationError) && failures < 3,
+  });
+}
+
 export function useMoveSessionMutation(client: ChronosApiClient = chronosApiClient) {
   return useMutation({
     mutationFn: ({ request, current }: { request: MoveSessionRequest; current: SolvedSolution }) =>

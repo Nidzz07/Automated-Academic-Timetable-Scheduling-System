@@ -22,7 +22,7 @@ import ingestionExample from '@contracts/examples/ingestion_v1.example.json';
 export type EdgeList = ChronosEdgeListContractV1;
 export type EdgeListSession = EdgeList['sessions'][number];
 
-// shortcut: names and labels come from the ingestion example; swap for API-served ingestion data at S13
+// shortcut: the contract examples' names come from the ingestion example; swap for API-served names at S13
 const ingestion = validateContract('ingestion', ingestionExample);
 const subjects = new Map(ingestion.subjects.map((s) => [s.id, s]));
 const faculty = new Map(ingestion.faculty.map((f) => [f.id, f]));
@@ -77,14 +77,79 @@ export function cohortsOverlap(a: string, b: string): boolean {
   return !!ma && !!mb && ma.some((m) => mb.includes(m));
 }
 
+/**
+ * D41 display sidecar (data/instances/<instance>/display.json, written by db/export_edge_list.py):
+ * names, pin kinds and labels, and period clock times for one edge list. Not a contract.
+ */
+export interface Display {
+  days: string[];
+  periods: Array<{ period: number; start: string; end: string; teaching: boolean }>;
+  faculty: Record<string, string>;
+  cohorts: Record<string, { name: string; type: string; years: string[] }>;
+  rooms: Record<string, string>;
+  subjects: Record<string, { code: string; name: string }>;
+  /** pins[i] describes pinned_occupancy[i] */
+  pins: Array<{ kind: string; label: string; decision?: string }>;
+}
+
+/** What the UI shows for an instance's ids. */
+export interface Labels {
+  faculty(id: string): { initials: string; name: string };
+  cohort(id: string): string;
+  subject(id: string): { code: string; name: string } | undefined;
+  room(room: { id: string; code: string }): string;
+  /** Same cohort, or two cohorts that share students */
+  overlap(a: string, b: string): boolean;
+  /** Kind and label of pinned_occupancy[index]; undefined when the instance has no display sidecar */
+  pin(index: number): Display['pins'][number] | undefined;
+  /** "09:00–10:00", or null when the instance gives no clock times */
+  clock(period: number): string | null;
+}
+
+/** The contract examples: names from the ingestion example, no pin kinds, no clock times. */
+export const EXAMPLE_LABELS: Labels = {
+  faculty: getFaculty,
+  cohort: getCohortLabel,
+  subject: (id) => subjects.get(id),
+  room: (room) => room.code,
+  overlap: cohortsOverlap,
+  pin: () => undefined,
+  clock: () => null,
+};
+
+/** An instance's labels: from its display sidecar (D41), else the contract examples'. */
+export function labelsFor(display: Display | null | undefined): Labels {
+  if (!display) return EXAMPLE_LABELS;
+  const clock = new Map(display.periods.map((p) => [p.period, `${p.start}–${p.end}`]));
+  return {
+    faculty: (id) => {
+      // display.json gives names, not initials: the name is the short label too
+      const name = display.faculty[id] ?? id;
+      return { initials: name, name };
+    },
+    cohort: (id) => display.cohorts[id]?.name ?? id,
+    subject: (id) => display.subjects[id],
+    room: (room) => display.rooms[room.id] ?? room.code,
+    // shortcut: display.json carries no batch membership, so a cohort overlaps only itself; use membership once the API serves it (S13)
+    overlap: (a, b) => a === b,
+    pin: (i) => display.pins[i],
+    clock: (p) => clock.get(p) ?? null,
+  };
+}
+
 /** Every cohort the edge list names (sessions and pinned occupancy), for filters. */
-export function cohortOptions(edgeList: EdgeList): Array<{ id: string; label: string }> {
+export function cohortOptions(
+  edgeList: EdgeList,
+  labels: Labels = EXAMPLE_LABELS
+): Array<{ id: string; label: string }> {
   const ids = new Set([
     ...edgeList.sessions.map((s) => s.cohort_id),
     ...edgeList.pinned_occupancy.flatMap((p) => p.cohort_ids),
   ]);
-  return [...ids]
-    .map((id) => ({ id, label: getCohortLabel(id) }))
+  const options = [...ids].map((id) => ({ id, label: labels.cohort(id) }));
+  // display.json names every division's batches "A".."D"; the id tells them apart
+  return options
+    .map((o) => (options.some((x) => x !== o && x.label === o.label) ? { ...o, label: `${o.label} (${o.id})` } : o))
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
@@ -141,11 +206,14 @@ export interface EnrichedPin {
   day: DayIndex;
   period: number;
   /**
-   * Holds cohorts only, no teacher and no room. A frozen item holds its teacher and room too
-   * (D24), so this is a year's lunch, pinned per division cohort (D6, D31).
-   * shortcut: edge_list_v1 pins carry no kind; switch to the kind once a contract carries it.
+   * From the display sidecar (lunch, frozen, exam, ...); null when the instance has none.
+   * Never inferred from which cohorts, teachers or rooms the pin holds (D41).
    */
-  isLunch: boolean;
+  kind: string | null;
+  /** The display label: a year's lunch, a frozen item's name, an exam; null without a sidecar */
+  label: string | null;
+  /** The ROADMAP decision behind the pin (e.g. D24), when the sidecar names one */
+  decision: string | null;
   cohortIds: string[];
   cohortLabels: string[];
   roomCodes: string[];
@@ -170,18 +238,23 @@ export function getSolvedSolutionFixture(): SolvedSolution {
  */
 export function buildEnrichedSessions(
   assignment: SessionAssignment[],
-  edgeList: EdgeList
+  edgeList: EdgeList,
+  labels: Labels = EXAMPLE_LABELS
 ): EnrichedSession[] {
   const grid = buildWeekGrid(edgeList);
   const rooms = new Map(edgeList.rooms.map((r) => [r.id, r]));
+  const roomName = (id: string) => {
+    const room = rooms.get(id);
+    return room ? labels.room(room) : id;
+  };
   const edgeSessions = new Map(edgeList.sessions.map((s) => [s.id, s]));
 
   return assignment.map((item) => {
     const edgeSession = edgeSessions.get(item.session_id);
-    const subject = subjects.get(edgeSession?.subject_id ?? '');
-    const fac = getFaculty(edgeSession?.faculty_id ?? '');
+    const subject = labels.subject(edgeSession?.subject_id ?? '');
+    const fac = labels.faculty(edgeSession?.faculty_id ?? '');
     const cohortId = edgeSession?.cohort_id ?? '';
-    const cohortLabel = getCohortLabel(cohortId);
+    const cohortLabel = labels.cohort(cohortId);
     const labBlock = edgeList.lab_blocks.find((lb) => lb.session_ids.includes(item.session_id));
 
     const isCombined = cohorts.get(cohortId)?.cohort_type === 'combined' || cohortId.includes('comb');
@@ -195,7 +268,7 @@ export function buildEnrichedSessions(
     }
 
     const duration = edgeSession?.duration_periods ?? 1;
-    const subRoomCode = item.sub_room_id ? rooms.get(item.sub_room_id)?.code ?? item.sub_room_id : null;
+    const subRoomCode = item.sub_room_id ? roomName(item.sub_room_id) : null;
 
     return {
       sessionId: item.session_id,
@@ -205,7 +278,7 @@ export function buildEnrichedSessions(
       durationPeriods: duration,
       roomId: item.room_id,
       subRoomId: item.sub_room_id,
-      roomCode: subRoomCode ?? rooms.get(item.room_id)?.code ?? item.room_id,
+      roomCode: subRoomCode ?? roomName(item.room_id),
       subRoomCode,
       subjectCode: subject?.code ?? (edgeSession?.subject_id ?? '').replace('subj-', '').toUpperCase(),
       subjectName: subject?.name ?? 'Subject',
@@ -248,16 +321,24 @@ export function buildEnrichedLabBlocks(sessions: EnrichedSession[]): EnrichedLab
 /**
  * Returns the edge list's pinned_occupancy as grid view models
  */
-export function buildPins(edgeList: EdgeList): EnrichedPin[] {
-  const rooms = new Map(edgeList.rooms.map((r) => [r.id, r.code]));
-  return edgeList.pinned_occupancy.map((p, i) => ({
-    key: `pin-${p.day}-${p.period}-${i}`,
-    day: p.day,
-    period: p.period,
-    isLunch: p.faculty_ids.length === 0 && p.room_ids.length === 0 && p.cohort_ids.length > 0,
-    cohortIds: p.cohort_ids,
-    cohortLabels: p.cohort_ids.map(getCohortLabel),
-    roomCodes: p.room_ids.map((id) => rooms.get(id) ?? id),
-    facultyInitials: p.faculty_ids.map((id) => getFaculty(id).initials),
-  }));
+export function buildPins(edgeList: EdgeList, labels: Labels = EXAMPLE_LABELS): EnrichedPin[] {
+  const rooms = new Map(edgeList.rooms.map((r) => [r.id, r]));
+  return edgeList.pinned_occupancy.map((p, i) => {
+    const shown = labels.pin(i);
+    return {
+      key: `pin-${p.day}-${p.period}-${i}`,
+      day: p.day,
+      period: p.period,
+      kind: shown?.kind ?? null,
+      label: shown?.label ?? null,
+      decision: shown?.decision ?? null,
+      cohortIds: p.cohort_ids,
+      cohortLabels: p.cohort_ids.map(labels.cohort),
+      roomCodes: p.room_ids.map((id) => {
+        const room = rooms.get(id);
+        return room ? labels.room(room) : id;
+      }),
+      facultyInitials: p.faculty_ids.map((id) => labels.faculty(id).initials),
+    };
+  });
 }

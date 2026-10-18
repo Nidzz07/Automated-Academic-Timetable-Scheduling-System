@@ -116,6 +116,23 @@ describe('MockChronosApiClient', () => {
     expect(d6.pinned_occupancy).toHaveLength(10);
   });
 
+  it('serves the real EVEN 2025-26 instance from data/instances/even-2025-26/', async () => {
+    const real = await client.getEdgeList('even_2025_26');
+    expect(real.sessions).toHaveLength(156);
+    expect(real.lab_blocks).toHaveLength(31);
+
+    const display = await client.getDisplay('even_2025_26');
+    expect(display?.pins).toHaveLength(real.pinned_occupancy.length);
+    // S12a timed out (D33), so no solution.json is committed yet
+    expect(await client.getInstanceSolution('even_2025_26')).toBeNull();
+  });
+
+  it('gives the contract examples no display sidecar and no published solution', async () => {
+    expect(await client.getDisplay('example')).toBeNull();
+    expect(await client.getDisplay('d6_grid')).toBeNull();
+    expect(await client.getInstanceSolution('d6_grid')).toBeNull();
+  });
+
   it('exercises the reject-the-move path when rejectMode is explicitly toggled', async () => {
     const solved = await client.getSolvedSolution();
     const customReason = 'Simulated room capacity deficit: Cohort 140 exceeds room capacity 80';

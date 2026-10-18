@@ -66,11 +66,13 @@ interface RelaxationV2 {
 
 /**
  * Display label per diagnosis.method: the one place a method is named. A new method in the
- * contract (e.g. presolve, proposal row 9) is one more line here; ajv still enforces the enum.
+ * contract is one more line here; ajv still enforces the enum.
  */
 export const DIAGNOSIS_METHOD_LABELS = {
   mus: { badge: 'MUS Extraction', text: 'The solver proved no conflict-free assignment exists under the current constraints and isolated a Minimal Unsatisfiable Subset (MUS).' },
   search_exhaustion: { badge: 'Search Exhaustion', text: 'Complete search proved no conflict-free assignment exists under the current constraints, but no explanation was extracted.' },
+  // contract row 9 (D43): a pre-solve certificate, proven but not minimal
+  presolve: { badge: 'Presolve', text: 'Proved infeasible by a counting check (not minimal)' },
 };
 /** solution.v1 does not say how it was diagnosed. */
 const UNSTATED_METHOD_LABEL = { badge: 'Method not stated (solution.v1)', text: 'The solver reported no conflict-free assignment exists under the current constraints.' };
@@ -80,7 +82,7 @@ type DiagnosisMethod = keyof typeof DIAGNOSIS_METHOD_LABELS;
 interface DiagnosisV2 {
   method: DiagnosisMethod;
   minimal_conflicting_set: ConflictV2[];
-  /** Present iff method is mus. */
+  /** Present iff method is mus or presolve. */
   suggested_relaxation?: RelaxationV2;
   partial_placement: Placement[];
   unplaced_session_ids: string[];
