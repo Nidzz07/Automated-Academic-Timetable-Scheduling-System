@@ -130,24 +130,24 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 - [x] Repo layout · [x] docker-compose · [x] v1 schemas · [x] slots.py (A)
 - [x] CI: ruff, pytest with Postgres, migrations, frontend jobs (required checks on GitHub: to verify)
 - [x] (PR #22) Contract examples validated on both sides: Python done; TypeScript (S5)
-- [ ] quality_rules.yaml (S10)
+- [x] (PR #29) quality_rules.yaml (S10)
 
 ### Phase 1 — Data model, graph, grid UI
-- B: [x] models (3NF), department scoping, cohort polymorphism · [~] reference seed: T/P loads missing (S7) · [~] faculty_initials table: needs human verification · [ ] constraint derivation / export (S9)
+- B: [x] models (3NF), department scoping, cohort polymorphism · [x] (PR #28, #33) reference seed with T/P loads (S7, S9) · [~] faculty_initials table: needs human verification · [x] (PR #33) constraint derivation / export (S9)
 - A: [x] conflict graph, O(1) adjacency · [x] Welsh-Powell fixed (PR #18) · [x] graph tests with networkx cross-check · [ ] chromatic lower bound (optional)
 - C: [x] scaffold, grid, lab, combined and pinned cells · [x] TS types generated from schemas (PR #22)
 - Exit: [ ] real solver output rendered in the browser (S12)
 
 ### Phase 2 — Real data and backtracking
-- B: [x] (PR #21) teaching scheme + class_tt parser (S6) · [ ] lab_tt, faculty loads, anomaly report (S7) · [ ] seeder + DB→edge-list export (S9)
-- A: [x] backtracking (forward checking, MRV, exact undo), lab blocks, sub-rooms, pinned blocks, capacity, validate.py · [x] (PR #23) pre-solve, lazy lab rooms, timeout (S4) · [ ] per-year lunch (S8)
+- B: [x] (PR #21) teaching scheme + class_tt parser (S6) · [x] (PR #28) lab_tt, faculty loads, anomaly report (S7) · [x] (PR #33) seeder + DB→edge-list export (S9)
+- A: [x] backtracking (forward checking, MRV, exact undo), lab blocks, sub-rooms, pinned blocks, capacity, validate.py · [x] (PR #23) pre-solve, lazy lab rooms, timeout (S4) · [x] (PR #27) per-year lunch (S8)
 - C: [x] drag and drop with revert, role views, mock API, Vitest · [ ] anomaly report viewer (S11)
 - Exit: [ ] real EVEN SE+TE instance solved and validated (S12)
 
 ### Phase 3 — Quality and API
-- A: [ ] scoring.py + rules (S10)
+- A: [x] (PR #29) scoring.py + rules (S10)
 - B: [ ] FastAPI endpoints, auth, audit (S13)
-- C: [x] (PR #22) TanStack Query (S5) · [ ] quality panel, workload view, room timetable, free rooms (S11) · [ ] generate flow on the real API (S13)
+- C: [x] (PR #22) TanStack Query (S5) · [x] (PR #30, #35) quality panel, workload view, room timetable, free rooms (S11) · [ ] generate flow on the real API (S13)
 
 ### Phase 4 — Diagnosis and repair
 - A: [ ] mus.py, relaxation, repair.py (S14)
@@ -155,7 +155,7 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 - C: [ ] diagnosis panel and repair preview on real data (S14)
 
 ### Phase 5 — Evaluation (S15)
-- [ ] Runtime vs size · [ ] compare with the real EVEN timetable · [ ] greedy vs backtracking · [ ] lab utilisation · [ ] API tests · [ ] property tests
+- [~] (PR #36) Runtime vs size: S15a harness, synthetic data only, no plot yet · [ ] compare with the real EVEN timetable · [ ] greedy vs backtracking · [ ] lab utilisation · [ ] API tests · [ ] property tests
 
 ### Phase 6 — Report and demo (S16)
 - [~] README · [ ] report · [ ] slides · [ ] demo script
@@ -171,12 +171,18 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | S4b | Dhruv | track/solver-presolve | — | Nidhi | Moved into S8 |
 | S5 | Rohan | track/frontend-contracts | — | Nidhi | Done (PR #22) |
 | S6 | Nidhi | track/data-class-tt | S2 merged | Rohan | Done (PR #21) |
-| S7 | Nidhi | track/data-lab-faculty | S6 merged | Rohan | In progress |
-| S8 | Dhruv | track/solver-v2-grid | S3 merged, S4 merged | Nidhi | In progress |
-| S9 | Nidhi | track/data-seed-export | S7 merged, S3 merged | Rohan | Not started |
-| S10 | Dhruv | track/solver-scoring | S8 merged | Nidhi | Not started |
-| S11 | Rohan | track/frontend-v2-rooms | S3, S5 merged | Nidhi | In progress |
-| S12 | All | integration/real-even | S9, S10, S11 | all three | Not started |
+| S7 | Nidhi | track/data-lab-faculty | S6 merged | Rohan | Done (PR #28) |
+| S8 | Dhruv | track/solver-v2-grid | S3 merged, S4 merged | Nidhi | Done (PR #27) |
+| S9 | Nidhi | track/data-seed-export | S7 merged, S3 merged | Rohan | Done (PR #33) |
+| S10 | Dhruv | track/solver-scoring | S8 merged | Nidhi | Done (PR #29) |
+| S11 | Rohan | track/frontend-v2-rooms | S3, S5 merged | Nidhi | Done (PR #30) |
+| S11b | Rohan | track/frontend-v2-rooms | S11 | Nidhi | Done (PR #30, #35) |
+| Row 9 | Nidhi | contracts/row9-presolve | row 9 signed | all three | Done (PR #31) |
+| S15a | Rohan | track/bench-harness | — | Nidhi | Done (PR #36) |
+| S12 | All | integration/real-even | S9, S10, S11 | all three | In progress (S12a–S12c) |
+| S12a | Dhruv | track/solver-real-even | S9, S10 merged | Nidhi | In progress |
+| S12b | Nidhi | track/data-real-baseline | S9 merged | Rohan | In progress |
+| S12c | Rohan | track/frontend-real-even | S9, S11 merged | Nidhi | In progress |
 | S13 | Nidhi + Rohan | track/backend-api, track/frontend-api | S12 | cross | Not started |
 | S14 | All | per track | S13 | cross | Not started |
 | S15 | All | eval/* | S14 | cross | Not started |
@@ -272,3 +278,4 @@ Tags as in the old plan: [S] = should (cut only if behind schedule, note the cut
 - 2026-10-11: New roadmap. Ownership corrected (D1). Real-data decisions D2–D22 recorded. Sequence S1–S16 defined.
 - 2026-10-15: D23–D34 added (real-timetable findings, row 8, process).
 - 2026-10-16: Wave 1 merged (S1–S6, S3b). Wave 2 started: S7, S8, S11. S4b folded into S8.
+- 2026-10-18: Wave 3 merged (S9, S10, S11/S11b, S15a, row 9). S12 started.
