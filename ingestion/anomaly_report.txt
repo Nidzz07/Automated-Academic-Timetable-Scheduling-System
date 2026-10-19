@@ -4,7 +4,7 @@ Sources: data/reference/teaching_scheme.yaml, data/real/classrooms.xlsx,
 data/real/lab_capacities.yaml and the EVEN class, lab and faculty timetables.
 Each anomaly: category, source file, location, message, and the ROADMAP decision
 that resolves it, or 'needs human'. Nothing is repaired (CONTEXT.md 3.5).
-Full detail: data/generated/anomalies_even.json (gitignored).
+Full detail: data/instances/even-2025-26/anomalies.json.
 
 ==============================================================================
 1. Summary

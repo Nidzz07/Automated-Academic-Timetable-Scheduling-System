@@ -1,0 +1,3408 @@
+{
+  "generated_by": "python -m ingestion.anomalies",
+  "counts": {
+    "total": 475,
+    "needs_human": 61,
+    "by_resolution": {
+      "D10": 9,
+      "D11": 8,
+      "D23": 8,
+      "D24": 214,
+      "D25": 4,
+      "D26": 40,
+      "D27": 2,
+      "D28": 1,
+      "D29": 4,
+      "D3": 4,
+      "D30": 4,
+      "D35": 70,
+      "D36": 1,
+      "D37": 2,
+      "D38": 15,
+      "D42": 2,
+      "D44": 20,
+      "D6": 4,
+      "D8": 2,
+      "needs human": 61
+    },
+    "by_category": {
+      "scheme_excluded": 3,
+      "scheme_note": 1,
+      "duplicate_room": 1,
+      "lab_capacity_conflict": 1,
+      "sub_room_labels_derived": 1,
+      "lab_excluded": 1,
+      "unknown_room_usage": 2,
+      "room_not_ce": 5,
+      "division_wide_tutorial": 8,
+      "initials_not_in_division_legend": 11,
+      "unmatched_subject": 4,
+      "parallel_division_sessions": 12,
+      "malformed_line": 2,
+      "break_partial": 4,
+      "overlaps_break": 4,
+      "excluded_item": 212,
+      "frozen_d44": 20,
+      "frozen_d26": 12,
+      "lecture_room_excluded": 5,
+      "lecture_room_not_class": 1,
+      "lecture_room_total": 1,
+      "frozen_room_conflict": 1,
+      "room_override": 5,
+      "lab_in_classroom": 1,
+      "out_of_scope_in_lab": 12,
+      "exam_block": 1,
+      "utilisation_mismatch": 4,
+      "frozen_in_lab": 5,
+      "initials_resolved_d38": 8,
+      "initials_unresolved": 1,
+      "room_label_normalised": 2,
+      "subroom_beyond_split": 3,
+      "room_not_generation": 2,
+      "practical_missing_in_lab_tt": 5,
+      "practical_room_mismatch": 1,
+      "practical_mismatch": 1,
+      "faculty_day_off": 1,
+      "time_off_grid": 2,
+      "load_mismatch": 19,
+      "load_above_16": 8,
+      "missing_workload": 2,
+      "no_faculty_page": 5,
+      "out_of_scope_room_disagreement": 2,
+      "out_of_scope_initials_unresolved": 3,
+      "faculty_tt_line_not_in_grids": 2,
+      "frozen_out_of_scope": 58,
+      "frozen_sources_disagree": 2,
+      "out_of_scope_not_blocking": 2,
+      "frozen_exam": 1,
+      "frozen_faculty_tt_mdm": 5
+    }
+  },
+  "anomalies": [
+    {
+      "category": "scheme_excluded",
+      "source_file": "teaching_scheme.yaml",
+      "location": "Semester 4 HS2XX",
+      "message": "HS2XX Humanities and Social Science Course II: HSSM (D3)",
+      "resolution": "D3"
+    },
+    {
+      "category": "scheme_excluded",
+      "source_file": "teaching_scheme.yaml",
+      "location": "Semester 4 LLCXX",
+      "message": "LLCXX Cocurricular / Liberal Learning Course IV: LLC (D3)",
+      "resolution": "D3"
+    },
+    {
+      "category": "scheme_excluded",
+      "source_file": "teaching_scheme.yaml",
+      "location": "Semester 6 PR3-I",
+      "message": "PR3-I Main Project Stage I: project (D3)",
+      "resolution": "D3"
+    },
+    {
+      "category": "scheme_note",
+      "source_file": "teaching_scheme.yaml",
+      "location": "Semester 6",
+      "message": "Semester VI programme electives are not listed in the PDF and are excluded (D3).",
+      "resolution": "D3"
+    },
+    {
+      "category": "duplicate_room",
+      "source_file": "classrooms.xlsx",
+      "location": "classrooms.xlsx 507",
+      "message": "room 507 appears 2 times (capacity 160 'class', capacity 20 'as a lab'); the lab row is used, as D8 lists it as a lab",
+      "resolution": "D8"
+    },
+    {
+      "category": "lab_capacity_conflict",
+      "source_file": "classrooms.xlsx",
+      "location": "classrooms.xlsx 509",
+      "message": "lab 509: classrooms.xlsx capacity 20, lab_capacities.yaml 2 batches x 20 = 40; lab_capacities.yaml is used",
+      "resolution": "D27"
+    },
+    {
+      "category": "sub_room_labels_derived",
+      "source_file": "lab_capacities.yaml",
+      "location": "lab_capacities.yaml 509",
+      "message": "lab 509 has 2 batch places but no separation or printed sub-room labels; emitted as 509-1, 509-2",
+      "resolution": "needs human"
+    },
+    {
+      "category": "lab_excluded",
+      "source_file": "lab_capacities.yaml",
+      "location": "lab_capacities.yaml 607A",
+      "message": "lab 607A is not for B.Tech (M.Tech batches only)",
+      "resolution": "D8"
+    },
+    {
+      "category": "unknown_room_usage",
+      "source_file": "classrooms.xlsx",
+      "location": "classrooms.xlsx 605",
+      "message": "room 605 'used as' reads 'unsure', capacity 80: used as a classroom",
+      "resolution": "D42"
+    },
+    {
+      "category": "unknown_room_usage",
+      "source_file": "classrooms.xlsx",
+      "location": "classrooms.xlsx 609",
+      "message": "room 609 'used as' reads 'unsure', capacity 80: used as a classroom",
+      "resolution": "D42"
+    },
+    {
+      "category": "room_not_ce",
+      "source_file": "classrooms.xlsx",
+      "location": "classrooms.xlsx 508",
+      "message": "room 508 ('class', capacity 160) is not on the 6th or 7th floor and is not lab 507/509: not used in v1",
+      "resolution": "D10"
+    },
+    {
+      "category": "room_not_ce",
+      "source_file": "classrooms.xlsx",
+      "location": "classrooms.xlsx 002",
+      "message": "room 002 ('class', capacity 160) is not on the 6th or 7th floor and is not lab 507/509: not used in v1",
+      "resolution": "D10"
+    },
+    {
+      "category": "room_not_ce",
+      "source_file": "classrooms.xlsx",
+      "location": "classrooms.xlsx 003",
+      "message": "room 003 ('lab', capacity 70) is not on the 6th or 7th floor and is not lab 507/509: not used in v1",
+      "resolution": "D10"
+    },
+    {
+      "category": "room_not_ce",
+      "source_file": "classrooms.xlsx",
+      "location": "classrooms.xlsx 203",
+      "message": "room 203 ('class', capacity 160) is not on the 6th or 7th floor and is not lab 507/509: not used in v1",
+      "resolution": "D10"
+    },
+    {
+      "category": "room_not_ce",
+      "source_file": "classrooms.xlsx",
+      "location": "classrooms.xlsx 103",
+      "message": "room 103 ('class', capacity 160) is not on the 6th or 7th floor and is not lab 507/509: not used in v1",
+      "resolution": "D10"
+    },
+    {
+      "category": "division_wide_tutorial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r1 c4 Thu P0",
+      "message": "'PCS / DN / 002': division-wide tutorial; D9 says 1 h per batch",
+      "resolution": "D23"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r4 c1 Mon P3-P4",
+      "message": "AGN x1 is not in this division's legend. Not resolved. Other legends: Amey Ganesh Nile (SE-Comp B); Amey Ganesh Nile (SE-Comp D)",
+      "resolution": "D38"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r7 c5 Fri P6-P7",
+      "message": "PBB x1 is not in this division's legend. Not resolved. Other legends: Prasenjit Bhavathankar (SE-Comp C); Prasenjit Bhavathankar (SE-Comp D)",
+      "resolution": "D38"
+    },
+    {
+      "category": "unmatched_subject",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r2 c5 Fri P1, t0 r7 c3 Wed P6, t0 r7 c4 Thu P6",
+      "message": "'FOM - II' x3",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r2 c5 Fri P1",
+      "message": "FOM - II / AsT /307 || SMCS / AT / 002",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r7 c3 Wed P6",
+      "message": "FOM - II / AsT /307 || SMCS / AT / 508",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r7 c4 Thu P6",
+      "message": "FOM - II / AsT /307 || SMCS / AT / 002",
+      "resolution": "D26"
+    },
+    {
+      "category": "division_wide_tutorial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r1 c4 Thu P0",
+      "message": "'PCS / DN / 002': division-wide tutorial; D9 says 1 h per batch",
+      "resolution": "D23"
+    },
+    {
+      "category": "unmatched_subject",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r2 c5 Fri P1, t2 r7 c3 Wed P6, t2 r7 c4 Thu P6",
+      "message": "'FOM - II' x3",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r2 c5 Fri P1",
+      "message": "FOM - II / AsT /307 || SMCS / AT / 002",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r7 c3 Wed P6",
+      "message": "FOM - II / AsT /307 || SMCS / AT / 508",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r7 c4 Thu P6",
+      "message": "FOM - II / AsT /307 || SMCS / AT / 002",
+      "resolution": "D26"
+    },
+    {
+      "category": "division_wide_tutorial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r1 c4 Thu P0",
+      "message": "'PCS / SD / 508': division-wide tutorial; D9 says 1 h per batch",
+      "resolution": "D23"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r4 c4 Thu P3-P4, t4 r4 c5 Fri P3-P4",
+      "message": "NR x2 is not in this division's legend. Not resolved. Other legends: Nataasha Raul (SE-Comp A); Nataasha Raul (SE-Comp D)",
+      "resolution": "D38"
+    },
+    {
+      "category": "unmatched_subject",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r2 c5 Fri P1, t4 r7 c3 Wed P6, t4 r7 c4 Thu P6",
+      "message": "'FOM - II' x3",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r2 c5 Fri P1",
+      "message": "FOM - II / AsT /307 || SMCS / TP / 508",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r7 c3 Wed P6",
+      "message": "FOM - II / AsT /307 || SMCS / CRG / 202",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r7 c4 Thu P6",
+      "message": "FOM - II / AsT /307 || SMCS / TP / 508",
+      "resolution": "D26"
+    },
+    {
+      "category": "division_wide_tutorial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r1 c4 Thu P0",
+      "message": "'PCS / SD / 508': division-wide tutorial; D9 says 1 h per batch",
+      "resolution": "D23"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r4 c4 Thu P3-P4",
+      "message": "IS x1 is not in this division's legend. Not resolved. Other legends: Isha Sawalkar (SE-Comp B)",
+      "resolution": "D38"
+    },
+    {
+      "category": "unmatched_subject",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r2 c5 Fri P1, t6 r7 c3 Wed P6, t6 r7 c4 Thu P6",
+      "message": "'FOM - II' x3",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r2 c5 Fri P1",
+      "message": "FOM - II / AsT /307 || SMCS / TP / 508",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r7 c3 Wed P6",
+      "message": "FOM - II / AsT /307 || SMCS / CRG / 202",
+      "resolution": "D26"
+    },
+    {
+      "category": "parallel_division_sessions",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r7 c4 Thu P6",
+      "message": "FOM - II / AsT /307 || SMCS / TP / 508",
+      "resolution": "D26"
+    },
+    {
+      "category": "malformed_line",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c3 Wed P0-P1",
+      "message": "missing '/' between initials and room in 'DL / PE-I-E / SJ 702-A'",
+      "resolution": "needs human"
+    },
+    {
+      "category": "malformed_line",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c3 Wed P0-P1",
+      "message": "missing '/' between initials and room in 'DL / PE-I-B / SRD 702-B'",
+      "resolution": "needs human"
+    },
+    {
+      "category": "break_partial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r3 c2 Tue P2",
+      "message": "coffee break marked only for Tuesday, Wednesday, Thursday, Friday",
+      "resolution": "D6"
+    },
+    {
+      "category": "division_wide_tutorial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r7 c3 Wed P6",
+      "message": "'Deop / RK / 002': division-wide tutorial; D9 says 1 h per batch",
+      "resolution": "D23"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c2 Tue P0-P1, t8 r1 c3 Wed P0-P1, t8 r1 c5 Fri P0, t8 r4 c5 Fri P3, t8 r6 c4 Thu P5-P6, t8 r7 c1 Mon P6-P7",
+      "message": "SRD x6 is not in this division's legend. Not resolved. Other legends: no other legend of this semester has it",
+      "resolution": "D25"
+    },
+    {
+      "category": "overlaps_break",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r2 c1 Mon P1-P3",
+      "message": "'ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode' (excluded: minor (MDM) - D3) covers a break or lunch",
+      "resolution": "D24"
+    },
+    {
+      "category": "break_partial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r3 c2 Tue P2",
+      "message": "coffee break marked only for Tuesday, Wednesday, Thursday, Friday",
+      "resolution": "D6"
+    },
+    {
+      "category": "division_wide_tutorial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r7 c3 Wed P6",
+      "message": "'Deop / RK / 002': division-wide tutorial; D9 says 1 h per batch",
+      "resolution": "D23"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c2 Tue P0-P1, t10 r1 c3 Wed P0-P1",
+      "message": "SRD x2 is not in this division's legend. Not resolved. Other legends: no other legend of this semester has it",
+      "resolution": "D25"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r6 c2 Tue P5-P6",
+      "message": "AGN x1 is not in this division's legend. Not resolved. Other legends: Amey Ganesh Nile (TE Comp - D)",
+      "resolution": "D38"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r6 c4 Thu P5-P6",
+      "message": "SM x1 is not in this division's legend. Not resolved. Other legends: Sudeep Mali (TE Comp - C); Sudeep Mali (TE Comp - D)",
+      "resolution": "D38"
+    },
+    {
+      "category": "overlaps_break",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r2 c1 Mon P1-P3",
+      "message": "'ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode' (excluded: minor (MDM) - D3) covers a break or lunch",
+      "resolution": "D24"
+    },
+    {
+      "category": "break_partial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r3 c2 Tue P2",
+      "message": "coffee break marked only for Tuesday, Wednesday, Thursday, Friday",
+      "resolution": "D6"
+    },
+    {
+      "category": "division_wide_tutorial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r6 c2 Tue P5",
+      "message": "'Devop / RK / 508': division-wide tutorial; D9 says 1 h per batch",
+      "resolution": "D23"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c2 Tue P0-P1, t12 r1 c3 Wed P0-P1, t12 r7 c2 Tue P6, t12 r7 c3 Wed P6",
+      "message": "SRD x4 is not in this division's legend. Not resolved. Other legends: no other legend of this semester has it",
+      "resolution": "D25"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r8 c4 Thu P7-P8",
+      "message": "AT x1 is not in this division's legend. Not resolved. Other legends: Anuj Tawari (TE Comp- B)",
+      "resolution": "D38"
+    },
+    {
+      "category": "overlaps_break",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r2 c1 Mon P1-P3",
+      "message": "'ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode' (excluded: minor (MDM) - D3) covers a break or lunch",
+      "resolution": "D24"
+    },
+    {
+      "category": "break_partial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r3 c2 Tue P2",
+      "message": "coffee break marked only for Tuesday, Wednesday, Thursday, Friday",
+      "resolution": "D6"
+    },
+    {
+      "category": "division_wide_tutorial",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r6 c2 Tue P5",
+      "message": "'Devops / RK /508': division-wide tutorial; D9 says 1 h per batch",
+      "resolution": "D23"
+    },
+    {
+      "category": "initials_not_in_division_legend",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c2 Tue P0-P1, t14 r1 c3 Wed P0-P1",
+      "message": "SRD x2 is not in this division's legend. Not resolved. Other legends: no other legend of this semester has it",
+      "resolution": "D25"
+    },
+    {
+      "category": "overlaps_break",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r2 c1 Mon P1-P3",
+      "message": "'ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode' (excluded: minor (MDM) - D3) covers a break or lunch",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r1 c1 Mon P0-P1",
+      "message": "'MDM - I LABs': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r1 c4 Thu P0",
+      "message": "'PCS / DN / 002': Dr. Deepak Nair is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r2 c5 Fri P1",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r2 c5 Fri P1",
+      "message": "'SMCS / AT / 002': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r4 c1 Mon P3-P4",
+      "message": "'PCS / D / DN / 608': Dr. Deepak Nair is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r4 c2 Tue P3-P4",
+      "message": "'PCS / A / DN / 605': Dr. Deepak Nair is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r4 c3 Wed P3-P4",
+      "message": "'PCS / B / DN / 608': Dr. Deepak Nair is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r7 c1 Mon P6",
+      "message": "'MDM -I THEORY': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r7 c2 Tue P6",
+      "message": "'MDM -I THEORY': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r7 c3 Wed P6",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r7 c3 Wed P6",
+      "message": "'SMCS / AT / 508': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r7 c4 Thu P6",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r7 c4 Thu P6",
+      "message": "'SMCS / AT / 002': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r7 c5 Fri P6-P7",
+      "message": "'PCS / C / DN /703-A': Dr. Deepak Nair is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r8 c1 Mon P7-P8",
+      "message": "'MDM - I LABs': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r8 c2 Tue P7-P8",
+      "message": "'MDM - I LABs': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r8 c3 Wed P7",
+      "message": "'HSS': HSSM - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r8 c4 Thu P7",
+      "message": "'HSS': HSSM - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r9 c4 Thu P8",
+      "message": "'LLC': LLC - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r9 c5 Fri P8-P9",
+      "message": "'STUDENT ACTIVITY': not a course: student activity; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp A t0 r10 c4 Thu P9",
+      "message": "'LLC': LLC - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r1 c1 Mon P0-P1",
+      "message": "'MDM - I - LAB': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r1 c4 Thu P0",
+      "message": "'PCS / DN / 002': Dr. Deepak Nair is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r2 c5 Fri P1",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r2 c5 Fri P1",
+      "message": "'SMCS / AT / 002': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r4 c1 Mon P3-P4",
+      "message": "'PCS / D / SD / 607-B': Prof. Sonali Dudhihalli is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r4 c2 Tue P3-P4",
+      "message": "'PCS / A / SM / 607-B': Prof. Suman M. is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r4 c3 Wed P3-P4",
+      "message": "'PCS / B / SD /607-B': Prof. Sonali Dudhihalli is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r7 c1 Mon P6",
+      "message": "'MDM -I THEORY': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r7 c2 Tue P6",
+      "message": "'MDM -I THEORY': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r7 c3 Wed P6",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r7 c3 Wed P6",
+      "message": "'SMCS / AT / 508': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r7 c4 Thu P6",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r7 c4 Thu P6",
+      "message": "'SMCS / AT / 002': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r7 c5 Fri P6-P7",
+      "message": "'PCS / C/ SD /703-B': Prof. Sonali Dudhihalli is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r8 c1 Mon P7-P8",
+      "message": "'MDM - I - LAB': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r8 c2 Tue P7-P8",
+      "message": "'MDM - I -LAB': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r8 c3 Wed P7",
+      "message": "'HSS': HSSM - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r8 c4 Thu P7",
+      "message": "'HSS': HSSM - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r9 c4 Thu P8",
+      "message": "'LLC': LLC - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r9 c5 Fri P8-P9",
+      "message": "'STUDENT ACTIVITY': not a course: student activity; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp B t2 r10 c4 Thu P9",
+      "message": "'LLC': LLC - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r1 c1 Mon P0-P1",
+      "message": "'MDM - I - LAB': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r1 c3 Wed P0-P1",
+      "message": "'PCS / A / DN / 605': Dr. Deepak Nair is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r1 c4 Thu P0",
+      "message": "'PCS / SD / 508': Prof. Sonali Dudhihalli is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r2 c5 Fri P1",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r2 c5 Fri P1",
+      "message": "'SMCS / TP / 508': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r4 c2 Tue P3-P4",
+      "message": "'PCS / D / SD / 505': Prof. Sonali Dudhihalli is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r4 c4 Thu P3-P4",
+      "message": "'PCS / B / DN / 505': Dr. Deepak Nair is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r4 c5 Fri P3-P4",
+      "message": "'PCS / C / DN / 609': Dr. Deepak Nair is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r7 c1 Mon P6",
+      "message": "'MDM -I THEORY': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r7 c2 Tue P6",
+      "message": "'MDM -I THEORY': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r7 c3 Wed P6",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r7 c3 Wed P6",
+      "message": "'SMCS / CRG / 202': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r7 c4 Thu P6",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r7 c4 Thu P6",
+      "message": "'SMCS / TP / 508': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r8 c1 Mon P7-P8",
+      "message": "'MDM - I - LAB': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r8 c2 Tue P7-P8",
+      "message": "'MDM - I - LAB': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r8 c3 Wed P7",
+      "message": "'HSS': HSSM - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r8 c4 Thu P7",
+      "message": "'HSS': HSSM - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r8 c5 Fri P7-P9",
+      "message": "'STUDENT ACTIVITY': not a course: student activity; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r9 c4 Thu P8",
+      "message": "'LLC': LLC - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp C t4 r10 c4 Thu P9",
+      "message": "'LLC': LLC - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r1 c1 Mon P0-P1",
+      "message": "'MDM - I - LAB': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r1 c3 Wed P0-P1",
+      "message": "'PCS / A / SD / 609': Prof. Sonali Dudhihalli is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r1 c4 Thu P0",
+      "message": "'PCS / SD / 508': Prof. Sonali Dudhihalli is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r2 c5 Fri P1",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r2 c5 Fri P1",
+      "message": "'SMCS / TP / 508': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r4 c2 Tue P3-P4",
+      "message": "'PCS / D / AY / 608': Prof. Aman Yadav is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r4 c4 Thu P3-P4",
+      "message": "'PCS / B / SD / 607-B': Prof. Sonali Dudhihalli is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "frozen_d44",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r4 c5 Fri P3-P4",
+      "message": "'PCS / C / SD /703-A': Prof. Sonali Dudhihalli is not in Faculty___Subjects.xlsx, so not CE faculty; frozen at its slot with its cohort, teacher and room",
+      "resolution": "D44"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r7 c1 Mon P6",
+      "message": "'MDM -I THEORY': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r7 c2 Tue P6",
+      "message": "'MDM -I THEORY': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r7 c3 Wed P6",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r7 c3 Wed P6",
+      "message": "'SMCS / CRG / 202': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r7 c4 Thu P6",
+      "message": "'FOM - II / AsT /307': unmatched subject: not in the Semester 4 scheme; an alternative to SMCS, frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "frozen_d26",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r7 c4 Thu P6",
+      "message": "'SMCS / TP / 508': SMCS runs parallel to FOM - II; frozen at its slot",
+      "resolution": "D26"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r8 c1 Mon P7-P8",
+      "message": "'MDM - I - LAB': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r8 c2 Tue P7-P8",
+      "message": "'MDM - I - LAB': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r8 c3 Wed P7",
+      "message": "'HSS': HSSM - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r8 c4 Thu P7",
+      "message": "'HSS': HSSM - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r8 c5 Fri P7-P9",
+      "message": "'STUDENT ACTIVITY': not a course: student activity; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r9 c4 Thu P8",
+      "message": "'LLC': LLC - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "SE-Comp D t6 r10 c4 Thu P9",
+      "message": "'LLC': LLC - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c1 Mon P0",
+      "message": "'Major Project': project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c2 Tue P0-P1",
+      "message": "'NLP / PE-I-A / RK /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c2 Tue P0-P1",
+      "message": "'NLP/ PE-I-B / AN /608': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c2 Tue P0-P1",
+      "message": "'DL / PE-I-C / SJ /702-A': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c2 Tue P0-P1",
+      "message": "'DL / PE-I-D / SRD /607-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c2 Tue P0-P1",
+      "message": "'BDA / PE-II-A / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c2 Tue P0-P1",
+      "message": "'BDA / PE-II-B / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c2 Tue P0-P1",
+      "message": "'IV / PE II -C / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c2 Tue P0-P1",
+      "message": "'IV / PE II -D / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c3 Wed P0-P1",
+      "message": "'NLP / PE-I-C / RK /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c3 Wed P0-P1",
+      "message": "'NLP/ PE-I-D / AN /608': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c3 Wed P0-P1",
+      "message": "'DL / PE-I-E / SJ 702-A': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c3 Wed P0-P1",
+      "message": "'DL / PE-I-B / SRD 702-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c3 Wed P0-P1",
+      "message": "'BDA / PE-II-C / PJB /603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c3 Wed P0-P1",
+      "message": "'BDA / PE-II-D / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c3 Wed P0-P1",
+      "message": "'IV / PE II -G / YP / 505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c3 Wed P0-P1",
+      "message": "'IV / PE II -H / AA / 509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c4 Thu P0-P1",
+      "message": "'NLP / PE-I-E / AN /702-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c4 Thu P0-P1",
+      "message": "'DL / PE-I-A / SJ /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c4 Thu P0-P1",
+      "message": "'BDA / PE-II-E / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c4 Thu P0-P1",
+      "message": "'BDA / PE-II-F / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c4 Thu P0-P1",
+      "message": "'IV / PE II -A / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c4 Thu P0-P1",
+      "message": "'IV / PE II -B / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r2 c1 Mon P1-P3",
+      "message": "'ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r4 c2 Tue P3",
+      "message": "'DL / SJ / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r4 c2 Tue P3",
+      "message": "'IV / YP / 002': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r4 c3 Wed P3",
+      "message": "'DL / SJ / 703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r4 c3 Wed P3",
+      "message": "'IV / YP / 002': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r4 c4 Thu P3",
+      "message": "'BDA / PJB / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r4 c4 Thu P3",
+      "message": "'NLP/ RK/ 703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r6 c5 Fri P5",
+      "message": "'BDA / PJB / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r6 c5 Fri P5",
+      "message": "'NLP/ RK/ 703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r7 c5 Fri P6-P7",
+      "message": "'BDA / PE-II-G / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r7 c5 Fri P6-P7",
+      "message": "'BDA / PE-II-H / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r7 c5 Fri P6-P7",
+      "message": "'IV / PE II -E / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r7 c5 Fri P6-P7",
+      "message": "'IV / PE II -F / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r10 c2 Tue P7-P8",
+      "message": "'MDM-III Lab': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r10 c3 Wed P7-P8",
+      "message": "'MDM-III Lab / Major - Project': minor (MDM) - D3; project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r10 c4 Thu P7-P8",
+      "message": "'MDM-III Lab /Major - Project': minor (MDM) - D3; project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r13 c5 Fri P8-P9",
+      "message": "'STUDENT ACTIVITY': not a course: student activity; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c1 Mon P0",
+      "message": "'Major Project': project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c2 Tue P0-P1",
+      "message": "'NLP / PE-I-A / RK /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c2 Tue P0-P1",
+      "message": "'NLP/ PE-I-B / AN /608': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c2 Tue P0-P1",
+      "message": "'DL / PE-I-C / SJ /702-A': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c2 Tue P0-P1",
+      "message": "'DL / PE-I-D / SRD /607-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c2 Tue P0-P1",
+      "message": "'BDA / PE-II-A / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c2 Tue P0-P1",
+      "message": "'BDA / PE-II-B / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c2 Tue P0-P1",
+      "message": "'IV / PE II -C / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c2 Tue P0-P1",
+      "message": "'IV / PE II -D / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c3 Wed P0-P1",
+      "message": "'NLP / PE-I-C / RK /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c3 Wed P0-P1",
+      "message": "'NLP/ PE-I-D / AN /608': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c3 Wed P0-P1",
+      "message": "'DL / PE-I-E / SJ/ 702-A': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c3 Wed P0-P1",
+      "message": "'DL / PE-I-B / SRD /702-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c3 Wed P0-P1",
+      "message": "'BDA / PE-II-C / PJB /603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c3 Wed P0-P1",
+      "message": "'BDA / PE-II-D / JB/ 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c3 Wed P0-P1",
+      "message": "'IV / PE II -G / YP / 505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c3 Wed P0-P1",
+      "message": "'IV / PE II -H / AA / 509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c4 Thu P0-P1",
+      "message": "'NLP / PE-I-E / AN /702-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c4 Thu P0-P1",
+      "message": "'DL / PE-I-A / SJ /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c4 Thu P0-P1",
+      "message": "'BDA / PE-II-E / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c4 Thu P0-P1",
+      "message": "'BDA / PE-II-F / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c4 Thu P0-P1",
+      "message": "'IV / PE II -A / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r1 c4 Thu P0-P1",
+      "message": "'IV / PE II -B / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r2 c1 Mon P1-P3",
+      "message": "'ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r4 c2 Tue P3",
+      "message": "'DL / SJ / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r4 c2 Tue P3",
+      "message": "'IV / YP / 002': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r4 c3 Wed P3",
+      "message": "'DL / SJ / 703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r4 c3 Wed P3",
+      "message": "'IV / YP / 002': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r4 c4 Thu P3",
+      "message": "'BDA / PJB / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r4 c4 Thu P3",
+      "message": "'NLP/ RK/ 703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r6 c5 Fri P5",
+      "message": "'BDA / PJB / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r6 c5 Fri P5",
+      "message": "'NLP/ RK/703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r7 c5 Fri P6-P7",
+      "message": "'BDA / PE-II-G / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r7 c5 Fri P6-P7",
+      "message": "'BDA / PE-II-H / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r7 c5 Fri P6-P7",
+      "message": "'IV / PE II -E / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r7 c5 Fri P6-P7",
+      "message": "'IV / PE II -F / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r10 c2 Tue P7-P8",
+      "message": "'MDM Lab': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r10 c3 Wed P7-P8",
+      "message": "'MDM Lab / Major - Project': minor (MDM) - D3; project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r10 c4 Thu P7-P8",
+      "message": "'MDM Lab / Major - Project': minor (MDM) - D3; project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp- B t10 r13 c5 Fri P8-P9",
+      "message": "'STUDENT ACTIVITY': not a course: student activity; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c1 Mon P0",
+      "message": "'Major Project': project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c2 Tue P0-P1",
+      "message": "'NLP / PE-I-A / RK /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c2 Tue P0-P1",
+      "message": "'NLP/ PE-I-B / AN /608': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c2 Tue P0-P1",
+      "message": "'DL / PE-I-C / SJ /702-A': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c2 Tue P0-P1",
+      "message": "'DL / PE-I-D / SRD /607-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c2 Tue P0-P1",
+      "message": "'BDA / PE-II-A / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c2 Tue P0-P1",
+      "message": "'BDA / PE-II-B / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c2 Tue P0-P1",
+      "message": "'IV / PE II -C / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c2 Tue P0-P1",
+      "message": "'IV / PE II -D / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c3 Wed P0-P1",
+      "message": "'NLP / PE-I-C / RK /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c3 Wed P0-P1",
+      "message": "'NLP/ PE-I-D / AN /608': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c3 Wed P0-P1",
+      "message": "'DL / PE-I-E / SJ /702-A': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c3 Wed P0-P1",
+      "message": "'DL / PE-I-B / SRD /702-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c3 Wed P0-P1",
+      "message": "'BDA / PE-II-C / PJB /603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c3 Wed P0-P1",
+      "message": "'BDA / PE-II-D / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c3 Wed P0-P1",
+      "message": "'IV / PE II -G / YP / 505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c3 Wed P0-P1",
+      "message": "'IV / PE II -H / AA / 509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c4 Thu P0-P1",
+      "message": "'NLP / PE-I-E / AN /702-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c4 Thu P0-P1",
+      "message": "'DL / PE-I-A / SJ /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c4 Thu P0-P1",
+      "message": "'BDA / PE-II-E / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c4 Thu P0-P1",
+      "message": "'BDA / PE-II-F / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c4 Thu P0-P1",
+      "message": "'IV / PE II -A / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r1 c4 Thu P0-P1",
+      "message": "'IV / PE II -B / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r2 c1 Mon P1-P3",
+      "message": "'ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r4 c2 Tue P3",
+      "message": "'DL / SJ / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r4 c2 Tue P3",
+      "message": "'IV / YP / 002': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r4 c3 Wed P3",
+      "message": "'DL / SJ / 703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r4 c3 Wed P3",
+      "message": "'IV / YP / 002': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r4 c4 Thu P3",
+      "message": "'BDA / PJB / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r4 c4 Thu P3",
+      "message": "'NLP/ RK/703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r6 c5 Fri P5",
+      "message": "'BDA / PJB / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r6 c5 Fri P5",
+      "message": "'NLP/ RK/703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r7 c5 Fri P6-P7",
+      "message": "'BDA / PE-II-G / PJB /603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r7 c5 Fri P6-P7",
+      "message": "'BDA / PE-II-H / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r7 c5 Fri P6-P7",
+      "message": "'IV / PE II -E / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r7 c5 Fri P6-P7",
+      "message": "'IV / PE II -F / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r8 c2 Tue P7-P8",
+      "message": "'MDM Lab': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r8 c3 Wed P7-P8",
+      "message": "'MDM Lab / Major Project': minor (MDM) - D3; project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r8 c4 Thu P7-P8",
+      "message": "'MDM Lab / Major Project': minor (MDM) - D3; project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - C t12 r9 c5 Fri P8-P9",
+      "message": "'STUDENT ACTIVITY': not a course: student activity; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c2 Tue P0-P1",
+      "message": "'NLP / PE-I-A / RK /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c2 Tue P0-P1",
+      "message": "'NLP/ PE-I-B / AN /608': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c2 Tue P0-P1",
+      "message": "'DL / PE-I-C / SJ /702-A': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c2 Tue P0-P1",
+      "message": "'DL / PE-I-D / SRD /607-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c2 Tue P0-P1",
+      "message": "'BDA / PE-II-A / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c2 Tue P0-P1",
+      "message": "'BDA / PE-II-B / JB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c2 Tue P0-P1",
+      "message": "'IV / PE II -C / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c2 Tue P0-P1",
+      "message": "'IV / PE II -D / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c3 Wed P0-P1",
+      "message": "'NLP / PE-I-C / RK /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c3 Wed P0-P1",
+      "message": "'NLP/ PE-I-D / AN /608': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c3 Wed P0-P1",
+      "message": "'DL / PE-I-E / SJ /702-A': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c3 Wed P0-P1",
+      "message": "'DL / PE-I-B / SRD /702-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c3 Wed P0-P1",
+      "message": "'BDA / PE-II-C / PJB /603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c3 Wed P0-P1",
+      "message": "'BDA / PE-II-D / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c3 Wed P0-P1",
+      "message": "'IV / PE II -G / YP / 505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c3 Wed P0-P1",
+      "message": "'IV / PE II -H / AA / 509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c4 Thu P0-P1",
+      "message": "'NLP / PE-I-E / AN /702-B': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c4 Thu P0-P1",
+      "message": "'DL / PE-I-A/ SJ /606-4': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c4 Thu P0-P1",
+      "message": "'BDA / PE-II-E / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c4 Thu P0-P1",
+      "message": "'BDA / PE-II-F / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c4 Thu P0-P1",
+      "message": "'IV / PE II -A / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r1 c4 Thu P0-P1",
+      "message": "'IV / PE II -B / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r2 c1 Mon P1-P3",
+      "message": "'ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r4 c2 Tue P3",
+      "message": "'DL / SJ / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r4 c2 Tue P3",
+      "message": "'IV / YP / 002': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r4 c3 Wed P3",
+      "message": "'DL / SJ / 703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r4 c3 Wed P3",
+      "message": "'IV / YP / 002': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r4 c4 Thu P3",
+      "message": "'BDA / PJB / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r4 c4 Thu P3",
+      "message": "'NLP/ RK/ 703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r6 c5 Fri P5",
+      "message": "'BDA / PJB / 508': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r6 c5 Fri P5",
+      "message": "'NLP/ RK/ 703': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r7 c2 Tue P6",
+      "message": "'Major Project': project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r7 c5 Fri P6-P7",
+      "message": "'BDA / PE-II-G / PJB / 603-2': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r7 c5 Fri P6-P7",
+      "message": "'BDA / PE-II-H / JB / 603-3': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r7 c5 Fri P6-P7",
+      "message": "'IV / PE II -E / YP /505': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r7 c5 Fri P6-P7",
+      "message": "'IV / PE II -F / AA /509': elective - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r8 c2 Tue P7-P8",
+      "message": "'MDM Lab': minor (MDM) - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r8 c3 Wed P7-P8",
+      "message": "'MDM Lab / Major Project': minor (MDM) - D3; project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r8 c4 Thu P7-P8",
+      "message": "'MDM Lab / Major Project': minor (MDM) - D3; project - D3; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "excluded_item",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE Comp - D t14 r9 c5 Fri P8-P9",
+      "message": "'STUDENT ACTIVITY': not a course: student activity; frozen at its slot with its division, teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "lecture_room_excluded",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "room 002",
+      "message": "room 002 is excluded by D10; removes 24 in-scope lecture/tutorial periods per week (frozen lecture lines there: 14)",
+      "resolution": "D10"
+    },
+    {
+      "category": "lecture_room_excluded",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "room 202",
+      "message": "'202' is not in classrooms.xlsx: recorded, not used; removes 0 in-scope lecture/tutorial periods per week (frozen lecture lines there: 2)",
+      "resolution": "D29"
+    },
+    {
+      "category": "lecture_room_excluded",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "room 203",
+      "message": "room 203 is excluded by D10; removes 2 in-scope lecture/tutorial periods per week (frozen lecture lines there: 0)",
+      "resolution": "D10"
+    },
+    {
+      "category": "lecture_room_excluded",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "room 307",
+      "message": "'307' is not in classrooms.xlsx: recorded, not used; removes 0 in-scope lecture/tutorial periods per week (frozen lecture lines there: 12)",
+      "resolution": "D29"
+    },
+    {
+      "category": "lecture_room_excluded",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "room 508",
+      "message": "room 508 is excluded by D10; removes 27 in-scope lecture/tutorial periods per week (frozen lecture lines there: 20)",
+      "resolution": "D10"
+    },
+    {
+      "category": "lecture_room_not_class",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "room 703",
+      "message": "room 703 has room_type 'lab', not 'class'; removes 0 in-scope lecture/tutorial periods per week (frozen lecture lines there: 12)",
+      "resolution": "needs human"
+    },
+    {
+      "category": "lecture_room_total",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "all lecture rooms",
+      "message": "53 of 60 in-scope lecture/tutorial periods per week are printed in rooms the generation room set does not offer as classrooms; the solver re-rooms them",
+      "resolution": "D10"
+    },
+    {
+      "category": "frozen_room_conflict",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx",
+      "location": "TE-Comp A t8 r1 c2 Tue P0-P1, TE Comp- B t10 r1 c2 Tue P0-P1, TE Comp - C t12 r1 c2 Tue P0-P1, TE Comp - D t14 r1 c2 Tue P0-P1",
+      "message": "'BDA / PE-II-B / JB / 603-3': the grids disagree on the room (TE-Comp A '603-3', TE Comp- B '603-3', TE Comp - C '603-3', TE Comp - D '603-2'); the lab timetable names '603-3'; used",
+      "resolution": "needs human"
+    },
+    {
+      "category": "room_override",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t0 607-B Fri P0-P1",
+      "message": "'SPCC /C/ AN | TE COMP C (608)' is in the 607-B table, whose utilisation line counts it, but names room '608' in brackets; the table's room is kept",
+      "resolution": "needs human"
+    },
+    {
+      "category": "room_override",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t0 607-B Mon P3-P4",
+      "message": "'PCS / D / SD | SE COMP B | (601)' is in the 607-B table, whose utilisation line counts it, but names room '601' in brackets; the table's room is kept",
+      "resolution": "needs human"
+    },
+    {
+      "category": "lab_in_classroom",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t0 607-B Mon P3-P4",
+      "message": "'PCS / D / SD | SE COMP B | (601)' names classroom 601 for a lab: recorded, not used for labs",
+      "resolution": "D29"
+    },
+    {
+      "category": "room_override",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t0 607-B Fri P3-P4",
+      "message": "'DAA / A / PBB | SE COMP D (606-4)' is in the 607-B table, whose utilisation line counts it, but names room '606-4' in brackets; the table's room is kept",
+      "resolution": "needs human"
+    },
+    {
+      "category": "room_override",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t0 607-B Mon P6-P7",
+      "message": "'Devop / C / JB | TE COMP C (403 B)' is in the 607-B table, whose utilisation line counts it, but names room '403 B' in brackets; the table's room is kept",
+      "resolution": "needs human"
+    },
+    {
+      "category": "room_override",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t0 607-B Fri P6-P7",
+      "message": "'SPCC / D / SBG | TE COMP A (509 new CSE)' is in the 607-B table, whose utilisation line counts it, but names room '509 new CSE' in brackets; the table's room is kept",
+      "resolution": "needs human"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t1 604 Tue P5",
+      "message": "'DCS /SND/ M.TECH COMP' (M.Tech) occupies 604; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t1 604 Wed P5",
+      "message": "'DCS /SND/ M.TECH COMP' (M.Tech) occupies 604; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t1 604 Thu P5",
+      "message": "'DCS /SND/ M.TECH COMP' (M.Tech) occupies 604; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "exam_block",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t5 603-2 Wed P3-P4",
+      "message": "'DAA | LAB EXAM ESE | SE COMP NR': an exam block, frozen room occupancy of 603-2 at its slot",
+      "resolution": "D37"
+    },
+    {
+      "category": "utilisation_mismatch",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t5 603-2",
+      "message": "printed 24/30 = 80.0 %, grid has 26 occupied periods = 86.67 %",
+      "resolution": "needs human"
+    },
+    {
+      "category": "utilisation_mismatch",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t6 603-3",
+      "message": "printed 22/30 = 73.33 %, grid has 20 occupied periods = 66.67 %",
+      "resolution": "needs human"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t7 603-7 Wed P0-P1",
+      "message": "'BDAV / B / RS | BECOMP' (BE) occupies 603-7; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t7 603-7 Thu P0-P1",
+      "message": "'BDAV / A / RS | BE COMP' (BE) occupies 603-7; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t7 603-7 Mon P7-P8",
+      "message": "'MDM-DBMS /RS': MDM in 603-7, frozen with its teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "frozen_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t7 603-7 Tue P7-P8",
+      "message": "'MDM-DBMS /RS': MDM in 603-7, frozen with its teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "utilisation_mismatch",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t7 603-7",
+      "message": "printed 12/30 = 40.0 %, grid has 14 occupied periods = 46.67 %",
+      "resolution": "needs human"
+    },
+    {
+      "category": "frozen_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t8 702-A Wed P7-P8",
+      "message": "'MDM-III Lab (CC) /B /SB': MDM in 702-A, frozen with its teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "utilisation_mismatch",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t8 702-A",
+      "message": "printed 22/30 = 73.33 %, grid has 20 occupied periods = 66.67 %",
+      "resolution": "needs human"
+    },
+    {
+      "category": "frozen_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t11 703-A Tue P7-P8",
+      "message": "'MDM-III Lab (CC) /A /SB': MDM in 703-A, frozen with its teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t12 703-B Tue P0-P1",
+      "message": "'HPC / B / JR | BE COMP' (BE) occupies 703-B; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t12 703-B Wed P5",
+      "message": "'HPC / JR | BE COMP' (BE) occupies 703-B; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t12 703-B Wed P6-P7",
+      "message": "'HPC / A /JR | BE COMP' (BE) occupies 703-B; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t13 509 Fri P0-P1",
+      "message": "'MDCF Lab / SB | M.TECH COMP' (M.Tech) occupies 509; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t13 509 Mon P1-P3",
+      "message": "'ET Lab /DDA | M.TECH COMP' (M.Tech) occupies 509; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t13 509 Tue P6",
+      "message": "'DFIR /MTech /NR' (M.Tech) occupies 509; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t13 509 Tue P7-P8",
+      "message": "'DFIR Lab /NR | M.TECH COMP' (M.Tech) occupies 509; out of scope (D2), frozen with its room and CE teacher",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_in_lab",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t13 509 Thu P7-P8",
+      "message": "'MDM III Lab | / Major Project | M.tech DFIR ESE /SB': MDM in 509, frozen with its teacher and room",
+      "resolution": "D24"
+    },
+    {
+      "category": "initials_resolved_d38",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t3 606-5 Thu P3-P4",
+      "message": "IS x1: not in the cell's division legend (or no division printed); resolved to Isha Sawalkar",
+      "resolution": "D38"
+    },
+    {
+      "category": "initials_resolved_d38",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t3 606-5 Thu P7-P8",
+      "message": "AT x1: not in the cell's division legend (or no division printed); resolved to Anuj Tawari",
+      "resolution": "D38"
+    },
+    {
+      "category": "initials_resolved_d38",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t4 608 Fri P6-P7",
+      "message": "PBB x1: not in the cell's division legend (or no division printed); resolved to Prasenjit Bhavathankar",
+      "resolution": "D38"
+    },
+    {
+      "category": "initials_unresolved",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t5 603-2 Wed P3-P4",
+      "message": "NR x1: no division. Not resolved.",
+      "resolution": "needs human"
+    },
+    {
+      "category": "initials_resolved_d38",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t5 603-2 Thu P3-P4, t5 603-2 Fri P3-P4",
+      "message": "NR x2: not in the cell's division legend (or no division printed); resolved to Nataasha Raul",
+      "resolution": "D38"
+    },
+    {
+      "category": "initials_resolved_d38",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t7 603-7 Mon P7-P8, t7 603-7 Tue P7-P8",
+      "message": "RS x2: not in the cell's division legend (or no division printed); resolved to Rupali Sawant",
+      "resolution": "D38"
+    },
+    {
+      "category": "initials_resolved_d38",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t8 702-A Mon P3-P4, t14 505 Tue P5-P6",
+      "message": "AGN x2: not in the cell's division legend (or no division printed); resolved to Amey Ganesh Nile",
+      "resolution": "D38"
+    },
+    {
+      "category": "initials_resolved_d38",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t8 702-A Wed P7-P8, t11 703-A Tue P7-P8",
+      "message": "SB x2: not in the cell's division legend (or no division printed); resolved to Soni Bhambar",
+      "resolution": "D38"
+    },
+    {
+      "category": "initials_resolved_d38",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t10 702-C Thu P5-P6",
+      "message": "SM x1: not in the cell's division legend (or no division printed); resolved to Sudeep Mali",
+      "resolution": "D38"
+    },
+    {
+      "category": "room_label_normalised",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t0 ROOM NO",
+      "message": "'607-B' read as room 607B",
+      "resolution": "D30"
+    },
+    {
+      "category": "subroom_beyond_split",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t2 ROOM NO, t0 607-B Fri P3-P4",
+      "message": "'606-4': room 606 declares sub-rooms 606-1, 606-2; mapped to 606",
+      "resolution": "D30"
+    },
+    {
+      "category": "subroom_beyond_split",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t3 ROOM NO",
+      "message": "'606-5': room 606 declares sub-rooms 606-1, 606-2; mapped to 606",
+      "resolution": "D30"
+    },
+    {
+      "category": "subroom_beyond_split",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t7 ROOM NO",
+      "message": "'603-7': room 603 declares sub-rooms 603-1, 603-2, 603-3; mapped to 603",
+      "resolution": "D30"
+    },
+    {
+      "category": "room_not_generation",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t14 ROOM NO",
+      "message": "lab 505 is not used for generation in v1",
+      "resolution": "D28"
+    },
+    {
+      "category": "room_not_generation",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t0 607-B Mon P6-P7",
+      "message": "'403 B' is outside D8/D10: recorded, not used",
+      "resolution": "D29"
+    },
+    {
+      "category": "room_label_normalised",
+      "source_file": "Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "t0 607-B Fri P6-P7",
+      "message": "'509 new CSE' read as lab 509",
+      "resolution": "D27"
+    },
+    {
+      "category": "practical_missing_in_lab_tt",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx + Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "SE-Comp A t0 r4 c2 Tue P3-P4",
+      "message": "'PCS / A / DN / 605' has no line in the lab timetable",
+      "resolution": "needs human"
+    },
+    {
+      "category": "practical_missing_in_lab_tt",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx + Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "SE-Comp C t4 r1 c3 Wed P0-P1",
+      "message": "'PCS / A / DN / 605' has no line in the lab timetable",
+      "resolution": "needs human"
+    },
+    {
+      "category": "practical_room_mismatch",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx + Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "SE-Comp C t4 r4 c5 Fri P3-P4 / t6 603-3 Fri P3-P4",
+      "message": "SE-C batch B CE208: class timetable room '603-4', lab timetable '603-3'",
+      "resolution": "needs human"
+    },
+    {
+      "category": "practical_missing_in_lab_tt",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx + Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "SE-Comp C t4 r4 c5 Fri P3-P4",
+      "message": "'PCS / C / DN / 609' has no line in the lab timetable",
+      "resolution": "needs human"
+    },
+    {
+      "category": "practical_missing_in_lab_tt",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx + Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "SE-Comp D t6 r1 c3 Wed P0-P1",
+      "message": "'PCS / A / SD / 609' has no line in the lab timetable",
+      "resolution": "needs human"
+    },
+    {
+      "category": "practical_mismatch",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx + Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "TE Comp - C t12 r8 c4 Thu P7-P8 / t11 703-A Fri P0-P1",
+      "message": "TE-C batch B CE307: day: class 'Thursday' vs lab 'Friday'; periods: class 'P7-P8' vs lab 'P0-P1'",
+      "resolution": "needs human"
+    },
+    {
+      "category": "practical_missing_in_lab_tt",
+      "source_file": "CE_Class_Time_Table-EVEN_sem_25-26.docx + Lab CE_Time_Table-Even_sem_25-26.docx",
+      "location": "TE Comp - D t14 r6 c4 Thu P5-P6",
+      "message": "'Devop/ A / AGN /403-A' has no line in the lab timetable",
+      "resolution": "needs human"
+    },
+    {
+      "category": "faculty_day_off",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t8 Swapnali Kurhade",
+      "message": "Swapnali Kurhade is marked 'PHD Day OFF' on Monday: every period of that day is unavailable",
+      "resolution": "D36"
+    },
+    {
+      "category": "time_off_grid",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t25 Amey Ganesh Nile r2",
+      "message": "time '9.00-11.00' fits no ROADMAP §5 period; cells on it: Wed 'OS / B / SE- D /607-B'; Fri 'Devop / B / TE-D / 603-2'",
+      "resolution": "needs human"
+    },
+    {
+      "category": "time_off_grid",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t25 Amey Ganesh Nile r6",
+      "message": "time '12.15 to1.15' fits no ROADMAP §5 period; cells on it: Mon 'OS / A / SE-A / 702-A'; Tue 'OS / B / SE- B / 702-B'; Thu 'OS / C / SE-D / 509'",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t1 Pramod Bide",
+      "message": "printed '4T+ 12P=16', computed 2T+8P=10 (lecture 0, tutorial 0, practical 0, frozen 2T+8P, lab-timetable only 0P); the page also lists PSOOP",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t3 Sudhir Dhage",
+      "message": "printed '3T+ 8P=11', computed 0T+11P=11 (lecture 0, tutorial 0, practical 8, frozen 0T+0P, lab-timetable only 3P)",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t5 Sunil Ghane",
+      "message": "printed '6T+10P=16', computed 6T+6P=12 (lecture 6, tutorial 0, practical 6, frozen 0T+0P, lab-timetable only 0P); the page also lists PSOOP",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t7 Reeta Koshy",
+      "message": "printed '8T+8P=16', computed 6T+8P=14 (lecture 0, tutorial 4, practical 4, frozen 2T+4P, lab-timetable only 0P)",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t10 Jyoti Ramteke",
+      "message": "printed '3T+14P=17', computed 0T+11P=11 (lecture 0, tutorial 0, practical 6, frozen 0T+0P, lab-timetable only 5P); the page also lists HPC Lab",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_above_16",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t10 Jyoti Ramteke",
+      "message": "Jyoti Ramteke: printed 17, computed 11 h/week; above the 16 h soft target",
+      "resolution": "D11"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t11 Nataasha Raul",
+      "message": "printed '2T+14P=16', computed 0T+11P=11 (lecture 0, tutorial 0, practical 8, frozen 0T+0P, lab-timetable only 3P); the page also lists PSOOP",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t12 Rupali Sawant",
+      "message": "printed '4T+ 10P=14', computed 0T+8P=8 (lecture 0, tutorial 0, practical 0, frozen 0T+0P, lab-timetable only 8P); the page also lists MDM-I lab, MDM-I (DBMS)",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t13 Abhijeet Salunke",
+      "message": "printed '8T+8P=16', computed 6T+8P=14 (lecture 6, tutorial 0, practical 8, frozen 0T+0P, lab-timetable only 0P); the page also lists ANC",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t14 Jignesh Sisodia",
+      "message": "printed '7T+10P=17', computed 6T+10P=16 (lecture 6, tutorial 0, practical 10, frozen 0T+0P, lab-timetable only 0P); the page also lists ANC",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_above_16",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t14 Jignesh Sisodia",
+      "message": "Jignesh Sisodia: printed 17, computed 16 h/week; above the 16 h soft target",
+      "resolution": "D11"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t16 Sudeep Mali",
+      "message": "printed '18P = 18', computed 0T+6P=6 (lecture 0, tutorial 0, practical 6, frozen 0T+0P, lab-timetable only 0P); the page also lists PSOOP",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_above_16",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t16 Sudeep Mali",
+      "message": "Sudeep Mali: printed 18, computed 6 h/week; above the 16 h soft target",
+      "resolution": "D11"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t17 Sanjyuktarani Jena",
+      "message": "printed '4T+14P=18', computed 2T+14P=16 (lecture 0, tutorial 0, practical 8, frozen 2T+6P, lab-timetable only 0P)",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_above_16",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t17 Sanjyuktarani Jena",
+      "message": "Sanjyuktarani Jena: printed 18, computed 16 h/week; above the 16 h soft target",
+      "resolution": "D11"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t18 Vaishnavee Rathod",
+      "message": "printed '4T+12P=16', computed 4T+8P=12 (lecture 4, tutorial 0, practical 8, frozen 0T+0P, lab-timetable only 0P); the page also lists PSOOP",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t19 Isha Sawalkar",
+      "message": "printed '18P = 18', computed 0T+14P=14 (lecture 0, tutorial 0, practical 14, frozen 0T+0P, lab-timetable only 0P); the page also lists PSOOP",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_above_16",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t19 Isha Sawalkar",
+      "message": "Isha Sawalkar: printed 18, computed 14 h/week; above the 16 h soft target",
+      "resolution": "D11"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t20 Jostna Bhagat",
+      "message": "printed '16P=16', computed 0T+12P=12 (lecture 0, tutorial 0, practical 4, frozen 0T+8P, lab-timetable only 0P); the page also lists PSOOP",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t21 Yogita Patil",
+      "message": "printed '4T + 14P=18', computed 2T+14P=16 (lecture 0, tutorial 0, practical 6, frozen 2T+8P, lab-timetable only 0P)",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_above_16",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t21 Yogita Patil",
+      "message": "Yogita Patil: printed 18, computed 16 h/week; above the 16 h soft target",
+      "resolution": "D11"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t23 Anas Ansari",
+      "message": "printed '16P = 16', computed 0T+12P=12 (lecture 0, tutorial 0, practical 4, frozen 0T+8P, lab-timetable only 0P); the page also lists PSOOP",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t24 Azman Qureshi",
+      "message": "printed '18P=18', computed 0T+6P=6 (lecture 0, tutorial 0, practical 6, frozen 0T+0P, lab-timetable only 0P); the page also lists PSOOP",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_above_16",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t24 Azman Qureshi",
+      "message": "Azman Qureshi: printed 18, computed 6 h/week; above the 16 h soft target",
+      "resolution": "D11"
+    },
+    {
+      "category": "load_above_16",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t25 Amey Ganesh Nile",
+      "message": "Amey Ganesh Nile: printed 18, computed 18 h/week; above the 16 h soft target",
+      "resolution": "D11"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t26 Soni Bhambar",
+      "message": "printed '4T+10P=14', computed 0T+8P=8 (lecture 0, tutorial 0, practical 0, frozen 0T+0P, lab-timetable only 8P); the page also lists MDM III Theory (CC), MDM III Theory(CC), MDCF, PSOOP",
+      "resolution": "needs human"
+    },
+    {
+      "category": "missing_workload",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t29 D. R. Kalbande",
+      "message": "D. R. Kalbande: no load line on the page",
+      "resolution": "needs human"
+    },
+    {
+      "category": "load_mismatch",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t30 Vandana Wekhande",
+      "message": "printed '1T+4P=5', computed 0T+0P=0 (lecture 0, tutorial 0, practical 0, frozen 0T+0P, lab-timetable only 0P); the page also lists HMI Theory, HMI",
+      "resolution": "needs human"
+    },
+    {
+      "category": "missing_workload",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "t31 Dayanand Ambawade",
+      "message": "Dayanand Ambawade: no load line on the page",
+      "resolution": "needs human"
+    },
+    {
+      "category": "no_faculty_page",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "Dr. Deepak Nair",
+      "message": "Dr. Deepak Nair teaches 2T+14P=16 (lecture 0, tutorial 2, practical 14, frozen 0T+0P, lab-timetable only 0P) in the class/lab timetables but has no page",
+      "resolution": "needs human"
+    },
+    {
+      "category": "no_faculty_page",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "Prof. Aman Yadav",
+      "message": "Prof. Aman Yadav teaches 0T+2P=2 (lecture 0, tutorial 0, practical 2, frozen 0T+0P, lab-timetable only 0P) in the class/lab timetables but has no page",
+      "resolution": "needs human"
+    },
+    {
+      "category": "no_faculty_page",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "Prof. Asma Tambe",
+      "message": "Prof. Asma Tambe teaches 3T+0P=3 (lecture 0, tutorial 0, practical 0, frozen 3T+0P, lab-timetable only 0P) in the class/lab timetables but has no page",
+      "resolution": "needs human"
+    },
+    {
+      "category": "no_faculty_page",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "Prof. Sonali Dudhihalli",
+      "message": "Prof. Sonali Dudhihalli teaches 2T+14P=16 (lecture 0, tutorial 2, practical 14, frozen 0T+0P, lab-timetable only 0P) in the class/lab timetables but has no page",
+      "resolution": "needs human"
+    },
+    {
+      "category": "no_faculty_page",
+      "source_file": "Faculty Individual timetable Even 2025-26.docx",
+      "location": "Prof. Suman M.",
+      "message": "Prof. Suman M. teaches 0T+2P=2 (lecture 0, tutorial 0, practical 2, frozen 0T+0P, lab-timetable only 0P) in the class/lab timetables but has no page",
+      "resolution": "needs human"
+    },
+    {
+      "category": "out_of_scope_room_disagreement",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r1 c3 Wed P0-P1",
+      "message": "'DL / E / 606-4 / SJ' is the frozen SE/TE session in 702-A (same teacher and slot) but names 606; the frozen session's room is kept",
+      "resolution": "needs human"
+    },
+    {
+      "category": "out_of_scope_initials_unresolved",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r4 c5 Fri P3",
+      "message": "'HMI Theory /VM /online': 'VM' names nobody in the BE Comp- A & B legend",
+      "resolution": "needs human"
+    },
+    {
+      "category": "out_of_scope_initials_unresolved",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r5 c1 Mon P4",
+      "message": "'PCS /SV / 507 new': 'SV' names nobody in the M.Tech Comp legend",
+      "resolution": "needs human"
+    },
+    {
+      "category": "out_of_scope_initials_unresolved",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r7 c5 Fri P6-P7",
+      "message": "'PCS /SV / 607-A': 'SV' names nobody in the M.Tech Comp legend",
+      "resolution": "needs human"
+    },
+    {
+      "category": "faculty_tt_line_not_in_grids",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t0 Prasenjit Bhavathankar Mon P3",
+      "message": "'DAA/ SE C & D / 508': an SE/TE subject or elective printed without a single SE/TE division, and the class and lab timetables give Prasenjit Bhavathankar nothing at that slot; not blocked",
+      "resolution": "needs human"
+    },
+    {
+      "category": "faculty_tt_line_not_in_grids",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t2 Kailas Devadkar Thu P4",
+      "message": "'OS / SE A & B / 002': an SE/TE subject or elective printed without a single SE/TE division, and the class and lab timetables give Kailas Devadkar nothing at that slot; not blocked",
+      "resolution": "needs human"
+    },
+    {
+      "category": "out_of_scope_room_disagreement",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t26 Soni Bhambar Tue P7-P8",
+      "message": "'MDM-III Lab (CC) /A /702-A' is the frozen SE/TE session in 703-A (same teacher and slot) but names 702-A; the frozen session's room is kept",
+      "resolution": "needs human"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r1 c2 Tue P0-P1 'HPC / B / 703-B /JR' || Lab CE_Time_Table-Even_sem_25-26.docx t12 703-B Tue P0-P1 'HPC / B / JR | BE COMP' || Faculty Individual timetable Even 2025-26.docx t10 Jyoti Ramteke Tue P0-P1 'HPC / B / 703-B / BE - A & B'",
+      "message": "'HPC / B / 703-B /JR' (BE) Tue P0-P1: blocks teacher Jyoti Ramteke, room 703-B",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r1 c3 Wed P0-P1 'BDAV /B / 603-7 / RS' || Lab CE_Time_Table-Even_sem_25-26.docx t7 603-7 Wed P0-P1 'BDAV / B / RS | BECOMP' || Faculty Individual timetable Even 2025-26.docx t12 Rupali Sawant Wed P0-P1 'BDAV / B / 603-7 / BE'",
+      "message": "'BDAV /B / 603-7 / RS' (BE) Wed P0-P1: blocks teacher Rupali Sawant, room 603",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r1 c4 Thu P0-P1 'BDAV /A / 603-7 / RS' || Lab CE_Time_Table-Even_sem_25-26.docx t7 603-7 Thu P0-P1 'BDAV / A / RS | BE COMP' || Faculty Individual timetable Even 2025-26.docx t12 Rupali Sawant Thu P0-P1 'BDAV /A / 603-7 / BE'",
+      "message": "'BDAV /A / 603-7 / RS' (BE) Thu P0-P1: blocks teacher Rupali Sawant, room 603",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r4 c1 Mon P3 'HPC /605 / JR' || Faculty Individual timetable Even 2025-26.docx t10 Jyoti Ramteke Mon P3 'HPC / 605 / BE - A & B'",
+      "message": "'HPC /605 / JR' (BE) Mon P3: blocks teacher Jyoti Ramteke, room 605",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r4 c2 Tue P3 'BDAV /601 / RS' || Faculty Individual timetable Even 2025-26.docx t12 Rupali Sawant Tue P3 'BDAV / 605 / BE - A & B'",
+      "message": "'BDAV /601 / RS' (BE) Tue P3: blocks teacher Rupali Sawant, room 601",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_sources_disagree",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r4 c2 Tue P3 'BDAV /601 / RS' || Faculty Individual timetable Even 2025-26.docx t12 Rupali Sawant Tue P3 'BDAV / 605 / BE - A & B'",
+      "message": "'BDAV /601 / RS': t12 Rupali Sawant Tue P3 names 605; blocked P3 in 601",
+      "resolution": "needs human"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r4 c3 Wed P3 'BDAV /605 / RS' || Faculty Individual timetable Even 2025-26.docx t12 Rupali Sawant Wed P3 'BDAV / 605 / BE - A & B'",
+      "message": "'BDAV /605 / RS' (BE) Wed P3: blocks teacher Rupali Sawant, room 605",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_not_blocking",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r4 c5 Fri P3 'HMI Theory /VM /online'",
+      "message": "'HMI Theory /VM /online' (BE): no CE teacher and no D8/D10 room, so it blocks nothing; its initials are unresolved",
+      "resolution": "needs human"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r6 c1 Mon P5-P6 'HMI /A /412 / DRK (CSE+CE)' || Faculty Individual timetable Even 2025-26.docx t29 D. R. Kalbande Mon P5-P6 'HMI /BA /412 (CE_CSE)_BE-Comp'",
+      "message": "'HMI /A /412 / DRK (CSE+CE)' (BE) Mon P5-P6: blocks teacher D. R. Kalbande, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r6 c1 Mon P5-P6 'HMI /B /404 /VW ( CE)' || Faculty Individual timetable Even 2025-26.docx t30 Vandana Wekhande Mon P5-P6 'HMI /B /404 CE_BE-Comp A-B'",
+      "message": "'HMI /B /404 /VW ( CE)' (BE) Mon P5-P6: blocks teacher Vandana Wekhande, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r6 c2 Tue P5 'HMI Theory / DRK /409' || Faculty Individual timetable Even 2025-26.docx t29 D. R. Kalbande Tue P5 'HMI Theory /409 BE CE'",
+      "message": "'HMI Theory / DRK /409' (BE) Tue P5: blocks teacher D. R. Kalbande, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r6 c3 Wed P5 'HPC /703-B / JR' || Lab CE_Time_Table-Even_sem_25-26.docx t12 703-B Wed P5 'HPC / JR | BE COMP' || Faculty Individual timetable Even 2025-26.docx t10 Jyoti Ramteke Wed P5 'HPC /703-B /BE -A & B'",
+      "message": "'HPC /703-B / JR' (BE) Wed P5: blocks teacher Jyoti Ramteke, room 703-B",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r7 c2 Tue P6-P7 'HMI /C /412 /VW (CE)' || Faculty Individual timetable Even 2025-26.docx t30 Vandana Wekhande Tue P7-P8 'HMI /C / 412 CE_ BE-Comp A-B'",
+      "message": "'HMI /C /412 /VW (CE)' (BE) Tue P6-P8: blocks teacher Vandana Wekhande, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_sources_disagree",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r7 c2 Tue P6-P7 'HMI /C /412 /VW (CE)' || Faculty Individual timetable Even 2025-26.docx t30 Vandana Wekhande Tue P7-P8 'HMI /C / 412 CE_ BE-Comp A-B'",
+      "message": "'HMI /C /412 /VW (CE)': t30 Vandana Wekhande Tue P7-P8 covers P7-P8; blocked P6-P8 in none",
+      "resolution": "needs human"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx BE Comp- A & B t17 r7 c3 Wed P6-P7 'HPC / A /703-B /JR' || Lab CE_Time_Table-Even_sem_25-26.docx t12 703-B Wed P6-P7 'HPC / A /JR | BE COMP' || Faculty Individual timetable Even 2025-26.docx t10 Jyoti Ramteke Wed P6-P7 'HPC / A /703-B / BE - A & B'",
+      "message": "'HPC / A /703-B /JR' (BE) Wed P6-P7: blocks teacher Jyoti Ramteke, room 703-B",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r1 c3 Wed P0-P1 'HPC Lab /JR /403-A' || Faculty Individual timetable Even 2025-26.docx t10 Jyoti Ramteke Wed P0-P1 'HPC Lab /M.Tech /403-A'",
+      "message": "'HPC Lab /JR /403-A' (M.Tech) Wed P0-P1: blocks teacher Jyoti Ramteke, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r1 c4 Thu P0 'ANC /JS /609' || Faculty Individual timetable Even 2025-26.docx t14 Jignesh Sisodia Thu P0 'ANC /MTech /609'",
+      "message": "'ANC /JS /609' (M.Tech) Thu P0: blocks teacher Jignesh Sisodia, room 609",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r1 c5 Fri P0-P1 'MDCF Lab /SB / 509' || Lab CE_Time_Table-Even_sem_25-26.docx t13 509 Fri P0-P1 'MDCF Lab / SB | M.TECH COMP' || Faculty Individual timetable Even 2025-26.docx t26 Soni Bhambar Fri P0-P1 'MDCF Lab /SPG 509'",
+      "message": "'MDCF Lab /SB / 509' (M.Tech) Fri P0-P1: blocks teacher Soni Bhambar, room 509",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r2 c1 Mon P1-P3 'ET Lab /DDA /509' || Lab CE_Time_Table-Even_sem_25-26.docx t13 509 Mon P1-P3 'ET Lab /DDA | M.TECH COMP' || Faculty Individual timetable Even 2025-26.docx t31 Dayanand Ambawade Mon P1-P3 'ET Lab /M.Tech /509 (10.00 -12.00)'",
+      "message": "'ET Lab /DDA /509' (M.Tech) Mon P1-P3: blocks teacher Dayanand Ambawade, room 509",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r2 c2 Tue P1 'ANC /AVS /609' || Faculty Individual timetable Even 2025-26.docx t13 Abhijeet Salunke Tue P1 'ANC /M.tech /609'",
+      "message": "'ANC /AVS /609' (M.Tech) Tue P1: blocks teacher Abhijeet Salunke, room 609",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r2 c4 Thu P1 'HPC /JR /609'",
+      "message": "'HPC /JR /609' (M.Tech) Thu P1: blocks teacher Jyoti Ramteke, room 609",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r4 c2 Tue P3 'MDCF /SB /609' || Faculty Individual timetable Even 2025-26.docx t26 Soni Bhambar Tue P3 'MDCF /SPG /609'",
+      "message": "'MDCF /SB /609' (M.Tech) Tue P3: blocks teacher Soni Bhambar, room 609",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r4 c3 Wed P3 'DFIR /NR /609' || Faculty Individual timetable Even 2025-26.docx t11 Nataasha Raul Wed P3 'DFIR / M.Tech /609'",
+      "message": "'DFIR /NR /609' (M.Tech) Wed P3: blocks teacher Nataasha Raul, room 609",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r4 c4 Thu P3 'MDCF /SB /609' || Faculty Individual timetable Even 2025-26.docx t26 Soni Bhambar Thu P3 'MDCF /SPG /609'",
+      "message": "'MDCF /SB /609' (M.Tech) Thu P3: blocks teacher Soni Bhambar, room 609",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r4 c5 Fri P3-P4 'HPC Lab /JR /403-A' || Faculty Individual timetable Even 2025-26.docx t10 Jyoti Ramteke Fri P3-P4 'HPC Lab /MTech /403-A'",
+      "message": "'HPC Lab /JR /403-A' (M.Tech) Fri P3-P4: blocks teacher Jyoti Ramteke, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r5 c1 Mon P4 'PCS /SV / 507 new'",
+      "message": "'PCS /SV / 507 new' (M.Tech) Mon P4: blocks teacher none, room 507",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r6 c2 Tue P5 'DCS /SND /604' || Lab CE_Time_Table-Even_sem_25-26.docx t1 604 Tue P5 'DCS /SND/ M.TECH COMP' || Faculty Individual timetable Even 2025-26.docx t3 Sudhir Dhage Tue P5 'DCS /M.tech /604'",
+      "message": "'DCS /SND /604' (M.Tech) Tue P5: blocks teacher Sudhir Dhage, room 604",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r6 c3 Wed P5 'DCS /SND /604' || Lab CE_Time_Table-Even_sem_25-26.docx t1 604 Wed P5 'DCS /SND/ M.TECH COMP' || Faculty Individual timetable Even 2025-26.docx t3 Sudhir Dhage Wed P5 'DCS /M.tech /604'",
+      "message": "'DCS /SND /604' (M.Tech) Wed P5: blocks teacher Sudhir Dhage, room 604",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r6 c4 Thu P5 'DCS /SND /604' || Lab CE_Time_Table-Even_sem_25-26.docx t1 604 Thu P5 'DCS /SND/ M.TECH COMP' || Faculty Individual timetable Even 2025-26.docx t3 Sudhir Dhage Thu P5 'DCS /M.Tech /604'",
+      "message": "'DCS /SND /604' (M.Tech) Thu P5: blocks teacher Sudhir Dhage, room 604",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r7 c1 Mon P6 'ANC /AVS /609' || Faculty Individual timetable Even 2025-26.docx t13 Abhijeet Salunke Mon P6 'ANC /M.tech /609'",
+      "message": "'ANC /AVS /609' (M.Tech) Mon P6: blocks teacher Abhijeet Salunke, room 609",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r7 c2 Tue P6 'DFIR / NR /509' || Lab CE_Time_Table-Even_sem_25-26.docx t13 509 Tue P6 'DFIR /MTech /NR' || Faculty Individual timetable Even 2025-26.docx t11 Nataasha Raul Tue P6 'DFIR / M.Tech /509'",
+      "message": "'DFIR / NR /509' (M.Tech) Tue P6: blocks teacher Nataasha Raul, room 509",
+      "resolution": "D35"
+    },
+    {
+      "category": "out_of_scope_not_blocking",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r7 c5 Fri P6-P7 'PCS /SV / 607-A'",
+      "message": "'PCS /SV / 607-A' (M.Tech): no CE teacher and no D8/D10 room, so it blocks nothing; its initials are unresolved",
+      "resolution": "needs human"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "CE_Class_Time_Table-EVEN_sem_25-26.docx M.Tech Comp t19 r8 c2 Tue P7-P8 'DFIR Lab /NR/ 509' || Lab CE_Time_Table-Even_sem_25-26.docx t13 509 Tue P7-P8 'DFIR Lab /NR | M.TECH COMP' || Faculty Individual timetable Even 2025-26.docx t11 Nataasha Raul Tue P7-P8 'DFIR lab /M.Tech /509'",
+      "message": "'DFIR Lab /NR/ 509' (M.Tech) Tue P7-P8: blocks teacher Nataasha Raul, room 509",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_exam",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Lab CE_Time_Table-Even_sem_25-26.docx t5 603-2 Wed P3-P4 'DAA | LAB EXAM ESE | SE COMP NR'",
+      "message": "'DAA | LAB EXAM ESE | SE COMP NR' (not printed) Wed P3-P4: blocks teacher none, room 603-2",
+      "resolution": "D37"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t1 Pramod Bide Tue P3-P4 'PSOOP / A1 / 003'",
+      "message": "'PSOOP / A1 / 003' (not printed) Tue P3-P4: blocks teacher Pramod Bide, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t1 Pramod Bide Wed P6-P7 'PSOOP / A1 / 003'",
+      "message": "'PSOOP / A1 / 003' (not printed) Wed P6-P7: blocks teacher Pramod Bide, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t5 Sunil Ghane Wed P0-P1 'PSOOP / G1 / 003'",
+      "message": "'PSOOP / G1 / 003' (not printed) Wed P0-P1: blocks teacher Sunil Ghane, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t5 Sunil Ghane Tue P6-P7 'PSOOP / G1 / 003'",
+      "message": "'PSOOP / G1 / 003' (not printed) Tue P6-P7: blocks teacher Sunil Ghane, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t10 Jyoti Ramteke Fri P7 'HPC /MTech /609'",
+      "message": "'HPC /MTech /609' (M.Tech) Fri P7: blocks teacher Jyoti Ramteke, room 609",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t11 Nataasha Raul Mon P6-P7 'PSOOP / B1 / 003'",
+      "message": "'PSOOP / B1 / 003' (not printed) Mon P6-P7: blocks teacher Nataasha Raul, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t11 Nataasha Raul Fri P6-P7 'PSOOP / B1 / 003'",
+      "message": "'PSOOP / B1 / 003' (not printed) Fri P6-P7: blocks teacher Nataasha Raul, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_faculty_tt_mdm",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t12 Rupali Sawant Mon P0-P1 'MDM-I lab /A /603-7'",
+      "message": "'MDM-I lab /A /603-7' (not printed) Mon P0-P1: blocks teacher Rupali Sawant, room 603",
+      "resolution": "D24"
+    },
+    {
+      "category": "frozen_faculty_tt_mdm",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t12 Rupali Sawant Mon P6 'MDM-I (DBMS) / 605'",
+      "message": "'MDM-I (DBMS) / 605' (not printed) Mon P6: blocks teacher Rupali Sawant, room 605",
+      "resolution": "D24"
+    },
+    {
+      "category": "frozen_faculty_tt_mdm",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t12 Rupali Sawant Tue P6 'MDM-I (DBMS) / 605'",
+      "message": "'MDM-I (DBMS) / 605' (not printed) Tue P6: blocks teacher Rupali Sawant, room 605",
+      "resolution": "D24"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t16 Sudeep Mali Mon P0-P1 'PSOOP / D2 /003'",
+      "message": "'PSOOP / D2 /003' (not printed) Mon P0-P1: blocks teacher Sudeep Mali, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t16 Sudeep Mali Wed P0-P1 'PSOOP / G2 /003'",
+      "message": "'PSOOP / G2 /003' (not printed) Wed P0-P1: blocks teacher Sudeep Mali, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t16 Sudeep Mali Thu P0-P1 'PSOOP / D2 /003'",
+      "message": "'PSOOP / D2 /003' (not printed) Thu P0-P1: blocks teacher Sudeep Mali, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t16 Sudeep Mali Tue P3-P4 'PSOOP / A2 /003'",
+      "message": "'PSOOP / A2 /003' (not printed) Tue P3-P4: blocks teacher Sudeep Mali, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t16 Sudeep Mali Tue P6-P7 'PSOOP / G2 /003'",
+      "message": "'PSOOP / G2 /003' (not printed) Tue P6-P7: blocks teacher Sudeep Mali, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t16 Sudeep Mali Wed P6-P7 'PSOOP / A2 /003'",
+      "message": "'PSOOP / A2 /003' (not printed) Wed P6-P7: blocks teacher Sudeep Mali, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t18 Vaishnavee Rathod Tue P0-P1 'PSOOP / F1 / 003'",
+      "message": "'PSOOP / F1 / 003' (not printed) Tue P0-P1: blocks teacher Vaishnavee Rathod, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t18 Vaishnavee Rathod Mon P3-P4 'PSOOP / F1 / 003'",
+      "message": "'PSOOP / F1 / 003' (not printed) Mon P3-P4: blocks teacher Vaishnavee Rathod, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t19 Isha Sawalkar Wed P0-P1 'PSOOP / G4 / 003'",
+      "message": "'PSOOP / G4 / 003' (not printed) Wed P0-P1: blocks teacher Isha Sawalkar, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t19 Isha Sawalkar Tue P6-P7 'PSOOP / G4 / 003'",
+      "message": "'PSOOP / G4 / 003' (not printed) Tue P6-P7: blocks teacher Isha Sawalkar, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t20 Jostna Bhagat Tue P3-P4 'PSOOP / A3 / 003'",
+      "message": "'PSOOP / A3 / 003' (not printed) Tue P3-P4: blocks teacher Jostna Bhagat, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t20 Jostna Bhagat Wed P6-P7 'PSOOP / A3 / 003'",
+      "message": "'PSOOP / A3 / 003' (not printed) Wed P6-P7: blocks teacher Jostna Bhagat, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t23 Anas Ansari Tue P3-P4 'PSOOP / A4 / 003'",
+      "message": "'PSOOP / A4 / 003' (not printed) Tue P3-P4: blocks teacher Anas Ansari, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t23 Anas Ansari Wed P6-P7 'PSOOP / A4 / 003'",
+      "message": "'PSOOP / A4 / 003' (not printed) Wed P6-P7: blocks teacher Anas Ansari, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t24 Azman Qureshi Mon P0-P1 'PSOOP / D3 / 003'",
+      "message": "'PSOOP / D3 / 003' (not printed) Mon P0-P1: blocks teacher Azman Qureshi, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t24 Azman Qureshi Tue P0-P1 'PSOOP / F2 / 003'",
+      "message": "'PSOOP / F2 / 003' (not printed) Tue P0-P1: blocks teacher Azman Qureshi, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t24 Azman Qureshi Thu P0-P1 'PSOOP / D3 / 003'",
+      "message": "'PSOOP / D3 / 003' (not printed) Thu P0-P1: blocks teacher Azman Qureshi, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t24 Azman Qureshi Fri P0-P1 'PSOOP / C2 / 003'",
+      "message": "'PSOOP / C2 / 003' (not printed) Fri P0-P1: blocks teacher Azman Qureshi, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t24 Azman Qureshi Mon P3-P4 'PSOOP / F2 / 003'",
+      "message": "'PSOOP / F2 / 003' (not printed) Mon P3-P4: blocks teacher Azman Qureshi, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t24 Azman Qureshi Wed P8-P9 'PSOOP / C2 / 003'",
+      "message": "'PSOOP / C2 / 003' (not printed) Wed P8-P9: blocks teacher Azman Qureshi, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_faculty_tt_mdm",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t26 Soni Bhambar Mon P1 'MDM III Theory (CC) /601 / TE'",
+      "message": "'MDM III Theory (CC) /601 / TE' (not printed) Mon P1: blocks teacher Soni Bhambar, room 601",
+      "resolution": "D24"
+    },
+    {
+      "category": "frozen_faculty_tt_mdm",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t26 Soni Bhambar Mon P3 'MDM III Theory(CC) / 601/ TE'",
+      "message": "'MDM III Theory(CC) / 601/ TE' (not printed) Mon P3: blocks teacher Soni Bhambar, room 601",
+      "resolution": "D24"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t26 Soni Bhambar Wed P3-P4 'PSOOP / E2 / 003'",
+      "message": "'PSOOP / E2 / 003' (not printed) Wed P3-P4: blocks teacher Soni Bhambar, room none",
+      "resolution": "D35"
+    },
+    {
+      "category": "frozen_out_of_scope",
+      "source_file": "EVEN class + lab + faculty timetables",
+      "location": "Faculty Individual timetable Even 2025-26.docx t30 Vandana Wekhande Fri P3 'HMI Theory /B.E CE /online'",
+      "message": "'HMI Theory /B.E CE /online' (BE) Fri P3: blocks teacher Vandana Wekhande, room none",
+      "resolution": "D35"
+    }
+  ]
+}

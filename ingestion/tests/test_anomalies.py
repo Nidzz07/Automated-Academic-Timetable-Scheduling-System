@@ -7,7 +7,7 @@ import re
 
 import pytest
 
-from ingestion.anomalies import DEFAULT_REPORT, Anomaly, Sources, build, to_json
+from ingestion.anomalies import DEFAULT_JSON, DEFAULT_REPORT, Anomaly, Sources, build, to_json
 
 
 @pytest.fixture(scope="module")
@@ -17,6 +17,8 @@ def built() -> tuple[Sources, list[Anomaly], str]:
 
 def test_committed_report_is_current(built) -> None:
     assert DEFAULT_REPORT.read_text(encoding="utf-8") == built[2]
+    assert DEFAULT_JSON.read_text(encoding="utf-8") == to_json(built[1]), (
+        "anomalies.json is stale: run python -m ingestion.anomalies")
 
 
 def test_every_anomaly_is_complete(built) -> None:
