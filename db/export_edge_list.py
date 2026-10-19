@@ -29,7 +29,13 @@ Both are deterministic: the same database gives byte-identical files.
   its cohort. The coffee break needs no pin: it is not a teaching period.
 
 The sidecar (D41, not a contract) gives names for the ids, each pin's kind and
-label in ``pinned_occupancy`` order, and the period clock times.
+label in ``pinned_occupancy`` order, and the period clock times. For the UI
+(S12e) it also gives each batch a unique label ("SE-Comp A batch A"), each
+division's batch ids, each teacher's initials per year from the
+faculty_initials rows scoped to the timetable's divisions (D38, D45; unscoped
+manual rows under "unscoped", since they name no year), and each pin a
+``unique_label``: its label, plus its slot and room when another block shares
+the label, plus its cohort when that is still not enough.
 
 Run from the repo root::
 
@@ -40,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 from itertools import pairwise
 from pathlib import Path
 
@@ -138,6 +145,9 @@ def export(session: Session, name: str = TIMETABLE_NAME) -> tuple[dict, dict]:
     def overlapping(c: Cohort) -> list[str]:
         return sorted(cohort_id[o] for o in universe if covers[o] & covers[c])
 
+    def cohort_label(c: Cohort) -> str:  # every division's batches are labelled "A".."D"
+        return f"{c.division.label} batch {c.label}" if isinstance(c, Batch) else c.label
+
     # ---- sessions, lab blocks, edges ------------------------------------------
     placed = [r for r in rows if r.frozen_by is None]
     if any(r.faculty is None for r in placed):
@@ -179,14 +189,21 @@ def export(session: Session, name: str = TIMETABLE_NAME) -> tuple[dict, dict]:
     # ---- pins ------------------------------------------------------------------
     pinned: list[dict] = []
     shown: list[dict] = []
+    #: one per pinned block: its display entry, its slot and room, its own cohort
+    pin_blocks: list[tuple[dict, list[str], str | None]] = []
+    room_code = {r["id"]: r["code"] for r in rooms}
 
     def pin(day: int, periods: list[int], faculty: Faculty | None, room_ref: str | None,
-            cohorts: list[str], about: dict) -> None:
+            cohorts: list[str], about: dict, owner: Cohort | None = None) -> None:
         for period in periods:
             pinned.append({"day": day, "period": period,
                            "faculty_ids": [faculty_id(faculty)] if faculty else [],
                            "room_ids": [room_ref] if room_ref else [], "cohort_ids": cohorts})
             shown.append(about)
+        span = f"P{periods[0]}" + (f"\u2013P{periods[-1]}" if len(periods) > 1 else "")
+        pin_blocks.append((about, [f"{grid['days'][day][:3]} {span}"]
+                           + ([room_code[room_ref]] if room_ref else []),
+                           cohort_label(owner) if owner else None))
 
     def room_ref(room_id: int | None, sub_room_id: int | None) -> str | None:
         return sub_ids.get(sub_room_id) or room_ids.get(room_id)
@@ -205,13 +222,26 @@ def export(session: Session, name: str = TIMETABLE_NAME) -> tuple[dict, dict]:
             pin(r.day, covered(r.period, r.duration_periods), r.faculty,
                 room_ref(r.room_id, r.sub_room_id), overlapping(r.cohort),
                 {"kind": "frozen", "label": r.source_cell, "decision": r.frozen_by,
-                 "source_ref": r.source_ref})
+                 "source_ref": r.source_ref}, r.cohort)
     for p in pins:
         if p.kind is PinnedKind.BREAK:
             continue
         pin(p.day, covered(p.period, p.duration_periods), p.faculty,
             room_ref(p.room_id, p.sub_room_id), overlapping(p.cohort) if p.cohort else [],
-            {"kind": p.kind.value, "label": p.label, "source_ref": p.source_ref})
+            {"kind": p.kind.value, "label": p.label, "source_ref": p.source_ref}, p.cohort)
+
+    # A label several blocks share gets their slot and room, then their own cohort.
+    repeated = Counter(about["label"] for about, _, _ in pin_blocks)
+    for about, where, _ in pin_blocks:
+        about["unique_label"] = ", ".join([about["label"], *where]) \
+            if repeated[about["label"]] > 1 else about["label"]
+    repeated = Counter(about["unique_label"] for about, _, _ in pin_blocks)
+    for about, _, owner in pin_blocks:
+        if repeated[about["unique_label"]] > 1 and owner:
+            about["unique_label"] += f", {owner}"
+    alike = [k for k, n in Counter(a["unique_label"] for a, _, _ in pin_blocks).items() if n > 1]
+    if alike:
+        raise SystemExit(f"pinned blocks no slot, room or cohort tells apart: {alike[:5]}")
 
     # ---- faculty availability ---------------------------------------------------
     off = sorted(session.scalars(select(FacultyUnavailability).where(
@@ -219,6 +249,19 @@ def export(session: Session, name: str = TIMETABLE_NAME) -> tuple[dict, dict]:
     named = {r.faculty for r in rows if r.faculty} | {p.faculty for p in pins if p.faculty} | {
         u.faculty for u in off}
     names = {faculty_id(f): f.full_name for f in named}
+    # Legend and D38 rows are scoped to a division, so to its year (D38: SD, SM differ by year).
+    initials: dict[str, dict[str, set[str]]] = {fid: {} for fid in names}
+    for f in named:
+        for fi in f.initials:
+            if fi.is_ambiguous:
+                continue
+            if fi.division in years:
+                scope = years[fi.division][0]
+            elif fi.division_id is None and fi.semester_id is None:
+                scope = "unscoped"
+            else:  # another term's legend
+                continue
+            initials[faculty_id(f)].setdefault(scope, set()).add(fi.initials)
     unavailable: dict[str, list[dict]] = {fid: [] for fid in names}
     for u in off:
         unavailable[faculty_id(u.faculty)].append({"day": u.day, "period": u.period})
@@ -248,7 +291,10 @@ def export(session: Session, name: str = TIMETABLE_NAME) -> tuple[dict, dict]:
     subjects = {r.subject for r in placed}
     display = {
         "note": "D41 display sidecar for edge_list.json: names, pin kinds and labels, clock "
-                "times. Not a contract. pins[i] describes pinned_occupancy[i].",
+                "times. Not a contract. pins[i] describes pinned_occupancy[i]; its unique_label "
+                "tells blocks apart that share a label. A batch's label is unique; batches gives "
+                "each division's batch ids; initials are per year, 'unscoped' for manual "
+                "mappings with no year.",
         "generated_by": "python -m db.export_edge_list",
         "timetable": timetable.name,
         "days": grid["days"],
@@ -257,8 +303,15 @@ def export(session: Session, name: str = TIMETABLE_NAME) -> tuple[dict, dict]:
         "coffee_period": coffee,
         "lunch_period": grid["lunch_period"],
         "faculty": {fid: names[fid] for fid in sorted(unavailable)},
+        "initials": {fid: {scope: sorted(initials[fid][scope]) for scope in sorted(initials[fid])}
+                     for fid in sorted(initials)},
         "cohorts": {cid: {"name": by_id[cid].label, "type": by_id[cid].cohort_type.value,
-                          "years": years[by_id[cid]]} for cid in sorted(in_list)},
+                          "years": years[by_id[cid]]}
+                    | ({"label": cohort_label(by_id[cid])}
+                       if isinstance(by_id[cid], Batch) else {})
+                    for cid in sorted(in_list)},
+        "batches": {cohort_id[d]: sorted(cohort_id[b] for b in d.batches)
+                    for d in sorted(divisions, key=lambda d: cohort_id[d])},
         "rooms": {r["id"]: r["code"] for r in rooms},
         "subjects": {f"subj-{slug(s.code)}": {"code": s.code, "name": s.name}
                      for s in sorted(subjects, key=lambda s: s.code)},

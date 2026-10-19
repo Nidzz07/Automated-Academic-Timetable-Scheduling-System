@@ -1,0 +1,1096 @@
+{
+  "note": "Not a contract. The real EVEN timetable as printed: the time-only check's violations, names from display.json (D41), and the quality score. See docs/real-baseline-even-2025-26.md.",
+  "generated_by": "python -m ingestion.real_baseline",
+  "edge_list": "edge_list.json",
+  "violations": [
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t0-r1-c2-l0",
+        "obs-t2-r1-c2-l0"
+      ],
+      "slots": [
+        {
+          "day": 1,
+          "period": 0
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t0-r1-c2-l0 and obs-t2-r1-c2-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t0-r1-c2-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp A",
+          "faculty": "Kailas Devadkar",
+          "printed": "OS / KKD / 002"
+        },
+        "obs-t2-r1-c2-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp B",
+          "faculty": "Kailas Devadkar",
+          "printed": "OS / KKD / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t0-r1-c3-l0",
+        "obs-t2-r1-c3-l0"
+      ],
+      "slots": [
+        {
+          "day": 2,
+          "period": 0
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t0-r1-c3-l0 and obs-t2-r1-c3-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t0-r1-c3-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp A",
+          "faculty": "Anant Nimkar",
+          "printed": "DAA / AVN / 002"
+        },
+        "obs-t2-r1-c3-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp B",
+          "faculty": "Anant Nimkar",
+          "printed": "DAA / AVN / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t0-r2-c2-l0",
+        "obs-t2-r2-c2-l0"
+      ],
+      "slots": [
+        {
+          "day": 1,
+          "period": 1
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t0-r2-c2-l0 and obs-t2-r2-c2-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t0-r2-c2-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp A",
+          "faculty": "Jignesh Sisodia",
+          "printed": "CCN / JS / 002"
+        },
+        "obs-t2-r2-c2-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp B",
+          "faculty": "Jignesh Sisodia",
+          "printed": "CCN / JS / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t0-r2-c3-l0",
+        "obs-t2-r2-c3-l0"
+      ],
+      "slots": [
+        {
+          "day": 2,
+          "period": 1
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t0-r2-c3-l0 and obs-t2-r2-c3-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t0-r2-c3-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp A",
+          "faculty": "Kailas Devadkar",
+          "printed": "OS / KKD / 002"
+        },
+        "obs-t2-r2-c3-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp B",
+          "faculty": "Kailas Devadkar",
+          "printed": "OS / KKD / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t0-r2-c4-l0",
+        "obs-t2-r2-c4-l0"
+      ],
+      "slots": [
+        {
+          "day": 3,
+          "period": 1
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t0-r2-c4-l0 and obs-t2-r2-c4-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t0-r2-c4-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp A",
+          "faculty": "Anant Nimkar",
+          "printed": "DAA / AVN / 002"
+        },
+        "obs-t2-r2-c4-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp B",
+          "faculty": "Anant Nimkar",
+          "printed": "DAA / AVN / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t0-r4-c4-l0",
+        "obs-t2-r4-c4-l0"
+      ],
+      "slots": [
+        {
+          "day": 3,
+          "period": 3
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t0-r4-c4-l0 and obs-t2-r4-c4-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t0-r4-c4-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp A",
+          "faculty": "Kailas Devadkar",
+          "printed": "OS / KKD / 002"
+        },
+        "obs-t2-r4-c4-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp B",
+          "faculty": "Kailas Devadkar",
+          "printed": "OS / KKD / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t0-r4-c5-l0",
+        "obs-t2-r4-c5-l0"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 3
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t0-r4-c5-l0 and obs-t2-r4-c5-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t0-r4-c5-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp A",
+          "faculty": "Jignesh Sisodia",
+          "printed": "CCN / JS / 002"
+        },
+        "obs-t2-r4-c5-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp B",
+          "faculty": "Jignesh Sisodia",
+          "printed": "CCN / JS / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t0-r5-c4-l0",
+        "obs-t2-r5-c4-l0"
+      ],
+      "slots": [
+        {
+          "day": 3,
+          "period": 4
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t0-r5-c4-l0 and obs-t2-r5-c4-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t0-r5-c4-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp A",
+          "faculty": "Jignesh Sisodia",
+          "printed": "CCN / JS / 002"
+        },
+        "obs-t2-r5-c4-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp B",
+          "faculty": "Jignesh Sisodia",
+          "printed": "CCN / JS / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t0-r5-c5-l0",
+        "obs-t2-r5-c5-l0"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 4
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t0-r5-c5-l0 and obs-t2-r5-c5-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t0-r5-c5-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp A",
+          "faculty": "Anant Nimkar",
+          "printed": "DAA / AVN / 002"
+        },
+        "obs-t2-r5-c5-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp B",
+          "faculty": "Anant Nimkar",
+          "printed": "DAA / AVN / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t10-r2-c5-l0",
+        "obs-t8-r2-c5-l0"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 1
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t10-r2-c5-l0 and obs-t8-r2-c5-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t10-r2-c5-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp- B",
+          "faculty": "Sunil Ghane",
+          "printed": "SPCC / SBG / 203"
+        },
+        "obs-t8-r2-c5-l0": {
+          "subject": "CE306",
+          "cohort": "TE-Comp A",
+          "faculty": "Sunil Ghane",
+          "printed": "SPCC / SBG / 203"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t10-r6-c1-l0",
+        "obs-t8-r6-c1-l0"
+      ],
+      "slots": [
+        {
+          "day": 0,
+          "period": 5
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t10-r6-c1-l0 and obs-t8-r6-c1-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t10-r6-c1-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp- B",
+          "faculty": "Sunil Ghane",
+          "printed": "SPCC / SBG / 002"
+        },
+        "obs-t8-r6-c1-l0": {
+          "subject": "CE306",
+          "cohort": "TE-Comp A",
+          "faculty": "Sunil Ghane",
+          "printed": "SPCC / SBG / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t10-r6-c3-l0",
+        "obs-t8-r6-c3-l0"
+      ],
+      "slots": [
+        {
+          "day": 2,
+          "period": 5
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t10-r6-c3-l0 and obs-t8-r6-c3-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t10-r6-c3-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp- B",
+          "faculty": "Sunil Ghane",
+          "printed": "SPCC / SBG / 002"
+        },
+        "obs-t8-r6-c3-l0": {
+          "subject": "CE306",
+          "cohort": "TE-Comp A",
+          "faculty": "Sunil Ghane",
+          "printed": "SPCC / SBG / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t10-r7-c3-l0",
+        "obs-t8-r7-c3-l0"
+      ],
+      "slots": [
+        {
+          "day": 2,
+          "period": 6
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t10-r7-c3-l0 and obs-t8-r7-c3-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t10-r7-c3-l0": {
+          "subject": "CE308",
+          "cohort": "TE Comp- B",
+          "faculty": "Reeta Koshy",
+          "printed": "Deop / RK / 002"
+        },
+        "obs-t8-r7-c3-l0": {
+          "subject": "CE308",
+          "cohort": "TE-Comp A",
+          "faculty": "Reeta Koshy",
+          "printed": "Deop / RK / 002"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t12-r4-c5-l0",
+        "obs-t14-r4-c5-l0"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 3
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t12-r4-c5-l0 and obs-t14-r4-c5-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t12-r4-c5-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp - C",
+          "faculty": "Anand Godbole",
+          "printed": "SPCC / AAG / 508"
+        },
+        "obs-t14-r4-c5-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp - D",
+          "faculty": "Anand Godbole",
+          "printed": "SPCC / AAG /508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t12-r6-c1-l0",
+        "obs-t14-r6-c1-l0"
+      ],
+      "slots": [
+        {
+          "day": 0,
+          "period": 5
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t12-r6-c1-l0 and obs-t14-r6-c1-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t12-r6-c1-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp - C",
+          "faculty": "Anand Godbole",
+          "printed": "SPCC / AAG /508"
+        },
+        "obs-t14-r6-c1-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp - D",
+          "faculty": "Anand Godbole",
+          "printed": "SPCC / AAG /508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t12-r6-c2-l0",
+        "obs-t14-r6-c2-l0"
+      ],
+      "slots": [
+        {
+          "day": 1,
+          "period": 5
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t12-r6-c2-l0 and obs-t14-r6-c2-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t12-r6-c2-l0": {
+          "subject": "CE308",
+          "cohort": "TE Comp - C",
+          "faculty": "Reeta Koshy",
+          "printed": "Devop / RK / 508"
+        },
+        "obs-t14-r6-c2-l0": {
+          "subject": "CE308",
+          "cohort": "TE Comp - D",
+          "faculty": "Reeta Koshy",
+          "printed": "Devops / RK /508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t12-r6-c3-l0",
+        "obs-t14-r6-c3-l0"
+      ],
+      "slots": [
+        {
+          "day": 2,
+          "period": 5
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t12-r6-c3-l0 and obs-t14-r6-c3-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t12-r6-c3-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp - C",
+          "faculty": "Anand Godbole",
+          "printed": "SPCC / AAG /508"
+        },
+        "obs-t14-r6-c3-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp - D",
+          "faculty": "Anand Godbole",
+          "printed": "SPCC / AAG /508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t4-r1-c2-l0",
+        "obs-t6-r1-c2-l0"
+      ],
+      "slots": [
+        {
+          "day": 1,
+          "period": 0
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t4-r1-c2-l0 and obs-t6-r1-c2-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t4-r1-c2-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp C",
+          "faculty": "Swapnali Kurhade",
+          "printed": "OS / SK / 508"
+        },
+        "obs-t6-r1-c2-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp D",
+          "faculty": "Swapnali Kurhade",
+          "printed": "OS / SK / 508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t4-r1-c5-l0",
+        "obs-t6-r1-c5-l0"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 0
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t4-r1-c5-l0 and obs-t6-r1-c5-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t4-r1-c5-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp C",
+          "faculty": "Abhijeet Salunke",
+          "printed": "CCN / AVS / 508"
+        },
+        "obs-t6-r1-c5-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp D",
+          "faculty": "Abhijeet Salunke",
+          "printed": "CCN / AVS / 508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t4-r2-c2-l0",
+        "obs-t6-r2-c2-l0"
+      ],
+      "slots": [
+        {
+          "day": 1,
+          "period": 1
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t4-r2-c2-l0 and obs-t6-r2-c2-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t4-r2-c2-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp C",
+          "faculty": "Prasenjit Bhavathankar",
+          "printed": "DAA / PBB / 508"
+        },
+        "obs-t6-r2-c2-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp D",
+          "faculty": "Prasenjit Bhavathankar",
+          "printed": "DAA/ PBB / 508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t4-r2-c4-l0",
+        "obs-t6-r2-c4-l0"
+      ],
+      "slots": [
+        {
+          "day": 3,
+          "period": 1
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t4-r2-c4-l0 and obs-t6-r2-c4-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t4-r2-c4-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp C",
+          "faculty": "Swapnali Kurhade",
+          "printed": "OS / SK / 508"
+        },
+        "obs-t6-r2-c4-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp D",
+          "faculty": "Swapnali Kurhade",
+          "printed": "OS / SK / 508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t4-r4-c1-l0",
+        "obs-t6-r4-c1-l0"
+      ],
+      "slots": [
+        {
+          "day": 0,
+          "period": 3
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t4-r4-c1-l0 and obs-t6-r4-c1-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t4-r4-c1-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp C",
+          "faculty": "Abhijeet Salunke",
+          "printed": "CCN / AVS / 508"
+        },
+        "obs-t6-r4-c1-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp D",
+          "faculty": "Abhijeet Salunke",
+          "printed": "CCN / AVS / 508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t4-r4-c3-l0",
+        "obs-t6-r4-c3-l0"
+      ],
+      "slots": [
+        {
+          "day": 2,
+          "period": 3
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t4-r4-c3-l0 and obs-t6-r4-c3-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t4-r4-c3-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp C",
+          "faculty": "Abhijeet Salunke",
+          "printed": "CCN / AVS / 508"
+        },
+        "obs-t6-r4-c3-l0": {
+          "subject": "CE208",
+          "cohort": "SE-Comp D",
+          "faculty": "Abhijeet Salunke",
+          "printed": "CCN / AVS / 508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t4-r5-c1-l0",
+        "obs-t6-r5-c1-l0"
+      ],
+      "slots": [
+        {
+          "day": 0,
+          "period": 4
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t4-r5-c1-l0 and obs-t6-r5-c1-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t4-r5-c1-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp C",
+          "faculty": "Prasenjit Bhavathankar",
+          "printed": "DAA/ PBB / 508"
+        },
+        "obs-t6-r5-c1-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp D",
+          "faculty": "Prasenjit Bhavathankar",
+          "printed": "DAA/ PBB / 508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t4-r5-c3-l0",
+        "obs-t6-r5-c3-l0"
+      ],
+      "slots": [
+        {
+          "day": 2,
+          "period": 4
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t4-r5-c3-l0 and obs-t6-r5-c3-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t4-r5-c3-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp C",
+          "faculty": "Prasenjit Bhavathankar",
+          "printed": "DAA / PBB / 508"
+        },
+        "obs-t6-r5-c3-l0": {
+          "subject": "CE207",
+          "cohort": "SE-Comp D",
+          "faculty": "Prasenjit Bhavathankar",
+          "printed": "DAA / PBB / 508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "FACULTY_CLASH",
+      "session_ids": [
+        "obs-t4-r7-c5-l0",
+        "obs-t6-r7-c5-l0"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 6
+        }
+      ],
+      "entity_ids": [],
+      "detail": "obs-t4-r7-c5-l0 and obs-t6-r7-c5-l0 share a FACULTY edge and overlap",
+      "sessions": {
+        "obs-t4-r7-c5-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp C",
+          "faculty": "Swapnali Kurhade",
+          "printed": "OS / SK /508"
+        },
+        "obs-t6-r7-c5-l0": {
+          "subject": "CE206",
+          "cohort": "SE-Comp D",
+          "faculty": "Swapnali Kurhade",
+          "printed": "OS / SK /508"
+        }
+      },
+      "entities": {}
+    },
+    {
+      "kind": "PINNED_BLOCK",
+      "session_ids": [
+        "obs-t10-r7-c5-l0"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 6
+        }
+      ],
+      "entity_ids": [
+        "coh-te-b-a"
+      ],
+      "detail": "obs-t10-r7-c5-l0 uses Friday 14.15-15.15, which a pinned block holds for ['coh-te-b-a']",
+      "sessions": {
+        "obs-t10-r7-c5-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp- B batch A",
+          "faculty": "Aishwarya Nalawade",
+          "printed": "SPCC / A / AN / 702-C"
+        }
+      },
+      "entities": {
+        "coh-te-b-a": "TE Comp- B batch A"
+      }
+    },
+    {
+      "kind": "PINNED_BLOCK",
+      "session_ids": [
+        "obs-t10-r7-c5-l0"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 7
+        }
+      ],
+      "entity_ids": [
+        "coh-te-b-a"
+      ],
+      "detail": "obs-t10-r7-c5-l0 uses Friday 15.15-16.15, which a pinned block holds for ['coh-te-b-a']",
+      "sessions": {
+        "obs-t10-r7-c5-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp- B batch A",
+          "faculty": "Aishwarya Nalawade",
+          "printed": "SPCC / A / AN / 702-C"
+        }
+      },
+      "entities": {
+        "coh-te-b-a": "TE Comp- B batch A"
+      }
+    },
+    {
+      "kind": "PINNED_BLOCK",
+      "session_ids": [
+        "obs-t12-r8-c4-l0"
+      ],
+      "slots": [
+        {
+          "day": 3,
+          "period": 7
+        }
+      ],
+      "entity_ids": [
+        "coh-te-c-d"
+      ],
+      "detail": "obs-t12-r8-c4-l0 uses Thursday 15.15-16.15, which a pinned block holds for ['coh-te-c-d']",
+      "sessions": {
+        "obs-t12-r8-c4-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp - C batch D",
+          "faculty": "Anuj Tawari",
+          "printed": "SPCC / D / AT / 606-5"
+        }
+      },
+      "entities": {
+        "coh-te-c-d": "TE Comp - C batch D"
+      }
+    },
+    {
+      "kind": "PINNED_BLOCK",
+      "session_ids": [
+        "obs-t12-r8-c4-l0"
+      ],
+      "slots": [
+        {
+          "day": 3,
+          "period": 8
+        }
+      ],
+      "entity_ids": [
+        "coh-te-c-d"
+      ],
+      "detail": "obs-t12-r8-c4-l0 uses Thursday 16.15-17.15, which a pinned block holds for ['coh-te-c-d']",
+      "sessions": {
+        "obs-t12-r8-c4-l0": {
+          "subject": "CE306",
+          "cohort": "TE Comp - C batch D",
+          "faculty": "Anuj Tawari",
+          "printed": "SPCC / D / AT / 606-5"
+        }
+      },
+      "entities": {
+        "coh-te-c-d": "TE Comp - C batch D"
+      }
+    },
+    {
+      "kind": "PINNED_BLOCK",
+      "session_ids": [
+        "obs-t12-r8-c4-l1"
+      ],
+      "slots": [
+        {
+          "day": 3,
+          "period": 7
+        }
+      ],
+      "entity_ids": [
+        "coh-te-c-b"
+      ],
+      "detail": "obs-t12-r8-c4-l1 uses Thursday 15.15-16.15, which a pinned block holds for ['coh-te-c-b']",
+      "sessions": {
+        "obs-t12-r8-c4-l1": {
+          "subject": "CE307",
+          "cohort": "TE Comp - C batch B",
+          "faculty": "Vaishnavee Rathod",
+          "printed": "ML / B / VR / 703-A"
+        }
+      },
+      "entities": {
+        "coh-te-c-b": "TE Comp - C batch B"
+      }
+    },
+    {
+      "kind": "PINNED_BLOCK",
+      "session_ids": [
+        "obs-t12-r8-c4-l1"
+      ],
+      "slots": [
+        {
+          "day": 3,
+          "period": 8
+        }
+      ],
+      "entity_ids": [
+        "coh-te-c-b"
+      ],
+      "detail": "obs-t12-r8-c4-l1 uses Thursday 16.15-17.15, which a pinned block holds for ['coh-te-c-b']",
+      "sessions": {
+        "obs-t12-r8-c4-l1": {
+          "subject": "CE307",
+          "cohort": "TE Comp - C batch B",
+          "faculty": "Vaishnavee Rathod",
+          "printed": "ML / B / VR / 703-A"
+        }
+      },
+      "entities": {
+        "coh-te-c-b": "TE Comp - C batch B"
+      }
+    },
+    {
+      "kind": "PINNED_BLOCK",
+      "session_ids": [
+        "obs-t8-r7-c5-l0"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 6
+        }
+      ],
+      "entity_ids": [
+        "coh-te-a-a"
+      ],
+      "detail": "obs-t8-r7-c5-l0 uses Friday 14.15-15.15, which a pinned block holds for ['coh-te-a-a']",
+      "sessions": {
+        "obs-t8-r7-c5-l0": {
+          "subject": "CE306",
+          "cohort": "TE-Comp A batch A",
+          "faculty": "Anand Godbole",
+          "printed": "SPCC / A / AAG / 603-7"
+        }
+      },
+      "entities": {
+        "coh-te-a-a": "TE-Comp A batch A"
+      }
+    },
+    {
+      "kind": "PINNED_BLOCK",
+      "session_ids": [
+        "obs-t8-r7-c5-l0"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 7
+        }
+      ],
+      "entity_ids": [
+        "coh-te-a-a"
+      ],
+      "detail": "obs-t8-r7-c5-l0 uses Friday 15.15-16.15, which a pinned block holds for ['coh-te-a-a']",
+      "sessions": {
+        "obs-t8-r7-c5-l0": {
+          "subject": "CE306",
+          "cohort": "TE-Comp A batch A",
+          "faculty": "Anand Godbole",
+          "printed": "SPCC / A / AAG / 603-7"
+        }
+      },
+      "entities": {
+        "coh-te-a-a": "TE-Comp A batch A"
+      }
+    },
+    {
+      "kind": "PINNED_BLOCK",
+      "session_ids": [
+        "obs-t8-r7-c5-l1"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 6
+        }
+      ],
+      "entity_ids": [
+        "coh-te-a-d"
+      ],
+      "detail": "obs-t8-r7-c5-l1 uses Friday 14.15-15.15, which a pinned block holds for ['coh-te-a-d']",
+      "sessions": {
+        "obs-t8-r7-c5-l1": {
+          "subject": "CE306",
+          "cohort": "TE-Comp A batch D",
+          "faculty": "Sunil Ghane",
+          "printed": "SPCC / D / SBG/ 607-B"
+        }
+      },
+      "entities": {
+        "coh-te-a-d": "TE-Comp A batch D"
+      }
+    },
+    {
+      "kind": "PINNED_BLOCK",
+      "session_ids": [
+        "obs-t8-r7-c5-l1"
+      ],
+      "slots": [
+        {
+          "day": 4,
+          "period": 7
+        }
+      ],
+      "entity_ids": [
+        "coh-te-a-d"
+      ],
+      "detail": "obs-t8-r7-c5-l1 uses Friday 15.15-16.15, which a pinned block holds for ['coh-te-a-d']",
+      "sessions": {
+        "obs-t8-r7-c5-l1": {
+          "subject": "CE306",
+          "cohort": "TE-Comp A batch D",
+          "faculty": "Sunil Ghane",
+          "printed": "SPCC / D / SBG/ 607-B"
+        }
+      },
+      "entities": {
+        "coh-te-a-d": "TE-Comp A batch D"
+      }
+    }
+  ],
+  "quality": {
+    "score": 21.5,
+    "rules_version": "1",
+    "breakdown": [
+      {
+        "rule_id": "S-GAP",
+        "status": "evaluated",
+        "weight": 2.0,
+        "raw": 2,
+        "penalty": 4.0,
+        "explanation": "2 idle teaching periods - coh-te-a-d: Thursday 13.15-14.15, Thursday 14.15-15.15."
+      },
+      {
+        "rule_id": "S-B2B",
+        "status": "evaluated",
+        "weight": 1.0,
+        "raw": 23,
+        "penalty": 23.0,
+        "explanation": "23 back-to-back pairs - fac-abhijeet-salunke Tuesday 10.00-11.00 and Tuesday 11.15-12.15; fac-abhijeet-salunke Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-aishwarya-nalawade Tuesday 10.00-11.00 and Tuesday 11.15-12.15; fac-amey-ganesh-nile Tuesday 12.15-13.15 and Tuesday 13.15-14.15; fac-amey-ganesh-nile Thursday 12.15-13.15 and Thursday 13.15-14.15; fac-anand-godbole Monday 13.15-14.15 and Monday 14.15-15.15; fac-anuj-tawari Tuesday 12.15-13.15 and Tuesday 13.15-14.15; fac-anuj-tawari Thursday 14.15-15.15 and Thursday 15.15-16.15; fac-anuj-tawari Friday 10.00-11.00 and Friday 11.15-12.15; fac-isha-sawalkar Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-isha-sawalkar Thursday 12.15-13.15 and Thursday 13.15-14.15; fac-jignesh-sisodia Tuesday 10.00-11.00 and Tuesday 11.15-12.15; fac-jignesh-sisodia Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-kailas-devadkar Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-prasenjit-bhavathankar Tuesday 10.00-11.00 and Tuesday 11.15-12.15; fac-sudhir-dhage Tuesday 12.15-13.15 and Tuesday 13.15-14.15; fac-sudhir-dhage Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-sudhir-dhage Wednesday 12.15-13.15 and Wednesday 13.15-14.15; fac-sudhir-dhage Thursday 12.15-13.15 and Thursday 13.15-14.15; fac-sunil-ghane Monday 13.15-14.15 and Monday 14.15-15.15; fac-swapnali-kurhade Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-swapnali-kurhade Thursday 10.00-11.00 and Thursday 11.15-12.15; fac-vaishnavee-rathod Thursday 14.15-15.15 and Thursday 15.15-16.15."
+      },
+      {
+        "rule_id": "S-LOAD16",
+        "status": "evaluated",
+        "weight": 1.0,
+        "raw": 5,
+        "penalty": 5.0,
+        "explanation": "5 faculty members above 16 h a week - fac-amey-ganesh-nile 18 h, fac-azman-qureshi 18 h, fac-isha-sawalkar 18 h, fac-jyoti-ramteke 18 h, fac-sudeep-mali 18 h."
+      },
+      {
+        "rule_id": "FAC_LOAD_IMBALANCE",
+        "status": "evaluated",
+        "weight": 0.5,
+        "raw": 93,
+        "penalty": 46.5,
+        "explanation": "Daily load spreads sum to 93 h - fac-abhijeet-salunke 3 h on Tuesday, 2 h on Monday; fac-aishwarya-nalawade 4 h on Tuesday, 2 h on Monday; fac-aman-yadav 2 h on Tuesday, 0 h on Monday; fac-amey-ganesh-nile 4 h on Monday, 2 h on Wednesday; fac-anand-godbole 3 h on Monday, 1 h on Wednesday; fac-anant-nimkar 3 h on Wednesday, 1 h on Thursday; fac-anas-ansari 4 h on Tuesday, 2 h on Monday; fac-anuj-tawari 4 h on Tuesday, 1 h on Wednesday; fac-asma-tambe 1 h on Wednesday, 0 h on Monday; fac-azman-qureshi 6 h on Monday, 2 h on Wednesday; fac-c-r-gajbiye 1 h on Wednesday, 0 h on Monday; fac-d-r-kalbande 2 h on Monday, 0 h on Wednesday; fac-dayanand-ambawade 2 h on Monday, 0 h on Tuesday; fac-deepak-nair 4 h on Wednesday, 2 h on Monday; fac-isha-sawalkar 4 h on Tuesday, 2 h on Monday; fac-jignesh-sisodia 4 h on Wednesday, 2 h on Monday; fac-jostna-bhagat 4 h on Tuesday, 2 h on Monday; fac-jyoti-ramteke 5 h on Wednesday, 3 h on Monday; fac-kailas-devadkar 4 h on Friday, 1 h on Thursday; fac-nataasha-raul 5 h on Tuesday, 1 h on Wednesday; fac-pramod-bide 4 h on Tuesday, 0 h on Monday; fac-prasenjit-bhavathankar 4 h on Friday, 0 h on Thursday; fac-reeta-koshy 3 h on Tuesday, 1 h on Friday; fac-rupali-sawant 5 h on Monday, 0 h on Friday; fac-sanjyuktarani-jena 5 h on Tuesday, 2 h on Monday; fac-sonali-dudhihalli 4 h on Wednesday, 2 h on Monday; fac-soni-bhambar 4 h on Wednesday, 2 h on Monday; fac-sudeep-mali 4 h on Monday, 2 h on Friday; fac-sudhir-dhage 5 h on Wednesday, 0 h on Monday; fac-suman-m 2 h on Tuesday, 0 h on Monday; fac-sunil-ghane 3 h on Monday, 2 h on Tuesday; fac-surekha-dholay 3 h on Tuesday, 2 h on Monday; fac-swapnali-kurhade 4 h on Wednesday, 0 h on Monday; fac-taqdis-pawle 1 h on Thursday, 0 h on Monday; fac-vaishnavee-rathod 5 h on Monday, 1 h on Wednesday; fac-vandana-wekhande 3 h on Tuesday, 0 h on Wednesday; fac-yogita-patil 5 h on Tuesday, 0 h on Monday."
+      }
+    ],
+    "not_evaluated_rule_ids": []
+  }
+}

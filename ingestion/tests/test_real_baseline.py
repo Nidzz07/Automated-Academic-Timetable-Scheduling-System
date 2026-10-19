@@ -12,10 +12,12 @@ from ingestion.real_baseline import (
     ASSIGNMENT_JSON,
     DISPLAY_JSON,
     EDGE_LIST_JSON,
+    REPORT_JSON,
     REPORT_MD,
     assignment_file,
     map_sessions,
     report,
+    report_file,
 )
 from solver.validate import validate_slot_placements
 
@@ -35,6 +37,20 @@ def test_committed_files_are_current(inst: Instance, edge_list: dict) -> None:
     display = json.loads(DISPLAY_JSON.read_text(encoding="utf-8"))
     assert ASSIGNMENT_JSON.read_text(encoding="utf-8") == dumps(assignment_file(b))
     assert REPORT_MD.read_text(encoding="utf-8") == report(b, edge_list, display)
+    assert REPORT_JSON.read_text(encoding="utf-8") == dumps(report_file(b, edge_list, display))
+
+
+def test_report_file_names_every_violation(inst: Instance, edge_list: dict) -> None:
+    b = map_sessions(edge_list, inst)
+    display = json.loads(DISPLAY_JSON.read_text(encoding="utf-8"))
+    data = report_file(b, edge_list, display)
+    assert data["quality"] == b.quality
+    assert [v["kind"] for v in data["violations"]] == [v.kind for v in b.violations]
+    for v in data["violations"]:
+        assert list(v["sessions"]) == v["session_ids"] and list(v["entities"]) == v["entity_ids"]
+        names = [*v["entities"].values()] + [x[k] for x in v["sessions"].values()
+                                             for k in ("cohort", "faculty")]
+        assert all(n and not n.startswith(("coh-", "fac-", "room-")) for n in names)
 
 
 def test_every_session_mapped_or_listed(inst: Instance, edge_list: dict) -> None:

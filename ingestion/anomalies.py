@@ -10,7 +10,7 @@ human". Nothing is repaired here (CONTEXT.md 3.5).
 Run from the repo root::
 
     python -m ingestion.anomalies   # writes ingestion/anomaly_report.txt and
-                                    # data/generated/anomalies_even.json
+                                    # data/instances/even-2025-26/anomalies.json
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ from ingestion.scheme import SCHEME_YAML, TeachingScheme, load_scheme
 from ingestion.seed_reference import CLASSROOMS_XLSX, REPO_ROOT, parse_faculty_subjects
 
 DEFAULT_REPORT = Path(__file__).resolve().parent / "anomaly_report.txt"
-DEFAULT_JSON = REPO_ROOT / "data" / "generated" / "anomalies_even.json"
+DEFAULT_JSON = REPO_ROOT / "data" / "instances" / "even-2025-26" / "anomalies.json"
 
 #: D26 names this subject.
 FOM_II = "FOM - II"
@@ -363,7 +363,7 @@ def format_report(s: Sources, anomalies: list[Anomaly]) -> str:
         "data/real/lab_capacities.yaml and the EVEN class, lab and faculty timetables.",
         "Each anomaly: category, source file, location, message, and the ROADMAP decision",
         "that resolves it, or 'needs human'. Nothing is repaired (CONTEXT.md 3.5).",
-        "Full detail: data/generated/anomalies_even.json (gitignored).",
+        "Full detail: data/instances/even-2025-26/anomalies.json.",
         "",
         rule,
         "1. Summary",
@@ -423,7 +423,7 @@ def main(argv: list[str] | None = None) -> None:
     _, anomalies, report = build()
     args.out.write_text(report, encoding="utf-8")
     args.json.parent.mkdir(parents=True, exist_ok=True)
-    args.json.write_text(to_json(anomalies), encoding="utf-8")
+    args.json.write_text(to_json(anomalies), encoding="utf-8", newline="\n")
     print(f"wrote {args.out}\nwrote {args.json}")
 
 

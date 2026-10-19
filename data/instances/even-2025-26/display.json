@@ -1,5 +1,5 @@
 {
- "note": "D41 display sidecar for edge_list.json: names, pin kinds and labels, clock times. Not a contract. pins[i] describes pinned_occupancy[i].",
+ "note": "D41 display sidecar for edge_list.json: names, pin kinds and labels, clock times. Not a contract. pins[i] describes pinned_occupancy[i]; its unique_label tells blocks apart that share a label. A batch's label is unique; batches gives each division's batch ids; initials are per year, 'unscoped' for manual mappings with no year.",
  "generated_by": "python -m db.export_edge_list",
  "timetable": "CE EVEN 2025-26 SE+TE (observed)",
  "days": [
@@ -114,6 +114,224 @@
   "fac-vaishnavee-rathod": "Vaishnavee Rathod",
   "fac-vandana-wekhande": "Vandana Wekhande",
   "fac-yogita-patil": "Yogita Patil"
+ },
+ "initials": {
+  "fac-abhijeet-salunke": {
+   "SE": [
+    "AVS"
+   ]
+  },
+  "fac-aishwarya-nalawade": {
+   "SE": [
+    "AN"
+   ],
+   "TE": [
+    "AN"
+   ]
+  },
+  "fac-aman-yadav": {
+   "SE": [
+    "AY"
+   ]
+  },
+  "fac-amey-ganesh-nile": {
+   "SE": [
+    "AGN"
+   ],
+   "TE": [
+    "AGN"
+   ],
+   "unscoped": [
+    "AGN"
+   ]
+  },
+  "fac-anand-godbole": {
+   "TE": [
+    "AAG"
+   ]
+  },
+  "fac-anant-nimkar": {
+   "SE": [
+    "AVN"
+   ]
+  },
+  "fac-anas-ansari": {
+   "TE": [
+    "AA"
+   ]
+  },
+  "fac-anuj-tawari": {
+   "SE": [
+    "AT"
+   ],
+   "TE": [
+    "AT"
+   ]
+  },
+  "fac-asma-tambe": {
+   "SE": [
+    "AsT"
+   ]
+  },
+  "fac-azman-qureshi": {
+   "TE": [
+    "AQ"
+   ]
+  },
+  "fac-c-r-gajbiye": {
+   "SE": [
+    "CRG"
+   ]
+  },
+  "fac-d-r-kalbande": {
+   "unscoped": [
+    "DRK"
+   ]
+  },
+  "fac-dayanand-ambawade": {},
+  "fac-deepak-nair": {
+   "SE": [
+    "DN"
+   ],
+   "unscoped": [
+    "DN"
+   ]
+  },
+  "fac-isha-sawalkar": {
+   "SE": [
+    "IS"
+   ],
+   "TE": [
+    "IS"
+   ]
+  },
+  "fac-jignesh-sisodia": {
+   "SE": [
+    "JS"
+   ],
+   "unscoped": [
+    "JS"
+   ]
+  },
+  "fac-jostna-bhagat": {
+   "TE": [
+    "JB"
+   ]
+  },
+  "fac-jyoti-ramteke": {
+   "TE": [
+    "JR"
+   ],
+   "unscoped": [
+    "JR"
+   ]
+  },
+  "fac-kailas-devadkar": {
+   "SE": [
+    "KKD"
+   ],
+   "unscoped": [
+    "KKD"
+   ]
+  },
+  "fac-nataasha-raul": {
+   "SE": [
+    "NR"
+   ],
+   "unscoped": [
+    "NR"
+   ]
+  },
+  "fac-pramod-bide": {
+   "TE": [
+    "PJB"
+   ]
+  },
+  "fac-prasenjit-bhavathankar": {
+   "SE": [
+    "PBB"
+   ],
+   "unscoped": [
+    "PBB"
+   ]
+  },
+  "fac-reeta-koshy": {
+   "TE": [
+    "RK"
+   ]
+  },
+  "fac-rupali-sawant": {
+   "unscoped": [
+    "RS"
+   ]
+  },
+  "fac-sanjyuktarani-jena": {
+   "TE": [
+    "SJ"
+   ]
+  },
+  "fac-sonali-dudhihalli": {
+   "SE": [
+    "SD"
+   ]
+  },
+  "fac-soni-bhambar": {
+   "TE": [
+    "SB"
+   ],
+   "unscoped": [
+    "SB"
+   ]
+  },
+  "fac-sudeep-mali": {
+   "TE": [
+    "SM"
+   ]
+  },
+  "fac-sudhir-dhage": {
+   "SE": [
+    "SND"
+   ]
+  },
+  "fac-suman-m": {
+   "SE": [
+    "SM"
+   ]
+  },
+  "fac-sunil-ghane": {
+   "TE": [
+    "SBG"
+   ]
+  },
+  "fac-surekha-dholay": {
+   "TE": [
+    "SD"
+   ],
+   "unscoped": [
+    "SRD"
+   ]
+  },
+  "fac-swapnali-kurhade": {
+   "SE": [
+    "SK"
+   ]
+  },
+  "fac-taqdis-pawle": {
+   "SE": [
+    "TP"
+   ]
+  },
+  "fac-vaishnavee-rathod": {
+   "TE": [
+    "VR"
+   ]
+  },
+  "fac-vandana-wekhande": {},
+  "fac-yogita-patil": {
+   "TE": [
+    "YP"
+   ]
+  }
  },
  "cohorts": {
   "coh-grp-bda": {
@@ -291,28 +509,32 @@
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp A batch A"
   },
   "coh-se-a-b": {
    "name": "B",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp A batch B"
   },
   "coh-se-a-c": {
    "name": "C",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp A batch C"
   },
   "coh-se-a-d": {
    "name": "D",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp A batch D"
   },
   "coh-se-b": {
    "name": "SE-Comp B",
@@ -326,28 +548,32 @@
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp B batch A"
   },
   "coh-se-b-b": {
    "name": "B",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp B batch B"
   },
   "coh-se-b-c": {
    "name": "C",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp B batch C"
   },
   "coh-se-b-d": {
    "name": "D",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp B batch D"
   },
   "coh-se-c": {
    "name": "SE-Comp C",
@@ -361,28 +587,32 @@
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp C batch A"
   },
   "coh-se-c-b": {
    "name": "B",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp C batch B"
   },
   "coh-se-c-c": {
    "name": "C",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp C batch C"
   },
   "coh-se-c-d": {
    "name": "D",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp C batch D"
   },
   "coh-se-d": {
    "name": "SE-Comp D",
@@ -396,28 +626,32 @@
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp D batch A"
   },
   "coh-se-d-b": {
    "name": "B",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp D batch B"
   },
   "coh-se-d-c": {
    "name": "C",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp D batch C"
   },
   "coh-se-d-d": {
    "name": "D",
    "type": "batch",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp D batch D"
   },
   "coh-te-a": {
    "name": "TE-Comp A",
@@ -431,28 +665,32 @@
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE-Comp A batch A"
   },
   "coh-te-a-b": {
    "name": "B",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE-Comp A batch B"
   },
   "coh-te-a-c": {
    "name": "C",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE-Comp A batch C"
   },
   "coh-te-a-d": {
    "name": "D",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE-Comp A batch D"
   },
   "coh-te-b": {
    "name": "TE Comp- B",
@@ -466,28 +704,32 @@
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp- B batch A"
   },
   "coh-te-b-b": {
    "name": "B",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp- B batch B"
   },
   "coh-te-b-c": {
    "name": "C",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp- B batch C"
   },
   "coh-te-b-d": {
    "name": "D",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp- B batch D"
   },
   "coh-te-c": {
    "name": "TE Comp - C",
@@ -501,28 +743,32 @@
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp - C batch A"
   },
   "coh-te-c-b": {
    "name": "B",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp - C batch B"
   },
   "coh-te-c-c": {
    "name": "C",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp - C batch C"
   },
   "coh-te-c-d": {
    "name": "D",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp - C batch D"
   },
   "coh-te-d": {
    "name": "TE Comp - D",
@@ -536,29 +782,83 @@
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp - D batch A"
   },
   "coh-te-d-b": {
    "name": "B",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp - D batch B"
   },
   "coh-te-d-c": {
    "name": "C",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp - D batch C"
   },
   "coh-te-d-d": {
    "name": "D",
    "type": "batch",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp - D batch D"
   }
+ },
+ "batches": {
+  "coh-se-a": [
+   "coh-se-a-a",
+   "coh-se-a-b",
+   "coh-se-a-c",
+   "coh-se-a-d"
+  ],
+  "coh-se-b": [
+   "coh-se-b-a",
+   "coh-se-b-b",
+   "coh-se-b-c",
+   "coh-se-b-d"
+  ],
+  "coh-se-c": [
+   "coh-se-c-a",
+   "coh-se-c-b",
+   "coh-se-c-c",
+   "coh-se-c-d"
+  ],
+  "coh-se-d": [
+   "coh-se-d-a",
+   "coh-se-d-b",
+   "coh-se-d-c",
+   "coh-se-d-d"
+  ],
+  "coh-te-a": [
+   "coh-te-a-a",
+   "coh-te-a-b",
+   "coh-te-a-c",
+   "coh-te-a-d"
+  ],
+  "coh-te-b": [
+   "coh-te-b-a",
+   "coh-te-b-b",
+   "coh-te-b-c",
+   "coh-te-b-d"
+  ],
+  "coh-te-c": [
+   "coh-te-c-a",
+   "coh-te-c-b",
+   "coh-te-c-c",
+   "coh-te-c-d"
+  ],
+  "coh-te-d": [
+   "coh-te-d-a",
+   "coh-te-d-b",
+   "coh-te-d-c",
+   "coh-te-d-d"
+  ]
  },
  "rooms": {
   "room-507": "507",
@@ -617,1818 +917,2157 @@
   {
    "kind": "lunch",
    "label": "TE lunch",
-   "year": "TE"
+   "year": "TE",
+   "unique_label": "TE lunch, Mon P4"
   },
   {
    "kind": "lunch",
    "label": "SE lunch",
-   "year": "SE"
+   "year": "SE",
+   "unique_label": "SE lunch, Mon P5"
   },
   {
    "kind": "lunch",
    "label": "TE lunch",
-   "year": "TE"
+   "year": "TE",
+   "unique_label": "TE lunch, Tue P4"
   },
   {
    "kind": "lunch",
    "label": "SE lunch",
-   "year": "SE"
+   "year": "SE",
+   "unique_label": "SE lunch, Tue P5"
   },
   {
    "kind": "lunch",
    "label": "TE lunch",
-   "year": "TE"
+   "year": "TE",
+   "unique_label": "TE lunch, Wed P4"
   },
   {
    "kind": "lunch",
    "label": "SE lunch",
-   "year": "SE"
+   "year": "SE",
+   "unique_label": "SE lunch, Wed P5"
   },
   {
    "kind": "lunch",
    "label": "TE lunch",
-   "year": "TE"
+   "year": "TE",
+   "unique_label": "TE lunch, Thu P4"
   },
   {
    "kind": "lunch",
    "label": "SE lunch",
-   "year": "SE"
+   "year": "SE",
+   "unique_label": "SE lunch, Thu P5"
   },
   {
    "kind": "lunch",
    "label": "TE lunch",
-   "year": "TE"
+   "year": "TE",
+   "unique_label": "TE lunch, Fri P4"
   },
   {
    "kind": "lunch",
    "label": "SE lunch",
-   "year": "SE"
+   "year": "SE",
+   "unique_label": "SE lunch, Fri P5"
   },
   {
    "kind": "frozen",
    "label": "MDM-III Lab (CC) /A /SB",
    "decision": "D24",
-   "source_ref": "obs-lab-t11-r8-c2"
+   "source_ref": "obs-lab-t11-r8-c2",
+   "unique_label": "MDM-III Lab (CC) /A /SB"
   },
   {
    "kind": "frozen",
    "label": "MDM-III Lab (CC) /A /SB",
    "decision": "D24",
-   "source_ref": "obs-lab-t11-r8-c2"
+   "source_ref": "obs-lab-t11-r8-c2",
+   "unique_label": "MDM-III Lab (CC) /A /SB"
   },
   {
    "kind": "frozen",
    "label": "MDM III Lab | / Major Project | M.tech DFIR ESE /SB",
    "decision": "D24",
-   "source_ref": "obs-lab-t13-r8-c4"
+   "source_ref": "obs-lab-t13-r8-c4",
+   "unique_label": "MDM III Lab | / Major Project | M.tech DFIR ESE /SB"
   },
   {
    "kind": "frozen",
    "label": "MDM III Lab | / Major Project | M.tech DFIR ESE /SB",
    "decision": "D24",
-   "source_ref": "obs-lab-t13-r8-c4"
+   "source_ref": "obs-lab-t13-r8-c4",
+   "unique_label": "MDM III Lab | / Major Project | M.tech DFIR ESE /SB"
   },
   {
    "kind": "frozen",
    "label": "MDM-DBMS /RS",
    "decision": "D24",
-   "source_ref": "obs-lab-t7-r8-c1"
+   "source_ref": "obs-lab-t7-r8-c1",
+   "unique_label": "MDM-DBMS /RS, Mon P7–P8, 603"
   },
   {
    "kind": "frozen",
    "label": "MDM-DBMS /RS",
    "decision": "D24",
-   "source_ref": "obs-lab-t7-r8-c1"
+   "source_ref": "obs-lab-t7-r8-c1",
+   "unique_label": "MDM-DBMS /RS, Mon P7–P8, 603"
   },
   {
    "kind": "frozen",
    "label": "MDM-DBMS /RS",
    "decision": "D24",
-   "source_ref": "obs-lab-t7-r8-c2"
+   "source_ref": "obs-lab-t7-r8-c2",
+   "unique_label": "MDM-DBMS /RS, Tue P7–P8, 603"
   },
   {
    "kind": "frozen",
    "label": "MDM-DBMS /RS",
    "decision": "D24",
-   "source_ref": "obs-lab-t7-r8-c2"
+   "source_ref": "obs-lab-t7-r8-c2",
+   "unique_label": "MDM-DBMS /RS, Tue P7–P8, 603"
   },
   {
    "kind": "frozen",
    "label": "MDM-III Lab (CC) /B /SB",
    "decision": "D24",
-   "source_ref": "obs-lab-t8-r8-c3"
+   "source_ref": "obs-lab-t8-r8-c3",
+   "unique_label": "MDM-III Lab (CC) /B /SB"
   },
   {
    "kind": "frozen",
    "label": "MDM-III Lab (CC) /B /SB",
    "decision": "D24",
-   "source_ref": "obs-lab-t8-r8-c3"
+   "source_ref": "obs-lab-t8-r8-c3",
+   "unique_label": "MDM-III Lab (CC) /B /SB"
   },
   {
    "kind": "frozen",
    "label": "PCS / DN / 002",
    "decision": "D44",
-   "source_ref": "obs-t0-r1-c4-l0"
+   "source_ref": "obs-t0-r1-c4-l0",
+   "unique_label": "PCS / DN / 002, Thu P0, SE-Comp A"
   },
   {
    "kind": "frozen",
    "label": "FOM - II / AsT /307",
    "decision": "D26",
-   "source_ref": "obs-t0-r2-c5-l0"
+   "source_ref": "obs-t0-r2-c5-l0",
+   "unique_label": "FOM - II / AsT /307, Fri P1"
   },
   {
    "kind": "frozen",
    "label": "SMCS / AT / 002",
    "decision": "D26",
-   "source_ref": "obs-t0-r2-c5-l1"
+   "source_ref": "obs-t0-r2-c5-l1",
+   "unique_label": "SMCS / AT / 002, Fri P1, SE-Comp A"
   },
   {
    "kind": "frozen",
    "label": "PCS / D / DN / 608",
    "decision": "D44",
-   "source_ref": "obs-t0-r4-c1-l3"
+   "source_ref": "obs-t0-r4-c1-l3",
+   "unique_label": "PCS / D / DN / 608"
   },
   {
    "kind": "frozen",
    "label": "PCS / D / DN / 608",
    "decision": "D44",
-   "source_ref": "obs-t0-r4-c1-l3"
+   "source_ref": "obs-t0-r4-c1-l3",
+   "unique_label": "PCS / D / DN / 608"
   },
   {
    "kind": "frozen",
    "label": "PCS / A / DN / 605",
    "decision": "D44",
-   "source_ref": "obs-t0-r4-c2-l0"
+   "source_ref": "obs-t0-r4-c2-l0",
+   "unique_label": "PCS / A / DN / 605, Tue P3–P4, 605"
   },
   {
    "kind": "frozen",
    "label": "PCS / A / DN / 605",
    "decision": "D44",
-   "source_ref": "obs-t0-r4-c2-l0"
+   "source_ref": "obs-t0-r4-c2-l0",
+   "unique_label": "PCS / A / DN / 605, Tue P3–P4, 605"
   },
   {
    "kind": "frozen",
    "label": "PCS / B / DN / 608",
    "decision": "D44",
-   "source_ref": "obs-t0-r4-c3-l1"
+   "source_ref": "obs-t0-r4-c3-l1",
+   "unique_label": "PCS / B / DN / 608"
   },
   {
    "kind": "frozen",
    "label": "PCS / B / DN / 608",
    "decision": "D44",
-   "source_ref": "obs-t0-r4-c3-l1"
+   "source_ref": "obs-t0-r4-c3-l1",
+   "unique_label": "PCS / B / DN / 608"
   },
   {
    "kind": "frozen",
    "label": "FOM - II / AsT /307",
    "decision": "D26",
-   "source_ref": "obs-t0-r7-c3-l0"
+   "source_ref": "obs-t0-r7-c3-l0",
+   "unique_label": "FOM - II / AsT /307, Wed P6"
   },
   {
    "kind": "frozen",
    "label": "SMCS / AT / 508",
    "decision": "D26",
-   "source_ref": "obs-t0-r7-c3-l1"
+   "source_ref": "obs-t0-r7-c3-l1",
+   "unique_label": "SMCS / AT / 508, Wed P6, SE-Comp A"
   },
   {
    "kind": "frozen",
    "label": "FOM - II / AsT /307",
    "decision": "D26",
-   "source_ref": "obs-t0-r7-c4-l0"
+   "source_ref": "obs-t0-r7-c4-l0",
+   "unique_label": "FOM - II / AsT /307, Thu P6"
   },
   {
    "kind": "frozen",
    "label": "SMCS / AT / 002",
    "decision": "D26",
-   "source_ref": "obs-t0-r7-c4-l1"
+   "source_ref": "obs-t0-r7-c4-l1",
+   "unique_label": "SMCS / AT / 002, Thu P6, SE-Comp A"
   },
   {
    "kind": "frozen",
    "label": "PCS / C / DN /703-A",
    "decision": "D44",
-   "source_ref": "obs-t0-r7-c5-l2"
+   "source_ref": "obs-t0-r7-c5-l2",
+   "unique_label": "PCS / C / DN /703-A"
   },
   {
    "kind": "frozen",
    "label": "PCS / C / DN /703-A",
    "decision": "D44",
-   "source_ref": "obs-t0-r7-c5-l2"
+   "source_ref": "obs-t0-r7-c5-l2",
+   "unique_label": "PCS / C / DN /703-A"
   },
   {
    "kind": "frozen",
    "label": "PCS / DN / 002",
    "decision": "D44",
-   "source_ref": "obs-t2-r1-c4-l0"
+   "source_ref": "obs-t2-r1-c4-l0",
+   "unique_label": "PCS / DN / 002, Thu P0, SE-Comp B"
   },
   {
    "kind": "frozen",
    "label": "SMCS / AT / 002",
    "decision": "D26",
-   "source_ref": "obs-t2-r2-c5-l1"
+   "source_ref": "obs-t2-r2-c5-l1",
+   "unique_label": "SMCS / AT / 002, Fri P1, SE-Comp B"
   },
   {
    "kind": "frozen",
    "label": "PCS / D / SD / 607-B",
    "decision": "D44",
-   "source_ref": "obs-t2-r4-c1-l3"
+   "source_ref": "obs-t2-r4-c1-l3",
+   "unique_label": "PCS / D / SD / 607-B"
   },
   {
    "kind": "frozen",
    "label": "PCS / D / SD / 607-B",
    "decision": "D44",
-   "source_ref": "obs-t2-r4-c1-l3"
+   "source_ref": "obs-t2-r4-c1-l3",
+   "unique_label": "PCS / D / SD / 607-B"
   },
   {
    "kind": "frozen",
    "label": "PCS / A / SM / 607-B",
    "decision": "D44",
-   "source_ref": "obs-t2-r4-c2-l0"
+   "source_ref": "obs-t2-r4-c2-l0",
+   "unique_label": "PCS / A / SM / 607-B"
   },
   {
    "kind": "frozen",
    "label": "PCS / A / SM / 607-B",
    "decision": "D44",
-   "source_ref": "obs-t2-r4-c2-l0"
+   "source_ref": "obs-t2-r4-c2-l0",
+   "unique_label": "PCS / A / SM / 607-B"
   },
   {
    "kind": "frozen",
    "label": "PCS / B / SD /607-B",
    "decision": "D44",
-   "source_ref": "obs-t2-r4-c3-l1"
+   "source_ref": "obs-t2-r4-c3-l1",
+   "unique_label": "PCS / B / SD /607-B"
   },
   {
    "kind": "frozen",
    "label": "PCS / B / SD /607-B",
    "decision": "D44",
-   "source_ref": "obs-t2-r4-c3-l1"
+   "source_ref": "obs-t2-r4-c3-l1",
+   "unique_label": "PCS / B / SD /607-B"
   },
   {
    "kind": "frozen",
    "label": "SMCS / AT / 508",
    "decision": "D26",
-   "source_ref": "obs-t2-r7-c3-l1"
+   "source_ref": "obs-t2-r7-c3-l1",
+   "unique_label": "SMCS / AT / 508, Wed P6, SE-Comp B"
   },
   {
    "kind": "frozen",
    "label": "SMCS / AT / 002",
    "decision": "D26",
-   "source_ref": "obs-t2-r7-c4-l1"
+   "source_ref": "obs-t2-r7-c4-l1",
+   "unique_label": "SMCS / AT / 002, Thu P6, SE-Comp B"
   },
   {
    "kind": "frozen",
    "label": "PCS / C/ SD /703-B",
    "decision": "D44",
-   "source_ref": "obs-t2-r7-c5-l2"
+   "source_ref": "obs-t2-r7-c5-l2",
+   "unique_label": "PCS / C/ SD /703-B"
   },
   {
    "kind": "frozen",
    "label": "PCS / C/ SD /703-B",
    "decision": "D44",
-   "source_ref": "obs-t2-r7-c5-l2"
+   "source_ref": "obs-t2-r7-c5-l2",
+   "unique_label": "PCS / C/ SD /703-B"
   },
   {
    "kind": "frozen",
    "label": "PCS / A / DN / 605",
    "decision": "D44",
-   "source_ref": "obs-t4-r1-c3-l3"
+   "source_ref": "obs-t4-r1-c3-l3",
+   "unique_label": "PCS / A / DN / 605, Wed P0–P1, 605"
   },
   {
    "kind": "frozen",
    "label": "PCS / A / DN / 605",
    "decision": "D44",
-   "source_ref": "obs-t4-r1-c3-l3"
+   "source_ref": "obs-t4-r1-c3-l3",
+   "unique_label": "PCS / A / DN / 605, Wed P0–P1, 605"
   },
   {
    "kind": "frozen",
    "label": "PCS / SD / 508",
    "decision": "D44",
-   "source_ref": "obs-t4-r1-c4-l0"
+   "source_ref": "obs-t4-r1-c4-l0",
+   "unique_label": "PCS / SD / 508, Thu P0, SE-Comp C"
   },
   {
    "kind": "frozen",
    "label": "SMCS / TP / 508",
    "decision": "D26",
-   "source_ref": "obs-t4-r2-c5-l1"
+   "source_ref": "obs-t4-r2-c5-l1",
+   "unique_label": "SMCS / TP / 508, Fri P1, SE-Comp C"
   },
   {
    "kind": "frozen",
    "label": "PCS / D / SD / 505",
    "decision": "D44",
-   "source_ref": "obs-t4-r4-c2-l3"
+   "source_ref": "obs-t4-r4-c2-l3",
+   "unique_label": "PCS / D / SD / 505"
   },
   {
    "kind": "frozen",
    "label": "PCS / D / SD / 505",
    "decision": "D44",
-   "source_ref": "obs-t4-r4-c2-l3"
+   "source_ref": "obs-t4-r4-c2-l3",
+   "unique_label": "PCS / D / SD / 505"
   },
   {
    "kind": "frozen",
    "label": "PCS / B / DN / 505",
    "decision": "D44",
-   "source_ref": "obs-t4-r4-c4-l3"
+   "source_ref": "obs-t4-r4-c4-l3",
+   "unique_label": "PCS / B / DN / 505"
   },
   {
    "kind": "frozen",
    "label": "PCS / B / DN / 505",
    "decision": "D44",
-   "source_ref": "obs-t4-r4-c4-l3"
+   "source_ref": "obs-t4-r4-c4-l3",
+   "unique_label": "PCS / B / DN / 505"
   },
   {
    "kind": "frozen",
    "label": "PCS / C / DN / 609",
    "decision": "D44",
-   "source_ref": "obs-t4-r4-c5-l3"
+   "source_ref": "obs-t4-r4-c5-l3",
+   "unique_label": "PCS / C / DN / 609"
   },
   {
    "kind": "frozen",
    "label": "PCS / C / DN / 609",
    "decision": "D44",
-   "source_ref": "obs-t4-r4-c5-l3"
+   "source_ref": "obs-t4-r4-c5-l3",
+   "unique_label": "PCS / C / DN / 609"
   },
   {
    "kind": "frozen",
    "label": "SMCS / CRG / 202",
    "decision": "D26",
-   "source_ref": "obs-t4-r7-c3-l1"
+   "source_ref": "obs-t4-r7-c3-l1",
+   "unique_label": "SMCS / CRG / 202, Wed P6, SE-Comp C"
   },
   {
    "kind": "frozen",
    "label": "SMCS / TP / 508",
    "decision": "D26",
-   "source_ref": "obs-t4-r7-c4-l1"
+   "source_ref": "obs-t4-r7-c4-l1",
+   "unique_label": "SMCS / TP / 508, Thu P6, SE-Comp C"
   },
   {
    "kind": "frozen",
    "label": "PCS / A / SD / 609",
    "decision": "D44",
-   "source_ref": "obs-t6-r1-c3-l3"
+   "source_ref": "obs-t6-r1-c3-l3",
+   "unique_label": "PCS / A / SD / 609"
   },
   {
    "kind": "frozen",
    "label": "PCS / A / SD / 609",
    "decision": "D44",
-   "source_ref": "obs-t6-r1-c3-l3"
+   "source_ref": "obs-t6-r1-c3-l3",
+   "unique_label": "PCS / A / SD / 609"
   },
   {
    "kind": "frozen",
    "label": "PCS / SD / 508",
    "decision": "D44",
-   "source_ref": "obs-t6-r1-c4-l0"
+   "source_ref": "obs-t6-r1-c4-l0",
+   "unique_label": "PCS / SD / 508, Thu P0, SE-Comp D"
   },
   {
    "kind": "frozen",
    "label": "SMCS / TP / 508",
    "decision": "D26",
-   "source_ref": "obs-t6-r2-c5-l1"
+   "source_ref": "obs-t6-r2-c5-l1",
+   "unique_label": "SMCS / TP / 508, Fri P1, SE-Comp D"
   },
   {
    "kind": "frozen",
    "label": "PCS / D / AY / 608",
    "decision": "D44",
-   "source_ref": "obs-t6-r4-c2-l3"
+   "source_ref": "obs-t6-r4-c2-l3",
+   "unique_label": "PCS / D / AY / 608"
   },
   {
    "kind": "frozen",
    "label": "PCS / D / AY / 608",
    "decision": "D44",
-   "source_ref": "obs-t6-r4-c2-l3"
+   "source_ref": "obs-t6-r4-c2-l3",
+   "unique_label": "PCS / D / AY / 608"
   },
   {
    "kind": "frozen",
    "label": "PCS / B / SD / 607-B",
    "decision": "D44",
-   "source_ref": "obs-t6-r4-c4-l3"
+   "source_ref": "obs-t6-r4-c4-l3",
+   "unique_label": "PCS / B / SD / 607-B"
   },
   {
    "kind": "frozen",
    "label": "PCS / B / SD / 607-B",
    "decision": "D44",
-   "source_ref": "obs-t6-r4-c4-l3"
+   "source_ref": "obs-t6-r4-c4-l3",
+   "unique_label": "PCS / B / SD / 607-B"
   },
   {
    "kind": "frozen",
    "label": "PCS / C / SD /703-A",
    "decision": "D44",
-   "source_ref": "obs-t6-r4-c5-l3"
+   "source_ref": "obs-t6-r4-c5-l3",
+   "unique_label": "PCS / C / SD /703-A"
   },
   {
    "kind": "frozen",
    "label": "PCS / C / SD /703-A",
    "decision": "D44",
-   "source_ref": "obs-t6-r4-c5-l3"
+   "source_ref": "obs-t6-r4-c5-l3",
+   "unique_label": "PCS / C / SD /703-A"
   },
   {
    "kind": "frozen",
    "label": "SMCS / CRG / 202",
    "decision": "D26",
-   "source_ref": "obs-t6-r7-c3-l1"
+   "source_ref": "obs-t6-r7-c3-l1",
+   "unique_label": "SMCS / CRG / 202, Wed P6, SE-Comp D"
   },
   {
    "kind": "frozen",
    "label": "SMCS / TP / 508",
    "decision": "D26",
-   "source_ref": "obs-t6-r7-c4-l1"
+   "source_ref": "obs-t6-r7-c4-l1",
+   "unique_label": "SMCS / TP / 508, Thu P6, SE-Comp D"
   },
   {
    "kind": "frozen",
    "label": "NLP / PE-I-A / RK /606-4",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l0"
+   "source_ref": "obs-t8-r1-c2-l0",
+   "unique_label": "NLP / PE-I-A / RK /606-4"
   },
   {
    "kind": "frozen",
    "label": "NLP / PE-I-A / RK /606-4",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l0"
+   "source_ref": "obs-t8-r1-c2-l0",
+   "unique_label": "NLP / PE-I-A / RK /606-4"
   },
   {
    "kind": "frozen",
    "label": "NLP/ PE-I-B / AN /608",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l1"
+   "source_ref": "obs-t8-r1-c2-l1",
+   "unique_label": "NLP/ PE-I-B / AN /608"
   },
   {
    "kind": "frozen",
    "label": "NLP/ PE-I-B / AN /608",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l1"
+   "source_ref": "obs-t8-r1-c2-l1",
+   "unique_label": "NLP/ PE-I-B / AN /608"
   },
   {
    "kind": "frozen",
    "label": "DL / PE-I-C / SJ /702-A",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l2"
+   "source_ref": "obs-t8-r1-c2-l2",
+   "unique_label": "DL / PE-I-C / SJ /702-A"
   },
   {
    "kind": "frozen",
    "label": "DL / PE-I-C / SJ /702-A",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l2"
+   "source_ref": "obs-t8-r1-c2-l2",
+   "unique_label": "DL / PE-I-C / SJ /702-A"
   },
   {
    "kind": "frozen",
    "label": "DL / PE-I-D / SRD /607-B",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l3"
+   "source_ref": "obs-t8-r1-c2-l3",
+   "unique_label": "DL / PE-I-D / SRD /607-B"
   },
   {
    "kind": "frozen",
    "label": "DL / PE-I-D / SRD /607-B",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l3"
+   "source_ref": "obs-t8-r1-c2-l3",
+   "unique_label": "DL / PE-I-D / SRD /607-B"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-A / PJB / 603-2",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l4"
+   "source_ref": "obs-t8-r1-c2-l4",
+   "unique_label": "BDA / PE-II-A / PJB / 603-2"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-A / PJB / 603-2",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l4"
+   "source_ref": "obs-t8-r1-c2-l4",
+   "unique_label": "BDA / PE-II-A / PJB / 603-2"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-B / JB / 603-3",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l5"
+   "source_ref": "obs-t8-r1-c2-l5",
+   "unique_label": "BDA / PE-II-B / JB / 603-3"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-B / JB / 603-3",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l5"
+   "source_ref": "obs-t8-r1-c2-l5",
+   "unique_label": "BDA / PE-II-B / JB / 603-3"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -C / YP /505",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l6"
+   "source_ref": "obs-t8-r1-c2-l6",
+   "unique_label": "IV / PE II -C / YP /505"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -C / YP /505",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l6"
+   "source_ref": "obs-t8-r1-c2-l6",
+   "unique_label": "IV / PE II -C / YP /505"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -D / AA /509",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l7"
+   "source_ref": "obs-t8-r1-c2-l7",
+   "unique_label": "IV / PE II -D / AA /509"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -D / AA /509",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c2-l7"
+   "source_ref": "obs-t8-r1-c2-l7",
+   "unique_label": "IV / PE II -D / AA /509"
   },
   {
    "kind": "frozen",
    "label": "NLP / PE-I-C / RK /606-4",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l0"
+   "source_ref": "obs-t8-r1-c3-l0",
+   "unique_label": "NLP / PE-I-C / RK /606-4"
   },
   {
    "kind": "frozen",
    "label": "NLP / PE-I-C / RK /606-4",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l0"
+   "source_ref": "obs-t8-r1-c3-l0",
+   "unique_label": "NLP / PE-I-C / RK /606-4"
   },
   {
    "kind": "frozen",
    "label": "NLP/ PE-I-D / AN /608",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l1"
+   "source_ref": "obs-t8-r1-c3-l1",
+   "unique_label": "NLP/ PE-I-D / AN /608"
   },
   {
    "kind": "frozen",
    "label": "NLP/ PE-I-D / AN /608",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l1"
+   "source_ref": "obs-t8-r1-c3-l1",
+   "unique_label": "NLP/ PE-I-D / AN /608"
   },
   {
    "kind": "frozen",
    "label": "DL / PE-I-E / SJ 702-A",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l2"
+   "source_ref": "obs-t8-r1-c3-l2",
+   "unique_label": "DL / PE-I-E / SJ 702-A"
   },
   {
    "kind": "frozen",
    "label": "DL / PE-I-E / SJ 702-A",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l2"
+   "source_ref": "obs-t8-r1-c3-l2",
+   "unique_label": "DL / PE-I-E / SJ 702-A"
   },
   {
    "kind": "frozen",
    "label": "DL / PE-I-B / SRD 702-B",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l3"
+   "source_ref": "obs-t8-r1-c3-l3",
+   "unique_label": "DL / PE-I-B / SRD 702-B"
   },
   {
    "kind": "frozen",
    "label": "DL / PE-I-B / SRD 702-B",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l3"
+   "source_ref": "obs-t8-r1-c3-l3",
+   "unique_label": "DL / PE-I-B / SRD 702-B"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-C / PJB /603-2",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l4"
+   "source_ref": "obs-t8-r1-c3-l4",
+   "unique_label": "BDA / PE-II-C / PJB /603-2"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-C / PJB /603-2",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l4"
+   "source_ref": "obs-t8-r1-c3-l4",
+   "unique_label": "BDA / PE-II-C / PJB /603-2"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-D / JB / 603-3",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l5"
+   "source_ref": "obs-t8-r1-c3-l5",
+   "unique_label": "BDA / PE-II-D / JB / 603-3"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-D / JB / 603-3",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l5"
+   "source_ref": "obs-t8-r1-c3-l5",
+   "unique_label": "BDA / PE-II-D / JB / 603-3"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -G / YP / 505",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l6"
+   "source_ref": "obs-t8-r1-c3-l6",
+   "unique_label": "IV / PE II -G / YP / 505"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -G / YP / 505",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l6"
+   "source_ref": "obs-t8-r1-c3-l6",
+   "unique_label": "IV / PE II -G / YP / 505"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -H / AA / 509",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l7"
+   "source_ref": "obs-t8-r1-c3-l7",
+   "unique_label": "IV / PE II -H / AA / 509"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -H / AA / 509",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c3-l7"
+   "source_ref": "obs-t8-r1-c3-l7",
+   "unique_label": "IV / PE II -H / AA / 509"
   },
   {
    "kind": "frozen",
    "label": "NLP / PE-I-E / AN /702-B",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l0"
+   "source_ref": "obs-t8-r1-c4-l0",
+   "unique_label": "NLP / PE-I-E / AN /702-B"
   },
   {
    "kind": "frozen",
    "label": "NLP / PE-I-E / AN /702-B",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l0"
+   "source_ref": "obs-t8-r1-c4-l0",
+   "unique_label": "NLP / PE-I-E / AN /702-B"
   },
   {
    "kind": "frozen",
    "label": "DL / PE-I-A / SJ /606-4",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l1"
+   "source_ref": "obs-t8-r1-c4-l1",
+   "unique_label": "DL / PE-I-A / SJ /606-4"
   },
   {
    "kind": "frozen",
    "label": "DL / PE-I-A / SJ /606-4",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l1"
+   "source_ref": "obs-t8-r1-c4-l1",
+   "unique_label": "DL / PE-I-A / SJ /606-4"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-E / PJB / 603-2",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l2"
+   "source_ref": "obs-t8-r1-c4-l2",
+   "unique_label": "BDA / PE-II-E / PJB / 603-2"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-E / PJB / 603-2",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l2"
+   "source_ref": "obs-t8-r1-c4-l2",
+   "unique_label": "BDA / PE-II-E / PJB / 603-2"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-F / JB / 603-3",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l3"
+   "source_ref": "obs-t8-r1-c4-l3",
+   "unique_label": "BDA / PE-II-F / JB / 603-3"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-F / JB / 603-3",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l3"
+   "source_ref": "obs-t8-r1-c4-l3",
+   "unique_label": "BDA / PE-II-F / JB / 603-3"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -A / YP /505",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l4"
+   "source_ref": "obs-t8-r1-c4-l4",
+   "unique_label": "IV / PE II -A / YP /505"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -A / YP /505",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l4"
+   "source_ref": "obs-t8-r1-c4-l4",
+   "unique_label": "IV / PE II -A / YP /505"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -B / AA /509",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l5"
+   "source_ref": "obs-t8-r1-c4-l5",
+   "unique_label": "IV / PE II -B / AA /509"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -B / AA /509",
    "decision": "D24",
-   "source_ref": "obs-t8-r1-c4-l5"
+   "source_ref": "obs-t8-r1-c4-l5",
+   "unique_label": "IV / PE II -B / AA /509"
   },
   {
    "kind": "frozen",
    "label": "DL / SJ / 508",
    "decision": "D24",
-   "source_ref": "obs-t8-r4-c2-l0"
+   "source_ref": "obs-t8-r4-c2-l0",
+   "unique_label": "DL / SJ / 508"
   },
   {
    "kind": "frozen",
    "label": "IV / YP / 002",
    "decision": "D24",
-   "source_ref": "obs-t8-r4-c2-l1"
+   "source_ref": "obs-t8-r4-c2-l1",
+   "unique_label": "IV / YP / 002, Tue P3"
   },
   {
    "kind": "frozen",
    "label": "DL / SJ / 703",
    "decision": "D24",
-   "source_ref": "obs-t8-r4-c3-l0"
+   "source_ref": "obs-t8-r4-c3-l0",
+   "unique_label": "DL / SJ / 703"
   },
   {
    "kind": "frozen",
    "label": "IV / YP / 002",
    "decision": "D24",
-   "source_ref": "obs-t8-r4-c3-l1"
+   "source_ref": "obs-t8-r4-c3-l1",
+   "unique_label": "IV / YP / 002, Wed P3"
   },
   {
    "kind": "frozen",
    "label": "BDA / PJB / 508",
    "decision": "D24",
-   "source_ref": "obs-t8-r4-c4-l0"
+   "source_ref": "obs-t8-r4-c4-l0",
+   "unique_label": "BDA / PJB / 508, Thu P3"
   },
   {
    "kind": "frozen",
    "label": "NLP/ RK/ 703",
    "decision": "D24",
-   "source_ref": "obs-t8-r4-c4-l1"
+   "source_ref": "obs-t8-r4-c4-l1",
+   "unique_label": "NLP/ RK/ 703, Thu P3, 703"
   },
   {
    "kind": "frozen",
    "label": "BDA / PJB / 508",
    "decision": "D24",
-   "source_ref": "obs-t8-r6-c5-l0"
+   "source_ref": "obs-t8-r6-c5-l0",
+   "unique_label": "BDA / PJB / 508, Fri P5"
   },
   {
    "kind": "frozen",
    "label": "NLP/ RK/ 703",
    "decision": "D24",
-   "source_ref": "obs-t8-r6-c5-l1"
+   "source_ref": "obs-t8-r6-c5-l1",
+   "unique_label": "NLP/ RK/ 703, Fri P5, 703"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-G / PJB / 603-2",
    "decision": "D24",
-   "source_ref": "obs-t8-r7-c5-l2"
+   "source_ref": "obs-t8-r7-c5-l2",
+   "unique_label": "BDA / PE-II-G / PJB / 603-2"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-G / PJB / 603-2",
    "decision": "D24",
-   "source_ref": "obs-t8-r7-c5-l2"
+   "source_ref": "obs-t8-r7-c5-l2",
+   "unique_label": "BDA / PE-II-G / PJB / 603-2"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-H / JB / 603-3",
    "decision": "D24",
-   "source_ref": "obs-t8-r7-c5-l3"
+   "source_ref": "obs-t8-r7-c5-l3",
+   "unique_label": "BDA / PE-II-H / JB / 603-3"
   },
   {
    "kind": "frozen",
    "label": "BDA / PE-II-H / JB / 603-3",
    "decision": "D24",
-   "source_ref": "obs-t8-r7-c5-l3"
+   "source_ref": "obs-t8-r7-c5-l3",
+   "unique_label": "BDA / PE-II-H / JB / 603-3"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -E / YP /505",
    "decision": "D24",
-   "source_ref": "obs-t8-r7-c5-l4"
+   "source_ref": "obs-t8-r7-c5-l4",
+   "unique_label": "IV / PE II -E / YP /505"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -E / YP /505",
    "decision": "D24",
-   "source_ref": "obs-t8-r7-c5-l4"
+   "source_ref": "obs-t8-r7-c5-l4",
+   "unique_label": "IV / PE II -E / YP /505"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -F / AA /509",
    "decision": "D24",
-   "source_ref": "obs-t8-r7-c5-l5"
+   "source_ref": "obs-t8-r7-c5-l5",
+   "unique_label": "IV / PE II -F / AA /509"
   },
   {
    "kind": "frozen",
    "label": "IV / PE II -F / AA /509",
    "decision": "D24",
-   "source_ref": "obs-t8-r7-c5-l5"
+   "source_ref": "obs-t8-r7-c5-l5",
+   "unique_label": "IV / PE II -F / AA /509"
   },
   {
    "kind": "exam",
    "label": "DAA | LAB EXAM ESE | SE COMP NR",
-   "source_ref": "exam-lab-t5-r4-c3"
+   "source_ref": "exam-lab-t5-r4-c3",
+   "unique_label": "DAA | LAB EXAM ESE | SE COMP NR"
   },
   {
    "kind": "exam",
    "label": "DAA | LAB EXAM ESE | SE COMP NR",
-   "source_ref": "exam-lab-t5-r4-c3"
+   "source_ref": "exam-lab-t5-r4-c3",
+   "unique_label": "DAA | LAB EXAM ESE | SE COMP NR"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC /MTech /609",
-   "source_ref": "oos-fac-t10-r8-c5"
+   "source_ref": "oos-fac-t10-r8-c5",
+   "unique_label": "HPC /MTech /609"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / B1 / 003",
-   "source_ref": "oos-fac-t11-r7-c1"
+   "source_ref": "oos-fac-t11-r7-c1",
+   "unique_label": "PSOOP / B1 / 003, Mon P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / B1 / 003",
-   "source_ref": "oos-fac-t11-r7-c1"
+   "source_ref": "oos-fac-t11-r7-c1",
+   "unique_label": "PSOOP / B1 / 003, Mon P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / B1 / 003",
-   "source_ref": "oos-fac-t11-r7-c5"
+   "source_ref": "oos-fac-t11-r7-c5",
+   "unique_label": "PSOOP / B1 / 003, Fri P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / B1 / 003",
-   "source_ref": "oos-fac-t11-r7-c5"
+   "source_ref": "oos-fac-t11-r7-c5",
+   "unique_label": "PSOOP / B1 / 003, Fri P6–P7"
   },
   {
    "kind": "mdm",
    "label": "MDM-I lab /A /603-7",
-   "source_ref": "oos-fac-t12-r1-c1"
+   "source_ref": "oos-fac-t12-r1-c1",
+   "unique_label": "MDM-I lab /A /603-7"
   },
   {
    "kind": "mdm",
    "label": "MDM-I lab /A /603-7",
-   "source_ref": "oos-fac-t12-r1-c1"
+   "source_ref": "oos-fac-t12-r1-c1",
+   "unique_label": "MDM-I lab /A /603-7"
   },
   {
    "kind": "mdm",
    "label": "MDM-I (DBMS) / 605",
-   "source_ref": "oos-fac-t12-r7-c1"
+   "source_ref": "oos-fac-t12-r7-c1",
+   "unique_label": "MDM-I (DBMS) / 605, Mon P6, 605"
   },
   {
    "kind": "mdm",
    "label": "MDM-I (DBMS) / 605",
-   "source_ref": "oos-fac-t12-r7-c2"
+   "source_ref": "oos-fac-t12-r7-c2",
+   "unique_label": "MDM-I (DBMS) / 605, Tue P6, 605"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D2 /003",
-   "source_ref": "oos-fac-t16-r1-c1"
+   "source_ref": "oos-fac-t16-r1-c1",
+   "unique_label": "PSOOP / D2 /003, Mon P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D2 /003",
-   "source_ref": "oos-fac-t16-r1-c1"
+   "source_ref": "oos-fac-t16-r1-c1",
+   "unique_label": "PSOOP / D2 /003, Mon P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G2 /003",
-   "source_ref": "oos-fac-t16-r1-c3"
+   "source_ref": "oos-fac-t16-r1-c3",
+   "unique_label": "PSOOP / G2 /003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G2 /003",
-   "source_ref": "oos-fac-t16-r1-c3"
+   "source_ref": "oos-fac-t16-r1-c3",
+   "unique_label": "PSOOP / G2 /003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D2 /003",
-   "source_ref": "oos-fac-t16-r1-c4"
+   "source_ref": "oos-fac-t16-r1-c4",
+   "unique_label": "PSOOP / D2 /003, Thu P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D2 /003",
-   "source_ref": "oos-fac-t16-r1-c4"
+   "source_ref": "oos-fac-t16-r1-c4",
+   "unique_label": "PSOOP / D2 /003, Thu P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A2 /003",
-   "source_ref": "oos-fac-t16-r4-c2"
+   "source_ref": "oos-fac-t16-r4-c2",
+   "unique_label": "PSOOP / A2 /003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A2 /003",
-   "source_ref": "oos-fac-t16-r4-c2"
+   "source_ref": "oos-fac-t16-r4-c2",
+   "unique_label": "PSOOP / A2 /003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G2 /003",
-   "source_ref": "oos-fac-t16-r7-c2"
+   "source_ref": "oos-fac-t16-r7-c2",
+   "unique_label": "PSOOP / G2 /003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G2 /003",
-   "source_ref": "oos-fac-t16-r7-c2"
+   "source_ref": "oos-fac-t16-r7-c2",
+   "unique_label": "PSOOP / G2 /003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A2 /003",
-   "source_ref": "oos-fac-t16-r7-c3"
+   "source_ref": "oos-fac-t16-r7-c3",
+   "unique_label": "PSOOP / A2 /003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A2 /003",
-   "source_ref": "oos-fac-t16-r7-c3"
+   "source_ref": "oos-fac-t16-r7-c3",
+   "unique_label": "PSOOP / A2 /003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F1 / 003",
-   "source_ref": "oos-fac-t18-r1-c2"
+   "source_ref": "oos-fac-t18-r1-c2",
+   "unique_label": "PSOOP / F1 / 003, Tue P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F1 / 003",
-   "source_ref": "oos-fac-t18-r1-c2"
+   "source_ref": "oos-fac-t18-r1-c2",
+   "unique_label": "PSOOP / F1 / 003, Tue P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F1 / 003",
-   "source_ref": "oos-fac-t18-r4-c1"
+   "source_ref": "oos-fac-t18-r4-c1",
+   "unique_label": "PSOOP / F1 / 003, Mon P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F1 / 003",
-   "source_ref": "oos-fac-t18-r4-c1"
+   "source_ref": "oos-fac-t18-r4-c1",
+   "unique_label": "PSOOP / F1 / 003, Mon P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G4 / 003",
-   "source_ref": "oos-fac-t19-r1-c3"
+   "source_ref": "oos-fac-t19-r1-c3",
+   "unique_label": "PSOOP / G4 / 003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G4 / 003",
-   "source_ref": "oos-fac-t19-r1-c3"
+   "source_ref": "oos-fac-t19-r1-c3",
+   "unique_label": "PSOOP / G4 / 003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G4 / 003",
-   "source_ref": "oos-fac-t19-r7-c2"
+   "source_ref": "oos-fac-t19-r7-c2",
+   "unique_label": "PSOOP / G4 / 003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G4 / 003",
-   "source_ref": "oos-fac-t19-r7-c2"
+   "source_ref": "oos-fac-t19-r7-c2",
+   "unique_label": "PSOOP / G4 / 003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A1 / 003",
-   "source_ref": "oos-fac-t1-r4-c2"
+   "source_ref": "oos-fac-t1-r4-c2",
+   "unique_label": "PSOOP / A1 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A1 / 003",
-   "source_ref": "oos-fac-t1-r4-c2"
+   "source_ref": "oos-fac-t1-r4-c2",
+   "unique_label": "PSOOP / A1 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A1 / 003",
-   "source_ref": "oos-fac-t1-r7-c3"
+   "source_ref": "oos-fac-t1-r7-c3",
+   "unique_label": "PSOOP / A1 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A1 / 003",
-   "source_ref": "oos-fac-t1-r7-c3"
+   "source_ref": "oos-fac-t1-r7-c3",
+   "unique_label": "PSOOP / A1 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A3 / 003",
-   "source_ref": "oos-fac-t20-r4-c2"
+   "source_ref": "oos-fac-t20-r4-c2",
+   "unique_label": "PSOOP / A3 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A3 / 003",
-   "source_ref": "oos-fac-t20-r4-c2"
+   "source_ref": "oos-fac-t20-r4-c2",
+   "unique_label": "PSOOP / A3 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A3 / 003",
-   "source_ref": "oos-fac-t20-r7-c3"
+   "source_ref": "oos-fac-t20-r7-c3",
+   "unique_label": "PSOOP / A3 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A3 / 003",
-   "source_ref": "oos-fac-t20-r7-c3"
+   "source_ref": "oos-fac-t20-r7-c3",
+   "unique_label": "PSOOP / A3 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A4 / 003",
-   "source_ref": "oos-fac-t23-r5-c2"
+   "source_ref": "oos-fac-t23-r5-c2",
+   "unique_label": "PSOOP / A4 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A4 / 003",
-   "source_ref": "oos-fac-t23-r5-c2"
+   "source_ref": "oos-fac-t23-r5-c2",
+   "unique_label": "PSOOP / A4 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A4 / 003",
-   "source_ref": "oos-fac-t23-r8-c3"
+   "source_ref": "oos-fac-t23-r8-c3",
+   "unique_label": "PSOOP / A4 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A4 / 003",
-   "source_ref": "oos-fac-t23-r8-c3"
+   "source_ref": "oos-fac-t23-r8-c3",
+   "unique_label": "PSOOP / A4 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D3 / 003",
-   "source_ref": "oos-fac-t24-r1-c1"
+   "source_ref": "oos-fac-t24-r1-c1",
+   "unique_label": "PSOOP / D3 / 003, Mon P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D3 / 003",
-   "source_ref": "oos-fac-t24-r1-c1"
+   "source_ref": "oos-fac-t24-r1-c1",
+   "unique_label": "PSOOP / D3 / 003, Mon P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F2 / 003",
-   "source_ref": "oos-fac-t24-r1-c2"
+   "source_ref": "oos-fac-t24-r1-c2",
+   "unique_label": "PSOOP / F2 / 003, Tue P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F2 / 003",
-   "source_ref": "oos-fac-t24-r1-c2"
+   "source_ref": "oos-fac-t24-r1-c2",
+   "unique_label": "PSOOP / F2 / 003, Tue P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D3 / 003",
-   "source_ref": "oos-fac-t24-r1-c4"
+   "source_ref": "oos-fac-t24-r1-c4",
+   "unique_label": "PSOOP / D3 / 003, Thu P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D3 / 003",
-   "source_ref": "oos-fac-t24-r1-c4"
+   "source_ref": "oos-fac-t24-r1-c4",
+   "unique_label": "PSOOP / D3 / 003, Thu P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / C2 / 003",
-   "source_ref": "oos-fac-t24-r1-c5"
+   "source_ref": "oos-fac-t24-r1-c5",
+   "unique_label": "PSOOP / C2 / 003, Fri P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / C2 / 003",
-   "source_ref": "oos-fac-t24-r1-c5"
+   "source_ref": "oos-fac-t24-r1-c5",
+   "unique_label": "PSOOP / C2 / 003, Fri P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F2 / 003",
-   "source_ref": "oos-fac-t24-r4-c1"
+   "source_ref": "oos-fac-t24-r4-c1",
+   "unique_label": "PSOOP / F2 / 003, Mon P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F2 / 003",
-   "source_ref": "oos-fac-t24-r4-c1"
+   "source_ref": "oos-fac-t24-r4-c1",
+   "unique_label": "PSOOP / F2 / 003, Mon P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / C2 / 003",
-   "source_ref": "oos-fac-t24-r9-c3"
+   "source_ref": "oos-fac-t24-r9-c3",
+   "unique_label": "PSOOP / C2 / 003, Wed P8–P9"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / C2 / 003",
-   "source_ref": "oos-fac-t24-r9-c3"
+   "source_ref": "oos-fac-t24-r9-c3",
+   "unique_label": "PSOOP / C2 / 003, Wed P8–P9"
   },
   {
    "kind": "mdm",
    "label": "MDM III Theory (CC) /601 / TE",
-   "source_ref": "oos-fac-t26-r2-c1"
+   "source_ref": "oos-fac-t26-r2-c1",
+   "unique_label": "MDM III Theory (CC) /601 / TE"
   },
   {
    "kind": "mdm",
    "label": "MDM III Theory(CC) / 601/ TE",
-   "source_ref": "oos-fac-t26-r4-c1"
+   "source_ref": "oos-fac-t26-r4-c1",
+   "unique_label": "MDM III Theory(CC) / 601/ TE"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / E2 / 003",
-   "source_ref": "oos-fac-t26-r4-c3"
+   "source_ref": "oos-fac-t26-r4-c3",
+   "unique_label": "PSOOP / E2 / 003"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / E2 / 003",
-   "source_ref": "oos-fac-t26-r4-c3"
+   "source_ref": "oos-fac-t26-r4-c3",
+   "unique_label": "PSOOP / E2 / 003"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI Theory /B.E CE /online",
-   "source_ref": "oos-fac-t30-r4-c5"
+   "source_ref": "oos-fac-t30-r4-c5",
+   "unique_label": "HMI Theory /B.E CE /online"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G1 / 003",
-   "source_ref": "oos-fac-t5-r1-c3"
+   "source_ref": "oos-fac-t5-r1-c3",
+   "unique_label": "PSOOP / G1 / 003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G1 / 003",
-   "source_ref": "oos-fac-t5-r1-c3"
+   "source_ref": "oos-fac-t5-r1-c3",
+   "unique_label": "PSOOP / G1 / 003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G1 / 003",
-   "source_ref": "oos-fac-t5-r7-c2"
+   "source_ref": "oos-fac-t5-r7-c2",
+   "unique_label": "PSOOP / G1 / 003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G1 / 003",
-   "source_ref": "oos-fac-t5-r7-c2"
+   "source_ref": "oos-fac-t5-r7-c2",
+   "unique_label": "PSOOP / G1 / 003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC / B / 703-B /JR || HPC / B / JR | BE COMP || HPC / B / 703-B / BE - A & B",
-   "source_ref": "oos-t17-r1-c2-l0"
+   "source_ref": "oos-t17-r1-c2-l0",
+   "unique_label": "HPC / B / 703-B /JR || HPC / B / JR | BE COMP || HPC / B / 703-B / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC / B / 703-B /JR || HPC / B / JR | BE COMP || HPC / B / 703-B / BE - A & B",
-   "source_ref": "oos-t17-r1-c2-l0"
+   "source_ref": "oos-t17-r1-c2-l0",
+   "unique_label": "HPC / B / 703-B /JR || HPC / B / JR | BE COMP || HPC / B / 703-B / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /B / 603-7 / RS || BDAV / B / RS | BECOMP || BDAV / B / 603-7 / BE",
-   "source_ref": "oos-t17-r1-c3-l0"
+   "source_ref": "oos-t17-r1-c3-l0",
+   "unique_label": "BDAV /B / 603-7 / RS || BDAV / B / RS | BECOMP || BDAV / B / 603-7 / BE"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /B / 603-7 / RS || BDAV / B / RS | BECOMP || BDAV / B / 603-7 / BE",
-   "source_ref": "oos-t17-r1-c3-l0"
+   "source_ref": "oos-t17-r1-c3-l0",
+   "unique_label": "BDAV /B / 603-7 / RS || BDAV / B / RS | BECOMP || BDAV / B / 603-7 / BE"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /A / 603-7 / RS || BDAV / A / RS | BE COMP || BDAV /A / 603-7 / BE",
-   "source_ref": "oos-t17-r1-c4-l0"
+   "source_ref": "oos-t17-r1-c4-l0",
+   "unique_label": "BDAV /A / 603-7 / RS || BDAV / A / RS | BE COMP || BDAV /A / 603-7 / BE"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /A / 603-7 / RS || BDAV / A / RS | BE COMP || BDAV /A / 603-7 / BE",
-   "source_ref": "oos-t17-r1-c4-l0"
+   "source_ref": "oos-t17-r1-c4-l0",
+   "unique_label": "BDAV /A / 603-7 / RS || BDAV / A / RS | BE COMP || BDAV /A / 603-7 / BE"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC /605 / JR || HPC / 605 / BE - A & B",
-   "source_ref": "oos-t17-r4-c1-l0"
+   "source_ref": "oos-t17-r4-c1-l0",
+   "unique_label": "HPC /605 / JR || HPC / 605 / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /601 / RS || BDAV / 605 / BE - A & B",
-   "source_ref": "oos-t17-r4-c2-l0"
+   "source_ref": "oos-t17-r4-c2-l0",
+   "unique_label": "BDAV /601 / RS || BDAV / 605 / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /605 / RS || BDAV / 605 / BE - A & B",
-   "source_ref": "oos-t17-r4-c3-l0"
+   "source_ref": "oos-t17-r4-c3-l0",
+   "unique_label": "BDAV /605 / RS || BDAV / 605 / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /A /412 / DRK (CSE+CE) || HMI /BA /412 (CE_CSE)_BE-Comp",
-   "source_ref": "oos-t17-r6-c1-l0"
+   "source_ref": "oos-t17-r6-c1-l0",
+   "unique_label": "HMI /A /412 / DRK (CSE+CE) || HMI /BA /412 (CE_CSE)_BE-Comp"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /A /412 / DRK (CSE+CE) || HMI /BA /412 (CE_CSE)_BE-Comp",
-   "source_ref": "oos-t17-r6-c1-l0"
+   "source_ref": "oos-t17-r6-c1-l0",
+   "unique_label": "HMI /A /412 / DRK (CSE+CE) || HMI /BA /412 (CE_CSE)_BE-Comp"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /B /404 /VW ( CE) || HMI /B /404 CE_BE-Comp A-B",
-   "source_ref": "oos-t17-r6-c1-l1"
+   "source_ref": "oos-t17-r6-c1-l1",
+   "unique_label": "HMI /B /404 /VW ( CE) || HMI /B /404 CE_BE-Comp A-B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /B /404 /VW ( CE) || HMI /B /404 CE_BE-Comp A-B",
-   "source_ref": "oos-t17-r6-c1-l1"
+   "source_ref": "oos-t17-r6-c1-l1",
+   "unique_label": "HMI /B /404 /VW ( CE) || HMI /B /404 CE_BE-Comp A-B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI Theory / DRK /409 || HMI Theory /409 BE CE",
-   "source_ref": "oos-t17-r6-c2-l0"
+   "source_ref": "oos-t17-r6-c2-l0",
+   "unique_label": "HMI Theory / DRK /409 || HMI Theory /409 BE CE"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC /703-B / JR || HPC / JR | BE COMP || HPC /703-B /BE -A & B",
-   "source_ref": "oos-t17-r6-c3-l0"
+   "source_ref": "oos-t17-r6-c3-l0",
+   "unique_label": "HPC /703-B / JR || HPC / JR | BE COMP || HPC /703-B /BE -A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B",
-   "source_ref": "oos-t17-r7-c2-l0"
+   "source_ref": "oos-t17-r7-c2-l0",
+   "unique_label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B",
-   "source_ref": "oos-t17-r7-c2-l0"
+   "source_ref": "oos-t17-r7-c2-l0",
+   "unique_label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B",
-   "source_ref": "oos-t17-r7-c2-l0"
+   "source_ref": "oos-t17-r7-c2-l0",
+   "unique_label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC / A /703-B /JR || HPC / A /JR | BE COMP || HPC / A /703-B / BE - A & B",
-   "source_ref": "oos-t17-r7-c3-l0"
+   "source_ref": "oos-t17-r7-c3-l0",
+   "unique_label": "HPC / A /703-B /JR || HPC / A /JR | BE COMP || HPC / A /703-B / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC / A /703-B /JR || HPC / A /JR | BE COMP || HPC / A /703-B / BE - A & B",
-   "source_ref": "oos-t17-r7-c3-l0"
+   "source_ref": "oos-t17-r7-c3-l0",
+   "unique_label": "HPC / A /703-B /JR || HPC / A /JR | BE COMP || HPC / A /703-B / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC Lab /JR /403-A || HPC Lab /M.Tech /403-A",
-   "source_ref": "oos-t19-r1-c3-l0"
+   "source_ref": "oos-t19-r1-c3-l0",
+   "unique_label": "HPC Lab /JR /403-A || HPC Lab /M.Tech /403-A"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC Lab /JR /403-A || HPC Lab /M.Tech /403-A",
-   "source_ref": "oos-t19-r1-c3-l0"
+   "source_ref": "oos-t19-r1-c3-l0",
+   "unique_label": "HPC Lab /JR /403-A || HPC Lab /M.Tech /403-A"
   },
   {
    "kind": "out_of_scope",
    "label": "ANC /JS /609 || ANC /MTech /609",
-   "source_ref": "oos-t19-r1-c4-l0"
+   "source_ref": "oos-t19-r1-c4-l0",
+   "unique_label": "ANC /JS /609 || ANC /MTech /609"
   },
   {
    "kind": "out_of_scope",
    "label": "MDCF Lab /SB / 509 || MDCF Lab / SB | M.TECH COMP || MDCF Lab /SPG 509",
-   "source_ref": "oos-t19-r1-c5-l0"
+   "source_ref": "oos-t19-r1-c5-l0",
+   "unique_label": "MDCF Lab /SB / 509 || MDCF Lab / SB | M.TECH COMP || MDCF Lab /SPG 509"
   },
   {
    "kind": "out_of_scope",
    "label": "MDCF Lab /SB / 509 || MDCF Lab / SB | M.TECH COMP || MDCF Lab /SPG 509",
-   "source_ref": "oos-t19-r1-c5-l0"
+   "source_ref": "oos-t19-r1-c5-l0",
+   "unique_label": "MDCF Lab /SB / 509 || MDCF Lab / SB | M.TECH COMP || MDCF Lab /SPG 509"
   },
   {
    "kind": "out_of_scope",
    "label": "ET Lab /DDA /509 || ET Lab /DDA | M.TECH COMP || ET Lab /M.Tech /509 (10.00 -12.00)",
-   "source_ref": "oos-t19-r2-c1-l0"
+   "source_ref": "oos-t19-r2-c1-l0",
+   "unique_label": "ET Lab /DDA /509 || ET Lab /DDA | M.TECH COMP || ET Lab /M.Tech /509 (10.00 -12.00)"
   },
   {
    "kind": "out_of_scope",
    "label": "ET Lab /DDA /509 || ET Lab /DDA | M.TECH COMP || ET Lab /M.Tech /509 (10.00 -12.00)",
-   "source_ref": "oos-t19-r2-c1-l0"
+   "source_ref": "oos-t19-r2-c1-l0",
+   "unique_label": "ET Lab /DDA /509 || ET Lab /DDA | M.TECH COMP || ET Lab /M.Tech /509 (10.00 -12.00)"
   },
   {
    "kind": "out_of_scope",
    "label": "ANC /AVS /609 || ANC /M.tech /609",
-   "source_ref": "oos-t19-r2-c2-l0"
+   "source_ref": "oos-t19-r2-c2-l0",
+   "unique_label": "ANC /AVS /609 || ANC /M.tech /609, Tue P1, 609"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC /JR /609",
-   "source_ref": "oos-t19-r2-c4-l0"
+   "source_ref": "oos-t19-r2-c4-l0",
+   "unique_label": "HPC /JR /609"
   },
   {
    "kind": "out_of_scope",
    "label": "MDCF /SB /609 || MDCF /SPG /609",
-   "source_ref": "oos-t19-r4-c2-l0"
+   "source_ref": "oos-t19-r4-c2-l0",
+   "unique_label": "MDCF /SB /609 || MDCF /SPG /609, Tue P3, 609"
   },
   {
    "kind": "out_of_scope",
    "label": "DFIR /NR /609 || DFIR / M.Tech /609",
-   "source_ref": "oos-t19-r4-c3-l0"
+   "source_ref": "oos-t19-r4-c3-l0",
+   "unique_label": "DFIR /NR /609 || DFIR / M.Tech /609"
   },
   {
    "kind": "out_of_scope",
    "label": "MDCF /SB /609 || MDCF /SPG /609",
-   "source_ref": "oos-t19-r4-c4-l0"
+   "source_ref": "oos-t19-r4-c4-l0",
+   "unique_label": "MDCF /SB /609 || MDCF /SPG /609, Thu P3, 609"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC Lab /JR /403-A || HPC Lab /MTech /403-A",
-   "source_ref": "oos-t19-r4-c5-l0"
+   "source_ref": "oos-t19-r4-c5-l0",
+   "unique_label": "HPC Lab /JR /403-A || HPC Lab /MTech /403-A"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC Lab /JR /403-A || HPC Lab /MTech /403-A",
-   "source_ref": "oos-t19-r4-c5-l0"
+   "source_ref": "oos-t19-r4-c5-l0",
+   "unique_label": "HPC Lab /JR /403-A || HPC Lab /MTech /403-A"
   },
   {
    "kind": "out_of_scope",
    "label": "PCS /SV / 507 new",
-   "source_ref": "oos-t19-r5-c1-l0"
+   "source_ref": "oos-t19-r5-c1-l0",
+   "unique_label": "PCS /SV / 507 new"
   },
   {
    "kind": "out_of_scope",
    "label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.tech /604",
-   "source_ref": "oos-t19-r6-c2-l0"
+   "source_ref": "oos-t19-r6-c2-l0",
+   "unique_label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.tech /604, Tue P5, 604"
   },
   {
    "kind": "out_of_scope",
    "label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.tech /604",
-   "source_ref": "oos-t19-r6-c3-l0"
+   "source_ref": "oos-t19-r6-c3-l0",
+   "unique_label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.tech /604, Wed P5, 604"
   },
   {
    "kind": "out_of_scope",
    "label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.Tech /604",
-   "source_ref": "oos-t19-r6-c4-l0"
+   "source_ref": "oos-t19-r6-c4-l0",
+   "unique_label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.Tech /604"
   },
   {
    "kind": "out_of_scope",
    "label": "ANC /AVS /609 || ANC /M.tech /609",
-   "source_ref": "oos-t19-r7-c1-l0"
+   "source_ref": "oos-t19-r7-c1-l0",
+   "unique_label": "ANC /AVS /609 || ANC /M.tech /609, Mon P6, 609"
   },
   {
    "kind": "out_of_scope",
    "label": "DFIR / NR /509 || DFIR /MTech /NR || DFIR / M.Tech /509",
-   "source_ref": "oos-t19-r7-c2-l0"
+   "source_ref": "oos-t19-r7-c2-l0",
+   "unique_label": "DFIR / NR /509 || DFIR /MTech /NR || DFIR / M.Tech /509"
   },
   {
    "kind": "out_of_scope",
    "label": "DFIR Lab /NR/ 509 || DFIR Lab /NR | M.TECH COMP || DFIR lab /M.Tech /509",
-   "source_ref": "oos-t19-r8-c2-l0"
+   "source_ref": "oos-t19-r8-c2-l0",
+   "unique_label": "DFIR Lab /NR/ 509 || DFIR Lab /NR | M.TECH COMP || DFIR lab /M.Tech /509"
   },
   {
    "kind": "out_of_scope",
    "label": "DFIR Lab /NR/ 509 || DFIR Lab /NR | M.TECH COMP || DFIR lab /M.Tech /509",
-   "source_ref": "oos-t19-r8-c2-l0"
+   "source_ref": "oos-t19-r8-c2-l0",
+   "unique_label": "DFIR Lab /NR/ 509 || DFIR Lab /NR | M.TECH COMP || DFIR lab /M.Tech /509"
   },
   {
    "kind": "llc",
    "label": "LLC",
-   "source_ref": "pin-t0-r10-c4-l0"
+   "source_ref": "pin-t0-r10-c4-l0",
+   "unique_label": "LLC, Thu P9, SE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
-   "source_ref": "pin-t0-r1-c1-l0"
+   "source_ref": "pin-t0-r1-c1-l0",
+   "unique_label": "MDM - I LABs, Mon P0–P1"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
-   "source_ref": "pin-t0-r1-c1-l0"
+   "source_ref": "pin-t0-r1-c1-l0",
+   "unique_label": "MDM - I LABs, Mon P0–P1"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
-   "source_ref": "pin-t0-r7-c1-l0"
+   "source_ref": "pin-t0-r7-c1-l0",
+   "unique_label": "MDM -I THEORY, Mon P6, SE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
-   "source_ref": "pin-t0-r7-c2-l0"
+   "source_ref": "pin-t0-r7-c2-l0",
+   "unique_label": "MDM -I THEORY, Tue P6, SE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
-   "source_ref": "pin-t0-r8-c1-l0"
+   "source_ref": "pin-t0-r8-c1-l0",
+   "unique_label": "MDM - I LABs, Mon P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
-   "source_ref": "pin-t0-r8-c1-l0"
+   "source_ref": "pin-t0-r8-c1-l0",
+   "unique_label": "MDM - I LABs, Mon P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
-   "source_ref": "pin-t0-r8-c2-l0"
+   "source_ref": "pin-t0-r8-c2-l0",
+   "unique_label": "MDM - I LABs, Tue P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
-   "source_ref": "pin-t0-r8-c2-l0"
+   "source_ref": "pin-t0-r8-c2-l0",
+   "unique_label": "MDM - I LABs, Tue P7–P8"
   },
   {
    "kind": "hss",
    "label": "HSS",
-   "source_ref": "pin-t0-r8-c3-l0"
+   "source_ref": "pin-t0-r8-c3-l0",
+   "unique_label": "HSS, Wed P7, SE-Comp A"
   },
   {
    "kind": "hss",
    "label": "HSS",
-   "source_ref": "pin-t0-r8-c4-l0"
+   "source_ref": "pin-t0-r8-c4-l0",
+   "unique_label": "HSS, Thu P7, SE-Comp A"
   },
   {
    "kind": "llc",
    "label": "LLC",
-   "source_ref": "pin-t0-r9-c4-l0"
+   "source_ref": "pin-t0-r9-c4-l0",
+   "unique_label": "LLC, Thu P8, SE-Comp A"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t0-r9-c5-l0"
+   "source_ref": "pin-t0-r9-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, SE-Comp A"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t0-r9-c5-l0"
+   "source_ref": "pin-t0-r9-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, SE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
-   "source_ref": "pin-t10-r10-c2-l0"
+   "source_ref": "pin-t10-r10-c2-l0",
+   "unique_label": "MDM Lab, Tue P7–P8, TE Comp- B"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
-   "source_ref": "pin-t10-r10-c2-l0"
+   "source_ref": "pin-t10-r10-c2-l0",
+   "unique_label": "MDM Lab, Tue P7–P8, TE Comp- B"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major - Project",
-   "source_ref": "pin-t10-r10-c3-l0"
+   "source_ref": "pin-t10-r10-c3-l0",
+   "unique_label": "MDM Lab / Major - Project, Wed P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major - Project",
-   "source_ref": "pin-t10-r10-c3-l0"
+   "source_ref": "pin-t10-r10-c3-l0",
+   "unique_label": "MDM Lab / Major - Project, Wed P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major - Project",
-   "source_ref": "pin-t10-r10-c4-l0"
+   "source_ref": "pin-t10-r10-c4-l0",
+   "unique_label": "MDM Lab / Major - Project, Thu P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major - Project",
-   "source_ref": "pin-t10-r10-c4-l0"
+   "source_ref": "pin-t10-r10-c4-l0",
+   "unique_label": "MDM Lab / Major - Project, Thu P7–P8"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t10-r13-c5-l0"
+   "source_ref": "pin-t10-r13-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp- B"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t10-r13-c5-l0"
+   "source_ref": "pin-t10-r13-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp- B"
   },
   {
    "kind": "project",
    "label": "Major Project",
-   "source_ref": "pin-t10-r1-c1-l0"
+   "source_ref": "pin-t10-r1-c1-l0",
+   "unique_label": "Major Project, Mon P0, TE Comp- B"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
-   "source_ref": "pin-t10-r2-c1-l0"
+   "source_ref": "pin-t10-r2-c1-l0",
+   "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp- B"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
-   "source_ref": "pin-t10-r2-c1-l0"
+   "source_ref": "pin-t10-r2-c1-l0",
+   "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp- B"
   },
   {
    "kind": "project",
    "label": "Major Project",
-   "source_ref": "pin-t12-r1-c1-l0"
+   "source_ref": "pin-t12-r1-c1-l0",
+   "unique_label": "Major Project, Mon P0, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
-   "source_ref": "pin-t12-r2-c1-l0"
+   "source_ref": "pin-t12-r2-c1-l0",
+   "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
-   "source_ref": "pin-t12-r2-c1-l0"
+   "source_ref": "pin-t12-r2-c1-l0",
+   "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
-   "source_ref": "pin-t12-r8-c2-l0"
+   "source_ref": "pin-t12-r8-c2-l0",
+   "unique_label": "MDM Lab, Tue P7–P8, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
-   "source_ref": "pin-t12-r8-c2-l0"
+   "source_ref": "pin-t12-r8-c2-l0",
+   "unique_label": "MDM Lab, Tue P7–P8, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
-   "source_ref": "pin-t12-r8-c3-l0"
+   "source_ref": "pin-t12-r8-c3-l0",
+   "unique_label": "MDM Lab / Major Project, Wed P7–P8, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
-   "source_ref": "pin-t12-r8-c3-l0"
+   "source_ref": "pin-t12-r8-c3-l0",
+   "unique_label": "MDM Lab / Major Project, Wed P7–P8, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
-   "source_ref": "pin-t12-r8-c4-l2"
+   "source_ref": "pin-t12-r8-c4-l2",
+   "unique_label": "MDM Lab / Major Project, Thu P7–P8, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
-   "source_ref": "pin-t12-r8-c4-l2"
+   "source_ref": "pin-t12-r8-c4-l2",
+   "unique_label": "MDM Lab / Major Project, Thu P7–P8, TE Comp - C"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t12-r9-c5-l0"
+   "source_ref": "pin-t12-r9-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp - C"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t12-r9-c5-l0"
+   "source_ref": "pin-t12-r9-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
-   "source_ref": "pin-t14-r2-c1-l0"
+   "source_ref": "pin-t14-r2-c1-l0",
+   "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
-   "source_ref": "pin-t14-r2-c1-l0"
+   "source_ref": "pin-t14-r2-c1-l0",
+   "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp - D"
   },
   {
    "kind": "project",
    "label": "Major Project",
-   "source_ref": "pin-t14-r7-c2-l0"
+   "source_ref": "pin-t14-r7-c2-l0",
+   "unique_label": "Major Project, Tue P6"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
-   "source_ref": "pin-t14-r8-c2-l0"
+   "source_ref": "pin-t14-r8-c2-l0",
+   "unique_label": "MDM Lab, Tue P7–P8, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
-   "source_ref": "pin-t14-r8-c2-l0"
+   "source_ref": "pin-t14-r8-c2-l0",
+   "unique_label": "MDM Lab, Tue P7–P8, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
-   "source_ref": "pin-t14-r8-c3-l0"
+   "source_ref": "pin-t14-r8-c3-l0",
+   "unique_label": "MDM Lab / Major Project, Wed P7–P8, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
-   "source_ref": "pin-t14-r8-c3-l0"
+   "source_ref": "pin-t14-r8-c3-l0",
+   "unique_label": "MDM Lab / Major Project, Wed P7–P8, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
-   "source_ref": "pin-t14-r8-c4-l0"
+   "source_ref": "pin-t14-r8-c4-l0",
+   "unique_label": "MDM Lab / Major Project, Thu P7–P8, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
-   "source_ref": "pin-t14-r8-c4-l0"
+   "source_ref": "pin-t14-r8-c4-l0",
+   "unique_label": "MDM Lab / Major Project, Thu P7–P8, TE Comp - D"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t14-r9-c5-l0"
+   "source_ref": "pin-t14-r9-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp - D"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t14-r9-c5-l0"
+   "source_ref": "pin-t14-r9-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp - D"
   },
   {
    "kind": "llc",
    "label": "LLC",
-   "source_ref": "pin-t2-r10-c4-l0"
+   "source_ref": "pin-t2-r10-c4-l0",
+   "unique_label": "LLC, Thu P9, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t2-r1-c1-l0"
+   "source_ref": "pin-t2-r1-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t2-r1-c1-l0"
+   "source_ref": "pin-t2-r1-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
-   "source_ref": "pin-t2-r7-c1-l0"
+   "source_ref": "pin-t2-r7-c1-l0",
+   "unique_label": "MDM -I THEORY, Mon P6, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
-   "source_ref": "pin-t2-r7-c2-l0"
+   "source_ref": "pin-t2-r7-c2-l0",
+   "unique_label": "MDM -I THEORY, Tue P6, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t2-r8-c1-l0"
+   "source_ref": "pin-t2-r8-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t2-r8-c1-l0"
+   "source_ref": "pin-t2-r8-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM - I -LAB",
-   "source_ref": "pin-t2-r8-c2-l0"
+   "source_ref": "pin-t2-r8-c2-l0",
+   "unique_label": "MDM - I -LAB"
   },
   {
    "kind": "mdm",
    "label": "MDM - I -LAB",
-   "source_ref": "pin-t2-r8-c2-l0"
+   "source_ref": "pin-t2-r8-c2-l0",
+   "unique_label": "MDM - I -LAB"
   },
   {
    "kind": "hss",
    "label": "HSS",
-   "source_ref": "pin-t2-r8-c3-l0"
+   "source_ref": "pin-t2-r8-c3-l0",
+   "unique_label": "HSS, Wed P7, SE-Comp B"
   },
   {
    "kind": "hss",
    "label": "HSS",
-   "source_ref": "pin-t2-r8-c4-l0"
+   "source_ref": "pin-t2-r8-c4-l0",
+   "unique_label": "HSS, Thu P7, SE-Comp B"
   },
   {
    "kind": "llc",
    "label": "LLC",
-   "source_ref": "pin-t2-r9-c4-l0"
+   "source_ref": "pin-t2-r9-c4-l0",
+   "unique_label": "LLC, Thu P8, SE-Comp B"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t2-r9-c5-l0"
+   "source_ref": "pin-t2-r9-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, SE-Comp B"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t2-r9-c5-l0"
+   "source_ref": "pin-t2-r9-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, SE-Comp B"
   },
   {
    "kind": "llc",
    "label": "LLC",
-   "source_ref": "pin-t4-r10-c4-l0"
+   "source_ref": "pin-t4-r10-c4-l0",
+   "unique_label": "LLC, Thu P9, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t4-r1-c1-l0"
+   "source_ref": "pin-t4-r1-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t4-r1-c1-l0"
+   "source_ref": "pin-t4-r1-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
-   "source_ref": "pin-t4-r7-c1-l0"
+   "source_ref": "pin-t4-r7-c1-l0",
+   "unique_label": "MDM -I THEORY, Mon P6, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
-   "source_ref": "pin-t4-r7-c2-l0"
+   "source_ref": "pin-t4-r7-c2-l0",
+   "unique_label": "MDM -I THEORY, Tue P6, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t4-r8-c1-l0"
+   "source_ref": "pin-t4-r8-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t4-r8-c1-l0"
+   "source_ref": "pin-t4-r8-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t4-r8-c2-l0"
+   "source_ref": "pin-t4-r8-c2-l0",
+   "unique_label": "MDM - I - LAB, Tue P7–P8, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t4-r8-c2-l0"
+   "source_ref": "pin-t4-r8-c2-l0",
+   "unique_label": "MDM - I - LAB, Tue P7–P8, SE-Comp C"
   },
   {
    "kind": "hss",
    "label": "HSS",
-   "source_ref": "pin-t4-r8-c3-l0"
+   "source_ref": "pin-t4-r8-c3-l0",
+   "unique_label": "HSS, Wed P7, SE-Comp C"
   },
   {
    "kind": "hss",
    "label": "HSS",
-   "source_ref": "pin-t4-r8-c4-l0"
+   "source_ref": "pin-t4-r8-c4-l0",
+   "unique_label": "HSS, Thu P7, SE-Comp C"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t4-r8-c5-l0"
+   "source_ref": "pin-t4-r8-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp C"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t4-r8-c5-l0"
+   "source_ref": "pin-t4-r8-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp C"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t4-r8-c5-l0"
+   "source_ref": "pin-t4-r8-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp C"
   },
   {
    "kind": "llc",
    "label": "LLC",
-   "source_ref": "pin-t4-r9-c4-l0"
+   "source_ref": "pin-t4-r9-c4-l0",
+   "unique_label": "LLC, Thu P8, SE-Comp C"
   },
   {
    "kind": "llc",
    "label": "LLC",
-   "source_ref": "pin-t6-r10-c4-l0"
+   "source_ref": "pin-t6-r10-c4-l0",
+   "unique_label": "LLC, Thu P9, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t6-r1-c1-l0"
+   "source_ref": "pin-t6-r1-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t6-r1-c1-l0"
+   "source_ref": "pin-t6-r1-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
-   "source_ref": "pin-t6-r7-c1-l0"
+   "source_ref": "pin-t6-r7-c1-l0",
+   "unique_label": "MDM -I THEORY, Mon P6, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
-   "source_ref": "pin-t6-r7-c2-l0"
+   "source_ref": "pin-t6-r7-c2-l0",
+   "unique_label": "MDM -I THEORY, Tue P6, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t6-r8-c1-l0"
+   "source_ref": "pin-t6-r8-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t6-r8-c1-l0"
+   "source_ref": "pin-t6-r8-c1-l0",
+   "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t6-r8-c2-l0"
+   "source_ref": "pin-t6-r8-c2-l0",
+   "unique_label": "MDM - I - LAB, Tue P7–P8, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
-   "source_ref": "pin-t6-r8-c2-l0"
+   "source_ref": "pin-t6-r8-c2-l0",
+   "unique_label": "MDM - I - LAB, Tue P7–P8, SE-Comp D"
   },
   {
    "kind": "hss",
    "label": "HSS",
-   "source_ref": "pin-t6-r8-c3-l0"
+   "source_ref": "pin-t6-r8-c3-l0",
+   "unique_label": "HSS, Wed P7, SE-Comp D"
   },
   {
    "kind": "hss",
    "label": "HSS",
-   "source_ref": "pin-t6-r8-c4-l0"
+   "source_ref": "pin-t6-r8-c4-l0",
+   "unique_label": "HSS, Thu P7, SE-Comp D"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t6-r8-c5-l0"
+   "source_ref": "pin-t6-r8-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp D"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t6-r8-c5-l0"
+   "source_ref": "pin-t6-r8-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp D"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t6-r8-c5-l0"
+   "source_ref": "pin-t6-r8-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp D"
   },
   {
    "kind": "llc",
    "label": "LLC",
-   "source_ref": "pin-t6-r9-c4-l0"
+   "source_ref": "pin-t6-r9-c4-l0",
+   "unique_label": "LLC, Thu P8, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab",
-   "source_ref": "pin-t8-r10-c2-l0"
+   "source_ref": "pin-t8-r10-c2-l0",
+   "unique_label": "MDM-III Lab"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab",
-   "source_ref": "pin-t8-r10-c2-l0"
+   "source_ref": "pin-t8-r10-c2-l0",
+   "unique_label": "MDM-III Lab"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab / Major - Project",
-   "source_ref": "pin-t8-r10-c3-l0"
+   "source_ref": "pin-t8-r10-c3-l0",
+   "unique_label": "MDM-III Lab / Major - Project"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab / Major - Project",
-   "source_ref": "pin-t8-r10-c3-l0"
+   "source_ref": "pin-t8-r10-c3-l0",
+   "unique_label": "MDM-III Lab / Major - Project"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab /Major - Project",
-   "source_ref": "pin-t8-r10-c4-l0"
+   "source_ref": "pin-t8-r10-c4-l0",
+   "unique_label": "MDM-III Lab /Major - Project"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab /Major - Project",
-   "source_ref": "pin-t8-r10-c4-l0"
+   "source_ref": "pin-t8-r10-c4-l0",
+   "unique_label": "MDM-III Lab /Major - Project"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t8-r13-c5-l0"
+   "source_ref": "pin-t8-r13-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE-Comp A"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
-   "source_ref": "pin-t8-r13-c5-l0"
+   "source_ref": "pin-t8-r13-c5-l0",
+   "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE-Comp A"
   },
   {
    "kind": "project",
    "label": "Major Project",
-   "source_ref": "pin-t8-r1-c1-l0"
+   "source_ref": "pin-t8-r1-c1-l0",
+   "unique_label": "Major Project, Mon P0, TE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
-   "source_ref": "pin-t8-r2-c1-l0"
+   "source_ref": "pin-t8-r2-c1-l0",
+   "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
-   "source_ref": "pin-t8-r2-c1-l0"
+   "source_ref": "pin-t8-r2-c1-l0",
+   "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE-Comp A"
   }
  ]
 }

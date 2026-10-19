@@ -285,6 +285,39 @@ def test_structure_the_solver_reads(exported) -> None:
     assert all(set(p["room_ids"]) <= room_ids for p in edge_list["pinned_occupancy"])
 
 
+def test_display_feeds_the_ui(exported) -> None:
+    edge_list, display = exported
+    cohorts = display["cohorts"]
+    # batches: unique readable labels, and each division's batch ids
+    batches = {cid: c for cid, c in cohorts.items() if c["type"] == "batch"}
+    assert cohorts["coh-se-a-a"]["label"] == "SE-Comp A batch A"
+    assert len({c["label"] for c in batches.values()}) == len(batches) == 32
+    assert all("label" not in c for c in cohorts.values() if c["type"] != "batch")
+    assert sorted(b for ids in display["batches"].values() for b in ids) == sorted(batches)
+    assert {cohorts[d]["type"] for d in display["batches"]} == {"division"}
+    assert display["batches"]["coh-te-b"] == ["coh-te-b-a", "coh-te-b-b", "coh-te-b-c",
+                                              "coh-te-b-d"]
+    # initials per year (D38: SD and SM name different people in SE and TE; D25 SRD)
+    initials = display["initials"]
+    assert set(initials) == set(display["faculty"])
+    assert initials["fac-sonali-dudhihalli"] == {"SE": ["SD"]}
+    assert initials["fac-surekha-dholay"] == {"TE": ["SD"], "unscoped": ["SRD"]}
+    assert initials["fac-suman-m"] == {"SE": ["SM"]}
+    assert initials["fac-sudeep-mali"] == {"TE": ["SM"]}
+    assert initials["fac-amey-ganesh-nile"]["SE"] == initials["fac-amey-ganesh-nile"]["TE"] == [
+        "AGN"]
+    # pins: one unique label per pinned block, and pins[i] still describes pinned_occupancy[i]
+    blocks = {p.get("source_ref") or (p["label"], occ["day"]): p["unique_label"]
+              for p, occ in zip(display["pins"], edge_list["pinned_occupancy"], strict=True)}
+    assert len(set(blocks.values())) == len(blocks)
+    assert {"MDM-DBMS /RS, Mon P7\u2013P8, 603", "MDM-DBMS /RS, Tue P7\u2013P8, 603",
+            "SE lunch, Mon P5", "LLC, Thu P9, SE-Comp A"} <= set(blocks.values())
+    for p, occ in zip(display["pins"], edge_list["pinned_occupancy"], strict=True):
+        assert p["unique_label"].startswith(p["label"])
+        if p["unique_label"] != p["label"]:
+            assert f", {display['days'][occ['day']][:3]} P" in p["unique_label"]
+
+
 def test_re_export_is_byte_identical_and_committed(engine, exported) -> None:
     with OrmSession(engine) as session:
         again = export(session)

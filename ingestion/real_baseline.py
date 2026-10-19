@@ -17,6 +17,9 @@ Writes:
 
 - ``data/instances/even-2025-26/real_baseline.assignment.json``: session id ->
   day, start period, room or null. Not a contract.
+- ``data/instances/even-2025-26/real_baseline.report.json``: every violation
+  (kind, sessions, slots, entities, with names from display.json) and the
+  score breakdown, for the UI. Not a contract.
 - ``docs/real-baseline-even-2025-26.md``: the report.
 
 Run from the repo root::
@@ -44,6 +47,7 @@ EDGE_LIST_JSON = INSTANCE_DIR / "edge_list.json"
 DISPLAY_JSON = INSTANCE_DIR / "display.json"
 SOLUTION_JSON = INSTANCE_DIR / "solution.json"
 ASSIGNMENT_JSON = INSTANCE_DIR / "real_baseline.assignment.json"
+REPORT_JSON = INSTANCE_DIR / "real_baseline.report.json"
 REPORT_MD = REPO_ROOT / "docs" / "real-baseline-even-2025-26.md"
 
 
@@ -130,6 +134,35 @@ def assignment_file(b: Baseline) -> dict[str, Any]:
     }
 
 
+def display_name(display: dict, eid: str) -> str:
+    """A faculty, cohort (a batch by its unique label) or room id's name, else the id."""
+    cohort = display["cohorts"].get(eid)
+    return (display["faculty"].get(eid) or (cohort and cohort.get("label", cohort["name"]))
+            or display["rooms"].get(eid) or eid)
+
+
+def report_file(b: Baseline, edge_list: dict, display: dict) -> dict[str, Any]:
+    sessions = {s["id"]: s for s in edge_list["sessions"]}
+    return {
+        "note": "Not a contract. The real EVEN timetable as printed: the time-only check's "
+                "violations, names from display.json (D41), and the quality score. See "
+                "docs/real-baseline-even-2025-26.md.",
+        "generated_by": "python -m ingestion.real_baseline",
+        "edge_list": EDGE_LIST_JSON.name,
+        "violations": [{
+            **v.to_dict(),
+            "sessions": {sid: {
+                "subject": display["subjects"][sessions[sid]["subject_id"]]["code"],
+                "cohort": display_name(display, sessions[sid]["cohort_id"]),
+                "faculty": display_name(display, sessions[sid]["faculty_id"]),
+                "printed": b.printed[sid],
+            } for sid in v.session_ids},
+            "entities": {eid: display_name(display, eid) for eid in v.entity_ids},
+        } for v in b.violations],
+        "quality": b.quality,
+    }
+
+
 # --------------------------------------------------------------------------- #
 # Report
 # --------------------------------------------------------------------------- #
@@ -144,12 +177,7 @@ def report(b: Baseline, edge_list: dict, display: dict) -> str:
     days = display["days"]
 
     def name(eid: str) -> str:
-        cohort = display["cohorts"].get(eid)
-        if cohort and cohort["type"] == "batch":  # labelled "A"; emit_v2 ids it coh-<div>-<b>
-            division = display["cohorts"].get(eid.rsplit("-", 1)[0], {"name": eid})
-            return f"{division['name']}, batch {cohort['name']}"
-        return (display["faculty"].get(eid) or (cohort and cohort["name"])
-                or display["rooms"].get(eid) or eid)
+        return display_name(display, eid)
 
     def slot(day: int, period: int) -> str:
         return f"{days[day][:3]} P{period}"
@@ -262,8 +290,10 @@ def main(argv: list[str] | None = None) -> None:
     display = json.loads(DISPLAY_JSON.read_text(encoding="utf-8"))
     b = map_sessions(edge_list, build())
     ASSIGNMENT_JSON.write_text(dumps(assignment_file(b)), encoding="utf-8", newline="\n")
+    REPORT_JSON.write_text(dumps(report_file(b, edge_list, display)), encoding="utf-8",
+                           newline="\n")
     REPORT_MD.write_text(report(b, edge_list, display), encoding="utf-8", newline="\n")
-    print(f"wrote {ASSIGNMENT_JSON}\nwrote {REPORT_MD}")
+    print(f"wrote {ASSIGNMENT_JSON}\nwrote {REPORT_JSON}\nwrote {REPORT_MD}")
     print(f"{len(b.assignment)} mapped, {len(b.unmapped)} unmapped, "
           f"{len(b.violations)} violations, score {b.quality['score']:g}")
 
