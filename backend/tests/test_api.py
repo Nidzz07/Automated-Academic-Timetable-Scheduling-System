@@ -99,10 +99,23 @@ class TestRealInstanceFiles:
         )
         assert real.get(f"/instances/{REAL}/{resource}").json() == committed
 
-    def test_no_solution_yet(self, real: TestClient) -> None:
-        # S12a timed out, so no solution.json is committed and nothing has been solved here
-        assert not (REPO / "data" / "instances" / REAL / "solution.json").exists()
-        assert real.get(f"/instances/{REAL}/solution").status_code == 404
+    def test_solution_served_as_committed(self, real: TestClient) -> None:
+        # S12d committed solution.json; nothing has been solved here, so it is what is served
+        committed = json.loads(
+            (REPO / "data" / "instances" / REAL / "solution.json").read_text("utf-8")
+        )
+        response = real.get(f"/instances/{REAL}/solution")
+        assert response.status_code == 200
+        assert conforms("solution_v2", response.json())
+        assert response.json() == committed
+
+    def test_no_solution_file(self, tmp_path: Path) -> None:
+        (tmp_path / "unsolved").mkdir()
+        (tmp_path / "unsolved" / "edge_list.json").write_text(
+            json.dumps(generate(PRESETS["small"], 1)), encoding="utf-8"
+        )
+        with TestClient(create_app(tmp_path)) as client:
+            assert client.get("/instances/unsolved/solution").status_code == 404
 
 
 class TestNotFound:

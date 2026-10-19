@@ -45,7 +45,6 @@ from solver.validate import Violation, validate_slot_placements
 INSTANCE_DIR = REPO_ROOT / "data" / "instances" / "even-2025-26"
 EDGE_LIST_JSON = INSTANCE_DIR / "edge_list.json"
 DISPLAY_JSON = INSTANCE_DIR / "display.json"
-SOLUTION_JSON = INSTANCE_DIR / "solution.json"
 ASSIGNMENT_JSON = INSTANCE_DIR / "real_baseline.assignment.json"
 REPORT_JSON = INSTANCE_DIR / "real_baseline.report.json"
 REPORT_MD = REPO_ROOT / "docs" / "real-baseline-even-2025-26.md"
@@ -274,11 +273,11 @@ def report(b: Baseline, edge_list: dict, display: dict) -> str:
     out += [f"| {r['rule_id']} | {r['weight']:g} | {r['raw']} | {r['penalty']:g} |"
             for r in q["breakdown"]]
     out += ["", "## Compared with the generated timetable", ""]
+    # Never read solution.json here: this report is the printed timetable only.
     out.append(
-        "`data/instances/even-2025-26/solution.json` exists, but this report does not compare it"
-        " yet." if SOLUTION_JSON.exists() else
-        "`data/instances/even-2025-26/solution.json` is not on main (S12a timed out, D33), so"
-        " there is no side-by-side table yet."
+        "This report does not read `data/instances/even-2025-26/solution.json`. The generated"
+        " timetable and its comparison with this one are in `docs/real-solve-even-2025-26.md`"
+        " (Track A)."
     )
     return "\n".join(out) + "\n"
 
