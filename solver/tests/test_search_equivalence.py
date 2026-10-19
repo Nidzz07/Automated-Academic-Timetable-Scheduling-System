@@ -1,14 +1,16 @@
 """The 2026-10 search speed-ups change speed, never answers.
 
 * Lazy lab-room candidates: the first solution is identical to the one the
-  old eager enumeration found.  The eager code is kept verbatim below as the
-  reference and swapped in with ``monkeypatch``.
+  old eager enumeration found.  The eager code is kept below as the reference
+  (verbatim but for S12d's start order) and swapped in with ``monkeypatch``.
 * Room symmetry breaking: identical solutions (and so identical
   satisfiability) with and without it.
 * Time budget: running out is ``"timeout"``, never ``"infeasible"``.
 * S8, the grid read from the payload: on the canonical grid, search, pre-solve
   and Welsh-Powell give exactly the answers the hard-coded grid gave, checked
   against digests recorded from the pre-S8 code.
+* S12d, the new search order: every instance keeps its verdict (solved /
+  infeasible) from before S12d; the full answers are pinned by new digests.
 
 Instances: the 400 seeded property instances and the synthetic presets
 (``large`` only in the symmetry test - the eager reference takes ~40 s on it;
@@ -26,7 +28,13 @@ from typing import Any
 import pytest
 
 import solver.backtracking as bt
-from solver.backtracking import LabBlock, _placement_ok, _SolverState, backtrack_solve
+from solver.backtracking import (
+    LabBlock,
+    _placement_ok,
+    _SolverState,
+    _start_order,
+    backtrack_solve,
+)
 from solver.benchmarks.synthetic import PRESETS, generate
 from solver.colouring import welsh_powell
 from solver.graph import build_conflict_graph
@@ -73,8 +81,9 @@ def _eager_lab_block_candidates(
         *({start for start, _ in state.domains[sid]} for sid in members)
     )
 
+    # S12d: starts in least-constraining order (was ascending); tuples as before
     candidates: list[tuple[SlotId, tuple[str, ...]]] = []
-    for start in sorted(common_starts):
+    for start in _start_order(state, members, common_starts):
         room_lists: list[list[str]] = []
         for sid in members:
             rooms = sorted(
@@ -88,7 +97,6 @@ def _eager_lab_block_candidates(
             for rt in _eager_gen_room_tuples(room_lists, state):
                 candidates.append((start, rt))
 
-    candidates.sort()
     return candidates
 
 
@@ -182,16 +190,32 @@ def test_generous_budget_changes_nothing() -> None:
 # S8: the grid comes from the payload - same answers on the canonical grid
 # ----------------------------------------------------------------------
 
-#: SHA-256 of the fingerprints below, recorded on 2026-10-17 by running
-#: ``_fingerprint`` as defined here on the pre-S8 code (main @ 744c712, where
-#: solver.slots hard-coded the canonical grid). The same under any PYTHONHASHSEED.
-_PRE_S8_DIGESTS = {
-    "property": "494ec6e8540818ad9b292ec2e2613b2d76823d00a51c9f62888b5d962479ab7b",
-    "property_subclass": "b478200793c01651a1a2fc0b85f24400b4e02a9de25d3815928d5aeee2c5eabc",
-    "small": "60b4022c7c835af5f83cab7f9b531f72dae963ebedb41c8e87b0f168c30acdb0",
-    "medium": "03f9a34d3e6db67a0d3d1f335387a634f37e4f083815cad999f1b70a2eee0a8d",
-    "large": "868e16c8e0cd665d50c761462a395b4d8511f5d841b6a78d07fb3e1f57500eb8",
+#: SHA-256 of the fingerprints below.  First recorded on 2026-10-17 from the
+#: pre-S8 code (main @ 744c712, where solver.slots hard-coded the canonical
+#: grid); the S8 code matched them.  Re-recorded on 2026-10-19 for S12d's search
+#: order (MRV + degree over blocks and sessions, least-constraining starts),
+#: which changes assignments and node counts on purpose: every group but
+#: "infeasible" changed; its pre-solve certificates, like every group's
+#: Welsh-Powell colouring, did not.  The same under any PYTHONHASHSEED.
+_DIGESTS = {
+    "property": "1d65215188448a1e26f878c3c59c4c06ff0c5401c81e122759c9afd618a66343",
+    "property_subclass": "51be4eded54c7ab0a64faacd626557a5d2dde9b16656f9cc21b9161ebe202343",
+    "small": "abacc3ca6cfe7d7b28070fe546dc4cf7d79cd4190ec4e072ec350aaf30a2f7d4",
+    "medium": "1056012f0f46f1add181c504f72dd35d3ce6fe098cb0a3a56695c9120be86829",
+    "large": "2516537caf2da2d123a021cf8fc9549266449195ed7a1dd22d76bb11357bcc97",
     "infeasible": "5f5a5fa6541f0dc4cd5e63fd644c73b70e82cc3d99f0865dfe1568bb3f0c2b6a",
+}
+
+#: SHA-256 of each group's list of outcomes alone, recorded on 2026-10-19 from
+#: the pre-S12d code (main @ 75a3f31): a search change may change assignments,
+#: never which instances are solved and which are infeasible.
+_PRE_S12D_VERDICTS = {
+    "property": "cd80f46927daba9f7994331a2e35267271b7c677f99b5c48b5d88a2cc83072c2",
+    "property_subclass": "cc39c253998b3a0b1abfc2c4c02e3a5c073932397dd4703103374144243620c2",
+    "small": "30ea0f1eb35099373db254880d18bfd83ad9a7f288dd4db6f97dc03413f145d5",
+    "medium": "30ea0f1eb35099373db254880d18bfd83ad9a7f288dd4db6f97dc03413f145d5",
+    "large": "30ea0f1eb35099373db254880d18bfd83ad9a7f288dd4db6f97dc03413f145d5",
+    "infeasible": "cf865e4e3b4095a3a80824e47973f5e5d2a5413fd8bd1211ea57890f5998d7c7",
 }
 
 
@@ -214,7 +238,7 @@ def _fingerprint(edge_list: dict[str, Any]) -> list[Any]:
     ]
 
 
-def test_payload_grid_gives_the_pre_s8_answers_on_the_canonical_grid() -> None:
+def test_answers_match_the_recorded_digests_and_pre_s12d_verdicts() -> None:
     groups = {
         "property": _property_instances(),
         "property_subclass": [
@@ -224,10 +248,11 @@ def test_payload_grid_gives_the_pre_s8_answers_on_the_canonical_grid() -> None:
         ],
         **{name: _presets(name) for name in ("small", "medium", "large", "infeasible")},
     }
-    digests = {
-        name: hashlib.sha256(
-            json.dumps([_fingerprint(e) for e in group], sort_keys=True).encode()
-        ).hexdigest()
-        for name, group in groups.items()
-    }
-    assert digests == _PRE_S8_DIGESTS
+    fingerprints = {name: [_fingerprint(e) for e in group] for name, group in groups.items()}
+
+    def digest(x: Any) -> str:
+        return hashlib.sha256(json.dumps(x, sort_keys=True).encode()).hexdigest()
+
+    verdicts = {name: digest([f[0] for f in fps]) for name, fps in fingerprints.items()}
+    assert verdicts == _PRE_S12D_VERDICTS
+    assert {name: digest(fps) for name, fps in fingerprints.items()} == _DIGESTS

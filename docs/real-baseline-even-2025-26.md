@@ -93,4 +93,4 @@ Score **21.5** (rules version 1).
 
 ## Compared with the generated timetable
 
-`data/instances/even-2025-26/solution.json` is not on main (S12a timed out, D33), so there is no side-by-side table yet.
+This report does not read `data/instances/even-2025-26/solution.json`. The generated timetable and its comparison with this one are in `docs/real-solve-even-2025-26.md` (Track A).

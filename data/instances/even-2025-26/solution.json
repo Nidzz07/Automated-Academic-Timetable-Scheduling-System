@@ -1,0 +1,1146 @@
+{
+  "schema_version": "solution.v2",
+  "status": "solved",
+  "assignment": [
+    {
+      "session_id": "obs-t0-r1-c2-l0",
+      "day": 2,
+      "period": 0,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r1-c3-l0",
+      "day": 3,
+      "period": 3,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r2-c2-l0",
+      "day": 4,
+      "period": 3,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r2-c3-l0",
+      "day": 2,
+      "period": 1,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r2-c4-l0",
+      "day": 3,
+      "period": 4,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r4-c1-l0",
+      "day": 0,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r4-c1-l1",
+      "day": 0,
+      "period": 3,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r4-c1-l2",
+      "day": 0,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r4-c2-l1",
+      "day": 1,
+      "period": 0,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r4-c2-l2",
+      "day": 1,
+      "period": 0,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r4-c2-l3",
+      "day": 1,
+      "period": 0,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-1"
+    },
+    {
+      "session_id": "obs-t0-r4-c3-l0",
+      "day": 2,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r4-c3-l2",
+      "day": 2,
+      "period": 3,
+      "room_id": "room-702",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r4-c3-l3",
+      "day": 2,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": "sub-603-1"
+    },
+    {
+      "session_id": "obs-t0-r4-c4-l0",
+      "day": 0,
+      "period": 9,
+      "room_id": "room-609",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r4-c5-l0",
+      "day": 2,
+      "period": 8,
+      "room_id": "room-609",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r5-c4-l0",
+      "day": 3,
+      "period": 1,
+      "room_id": "room-701",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r5-c5-l0",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-609",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r7-c5-l0",
+      "day": 4,
+      "period": 6,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r7-c5-l1",
+      "day": 4,
+      "period": 6,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t0-r7-c5-l3",
+      "day": 4,
+      "period": 6,
+      "room_id": "room-702",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r1-c5-l0",
+      "day": 0,
+      "period": 7,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r2-c5-l0",
+      "day": 0,
+      "period": 8,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r4-c5-l0",
+      "day": 1,
+      "period": 9,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r6-c1-l0",
+      "day": 0,
+      "period": 9,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r6-c2-l0",
+      "day": 1,
+      "period": 5,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r6-c2-l1",
+      "day": 1,
+      "period": 5,
+      "room_id": "room-702",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r6-c2-l2",
+      "day": 1,
+      "period": 5,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-a"
+    },
+    {
+      "session_id": "obs-t10-r6-c2-l3",
+      "day": 1,
+      "period": 5,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-b"
+    },
+    {
+      "session_id": "obs-t10-r6-c3-l0",
+      "day": 2,
+      "period": 9,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r6-c4-l0",
+      "day": 3,
+      "period": 5,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r6-c4-l1",
+      "day": 3,
+      "period": 5,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r6-c4-l2",
+      "day": 3,
+      "period": 5,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r6-c4-l3",
+      "day": 3,
+      "period": 5,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r7-c1-l0",
+      "day": 0,
+      "period": 5,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r7-c1-l1",
+      "day": 0,
+      "period": 5,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r7-c1-l2",
+      "day": 0,
+      "period": 5,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r7-c3-l0",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t10-r7-c5-l0",
+      "day": 2,
+      "period": 5,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r1-c5-l0",
+      "day": 0,
+      "period": 8,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r1-c5-l1",
+      "day": 0,
+      "period": 8,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r4-c5-l0",
+      "day": 1,
+      "period": 9,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r6-c1-l0",
+      "day": 2,
+      "period": 5,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r6-c2-l0",
+      "day": 2,
+      "period": 9,
+      "room_id": "room-701",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r6-c3-l0",
+      "day": 2,
+      "period": 6,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r6-c4-l0",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r6-c4-l1",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r6-c4-l2",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r6-c4-l3",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r7-c1-l0",
+      "day": 0,
+      "period": 5,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r7-c1-l1",
+      "day": 0,
+      "period": 5,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r7-c1-l2",
+      "day": 0,
+      "period": 5,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r7-c1-l3",
+      "day": 0,
+      "period": 5,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r7-c2-l0",
+      "day": 0,
+      "period": 7,
+      "room_id": "room-701",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r7-c3-l0",
+      "day": 1,
+      "period": 5,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r8-c4-l0",
+      "day": 0,
+      "period": 8,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t12-r8-c4-l1",
+      "day": 0,
+      "period": 8,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r1-c1-l0",
+      "day": 0,
+      "period": 0,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r1-c5-l0",
+      "day": 2,
+      "period": 5,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r1-c5-l1",
+      "day": 2,
+      "period": 5,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r1-c5-l2",
+      "day": 2,
+      "period": 5,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r1-c5-l3",
+      "day": 2,
+      "period": 5,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r4-c5-l0",
+      "day": 0,
+      "period": 8,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r6-c1-l0",
+      "day": 0,
+      "period": 9,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r6-c2-l0",
+      "day": 1,
+      "period": 5,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r6-c3-l0",
+      "day": 0,
+      "period": 7,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r6-c4-l0",
+      "day": 3,
+      "period": 5,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r6-c4-l1",
+      "day": 3,
+      "period": 5,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r6-c4-l2",
+      "day": 3,
+      "period": 5,
+      "room_id": "room-702",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r6-c4-l3",
+      "day": 3,
+      "period": 5,
+      "room_id": "room-703",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r7-c1-l0",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-703",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t14-r7-c1-l1",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-a"
+    },
+    {
+      "session_id": "obs-t14-r7-c1-l2",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-b"
+    },
+    {
+      "session_id": "obs-t14-r7-c1-l3",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-c"
+    },
+    {
+      "session_id": "obs-t14-r7-c3-l0",
+      "day": 2,
+      "period": 9,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r1-c2-l0",
+      "day": 2,
+      "period": 8,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r1-c3-l0",
+      "day": 2,
+      "period": 0,
+      "room_id": "room-701",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r2-c2-l0",
+      "day": 0,
+      "period": 9,
+      "room_id": "room-701",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r2-c3-l0",
+      "day": 3,
+      "period": 1,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r2-c4-l0",
+      "day": 2,
+      "period": 1,
+      "room_id": "room-701",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r4-c1-l0",
+      "day": 0,
+      "period": 3,
+      "room_id": "room-702",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r4-c1-l1",
+      "day": 0,
+      "period": 3,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-a"
+    },
+    {
+      "session_id": "obs-t2-r4-c1-l2",
+      "day": 0,
+      "period": 3,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-b"
+    },
+    {
+      "session_id": "obs-t2-r4-c2-l1",
+      "day": 1,
+      "period": 0,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-b"
+    },
+    {
+      "session_id": "obs-t2-r4-c2-l2",
+      "day": 1,
+      "period": 0,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-c"
+    },
+    {
+      "session_id": "obs-t2-r4-c2-l3",
+      "day": 1,
+      "period": 0,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-a"
+    },
+    {
+      "session_id": "obs-t2-r4-c3-l0",
+      "day": 2,
+      "period": 3,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r4-c3-l2",
+      "day": 2,
+      "period": 3,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r4-c3-l3",
+      "day": 2,
+      "period": 3,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r4-c4-l0",
+      "day": 3,
+      "period": 3,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r4-c5-l0",
+      "day": 3,
+      "period": 4,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r5-c4-l0",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r5-c5-l0",
+      "day": 4,
+      "period": 3,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r7-c5-l0",
+      "day": 4,
+      "period": 6,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r7-c5-l1",
+      "day": 4,
+      "period": 6,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t2-r7-c5-l3",
+      "day": 4,
+      "period": 6,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r1-c2-l0",
+      "day": 1,
+      "period": 1,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r1-c3-l0",
+      "day": 2,
+      "period": 0,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r1-c3-l1",
+      "day": 2,
+      "period": 0,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r1-c3-l2",
+      "day": 2,
+      "period": 0,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r1-c5-l0",
+      "day": 2,
+      "period": 8,
+      "room_id": "room-701",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r2-c2-l0",
+      "day": 0,
+      "period": 3,
+      "room_id": "room-609",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r2-c4-l0",
+      "day": 4,
+      "period": 6,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c1-l0",
+      "day": 0,
+      "period": 4,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c2-l0",
+      "day": 1,
+      "period": 3,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c2-l1",
+      "day": 1,
+      "period": 3,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c2-l2",
+      "day": 1,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c3-l0",
+      "day": 2,
+      "period": 3,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c4-l0",
+      "day": 3,
+      "period": 3,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c4-l1",
+      "day": 3,
+      "period": 3,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c4-l2",
+      "day": 3,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c5-l0",
+      "day": 4,
+      "period": 3,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c5-l1",
+      "day": 4,
+      "period": 3,
+      "room_id": "room-509",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r4-c5-l2",
+      "day": 4,
+      "period": 3,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r5-c1-l0",
+      "day": 2,
+      "period": 4,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r5-c3-l0",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-701",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t4-r7-c5-l0",
+      "day": 1,
+      "period": 0,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r1-c2-l0",
+      "day": 1,
+      "period": 9,
+      "room_id": "room-701",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r1-c3-l0",
+      "day": 2,
+      "period": 0,
+      "room_id": "room-702",
+      "sub_room_id": "sub-702-c"
+    },
+    {
+      "session_id": "obs-t6-r1-c3-l1",
+      "day": 2,
+      "period": 0,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-a"
+    },
+    {
+      "session_id": "obs-t6-r1-c3-l2",
+      "day": 2,
+      "period": 0,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-b"
+    },
+    {
+      "session_id": "obs-t6-r1-c5-l0",
+      "day": 0,
+      "period": 3,
+      "room_id": "room-701",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r2-c2-l0",
+      "day": 0,
+      "period": 4,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r2-c4-l0",
+      "day": 2,
+      "period": 8,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c1-l0",
+      "day": 2,
+      "period": 4,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c2-l0",
+      "day": 1,
+      "period": 3,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c2-l1",
+      "day": 1,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c2-l2",
+      "day": 1,
+      "period": 3,
+      "room_id": "room-702",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c3-l0",
+      "day": 4,
+      "period": 6,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c4-l0",
+      "day": 3,
+      "period": 3,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c4-l1",
+      "day": 3,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c4-l2",
+      "day": 3,
+      "period": 3,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c5-l0",
+      "day": 4,
+      "period": 3,
+      "room_id": "room-604",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c5-l1",
+      "day": 4,
+      "period": 3,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r4-c5-l2",
+      "day": 4,
+      "period": 3,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r5-c1-l0",
+      "day": 1,
+      "period": 0,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r5-c3-l0",
+      "day": 1,
+      "period": 1,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t6-r7-c5-l0",
+      "day": 3,
+      "period": 1,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r1-c5-l0",
+      "day": 2,
+      "period": 6,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r2-c5-l0",
+      "day": 0,
+      "period": 7,
+      "room_id": "room-609",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r4-c5-l0",
+      "day": 2,
+      "period": 9,
+      "room_id": "room-609",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r6-c1-l0",
+      "day": 1,
+      "period": 9,
+      "room_id": "room-609",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r6-c2-l0",
+      "day": 1,
+      "period": 5,
+      "room_id": "room-507",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r6-c2-l1",
+      "day": 1,
+      "period": 5,
+      "room_id": "room-603",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r6-c2-l2",
+      "day": 1,
+      "period": 5,
+      "room_id": "room-606",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r6-c2-l3",
+      "day": 1,
+      "period": 5,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r6-c3-l0",
+      "day": 2,
+      "period": 5,
+      "room_id": "room-605",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r6-c4-l0",
+      "day": 0,
+      "period": 8,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r6-c4-l1",
+      "day": 0,
+      "period": 8,
+      "room_id": "room-608",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r6-c4-l2",
+      "day": 0,
+      "period": 8,
+      "room_id": "room-702",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r7-c1-l0",
+      "day": 0,
+      "period": 5,
+      "room_id": "room-702",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r7-c1-l1",
+      "day": 0,
+      "period": 5,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-a"
+    },
+    {
+      "session_id": "obs-t8-r7-c1-l2",
+      "day": 0,
+      "period": 5,
+      "room_id": "room-703",
+      "sub_room_id": "sub-703-b"
+    },
+    {
+      "session_id": "obs-t8-r7-c3-l0",
+      "day": 3,
+      "period": 5,
+      "room_id": "room-601",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r7-c5-l0",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-607b",
+      "sub_room_id": null
+    },
+    {
+      "session_id": "obs-t8-r7-c5-l1",
+      "day": 4,
+      "period": 0,
+      "room_id": "room-608",
+      "sub_room_id": null
+    }
+  ],
+  "quality": {
+    "score": -162.5,
+    "rules_version": "1",
+    "breakdown": [
+      {
+        "rule_id": "S-GAP",
+        "status": "evaluated",
+        "weight": 2.0,
+        "raw": 79,
+        "penalty": 158.0,
+        "explanation": "79 idle teaching periods - coh-se-a: Friday 12.15-13.15; coh-se-a-a: Friday 12.15-13.15; coh-se-a-b: Friday 12.15-13.15; coh-se-a-c: Friday 12.15-13.15; coh-se-a-d: Friday 12.15-13.15; coh-se-b: Friday 12.15-13.15; coh-se-b-a: Friday 12.15-13.15; coh-se-b-b: Friday 12.15-13.15; coh-se-b-c: Friday 12.15-13.15; coh-se-b-d: Friday 12.15-13.15; coh-se-c: Thursday 10.00-11.00; coh-se-c-a: Thursday 10.00-11.00; coh-se-c-b: Thursday 10.00-11.00; coh-se-c-c: Thursday 10.00-11.00; coh-se-c-d: Thursday 10.00-11.00; coh-se-d: Wednesday 11.15-12.15; coh-se-d-a: Wednesday 11.15-12.15; coh-se-d-b: Wednesday 11.15-12.15; coh-se-d-c: Wednesday 11.15-12.15; coh-se-d-d: Wednesday 11.15-12.15; coh-te-a: Thursday 14.15-15.15, Friday 11.15-12.15; coh-te-a-a: Thursday 14.15-15.15, Friday 11.15-12.15; coh-te-a-b: Thursday 14.15-15.15; coh-te-a-c: Thursday 14.15-15.15; coh-te-a-d: Thursday 14.15-15.15, Friday 11.15-12.15; coh-te-b: Friday 10.00-11.00, Friday 11.15-12.15; coh-te-b-a: Friday 10.00-11.00, Friday 11.15-12.15; coh-te-b-b: Wednesday 13.15-14.15, Wednesday 14.15-15.15, Friday 10.00-11.00, Friday 11.15-12.15; coh-te-b-c: Wednesday 13.15-14.15, Wednesday 14.15-15.15, Friday 10.00-11.00, Friday 11.15-12.15; coh-te-b-d: Wednesday 13.15-14.15, Wednesday 14.15-15.15, Friday 10.00-11.00, Friday 11.15-12.15; coh-te-c: Tuesday 14.15-15.15, Thursday 13.15-14.15, Thursday 14.15-15.15, Friday 11.15-12.15; coh-te-c-a: Tuesday 14.15-15.15, Thursday 13.15-14.15, Thursday 14.15-15.15, Friday 11.15-12.15; coh-te-c-b: Tuesday 14.15-15.15, Thursday 13.15-14.15, Thursday 14.15-15.15, Friday 11.15-12.15; coh-te-c-c: Tuesday 14.15-15.15, Thursday 13.15-14.15, Thursday 14.15-15.15, Friday 11.15-12.15; coh-te-c-d: Tuesday 14.15-15.15, Thursday 13.15-14.15, Thursday 14.15-15.15, Friday 11.15-12.15; coh-te-d: Monday 13.15-14.15, Monday 14.15-15.15, Friday 11.15-12.15; coh-te-d-a: Monday 13.15-14.15, Monday 14.15-15.15, Friday 11.15-12.15; coh-te-d-b: Monday 13.15-14.15, Monday 14.15-15.15, Friday 11.15-12.15; coh-te-d-c: Monday 13.15-14.15, Monday 14.15-15.15, Friday 11.15-12.15; coh-te-d-d: Monday 13.15-14.15, Monday 14.15-15.15, Friday 11.15-12.15."
+      },
+      {
+        "rule_id": "S-B2B",
+        "status": "evaluated",
+        "weight": 1.0,
+        "raw": 42,
+        "penalty": 42.0,
+        "explanation": "42 back-to-back pairs - fac-abhijeet-salunke Monday 11.15-12.15 and Monday 12.15-13.15; fac-abhijeet-salunke Tuesday 10.00-11.00 and Tuesday 11.15-12.15; fac-abhijeet-salunke Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-abhijeet-salunke Wednesday 11.15-12.15 and Wednesday 12.15-13.15; fac-aishwarya-nalawade Tuesday 10.00-11.00 and Tuesday 11.15-12.15; fac-amey-ganesh-nile Thursday 12.15-13.15 and Thursday 13.15-14.15; fac-anand-godbole Monday 14.15-15.15 and Monday 15.15-16.15; fac-anand-godbole Monday 15.15-16.15 and Monday 16.15-17.15; fac-anand-godbole Monday 16.15-17.15 and Monday 17.15-18.15; fac-anand-godbole Wednesday 13.15-14.15 and Wednesday 14.15-15.15; fac-anant-nimkar Wednesday 09.00-10.00 and Wednesday 10.00-11.00; fac-anant-nimkar Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-anant-nimkar Thursday 11.15-12.15 and Thursday 12.15-13.15; fac-anuj-tawari Tuesday 12.15-13.15 and Tuesday 13.15-14.15; fac-anuj-tawari Friday 10.00-11.00 and Friday 11.15-12.15; fac-azman-qureshi Monday 12.15-13.15 and Monday 13.15-14.15; fac-isha-sawalkar Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-isha-sawalkar Wednesday 12.15-13.15 and Wednesday 13.15-14.15; fac-jignesh-sisodia Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-jignesh-sisodia Thursday 09.00-10.00 and Thursday 10.00-11.00; fac-kailas-devadkar Wednesday 09.00-10.00 and Wednesday 10.00-11.00; fac-kailas-devadkar Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-kailas-devadkar Thursday 10.00-11.00 and Thursday 11.15-12.15; fac-prasenjit-bhavathankar Monday 11.15-12.15 and Monday 12.15-13.15; fac-prasenjit-bhavathankar Tuesday 09.00-10.00 and Tuesday 10.00-11.00; fac-prasenjit-bhavathankar Tuesday 10.00-11.00 and Tuesday 11.15-12.15; fac-sudhir-dhage Tuesday 12.15-13.15 and Tuesday 13.15-14.15; fac-sudhir-dhage Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-sudhir-dhage Wednesday 12.15-13.15 and Wednesday 13.15-14.15; fac-sudhir-dhage Thursday 12.15-13.15 and Thursday 13.15-14.15; fac-sunil-ghane Monday 14.15-15.15 and Monday 15.15-16.15; fac-sunil-ghane Monday 15.15-16.15 and Monday 16.15-17.15; fac-sunil-ghane Monday 16.15-17.15 and Monday 17.15-18.15; fac-surekha-dholay Monday 14.15-15.15 and Monday 15.15-16.15; fac-surekha-dholay Monday 15.15-16.15 and Monday 16.15-17.15; fac-swapnali-kurhade Tuesday 09.00-10.00 and Tuesday 10.00-11.00; fac-swapnali-kurhade Tuesday 10.00-11.00 and Tuesday 11.15-12.15; fac-swapnali-kurhade Wednesday 10.00-11.00 and Wednesday 11.15-12.15; fac-swapnali-kurhade Thursday 10.00-11.00 and Thursday 11.15-12.15; fac-vaishnavee-rathod Monday 12.15-13.15 and Monday 13.15-14.15; fac-vaishnavee-rathod Monday 14.15-15.15 and Monday 15.15-16.15; fac-vaishnavee-rathod Monday 15.15-16.15 and Monday 16.15-17.15."
+      },
+      {
+        "rule_id": "S-LOAD16",
+        "status": "evaluated",
+        "weight": 1.0,
+        "raw": 6,
+        "penalty": 6.0,
+        "explanation": "6 faculty members above 16 h a week - fac-amey-ganesh-nile 18 h, fac-azman-qureshi 18 h, fac-isha-sawalkar 18 h, fac-jignesh-sisodia 17 h, fac-jyoti-ramteke 18 h, fac-sudeep-mali 18 h."
+      },
+      {
+        "rule_id": "FAC_LOAD_IMBALANCE",
+        "status": "evaluated",
+        "weight": 0.5,
+        "raw": 113,
+        "penalty": 56.5,
+        "explanation": "Daily load spreads sum to 113 h - fac-abhijeet-salunke 5 h on Wednesday, 2 h on Thursday; fac-aishwarya-nalawade 4 h on Tuesday, 2 h on Monday; fac-aman-yadav 2 h on Tuesday, 0 h on Monday; fac-amey-ganesh-nile 4 h on Tuesday, 2 h on Monday; fac-anand-godbole 5 h on Monday, 2 h on Wednesday; fac-anant-nimkar 4 h on Wednesday, 2 h on Monday; fac-anas-ansari 4 h on Tuesday, 2 h on Monday; fac-anuj-tawari 4 h on Monday, 1 h on Wednesday; fac-asma-tambe 1 h on Wednesday, 0 h on Monday; fac-azman-qureshi 6 h on Monday, 2 h on Wednesday; fac-c-r-gajbiye 1 h on Wednesday, 0 h on Monday; fac-d-r-kalbande 2 h on Monday, 0 h on Wednesday; fac-dayanand-ambawade 2 h on Monday, 0 h on Tuesday; fac-deepak-nair 4 h on Wednesday, 2 h on Monday; fac-isha-sawalkar 6 h on Wednesday, 2 h on Monday; fac-jignesh-sisodia 5 h on Wednesday, 2 h on Tuesday; fac-jostna-bhagat 4 h on Monday, 2 h on Thursday; fac-jyoti-ramteke 5 h on Wednesday, 3 h on Monday; fac-kailas-devadkar 5 h on Wednesday, 2 h on Tuesday; fac-nataasha-raul 5 h on Tuesday, 1 h on Wednesday; fac-pramod-bide 4 h on Tuesday, 0 h on Monday; fac-prasenjit-bhavathankar 5 h on Friday, 0 h on Thursday; fac-reeta-koshy 4 h on Monday, 2 h on Thursday; fac-rupali-sawant 5 h on Monday, 0 h on Friday; fac-sanjyuktarani-jena 5 h on Tuesday, 0 h on Monday; fac-sonali-dudhihalli 4 h on Wednesday, 2 h on Monday; fac-soni-bhambar 4 h on Wednesday, 2 h on Monday; fac-sudeep-mali 4 h on Monday, 2 h on Friday; fac-sudhir-dhage 5 h on Wednesday, 0 h on Monday; fac-suman-m 2 h on Tuesday, 0 h on Monday; fac-sunil-ghane 5 h on Monday, 2 h on Thursday; fac-surekha-dholay 5 h on Monday, 0 h on Thursday; fac-swapnali-kurhade 5 h on Tuesday, 0 h on Monday; fac-taqdis-pawle 1 h on Thursday, 0 h on Monday; fac-vaishnavee-rathod 8 h on Monday, 0 h on Thursday; fac-vandana-wekhande 3 h on Tuesday, 0 h on Wednesday; fac-yogita-patil 5 h on Tuesday, 0 h on Monday."
+      }
+    ],
+    "not_evaluated_rule_ids": []
+  },
+  "displaced": [],
+  "metadata": {
+    "algorithm": "backtracking(forward-checking, mrv)",
+    "runtime_ms": 255.93389999994542,
+    "sessions_total": 156,
+    "sessions_assigned": 156,
+    "slots_used": 34,
+    "backtracks": 92
+  }
+}

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MockChronosApiClient } from '../chronosApi';
 import { isSolvedSolution, isInfeasibleSolution } from '@/adapters/solution';
 import solvedFixture from '@contracts/examples/solution_v2.solved.example.json';
@@ -123,8 +123,24 @@ describe('MockChronosApiClient', () => {
 
     const display = await client.getDisplay('even_2025_26');
     expect(display?.pins).toHaveLength(real.pinned_occupancy.length);
-    // S12a timed out (D33), so no solution.json is committed yet
-    expect(await client.getInstanceSolution('even_2025_26')).toBeNull();
+    // S12d committed solution.json: validated as solution.v2, placing every session
+    const solution = await client.getInstanceSolution('even_2025_26');
+    expect(solution?.schema_version).toBe('solution.v2');
+    if (!solution || !isSolvedSolution(solution)) throw new Error('Expected a solved solution.json');
+    expect(solution.assignment.map((a) => a.session_id).sort()).toEqual(real.sessions.map((s) => s.id).sort());
+  });
+
+  it('returns null for the real instance when solution.json is missing', async () => {
+    vi.resetModules();
+    // a JSON null is what loadRealEven yields for a file with no loader
+    vi.doMock('@instances/even-2025-26/solution.json', () => ({ default: null }));
+    try {
+      const { MockChronosApiClient: Fresh } = await import('../chronosApi');
+      expect(await new Fresh().getInstanceSolution('even_2025_26')).toBeNull();
+    } finally {
+      vi.doUnmock('@instances/even-2025-26/solution.json');
+      vi.resetModules();
+    }
   });
 
   it('gives the contract examples no display sidecar and no published solution', async () => {

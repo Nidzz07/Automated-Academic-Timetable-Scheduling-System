@@ -1,9 +1,10 @@
-"""The real EVEN SE+TE instance (S12a): the committed result is reproducible.
+"""The real EVEN SE+TE instance (S12a, S12d): the committed result is reproducible.
 
 Re-solving ``data/instances/even-2025-26/edge_list.json`` must give the
 committed ``solution.json`` (all but its wall-clock ``metadata.runtime_ms``), or,
 when the search runs out of time, no ``solution.json`` at all (ROADMAP D33).
-Slow: while the search times out, this test spends the full 300 s budget.
+Since S12d the search solves it in under a second; the test stays ``slow`` so
+that a search regression back to a timeout spends its 300 s only under -m slow.
 """
 
 from __future__ import annotations

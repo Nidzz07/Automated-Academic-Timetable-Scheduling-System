@@ -7,8 +7,10 @@ import {
   cohortOptions,
   getExampleEdgeList,
   getSolvedSolutionFixture,
+  labelsFor,
 } from '@/adapters/timetable';
-import { chronosApiClient } from '@/api/chronosApi';
+import { isSolvedSolution } from '@/adapters/solution';
+import { chronosApiClient, MockChronosApiClient } from '@/api/chronosApi';
 
 const edgeList = getExampleEdgeList();
 const assignment = getSolvedSolutionFixture().assignment;
@@ -90,7 +92,34 @@ describe('The real EVEN 2025-26 instance in the app', () => {
     await screen.findByTestId('period-clock-0');
   };
 
-  it('says Not solved yet while solution.json is absent, and shows its lunches and pins', async () => {
+  it('shows the solved room view from solution.json', async () => {
+    const client = new MockChronosApiClient();
+    const [real, display, solution] = await Promise.all([
+      client.getEdgeList('even_2025_26'),
+      client.getDisplay('even_2025_26'),
+      client.getInstanceSolution('even_2025_26'),
+    ]);
+    if (!solution || !isSolvedSolution(solution)) throw new Error('Expected a solved solution.json');
+    const labels = labelsFor(display);
+    const placed = buildEnrichedSessions(solution.assignment, real, labels);
+    const roomId = placed[0].roomId;
+    const code = new Map(real.rooms.map((r) => [r.id, labels.room(r)]));
+
+    await openRealInstance();
+    expect(screen.queryByTestId('no-solution-note')).not.toBeInTheDocument();
+    const rooms = screen.getByTestId('room-timetable');
+    fireEvent.change(within(rooms).getByLabelText('Select room'), { target: { value: roomId } });
+    for (const s of placed.filter((p) => p.roomId === roomId)) {
+      for (const period of s.periods) {
+        const cell = within(rooms).getByTestId(`room-cell-${s.day}-${period}`);
+        expect(cell).toHaveTextContent(`${s.subjectCode} · ${s.cohortLabel} · ${s.facultyInitials}`);
+        if (s.subRoomId) expect(cell).toHaveTextContent(`(${code.get(s.subRoomId)})`);
+      }
+    }
+  });
+
+  it('says Not solved yet when no solution is published, and shows its lunches and pins', async () => {
+    vi.spyOn(chronosApiClient, 'getInstanceSolution').mockResolvedValue(null);
     await openRealInstance();
     expect(screen.getByTestId('no-solution-note')).toHaveTextContent('Not solved yet');
     expect(screen.getByTestId('status-badge-unsolved')).toHaveTextContent('Not solved yet');
