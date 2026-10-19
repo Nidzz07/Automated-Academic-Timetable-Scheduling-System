@@ -117,6 +117,7 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 <option value="example">Example instance</option>
                 <option value="d6_grid">D6 grid example (no solution)</option>
                 <option value="even_2025_26">EVEN 2025-26 SE+TE (real)</option>
+                <option value="even_2025_26_printed">EVEN 2025-26 printed (real)</option>
               </select>
             </div>
           )}

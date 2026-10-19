@@ -10,8 +10,8 @@ interface RoleSelectorProps {
   onFacultyChange: (faculty: string) => void;
   selectedStudentDivision: string;
   onStudentDivisionChange: (division: string) => void;
-  /** Faculty initials placed in the timetable (from the payload) */
-  facultyOptions: string[];
+  /** Faculty placed in the timetable (from the payload): id and "Name (INITIALS)" */
+  facultyOptions: Array<{ id: string; label: string }>;
   /** Cohorts named in the edge list */
   cohortOptions: Array<{ id: string; label: string }>;
 }
@@ -118,9 +118,9 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
               onChange={(e) => onFacultyChange(e.target.value)}
               className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
             >
-              {facultyOptions.map((initials) => (
-                <option key={initials} value={initials}>
-                  {initials}
+              {facultyOptions.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
                 </option>
               ))}
             </select>

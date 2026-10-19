@@ -6,11 +6,14 @@ import { Layers, Clock, DoorOpen, User, BookOpen } from 'lucide-react';
 interface ParallelLabBlockProps {
   labBlock: EnrichedLabBlock;
   onSelectSession?: (sessionId: string) => void;
+  /** Member sessions outlined as in violation */
+  flaggedSessionIds?: ReadonlySet<string>;
 }
 
 export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
   labBlock,
   onSelectSession,
+  flaggedSessionIds,
 }) => {
   return (
     <div
@@ -52,8 +55,11 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
             data-testid={`batch-session-${sess.sessionId}`}
             data-batch={sess.batchLabel}
             data-subroom={sess.subRoomCode ?? sess.roomCode}
+            data-flagged={flaggedSessionIds?.has(sess.sessionId) || undefined}
             onClick={() => onSelectSession?.(sess.sessionId)}
-            className="group/batch relative flex flex-col justify-between rounded-lg border border-emerald-500/25 bg-background/80 p-2 shadow-xs backdrop-blur-xs transition-all hover:bg-emerald-500/10 hover:border-emerald-500/50 cursor-pointer"
+            className={`group/batch relative flex flex-col justify-between rounded-lg border border-emerald-500/25 bg-background/80 p-2 shadow-xs backdrop-blur-xs transition-all hover:bg-emerald-500/10 hover:border-emerald-500/50 cursor-pointer ${
+              flaggedSessionIds?.has(sess.sessionId) ? 'ring-2 ring-destructive' : ''
+            }`}
           >
             {/* Top row: Batch Pill + Room */}
             <div className="flex items-center justify-between gap-1 mb-1">

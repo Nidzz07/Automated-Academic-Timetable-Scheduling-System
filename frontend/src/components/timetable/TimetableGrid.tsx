@@ -40,10 +40,12 @@ export interface TimetableGridProps {
    */
   edgeList?: EdgeList;
   /**
-   * The solved solution contract payload; null shows the grid with no sessions.
-   * Defaults to contracts/examples/solution_v2.solved.example.json.
+   * The placements to show (a solved solution, or the printed baseline); null shows the grid
+   * with no sessions. Defaults to contracts/examples/solution_v2.solved.example.json.
    */
-  solution?: SolvedSolution | null;
+  solution?: Pick<SolvedSolution, 'assignment'> | null;
+  /** Sessions outlined as in violation (the printed baseline's violations) */
+  flaggedSessionIds?: ReadonlySet<string>;
   /** Names, pin kinds and clock times for the edge list's ids; defaults to the contract examples' */
   labels?: Labels;
   /** Cohort filter: 'all' or a cohort id; overlapping cohorts (batches of a division) are shown */
@@ -204,6 +206,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   selectedSessionId = null,
   provisionalSessionId = null,
   onMoveSession,
+  flaggedSessionIds,
 }) => {
   const [activeDragSessionId, setActiveDragSessionId] = useState<string | null>(null);
 
@@ -396,20 +399,32 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                       >
                         {/* 1. Multi-period Parallel Lab Block Case */}
                         {labBlock && (
-                          <ParallelLabBlock labBlock={labBlock} onSelectSession={onSelectSession} />
+                          <ParallelLabBlock
+                            labBlock={labBlock}
+                            onSelectSession={onSelectSession}
+                            flaggedSessionIds={flaggedSessionIds}
+                          />
                         )}
 
                         {/* 2 & 3. Draggable Session (Combined Lecture or Standard Theory) */}
-                        {cellSessions.map((session) => (
-                          <DraggableSessionItem
-                            key={session.sessionId}
-                            session={session}
-                            canDragAndDrop={canDragAndDrop}
-                            isProvisional={session.sessionId === provisionalSessionId}
-                            isSelected={session.sessionId === selectedSessionId}
-                            onSelect={() => onSelectSession?.(session.sessionId)}
-                          />
-                        ))}
+                        {cellSessions.map((session) => {
+                          const flagged = !!flaggedSessionIds?.has(session.sessionId);
+                          return (
+                            <div
+                              key={session.sessionId}
+                              data-flagged={flagged || undefined}
+                              className={flagged ? 'rounded-xl ring-2 ring-destructive' : undefined}
+                            >
+                              <DraggableSessionItem
+                                session={session}
+                                canDragAndDrop={canDragAndDrop}
+                                isProvisional={session.sessionId === provisionalSessionId}
+                                isSelected={session.sessionId === selectedSessionId}
+                                onSelect={() => onSelectSession?.(session.sessionId)}
+                              />
+                            </div>
+                          );
+                        })}
 
                         {/* 4. Pinned occupancy, labelled by its display kind (D41): lunch, a frozen item, an exam, ... */}
                         {cellPins.map((pin) =>

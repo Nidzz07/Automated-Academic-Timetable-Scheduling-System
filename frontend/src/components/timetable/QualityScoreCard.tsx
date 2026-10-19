@@ -10,12 +10,15 @@ import { CheckCircle2, Cpu, Timer, ShieldCheck, Activity } from 'lucide-react';
  */
 interface QualityScoreCardProps {
   quality: QualityView;
-  metadata: SolutionMetadata;
+  /** Solver run statistics; absent for a timetable the solver did not make (the printed one) */
+  metadata?: SolutionMetadata;
+  title?: string;
 }
 
 export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
   quality,
   metadata,
+  title = 'Solver Quality Evaluation',
 }) => {
   return (
     <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-sm">
@@ -26,7 +29,7 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
               <ShieldCheck className="h-5 w-5" />
             </span>
             <div>
-              <CardTitle className="text-base font-bold">Solver Quality Evaluation</CardTitle>
+              <CardTitle className="text-base font-bold">{title}</CardTitle>
               <p className="text-xs text-muted-foreground">
                 Itemised breakdown per quality_rules.yaml
                 {quality.rulesVersion !== null && ` · rules version ${quality.rulesVersion}`}
@@ -60,6 +63,7 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
 
       <CardContent className="space-y-3 pt-0">
         {/* Run statistics metrics */}
+        {metadata && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
           <div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/40 p-2">
             <Cpu className="h-4 w-4 text-primary shrink-0" />
@@ -99,6 +103,7 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
             </div>
           </div>
         </div>
+        )}
 
         {/* Penalty Breakdown */}
         <div className="rounded-lg border border-border/60 bg-background/50 p-2.5">

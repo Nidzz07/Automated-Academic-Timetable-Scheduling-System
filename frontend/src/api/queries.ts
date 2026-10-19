@@ -11,7 +11,7 @@ import {
   MoveSessionRequest,
   chronosApiClient,
 } from '@/api/chronosApi';
-import { ContractValidationError } from '@/api/contractValidation';
+import { ContractValidationError } from '@/api/contractError';
 import { SolvedSolution } from '@/adapters/solution';
 
 export const timetableQueryKey = ['timetable'] as const;
@@ -59,6 +59,28 @@ export function useInstanceSolutionQuery(
     queryFn: () => client.getInstanceSolution(instance),
     staleTime: Infinity,
     retry: (failures, error) => !(error instanceof ContractValidationError) && failures < 3,
+  });
+}
+
+export function useAnomaliesQuery(
+  instance: EdgeListInstance,
+  client: ChronosApiClient = chronosApiClient
+) {
+  return useQuery({
+    queryKey: ['anomalies', instance],
+    queryFn: () => client.getAnomalies(instance),
+    staleTime: Infinity,
+  });
+}
+
+export function usePrintedBaselineQuery(
+  instance: EdgeListInstance,
+  client: ChronosApiClient = chronosApiClient
+) {
+  return useQuery({
+    queryKey: ['printed-baseline', instance],
+    queryFn: () => client.getPrintedBaseline(instance),
+    staleTime: Infinity,
   });
 }
 

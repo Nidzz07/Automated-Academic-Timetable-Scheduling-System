@@ -9,12 +9,15 @@ import { FacultyWorkloadCard } from '@/components/timetable/FacultyWorkloadCard'
 import { InfeasibilityDiagnosisPanel } from '@/components/timetable/InfeasibilityDiagnosisPanel';
 import { RejectionAlert } from '@/components/timetable/RejectionAlert';
 import { FreeRoomsPanel, RoomTimetable } from '@/components/timetable/RoomViews';
+import { AnomalyReportPanel } from '@/components/timetable/AnomalyReport';
+import { PrintedViolationsPanel } from '@/components/timetable/PrintedViolations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserRole, ROLE_CAPABILITIES } from '@/types/roles';
 import {
   SolutionContract,
   SolvedSolution,
+  SessionAssignment,
   isSolvedSolution,
   isInfeasibleSolution,
   toQualityView,
@@ -29,14 +32,17 @@ import {
   DAY_NAMES,
   labelsFor,
 } from '@/adapters/timetable';
+import { AnomalyReport, PrintedBaseline } from '@/adapters/realInstance';
 import { chronosApiClient, EdgeListInstance } from '@/api/chronosApi';
-import { ContractValidationError } from '@/api/contractValidation';
+import { ContractValidationError } from '@/api/contractError';
 import {
   timetableQueryKey,
+  useAnomaliesQuery,
   useDisplayQuery,
   useEdgeListQuery,
   useInstanceSolutionQuery,
   useMoveSessionMutation,
+  usePrintedBaselineQuery,
   useTimetableQuery,
 } from '@/api/queries';
 
@@ -56,13 +62,17 @@ function TimetableApp() {
   const edgeList = useEdgeListQuery(instance);
   const display = useDisplayQuery(instance);
   const published = useInstanceSolutionQuery(instance);
-  const queries = [timetable, edgeList, display, published];
+  const anomalies = useAnomaliesQuery(instance);
+  const printed = usePrintedBaselineQuery(instance);
+  const queries = [timetable, edgeList, display, published, anomalies, printed];
 
   if (
     timetable.status !== 'success' ||
     edgeList.status !== 'success' ||
     display.status !== 'success' ||
-    published.status !== 'success'
+    published.status !== 'success' ||
+    anomalies.status !== 'success' ||
+    printed.status !== 'success'
   ) {
     const error = queries.find((q) => q.error)?.error;
     return (
@@ -91,6 +101,8 @@ function TimetableApp() {
       edgeList={edgeList.data}
       display={display.data}
       publishedSolution={published.data}
+      anomalies={anomalies.data}
+      printed={printed.data}
       instance={instance}
       onInstanceChange={setInstance}
     />
@@ -132,6 +144,10 @@ interface TimetableWorkspaceProps {
   display: Display | null;
   /** The solution published beside a non-example instance's edge list; null when not solved yet */
   publishedSolution: SolutionContract | null;
+  /** The instance's ingestion anomaly report; null for the contract examples */
+  anomalies: AnomalyReport | null;
+  /** The timetable as printed (the printed instance only); not a solution contract */
+  printed: PrintedBaseline | null;
   instance: EdgeListInstance;
   onInstanceChange: (instance: EdgeListInstance) => void;
 }
@@ -141,6 +157,8 @@ function TimetableWorkspace({
   edgeList,
   display,
   publishedSolution,
+  anomalies,
+  printed,
   instance,
   onInstanceChange,
 }: TimetableWorkspaceProps) {
@@ -153,6 +171,7 @@ function TimetableWorkspace({
   const [showQualityCard, setShowQualityCard] = useState<boolean>(true);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [selectedViolation, setSelectedViolation] = useState<number | null>(null);
 
   // The query cache holds the solution; optimistic moves and reverts write straight into it
   const queryClient = useQueryClient();
@@ -203,11 +222,27 @@ function TimetableWorkspace({
     });
   };
 
-  // Enriched sessions if solved
-  const allSessions = useMemo(() => {
-    if (!shown || !isSolvedSolution(shown)) return [];
-    return buildEnrichedSessions(shown.assignment, edgeList, labels);
-  }, [shown, edgeList, labels]);
+  // Placements on the grid: the printed timetable, else the solved solution's
+  const placed = useMemo<SessionAssignment[] | null>(
+    () => printed?.assignment ?? (shown && isSolvedSolution(shown) ? shown.assignment : null),
+    [printed, shown]
+  );
+  const quality = useMemo(
+    () => printed?.quality ?? (shown && isSolvedSolution(shown) ? toQualityView(shown) : null),
+    [printed, shown]
+  );
+  // The printed timetable's violating sessions: the picked violation's, else every one
+  const flaggedSessionIds = useMemo(() => {
+    if (!printed) return undefined;
+    const picked = selectedViolation === null ? undefined : printed.violations[selectedViolation];
+    return new Set((picked ? [picked] : printed.violations).flatMap((v) => v.session_ids));
+  }, [printed, selectedViolation]);
+
+  // Enriched sessions if solved (or printed)
+  const allSessions = useMemo(
+    () => (placed ? buildEnrichedSessions(placed, edgeList, labels) : []),
+    [placed, edgeList, labels]
+  );
 
   // Selected session lookup
   const selectedSession = useMemo<EnrichedSession | null>(() => {
@@ -216,14 +251,19 @@ function TimetableWorkspace({
   }, [selectedSessionId, allSessions]);
 
   const facultyOptions = useMemo(
-    () => [...new Set(allSessions.map((s) => s.facultyInitials))].sort(),
+    () =>
+      [...new Map(allSessions.map((s) => [s.facultyId, `${s.facultyName} (${s.facultyInitials})`]))]
+        .map(([id, label]) => ({ id, label }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
     [allSessions]
   );
   const cohorts = useMemo(() => cohortOptions(edgeList, labels), [edgeList, labels]);
   // A choice made on another instance falls back to this instance's first option
   const hasCohort = (id: string | null) => cohorts.some((c) => c.id === id);
   const selectedFaculty =
-    facultyChoice !== null && facultyOptions.includes(facultyChoice) ? facultyChoice : facultyOptions[0] ?? '';
+    facultyChoice !== null && facultyOptions.some((f) => f.id === facultyChoice)
+      ? facultyChoice
+      : facultyOptions[0]?.id ?? '';
   const selectedStudentDivision =
     studentChoice !== null && hasCohort(studentChoice) ? studentChoice : cohorts[0]?.id ?? 'all';
   const selectedCohortFilter = hasCohort(cohortFilter) ? cohortFilter : 'all';
@@ -231,7 +271,7 @@ function TimetableWorkspace({
   // Compute sessions for selected faculty (for faculty role view)
   const facultySessions = useMemo(() => {
     if (!allSessions.length) return [];
-    return allSessions.filter((s) => s.facultyInitials === selectedFaculty);
+    return allSessions.filter((s) => s.facultyId === selectedFaculty);
   }, [allSessions, selectedFaculty]);
 
   // Determine effective cohort filter based on role
@@ -245,22 +285,15 @@ function TimetableWorkspace({
     return selectedCohortFilter;
   }, [currentRole, selectedStudentDivision, selectedCohortFilter]);
 
-  // If role is faculty, derive solution subset showing only this faculty's sessions
-  const roleFilteredSolution = useMemo<SolvedSolution | null>(() => {
-    if (!shown || !isSolvedSolution(shown)) return null;
-    if (currentRole !== 'faculty') return shown;
+  // If role is faculty, derive the placements showing only this faculty's sessions
+  const roleFilteredSolution = useMemo(() => {
+    if (!placed) return null;
+    if (currentRole !== 'faculty') return { assignment: placed };
 
     // Filter assignments to only those belonging to the selected faculty
     const facultySessionIds = new Set(facultySessions.map((s) => s.sessionId));
-    const filteredAssignments = shown.assignment.filter((a) =>
-      facultySessionIds.has(a.session_id)
-    );
-
-    return {
-      ...shown,
-      assignment: filteredAssignments,
-    };
-  }, [shown, currentRole, facultySessions]);
+    return { assignment: placed.filter((a) => facultySessionIds.has(a.session_id)) };
+  }, [placed, currentRole, facultySessions]);
 
   /**
    * Optimistic drag-and-drop handler with clean revert-on-reject.
@@ -384,6 +417,7 @@ function TimetableWorkspace({
           instance={instance}
           onInstanceChange={(next) => {
             setCohortFilter('all');
+            setSelectedViolation(null);
             onInstanceChange(next);
           }}
           showQualityCard={showQualityCard}
@@ -420,11 +454,11 @@ function TimetableWorkspace({
         )}
 
         {/* Faculty Workload View (Visible only to Faculty Role) */}
-        {currentRole === 'faculty' && shown && isSolvedSolution(shown) && (
+        {currentRole === 'faculty' && quality && (
           <FacultyWorkloadCard
-            facultyInitials={selectedFaculty}
+            facultyInitials={facultySessions[0]?.facultyInitials ?? ''}
             facultySessions={facultySessions}
-            loadRule={toQualityView(shown).rules.find((r) => r.rule_id === 'S-LOAD16')}
+            loadRule={quality.rules.find((r) => r.rule_id === 'S-LOAD16')}
           />
         )}
 
@@ -443,6 +477,18 @@ function TimetableWorkspace({
             quality={toQualityView(shown)}
             metadata={shown.metadata}
           />
+        )}
+
+        {/* The printed timetable: its violations and score (not a solver output) */}
+        {printed && caps.showQualityScore && (
+          <section className="grid gap-5 lg:grid-cols-2">
+            <PrintedViolationsPanel
+              violations={printed.violations}
+              selected={selectedViolation}
+              onSelect={setSelectedViolation}
+            />
+            <QualityScoreCard quality={printed.quality} title="Printed timetable quality" />
+          </section>
         )}
 
         {/* Empty state: solver returned a solved timetable with no sessions */}
@@ -468,7 +514,7 @@ function TimetableWorkspace({
               </span>
             </div>
 
-            {!shown && (
+            {!shown && !printed && (
               <p data-testid="no-solution-note" className="px-1 text-xs text-muted-foreground">
                 Not solved yet. No solution is published for this instance; the grid shows its
                 periods, breaks and pinned occupancy only.
@@ -489,6 +535,7 @@ function TimetableWorkspace({
                 setIsModalOpen(true);
               }}
               onMoveSession={handleMoveSession}
+              flaggedSessionIds={flaggedSessionIds}
             />
           </main>
         )}
@@ -500,6 +547,9 @@ function TimetableWorkspace({
             <FreeRoomsPanel edgeList={edgeList} sessions={allSessions} labels={labels} />
           </section>
         )}
+
+        {/* Ingestion anomaly report (whole-department roles) */}
+        {caps.viewScope === 'all' && anomalies && <AnomalyReportPanel report={anomalies} />}
 
         {/* Session Details Modal */}
         <SessionDetailModal
