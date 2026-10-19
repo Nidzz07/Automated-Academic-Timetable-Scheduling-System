@@ -7,7 +7,7 @@ import { ChronosApiClient, chronosApiClient } from '../chronosApi';
 import { ContractValidationError } from '../contractValidation';
 import { useMoveSessionMutation, useTimetableQuery } from '../queries';
 import { getSolvedSolutionFixture } from '@/adapters/timetable';
-import { parseSolution } from '@/adapters/solution';
+import { parseSolution } from '@/api/contractValidation';
 
 function makeWrapper() {
   const queryClient = new QueryClient();
@@ -22,6 +22,8 @@ function stubClient(overrides: Partial<ChronosApiClient>): ChronosApiClient {
     getEdgeList: vi.fn(),
     getDisplay: vi.fn(),
     getInstanceSolution: vi.fn(),
+    getAnomalies: vi.fn(),
+    getPrintedBaseline: vi.fn(),
     generateTimetable: vi.fn(),
     moveSession: vi.fn(),
     getSolvedSolution: vi.fn(),

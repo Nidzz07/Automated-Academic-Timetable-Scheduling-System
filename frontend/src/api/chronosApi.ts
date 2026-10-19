@@ -15,11 +15,9 @@ import {
   DayIndex,
   PeriodIndex,
   SessionAssignment,
-  parseSolution,
   isSolvedSolution,
   isInfeasibleSolution,
 } from '@/adapters/solution';
-import { validateContract } from '@/api/contractValidation';
 import solvedFixture from '@contracts/examples/solution_v2.solved.example.json';
 import infeasibleFixture from '@contracts/examples/solution_v2.infeasible.example.json';
 import edgeListExample from '@contracts/examples/edge_list_v1.example.json';
@@ -30,24 +28,39 @@ import {
   EdgeList,
   cohortsOverlap,
   getCohortLabel,
-  getExampleEdgeList,
   getFaculty,
 } from '@/adapters/timetable';
+import { AnomalyReport, PrintedBaseline, toPrintedBaseline } from '@/adapters/realInstance';
+
+// ajv and the schemas load on first use, off the main bundle
+const validation = () => import('@/api/contractValidation');
 
 /**
  * Edge lists the mock serves. 'example' is the instance the solution examples were solved
  * for; 'd6_grid' shows the D6 grid (per-year lunch as pinned occupancy) and has no solution;
- * 'even_2025_26' is the real CE EVEN 2025-26 SE+TE instance (S9 export, D41 display sidecar).
+ * 'even_2025_26' is the real CE EVEN 2025-26 SE+TE instance (S9 export, D41 display sidecar);
+ * 'even_2025_26_printed' is the same edge list with the timetable as printed (S12b baseline).
  */
 export const EDGE_LIST_INSTANCES = { example: edgeListExample, d6_grid: d6GridEdgeList };
-export type EdgeListInstance = keyof typeof EDGE_LIST_INSTANCES | 'even_2025_26';
+export type EdgeListInstance = keyof typeof EDGE_LIST_INSTANCES | 'even_2025_26' | 'even_2025_26_printed';
 
-// Lazy, so the 370 KB edge list loads only when picked; solution.json has no loader until it is solved
-const realEven = import.meta.glob('@instances/even-2025-26/{edge_list,display,solution}.json', {
-  import: 'default',
-});
+const REAL_INSTANCES: EdgeListInstance[] = ['even_2025_26', 'even_2025_26_printed'];
 
-async function loadRealEven(file: 'edge_list' | 'display' | 'solution'): Promise<unknown> {
+type RealEvenFile =
+  | 'edge_list'
+  | 'display'
+  | 'solution'
+  | 'anomalies'
+  | 'real_baseline.assignment'
+  | 'real_baseline.report';
+
+// Lazy, so each file loads only when picked; solution.json has no loader until it is solved
+const realEven = import.meta.glob(
+  '@instances/even-2025-26/{edge_list,display,solution,anomalies,real_baseline.assignment,real_baseline.report}.json',
+  { import: 'default' }
+);
+
+async function loadRealEven(file: RealEvenFile): Promise<unknown> {
   const load = Object.entries(realEven).find(([path]) => path.endsWith(`/${file}.json`))?.[1];
   return load ? JSON.parse(JSON.stringify(await load())) : null;
 }
@@ -99,6 +112,12 @@ export interface ChronosApiClient {
    * The example instance's solutions come from getTimetable().
    */
   getInstanceSolution(instance: EdgeListInstance): Promise<SolutionContract | null>;
+
+  /** The instance's ingestion anomaly report (anomalies.json); null when it has none. */
+  getAnomalies(instance: EdgeListInstance): Promise<AnomalyReport | null>;
+
+  /** The timetable as printed, with its violations and score; null except for the printed instance. */
+  getPrintedBaseline(instance: EdgeListInstance): Promise<PrintedBaseline | null>;
 
   /**
    * Request solver to generate a timetable.
@@ -167,12 +186,13 @@ export class MockChronosApiClient implements ChronosApiClient {
   }
 
   public async getEdgeList(instance: EdgeListInstance = 'example'): Promise<EdgeList> {
-    if (instance === 'even_2025_26') return validateContract('edge_list', await loadRealEven('edge_list'));
-    return validateContract('edge_list', JSON.parse(JSON.stringify(EDGE_LIST_INSTANCES[instance])));
+    const { validateContract } = await validation();
+    if (REAL_INSTANCES.includes(instance)) return validateContract('edge_list', await loadRealEven('edge_list'));
+    return validateContract('edge_list', JSON.parse(JSON.stringify(EDGE_LIST_INSTANCES[instance as keyof typeof EDGE_LIST_INSTANCES])));
   }
 
   public async getDisplay(instance: EdgeListInstance): Promise<Display | null> {
-    if (instance !== 'even_2025_26') return null;
+    if (!REAL_INSTANCES.includes(instance)) return null;
     const display = (await loadRealEven('display')) as Display;
     const pins = (await this.getEdgeList(instance)).pinned_occupancy.length;
     // pins[i] describes pinned_occupancy[i]: a sidecar out of step would mislabel every pin
@@ -185,7 +205,22 @@ export class MockChronosApiClient implements ChronosApiClient {
   public async getInstanceSolution(instance: EdgeListInstance): Promise<SolutionContract | null> {
     if (instance !== 'even_2025_26') return null;
     const solution = await loadRealEven('solution');
-    return solution === null ? null : parseSolution(solution);
+    return solution === null ? null : (await validation()).parseSolution(solution);
+  }
+
+  public async getAnomalies(instance: EdgeListInstance): Promise<AnomalyReport | null> {
+    if (!REAL_INSTANCES.includes(instance)) return null;
+    return (await loadRealEven('anomalies')) as AnomalyReport;
+  }
+
+  public async getPrintedBaseline(instance: EdgeListInstance): Promise<PrintedBaseline | null> {
+    if (instance !== 'even_2025_26_printed') return null;
+    const [assignment, report, edgeList] = await Promise.all([
+      loadRealEven('real_baseline.assignment'),
+      loadRealEven('real_baseline.report'),
+      this.getEdgeList(instance),
+    ]);
+    return toPrintedBaseline(assignment, report, edgeList);
   }
 
   public async generateTimetable(): Promise<SolutionContract> {
@@ -199,14 +234,14 @@ export class MockChronosApiClient implements ChronosApiClient {
 
   public async getSolvedSolution(): Promise<SolvedSolution> {
     // Deep clone of the solved example, validated like any API payload
-    const solution = parseSolution(JSON.parse(JSON.stringify(solvedFixture)));
+    const solution = (await validation()).parseSolution(JSON.parse(JSON.stringify(solvedFixture)));
     if (!isSolvedSolution(solution)) throw new Error('Expected a solved solution payload');
     return solution;
   }
 
   public async getInfeasibleSolution(): Promise<InfeasibleSolution> {
     // Deep clone of the infeasible example, validated like any API payload
-    const solution = parseSolution(JSON.parse(JSON.stringify(infeasibleFixture)));
+    const solution = (await validation()).parseSolution(JSON.parse(JSON.stringify(infeasibleFixture)));
     if (!isInfeasibleSolution(solution)) throw new Error('Expected an infeasible solution payload');
     return solution;
   }
@@ -247,7 +282,7 @@ export class MockChronosApiClient implements ChronosApiClient {
     }
 
     // The solution examples were solved for the example instance
-    const edgeList = getExampleEdgeList();
+    const edgeList = await this.getEdgeList('example');
     const edgeSession = edgeList.sessions.find((s) => s.id === req.sessionId);
     const slotLabel = `${DAY_NAMES[req.targetDay]} P${req.targetWallClockPeriod}`;
 
@@ -342,7 +377,7 @@ export class MockChronosApiClient implements ChronosApiClient {
       displaced: Array.from(new Set([...currentSolution.displaced, req.sessionId])),
     };
 
-    parseSolution(updatedSolution);
+    (await validation()).parseSolution(updatedSolution);
     return {
       success: true,
       solution: updatedSolution,

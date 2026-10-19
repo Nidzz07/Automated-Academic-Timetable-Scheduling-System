@@ -7,7 +7,8 @@ import {
   getExampleEdgeList,
   getSolvedSolutionFixture,
 } from '@/adapters/timetable';
-import { isSolvedSolution, parseSolution, toQualityView } from '@/adapters/solution';
+import { isSolvedSolution, toQualityView } from '@/adapters/solution';
+import { parseSolution } from '@/api/contractValidation';
 import solvedV2Fixture from '@contracts/examples/solution_v2.solved.example.json';
 import solvedV1Fixture from '@contracts/examples/solution_v1.solved.example.json';
 

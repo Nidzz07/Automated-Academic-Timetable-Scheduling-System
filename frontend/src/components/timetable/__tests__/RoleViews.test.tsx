@@ -73,9 +73,15 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     expect(formulaBadge).toBeInTheDocument();
     expect(formulaBadge.textContent).toMatch(/\d+T \+ \d+P = \d+ hrs\/wk/);
 
-    // Persona options are the faculty initials placed in the payload; no invented names or titles
+    // Persona options are the faculty placed in the payload, as "Name (INITIALS)"; no invented names or titles
     const facultySelect = screen.getByLabelText('Select faculty persona') as HTMLSelectElement;
-    expect([...facultySelect.options].map((o) => o.text)).toEqual(['AGN', 'DN', 'JS', 'KKD', 'NR']);
+    expect([...facultySelect.options].map((o) => o.text)).toEqual([
+      'A. G. Nikam (AGN)',
+      'D. Naik (DN)',
+      'J. Shinde (JS)',
+      'K. K. Deshpande (KKD)',
+      'N. Raut (NR)',
+    ]);
     expect(screen.queryByText(/Abha|Dr\.|Prof\./)).not.toBeInTheDocument();
 
     // Load status comes only from the solver's S-LOAD16, which this payload did not evaluate

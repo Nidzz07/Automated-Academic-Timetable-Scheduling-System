@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { ContractValidationError, validateContract } from '@/api/contractValidation';
+import { ContractValidationError, parseSolution, validateContract } from '@/api/contractValidation';
 import { MockChronosApiClient } from '@/api/chronosApi';
 import {
   DIAGNOSIS_METHOD_LABELS,
   InfeasibleSolution,
   isInfeasibleSolution,
   isSolvedSolution,
-  parseSolution,
   toDiagnosisView,
   toQualityView,
 } from '../solution';
@@ -265,7 +264,10 @@ describe('the real EVEN 2025-26 instance through its display sidecar (D41)', () 
 
   it('takes names, subjects, rooms and clock times from display.json, not the ingestion example', () => {
     const labels = labelsFor(display);
-    expect(labels.faculty('fac-kailas-devadkar')).toEqual({ initials: display.faculty['fac-kailas-devadkar'], name: display.faculty['fac-kailas-devadkar'] });
+    expect(labels.faculty('fac-kailas-devadkar')).toEqual({ initials: 'KKD', name: 'Kailas Devadkar' });
+    // every initial across years; none in display.json is never guessed
+    expect(labels.faculty('fac-surekha-dholay').initials).toBe('SD/SRD');
+    expect(labels.faculty('fac-dayanand-ambawade').initials).toBe('Unresolved');
     expect(labels.cohort('coh-se-a')).toBe('SE-Comp A');
     expect(labels.subject('subj-ce206')).toEqual({ code: 'CE206', name: 'Operating Systems' });
     expect(labels.room({ id: 'room-607b', code: 'x' })).toBe('607B');
@@ -273,9 +275,9 @@ describe('the real EVEN 2025-26 instance through its display sidecar (D41)', () 
     expect(labels.clock(2)).toBe('11:00–11:15');
   });
 
-  it('tells apart the cohorts display.json names alike (every division has batches A–D)', () => {
+  it('labels batches by their display label, and tells apart cohorts named alike', () => {
     const options = cohortOptions(edgeList, labelsFor(display));
-    expect(options.find((o) => o.id === 'coh-se-a-a')?.label).toBe('A (coh-se-a-a)');
+    expect(options.find((o) => o.id === 'coh-se-a-a')?.label).toBe('SE-Comp A batch A');
     expect(options.find((o) => o.id === 'coh-se-a')?.label).toBe('SE-Comp A');
     expect(new Set(options.map((o) => o.label)).size).toBe(options.length);
   });
