@@ -10,11 +10,10 @@ import {
   SolvedSolution,
   DayIndex,
   SessionAssignment,
-  parseSolution,
   isSolvedSolution,
 } from '@/adapters/solution';
-import { validateContract } from '@/api/contractValidation';
 import type { ChronosEdgeListContractV1 } from '@/types/generated/edge_list_v1.schema';
+import type { ChronosIngestionContractV1 } from '@/types/generated/ingestion_v1.schema';
 import solvedExample from '@contracts/examples/solution_v2.solved.example.json';
 import edgeListExample from '@contracts/examples/edge_list_v1.example.json';
 import ingestionExample from '@contracts/examples/ingestion_v1.example.json';
@@ -23,7 +22,9 @@ export type EdgeList = ChronosEdgeListContractV1;
 export type EdgeListSession = EdgeList['sessions'][number];
 
 // shortcut: the contract examples' names come from the ingestion example; swap for API-served names at S13
-const ingestion = validateContract('ingestion', ingestionExample);
+// The bundled contract examples are schema-checked in contractValidation.test.ts, not at page
+// load, so ajv stays off the main bundle; API payloads are still validated by the client
+const ingestion = ingestionExample as ChronosIngestionContractV1;
 const subjects = new Map(ingestion.subjects.map((s) => [s.id, s]));
 const faculty = new Map(ingestion.faculty.map((f) => [f.id, f]));
 const cohorts = new Map(ingestion.cohorts.map((c) => [c.id, c]));
@@ -85,7 +86,12 @@ export interface Display {
   days: string[];
   periods: Array<{ period: number; start: string; end: string; teaching: boolean }>;
   faculty: Record<string, string>;
-  cohorts: Record<string, { name: string; type: string; years: string[] }>;
+  /** Faculty initials per year ('SE', 'TE', or 'unscoped' for a manual mapping with no year) */
+  initials: Record<string, Record<string, string[]>>;
+  /** A batch's `label` is unique ("SE-Comp A batch A"); its `name` is only "A".."D" */
+  cohorts: Record<string, { name: string; type: string; years: string[]; label?: string }>;
+  /** Each division's batch ids */
+  batches: Record<string, string[]>;
   rooms: Record<string, string>;
   subjects: Record<string, { code: string; name: string }>;
   /** pins[i] describes pinned_occupancy[i] */
@@ -123,15 +129,15 @@ export function labelsFor(display: Display | null | undefined): Labels {
   const clock = new Map(display.periods.map((p) => [p.period, `${p.start}–${p.end}`]));
   return {
     faculty: (id) => {
-      // display.json gives names, not initials: the name is the short label too
-      const name = display.faculty[id] ?? id;
-      return { initials: name, name };
+      // every initial the faculty is known by, across years; none is never guessed
+      const initials = [...new Set(Object.values(display.initials[id] ?? {}).flat())];
+      return { initials: initials.join('/') || 'Unresolved', name: display.faculty[id] ?? id };
     },
-    cohort: (id) => display.cohorts[id]?.name ?? id,
+    cohort: (id) => display.cohorts[id]?.label ?? display.cohorts[id]?.name ?? id,
     subject: (id) => display.subjects[id],
     room: (room) => display.rooms[room.id] ?? room.code,
-    // shortcut: display.json carries no batch membership, so a cohort overlaps only itself; use membership once the API serves it (S13)
-    overlap: (a, b) => a === b,
+    // a division and its batches share students; display.json gives elective groups no members
+    overlap: (a, b) => a === b || !!display.batches[a]?.includes(b) || !!display.batches[b]?.includes(a),
     pin: (i) => display.pins[i],
     clock: (p) => clock.get(p) ?? null,
   };
@@ -147,7 +153,7 @@ export function cohortOptions(
     ...edgeList.pinned_occupancy.flatMap((p) => p.cohort_ids),
   ]);
   const options = [...ids].map((id) => ({ id, label: labels.cohort(id) }));
-  // display.json names every division's batches "A".."D"; the id tells them apart
+  // two cohorts with one display name (e.g. two "MDM-DBMS" groups): the id tells them apart
   return options
     .map((o) => (options.some((x) => x !== o && x.label === o.label) ? { ...o, label: `${o.label} (${o.id})` } : o))
     .sort((a, b) => a.label.localeCompare(b.label));
@@ -221,14 +227,14 @@ export interface EnrichedPin {
 }
 
 export function getExampleEdgeList(): EdgeList {
-  return validateContract('edge_list', edgeListExample);
+  return edgeListExample as unknown as EdgeList;
 }
 
 /**
  * Returns the solved solution example from contracts/examples (solution.v2)
  */
 export function getSolvedSolutionFixture(): SolvedSolution {
-  const solution = parseSolution(solvedExample);
+  const solution = solvedExample as SolvedSolution;
   if (!isSolvedSolution(solution)) throw new Error('solution_v2.solved.example.json is not solved');
   return solution;
 }
@@ -245,7 +251,8 @@ export function buildEnrichedSessions(
   const rooms = new Map(edgeList.rooms.map((r) => [r.id, r]));
   const roomName = (id: string) => {
     const room = rooms.get(id);
-    return room ? labels.room(room) : id;
+    // '' is a printed room outside the edge list's room set (real baseline; D10, D29)
+    return room ? labels.room(room) : id || 'Room not in edge list';
   };
   const edgeSessions = new Map(edgeList.sessions.map((s) => [s.id, s]));
 

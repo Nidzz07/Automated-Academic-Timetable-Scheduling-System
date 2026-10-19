@@ -131,6 +131,16 @@ describe('MockChronosApiClient', () => {
     expect(await client.getDisplay('example')).toBeNull();
     expect(await client.getDisplay('d6_grid')).toBeNull();
     expect(await client.getInstanceSolution('d6_grid')).toBeNull();
+    expect(await client.getAnomalies('example')).toBeNull();
+    expect(await client.getPrintedBaseline('example')).toBeNull();
+  });
+
+  it('serves the real instance’s anomaly report, and the printed baseline on its own instance', async () => {
+    const report = await client.getAnomalies('even_2025_26');
+    expect(report?.anomalies).toHaveLength(report!.counts.total);
+    expect(await client.getPrintedBaseline('even_2025_26')).toBeNull();
+    const printed = await client.getPrintedBaseline('even_2025_26_printed');
+    expect(printed?.assignment).toHaveLength((await client.getEdgeList('even_2025_26_printed')).sessions.length);
   });
 
   it('exercises the reject-the-move path when rejectMode is explicitly toggled', async () => {

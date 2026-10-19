@@ -16,7 +16,6 @@ import type {
   Placement,
   SlotRef,
 } from '@/types/generated/solution_v2.schema';
-import { validateContract } from '@/api/contractValidation';
 
 /** Drops the `[k: string]: unknown` json2ts emits for the schema's top-level allOf. */
 type KnownKeys<T> = { [K in keyof T as string extends K ? never : K]: T[K] };
@@ -120,17 +119,7 @@ export type DayIndex = SessionAssignment['day'];
 export type PeriodIndex = SessionAssignment['period'];
 export type { Kind as ConstraintKind, SlotRef };
 
-/**
- * Validates a raw payload and returns the solved/infeasible view. A payload declaring
- * `solution.v2` is held to solution_v2.schema.json; anything else to solution_v1.
- */
-export function parseSolution(payload: unknown): SolutionContract {
-  const isV2 = (payload as { schema_version?: unknown } | null)?.schema_version === 'solution.v2';
-  // ajv has enforced the if/then branches the generated types cannot carry
-  return (
-    isV2 ? validateContract('solution_v2', payload) : validateContract('solution', payload)
-  ) as SolutionContract;
-}
+// parseSolution (ajv) lives in api/contractValidation.ts, which loads lazily
 
 export function isSolvedSolution(sol: SolutionContract): sol is SolvedSolution {
   return sol.status === 'solved';

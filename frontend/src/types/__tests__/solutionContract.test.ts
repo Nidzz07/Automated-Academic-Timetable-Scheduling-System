@@ -9,8 +9,8 @@ import {
   SolutionContract,
   isSolvedSolution,
   isInfeasibleSolution,
-  parseSolution,
 } from '@/adapters/solution';
+import { parseSolution } from '@/api/contractValidation';
 
 function parseSolved(raw: unknown): SolvedSolution {
   const sol = parseSolution(raw);

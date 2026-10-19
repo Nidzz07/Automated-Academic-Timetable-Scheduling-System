@@ -4,7 +4,8 @@ import { InfeasibilityDiagnosisPanel } from '../InfeasibilityDiagnosisPanel';
 import infeasibleFixture from '@contracts/examples/solution_v1.infeasible.example.json';
 import infeasibleV2Fixture from '@contracts/examples/solution_v2.infeasible.example.json';
 import presolveFixture from '@contracts/examples/solution_v2.presolve.example.json';
-import { parseSolution, isInfeasibleSolution } from '@/adapters/solution';
+import { isInfeasibleSolution } from '@/adapters/solution';
+import { parseSolution } from '@/api/contractValidation';
 
 describe('Infeasibility Diagnosis Panel on a presolve certificate (contract row 9, D43)', () => {
   it('renders solution_v2.presolve.example.json with the presolve label and its conflicting set', () => {
