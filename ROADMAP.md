@@ -180,10 +180,15 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | Row 9 | Nidhi | contracts/row9-presolve | row 9 signed | all three | Done (PR #31) |
 | S15a | Rohan | track/bench-harness | — | Nidhi | Done (PR #36) |
 | S12 | All | integration/real-even | S9, S10, S11 | all three | In progress (S12a–S12c) |
-| S12a | Dhruv | track/solver-real-even | S9, S10 merged | Nidhi | In progress |
-| S12b | Nidhi | track/data-real-baseline | S9 merged | Rohan | In progress |
-| S12c | Rohan | track/frontend-real-even | S9, S11 merged | Nidhi | In progress |
+| S12a | Dhruv | track/solver-real-even | S9, S10 merged | Nidhi | Done (PR #34): timeout, follow-up S12d |
+| S12b | Nidhi | track/data-real-baseline | S9 merged | Rohan | Done (PR #38) |
+| S12c | Rohan | track/frontend-real-even | S9, S11 merged | Nidhi | Done (PR #39) |
+| S12d | Dhruv | track/solver-search | S12a | Nidhi | In progress |
+| S12e | Nidhi | track/data-ui-feed | — | Rohan | Not started |
+| S12f | Rohan | track/frontend-real-data | S12e | Nidhi | Not started |
 | S13 | Nidhi + Rohan | track/backend-api, track/frontend-api | S12 | cross | Not started |
+| S13a | Nidhi | track/backend-api | S12e | Rohan | Not started |
+| S13c | Rohan | track/frontend-api | S13a | Nidhi | Not started |
 | S14 | All | per track | S13 | cross | Not started |
 | S15 | All | eval/* | S14 | cross | Not started |
 | S16 | All | docs/report | S15 | cross | Not started |
@@ -279,3 +284,4 @@ Tags as in the old plan: [S] = should (cut only if behind schedule, note the cut
 - 2026-10-15: D23–D34 added (real-timetable findings, row 8, process).
 - 2026-10-16: Wave 1 merged (S1–S6, S3b). Wave 2 started: S7, S8, S11. S4b folded into S8.
 - 2026-10-18: Wave 3 merged (S9, S10, S11/S11b, S15a, row 9). S12 started.
+- 2026-10-19: S12a–c merged; real instance times out at 300 s; S12d (search) started. Real printed timetable scores 21.5.
