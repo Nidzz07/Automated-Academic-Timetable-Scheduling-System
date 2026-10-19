@@ -186,9 +186,10 @@ def test_quality_evaluates_every_d34_rule() -> None:
 def test_search_exhaustion_keeps_the_first_deepest_partial() -> None:
     """C5 in two slots and one room: no partial gets past two sessions.
 
-    The search first places s0 at Monday 09.00 and s1 at Monday 10.00, then
-    fails, and later reaches the mirror image (s0 at 10.00, s1 at 09.00) at the
-    same depth: the first one is kept.
+    The search first places s0 at Monday 09.00.  The one room then leaves every
+    other session only 10.00, and the degree tie-break picks s2 (two unassigned
+    neighbours, like s3, and the smaller id), which wipes out s1.  Later
+    partials are no deeper, so this first one is kept.
     """
     edge_list = _odd_cycle()
     result = _solve(edge_list)
@@ -197,14 +198,14 @@ def test_search_exhaustion_keeps_the_first_deepest_partial() -> None:
     assert diagnosis["method"] == "search_exhaustion"
     assert diagnosis["minimal_conflicting_set"] == []
     assert "suggested_relaxation" not in diagnosis
-    assert result.partial_assignment == {"s0": SlotId(0, 0), "s1": SlotId(0, 1)}
+    assert result.partial_assignment == {"s0": SlotId(0, 0), "s2": SlotId(0, 1)}
     assert diagnosis["partial_placement"] == [
         {"session_id": "s0", "day": 0, "period": 0, "room_id": "room-default",
          "sub_room_id": None},
-        {"session_id": "s1", "day": 0, "period": 1, "room_id": "room-default",
+        {"session_id": "s2", "day": 0, "period": 1, "room_id": "room-default",
          "sub_room_id": None},
     ]
-    assert diagnosis["unplaced_session_ids"] == ["s2", "s3", "s4"]
+    assert diagnosis["unplaced_session_ids"] == ["s1", "s3", "s4"]
 
 
 def test_a_timeout_is_never_serialised() -> None:

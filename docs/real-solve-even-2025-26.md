@@ -1,11 +1,125 @@
-# First solve of the real EVEN 2025-26 SE+TE instance (S12a)
+# Solving the real EVEN 2025-26 SE+TE instance (S12a, S12d)
 
-Date: 2026-10-18 · Track A · reproduce with `python -m solver.benchmarks.real_solve`
-(on a timeout it writes nothing; `solver/tests/test_real_solve.py` re-runs it, marked `slow`).
+Track A · reproduce with `python -m solver.benchmarks.real_solve`
+(`solver/tests/test_real_solve.py` re-runs it and compares with the committed file, marked `slow`).
 
-**Outcome: timeout.** Backtracking ran out of its 300 s budget without a timetable or a proof
-of infeasibility. Under ROADMAP D33 a timeout is a job status, not a solution, so
-`data/instances/even-2025-26/solution.json` is **not written** and there is no quality score.
+**Outcome (S12d, 2026-10-19): solved in 0.26 s, 92 search nodes.** The timetable passes
+`solver.validate.validate_solution` with no violation and is committed as
+`data/instances/even-2025-26/solution.json` (`solution.v2`; deterministic except
+`metadata.runtime_ms`). Its quality score is **−162.5**, against **21.5** for the printed
+timetable: it is a feasible timetable, not a good one (see the side-by-side below).
+
+S12a (2026-10-18) timed out at 300 s with the earlier search order; that run and its analysis
+are kept below.
+
+## S12d: why the old search got stuck
+
+Re-run of the S12a search (commit 75a3f31) for 300 s on the same machine: timeout, 563,081
+nodes, deepest partial 101 of 156 — all 31 lab blocks (96 practicals) and 5 lectures, as in S12a.
+
+In that deepest partial one lecture has no start left: **SE-Comp B, CE206 Operating Systems,
+Kailas Devadkar**. The lectures still to place, by cohort and teacher (*need* = periods,
+*free* = distinct slots their remaining starts can still use):
+
+| Division | Need | Free | | Faculty | Need | Free |
+|---|---|---|---|---|---|---|
+| SE-Comp D | 9 | 7 | | Jignesh Sisodia | 3 | 3 |
+| SE-Comp A | 9 | 8 | | Kailas Devadkar | 4 | 4 |
+| SE-Comp B | 4 | 3 | | Swapnali Kurhade | 6 | 6 |
+| SE-Comp C | 9 | 11 | | Sunil Ghane | 6 | 7 |
+
+The 5 lectures are not the cause. With only the 31 lab blocks of that partial placed, SE-Comp D
+already has 7 slots for its 9 lectures, SE-Comp A and B 8 for 9: the lab placement itself
+cannot be completed. Forward checking looks at one session's domain at a time, so it does not
+see that nine lectures share seven slots; the search only finds out after the labs, and has to
+undo lab blocks placed at the bottom of its stack. 300 s is nowhere near enough for that.
+
+Why the labs landed there: the old order placed **every lab block first** (counted in
+(start, room) values, a lab block always looked smaller than a lecture with four classrooms)
+and tried starts **in ascending slot order**. Each block took the earliest slots its members
+shared, with no regard for which slots the division's lectures and their teachers could still
+use. The labs did not take more time: each SE division's batches have 8 lab periods both in
+that partial and in the S12d timetable. They took the wrong periods. After the S12d timetable's
+labs alone, the SE divisions keep 12–13 usable slots for 9 lectures (TE: 9–11 for 6), and
+Swapnali Kurhade 8 for 6.
+
+## S12d: what changed, and what each step measured
+
+Hand-written in `solver/backtracking.py`; the heuristics are from Artificial Intelligence and
+Soft Computing (CE303), the backtracking from Design and Analysis of Algorithms (CE207).
+
+**(a) One dynamic ordering and least-constraining values — kept.**
+`_select_variable`: lab blocks and lectures compete in one ordering. Minimum remaining values,
+counted in **start slots** so a block (the starts all its members share) and a lecture
+(whatever its room) compare fairly; ties to the most unassigned conflict neighbours (degree),
+then the smaller id. A block whose members conflict with each other has no start at all, so it
+is picked, and refuted, first. `_start_order`: starts are tried least constraining first — the
+start that removes the fewest (neighbour, start) values from unassigned neighbours — then in
+slot order; rooms by id within a start (so room symmetry breaking still holds).
+
+| Real instance, 120 s budget (300 s for the old order) | Outcome | Time | Nodes | Deepest |
+|---|---|---|---|---|
+| Old: labs first, ascending starts | timeout | 300 s | 563,081 | 101 |
+| Dynamic MRV + degree, ascending starts | timeout | 120 s | 45,624 | 52 |
+| Labs first, least-constraining starts | solved | 0.3 s | 92 | 156 |
+| **Dynamic MRV + degree, least-constraining starts (committed)** | **solved** | **0.26 s** | **92** | 156 |
+
+Least-constraining values do the work; dynamic ordering alone is worse than the old order, and
+with LCV it is neutral on this instance (same 92 nodes, a different timetable). It is kept
+because it is what (a) asked for and replaces two selection functions with one; the synthetic
+sets below show the cost.
+
+Synthetic presets (3 seeds each) and the property instances, total search nodes:
+
+| Set | Old | Committed | Dynamic, no LCV | Labs first + LCV |
+|---|---|---|---|---|
+| 400 property instances | 1,229 | 1,552 | 1,555 | 1,251 |
+| 400 property sub-class | 1,774 | 1,774 | 1,774 | 1,774 |
+| small / medium / large | 33 / 174 / 459 | 33 / 174 / 459 | same | same |
+| infeasible (pre-solve) | 0 | 0 | 0 | 0 |
+
+Every instance keeps its verdict (172 solved / 228 infeasible property instances, all 400
+sub-class instances and all presets solved, the `infeasible` preset refuted by pre-solve);
+`solver/tests/test_search_equivalence.py` now checks that against digests of the pre-S12d
+verdicts. Assignments changed in every set except `infeasible`, so the full-answer digests were
+re-recorded; pre-solve certificates and Welsh-Powell colourings are unchanged. Cost: computing
+start counts and LCV at every node made `large` slower per node (7.1 s against 4.4 s for the
+same 459 nodes on one seed set, single run, same machine).
+
+**(b) Randomised restarts (Luby cutoffs, fixed seed) — not built.** With (a) the real instance
+needs 92 nodes and no backtracking to speak of; a restart cutoff would never fire, so (b) could
+not measurably help.
+
+**(c) Min-conflicts local search — not built.** Only called for if (a) and (b) timed out.
+
+## S12d result
+
+| | |
+|---|---|
+| Machine | Intel64 Family 6 Model 183 (GenuineIntel), Windows, Python 3.12.10 |
+| Pre-solve (D21) | passed |
+| Backtracking | **solved**, 256 ms wall clock (pre-solve included; the committed `metadata.runtime_ms`), 92 nodes |
+| Validator | `validate_solution`: no violations |
+| Slots used | 34 |
+| Welsh-Powell | unchanged: 32 colours, 8 sessions uncoloured, time-only check clean |
+
+Quality (`solver/scoring.py`, rules version 1, weights untouched), with the printed timetable
+from `docs/real-baseline-even-2025-26.md`:
+
+| Rule | Weight | Generated raw | Generated penalty | Printed raw | Printed penalty |
+|---|---|---|---|---|---|
+| S-GAP | 2 | 79 | 158 | 2 | 4 |
+| S-B2B | 1 | 42 | 42 | 23 | 23 |
+| S-LOAD16 | 1 | 6 | 6 | 5 | 5 |
+| FAC_LOAD_IMBALANCE | 0.5 | 113 | 56.5 | 93 | 46.5 |
+| **Score** | | | **−162.5** | | **21.5** |
+
+The search satisfies the hard constraints and optimises nothing soft, so it leaves 79 idle
+student periods where SPIT's printed week has 2. The comparison is not like for like in one
+respect: the printed timetable is not hard-feasible against this edge list (36 time-only
+violations: 26 FACULTY_CLASH, all combined lectures under D40, and 10 PINNED_BLOCK), while the
+generated one is. Closing the soft-score gap is Phase 3 work
+(repair / local search on S-GAP and S-B2B), not part of S12d.
 
 ## Instance
 
@@ -22,7 +136,7 @@ of infeasibility. Under ROADMAP D33 a timeout is a job status, not a solution, s
 | Faculty unavailability | 9 slots, all Swapnali Kurhade's Monday (D36, "PHD Day OFF") |
 | Grid | D6: P0–P9, P2 coffee for all; lunch pinned per year (P5 SE, P4 TE) |
 
-## Result
+## S12a result (2026-10-18): timeout
 
 | | |
 |---|---|
@@ -99,10 +213,10 @@ SE-Comp A and B and their batches follow with slack 5 (free 20).
 Greedy colouring fixes each unit's slot at once and never revisits it, so these show where the
 week runs out first, not that the instance is infeasible.
 
-## What this does and does not say
+## What the S12a run did and did not say
 
-- It does **not** say the instance is infeasible: no pre-solve certificate, no exhausted search.
-- It does say the observed EVEN week is very tight once the frozen items (D24, D26, D44) and each
+- It did **not** say the instance is infeasible (S12d has since solved it).
+- It did say the observed EVEN week is very tight once the frozen items (D24, D26, D44) and each
   year's lunch (D6) are pinned: SE cohorts keep 4–5 periods of slack in the week, and Swapnali
   Kurhade 2.
 - Names in this report come from `data/instances/even-2025-26/display.json` (D41); the solver

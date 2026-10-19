@@ -36,10 +36,15 @@ exact prior state.  Because a prune removes a whole ``(start, room)`` domain
 value whatever period of it overlapped, undo restores exactly the values
 that were pruned, for every period.  A test asserts exact restoration.
 
-**MRV variable ordering.**
-The next variable to assign is always the unassigned session (or
-lab-block) whose current domain is smallest.  Ties break lexicographically
-for determinism.
+**MRV + degree variable ordering, least-constraining values (S12d).**
+Lab blocks and single sessions compete in one ordering: the next variable is
+the one with the fewest start slots left (minimum remaining values), ties to
+the most unassigned conflict neighbours (degree), then to the smaller id - see
+:func:`_select_variable`.  Its starts are tried least constraining first
+(:func:`_start_order`), rooms by id within a start.  The earlier "every lab
+block first, starts ascending" order packed the real EVEN instance's labs into
+the slots its lectures needed and timed out at 300 s; this order solves it in
+under a second (docs/real-solve-even-2025-26.md).  All of it is deterministic.
 
 **LabBlock joint allocation.**
 A LabBlock's N parallel batch sessions are one composite decision variable.
@@ -496,6 +501,8 @@ class _SolverState:
     # (start, duration) → occupied slots, for every start that has a full
     # teaching-adjacent chain.  Read only through _occupied_slots.
     chains: dict[tuple[SlotId, int], tuple[SlotId, ...]] = field(default_factory=dict)
+    # (slot, duration) → every start whose chain of that duration occupies slot
+    covering: dict[tuple[SlotId, int], list[SlotId]] = field(default_factory=dict)
 
     # session_id → every slot an assigned session occupies
     occupied: dict[str, tuple[SlotId, ...]] = field(default_factory=dict)
@@ -594,9 +601,12 @@ def _new_state(graph: ConflictGraph, payload: dict[str, Any]) -> _SolverState:
     children_of, parent_of = _build_room_hierarchy(rooms)
 
     chains: dict[tuple[SlotId, int], tuple[SlotId, ...]] = {}
+    covering: dict[tuple[SlotId, int], list[SlotId]] = {}
     for duration in {s.duration_periods for s in graph.sessions.values()}:
         for chain in _contiguous_start_slots(graph.grid, duration):
             chains[(chain[0], duration)] = chain
+            for slot in chain:
+                covering.setdefault((slot, duration), []).append(chain[0])
 
     state = _SolverState(
         graph=graph,
@@ -607,6 +617,7 @@ def _new_state(graph: ConflictGraph, payload: dict[str, Any]) -> _SolverState:
         room_assignment={},
         session_to_block=session_to_block,
         chains=chains,
+        covering=covering,
         children_of=children_of,
         parent_of=parent_of,
     )
@@ -910,54 +921,92 @@ def _undo_trail(state: _SolverState, trail_start: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _select_mrv(state: _SolverState) -> str | None:
-    """Pick the unassigned non-lab-block session with smallest domain.
+def _starts(state: _SolverState, sid: str) -> set[SlotId]:
+    """The start slots left in *sid*'s domain, whatever the room."""
+    return {start for start, _ in state.domains[sid]}
 
-    Lab-block member sessions are handled via their parent block.
-    Returns None when all sessions are assigned.
+
+def _block_starts(state: _SolverState, members: tuple[str, ...]) -> set[SlotId]:
+    """The starts every member of a block still has; none when two members
+    conflict, since members share every period and so can never be placed."""
+    for i, a in enumerate(members):
+        if any(b in state.graph.adjacency[a] for b in members[i + 1:]):
+            return set()
+    return set.intersection(*(_starts(state, sid) for sid in members))
+
+
+def _live_neighbours(state: _SolverState, members: tuple[str, ...]) -> set[str]:
+    """Unassigned sessions in conflict with any of *members*, members excluded."""
+    found: set[str] = set()
+    for sid in members:
+        found.update(state.graph.adjacency[sid])
+    return {n for n in found if n not in state.slot_assignment}.difference(members)
+
+
+def _select_variable(state: _SolverState) -> LabBlock | str | None:
+    """The next variable: a lab block or a session outside any block.
+
+    Blocks and sessions compete in one ordering - there is no "blocks first"
+    phase.  Minimum remaining values, counted in start slots so a block (the
+    starts its members share) and a lecture (whatever its room) compare
+    fairly; ties go to the variable with the most unassigned conflict
+    neighbours (the degree heuristic), then to the smaller id.  Both are the
+    variable-ordering heuristics for constraint satisfaction search
+    (Artificial Intelligence and Soft Computing, CE303).  Returns None when
+    everything is placed.
     """
-    best_sid: str | None = None
-    best_size = float("inf")
-
-    for sid in state.graph.sessions:
-        if sid in state.slot_assignment:
-            continue
-        if sid in state.session_to_block:
-            continue  # Handled by block selection
-        size = len(state.domains[sid])
-        if size < best_size or (size == best_size and (
-            best_sid is None or sid < best_sid
-        )):
-            best_size = size
-            best_sid = sid
-
-    return best_sid
-
-
-def _select_mrv_block(state: _SolverState) -> LabBlock | None:
-    """Pick the unassigned lab block whose 'hardest' session has the smallest
-    domain.
-    """
-    best_block: LabBlock | None = None
-    best_min_size = float("inf")
-    best_block_id = ""
-
+    best: list[tuple[int, str, LabBlock | str, tuple[str, ...]]] = []
+    best_size = -1
     for block in state.lab_blocks:
-        # Skip an empty block, or one already placed
-        if not block.session_ids or any(
-            sid in state.slot_assignment for sid in block.session_ids
-        ):
+        members = block.session_ids
+        if not members or members[0] in state.slot_assignment:
+            continue  # an empty block, or one already placed
+        size = len(_block_starts(state, members))
+        if best_size < 0 or size < best_size:
+            best, best_size = [], size
+        if size == best_size:
+            best.append((0, block.id, block, members))
+    for sid in state.graph.sessions:
+        if sid in state.slot_assignment or sid in state.session_to_block:
             continue
-        # The hardest session in the block
-        min_size = min(len(state.domains[sid]) for sid in block.session_ids)
-        if min_size < best_min_size or (
-            min_size == best_min_size and block.id < best_block_id
-        ):
-            best_min_size = min_size
-            best_block = block
-            best_block_id = block.id
+        size = len(_starts(state, sid))
+        if best_size < 0 or size < best_size:
+            best, best_size = [], size
+        if size == best_size:
+            best.append((0, sid, sid, (sid,)))
+    if not best:
+        return None
+    if len(best) > 1:
+        best = [(-len(_live_neighbours(state, m)), i, v, m) for _, i, v, m in best]
+    return min(best, key=lambda t: (t[0], t[1]))[2]
 
-    return best_block
+
+def _start_order(
+    state: _SolverState,
+    members: tuple[str, ...],
+    starts: set[SlotId],
+) -> list[SlotId]:
+    """*starts* for *members* (one session, or a block's), least constraining first.
+
+    A start costs the number of (neighbour, start) values it would remove from
+    the unassigned conflict neighbours' domains - the least-constraining-value
+    heuristic (Artificial Intelligence and Soft Computing, CE303).  Ties keep
+    slot order, so the result is deterministic.
+    """
+    duration = state.graph.sessions[members[0]].duration_periods
+    neighbour_starts = [
+        (state.graph.sessions[n].duration_periods, _starts(state, n))
+        for n in _live_neighbours(state, members)
+    ]
+
+    def cost(start: SlotId) -> int:
+        occupied = state.chains[(start, duration)]
+        return sum(
+            len(their.intersection(t for x in occupied for t in state.covering.get((x, d), ())))
+            for d, their in neighbour_starts
+        )
+
+    return sorted(starts, key=lambda s: (cost(s), s))
 
 
 # ---------------------------------------------------------------------------
@@ -995,31 +1044,25 @@ def _lab_block_candidates(
     state: _SolverState,
     block: LabBlock,
 ) -> Iterator[tuple[SlotId, tuple[str, ...]]]:
-    """Yield candidate ``(start_slot, room_tuple)`` for a LabBlock, in sorted order.
+    """Yield candidate ``(start_slot, room_tuple)`` for a LabBlock.
 
     Every member starts at the same slot and occupies the same chain, so a
     conflict edge between two members makes the block unplaceable.  Starts
-    come from the intersection of the members' current domains; each member's
-    rooms are those its domain still allows at that start and that pass
-    :func:`_placement_ok` over every occupied period.
+    come from the intersection of the members' current domains
+    (:func:`_block_starts`); each member's rooms are those its domain still
+    allows at that start and that pass :func:`_placement_ok` over every
+    occupied period.
 
-    Lazy, and in the same order as sorting every candidate: starts ascend and
-    each start's tuples come out lexicographically.  The caller undoes every
-    change before asking for the next candidate, so each one is computed
-    against the same state the old eager list was.
+    Lazy: starts come in :func:`_start_order` and each start's tuples
+    lexicographically, the order of the eager list kept in
+    ``test_search_equivalence``.  The caller undoes every change before asking
+    for the next candidate, so each one is computed against the same state the
+    eager list was.
     """
     members = block.session_ids
     if not members:
         return
-    for i, a in enumerate(members):
-        if any(b in state.graph.adjacency[a] for b in members[i + 1:]):
-            return
-
-    common_starts = set.intersection(
-        *({start for start, _ in state.domains[sid]} for sid in members)
-    )
-
-    for start in sorted(common_starts):
+    for start in _start_order(state, members, _block_starts(state, members)):
         room_lists: list[list[str]] = []
         for sid in members:
             rooms = sorted(
@@ -1055,38 +1098,37 @@ def _solve(state: _SolverState) -> bool:
     if state.deadline is not None and time.perf_counter() >= state.deadline:
         raise _Timeout
 
-    # 1. Try to place the next lab block (prioritise blocks — they are harder)
-    block = _select_mrv_block(state)
-    if block is not None:
-        return _solve_block(state, block)
-
-    # 2. Try to place the next individual session
-    sid = _select_mrv(state)
-    if sid is None:
-        # All sessions assigned — success!
-        return True
-
-    return _solve_session(state, sid)
+    var = _select_variable(state)
+    if var is None:
+        return True  # all sessions assigned
+    if isinstance(var, LabBlock):
+        return _solve_block(state, var)
+    return _solve_session(state, var)
 
 
 def _solve_session(state: _SolverState, sid: str) -> bool:
-    """Try to assign session *sid* to each (start, room) in its domain."""
-    for start, room_id in sorted(state.domains[sid]):
-        if _symmetric_duplicate(state, room_id, start.day):
-            continue
-        slots = _placement_ok(state, sid, start, room_id)
-        if slots is None:
-            continue
+    """Try *sid* at each start in its domain (least constraining first), and at
+    each start in each of its rooms, by id."""
+    rooms_at: dict[SlotId, list[str]] = {}
+    for start, room_id in state.domains[sid]:
+        rooms_at.setdefault(start, []).append(room_id)
+    for start in _start_order(state, (sid,), set(rooms_at)):
+        for room_id in sorted(rooms_at[start]):
+            if _symmetric_duplicate(state, room_id, start.day):
+                continue
+            slots = _placement_ok(state, sid, start, room_id)
+            if slots is None:
+                continue
 
-        trail_start = len(state.trail)
-        _assign(state, sid, start, room_id, slots)
-        _note_depth(state)
+            trail_start = len(state.trail)
+            _assign(state, sid, start, room_id, slots)
+            _note_depth(state)
 
-        if _forward_check(state, sid) and _solve(state):
-            return True
+            if _forward_check(state, sid) and _solve(state):
+                return True
 
-        _undo_trail(state, trail_start)
-        _unassign(state, sid)
+            _undo_trail(state, trail_start)
+            _unassign(state, sid)
 
     return False
 
