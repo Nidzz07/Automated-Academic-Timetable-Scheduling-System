@@ -26,5 +26,6 @@ known-first-party = ["solver", "backend", "ingestion", "db", "bench"]
 quote-style = "double"
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "solver/tests", "backend/tests", "db/tests", "ingestion/tests"]
+testpaths = ["tests", "solver/tests", "backend/tests", "db/tests", "ingestion/tests", "bench/tests"]
 python_files = ["test_*.py"]
+addopts = "-m \"not slow\""
