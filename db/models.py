@@ -199,6 +199,15 @@ class TimetableStatus(enum.Enum):
     OBSERVED = "observed"  # ingested from the department's published timetable
 
 
+class UserRole(enum.Enum):
+    """The four roles of frontend/src/types/roles.ts (``UserRole``), spelled the same."""
+
+    ADMINISTRATOR = "administrator"
+    COORDINATOR = "coordinator"
+    FACULTY = "faculty"
+    STUDENT = "student"
+
+
 # ---------------------------------------------------------------------------
 # association tables
 # ---------------------------------------------------------------------------
@@ -1004,3 +1013,27 @@ class AuditEntry(Base):
     )
     affected_session_ids: Mapped[list[int]] = mapped_column(JSONB, default=list)
     detail: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+
+
+class User(Base):
+    """An API account with exactly one role (S13b). ``user`` is reserved in Postgres.
+
+    ``password_hash`` is ``backend.app.auth.hash_password`` output (scrypt); the
+    password itself is never stored.
+    """
+
+    __tablename__ = "app_user"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    #: Null for an institute-wide account, as on AuditEntry.
+    department_id: Mapped[int | None] = mapped_column(
+        ForeignKey("department.id"), nullable=True, index=True
+    )
+    username: Mapped[str] = mapped_column(String(64), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    role: Mapped[UserRole] = mapped_column(
+        SAEnum(UserRole, name="user_role", values_callable=_values)
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

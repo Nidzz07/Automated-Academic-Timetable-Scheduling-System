@@ -2,6 +2,7 @@
 
 Solves use synthetic presets (D19) in a scratch instance directory; the real
 EVEN instance is only read, never solved here (it times out at 300 s, S12a).
+Every client carries a coordinator token (S13b); auth itself is tested in test_auth.py.
 """
 
 from __future__ import annotations
@@ -16,8 +17,9 @@ import pytest
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
 
-from backend.app.main import app, create_app
+from backend.app.main import create_app
 from backend.app.store import INSTANCES_DIR, InstanceStore
+from backend.tests.conftest import AUTH, bearer
 from solver.benchmarks.synthetic import PRESETS, generate
 
 REPO = Path(__file__).resolve().parents[2]
@@ -29,14 +31,21 @@ def conforms(contract: str, payload: Any) -> bool:
     return not list(Draft202012Validator(schema).iter_errors(payload))
 
 
+def client_for(root: Path, database_url: str) -> TestClient:
+    app = create_app(root, database_url=database_url, auth=AUTH)
+    return TestClient(app, headers=bearer("coordinator"))
+
+
 @pytest.fixture(scope="module")
-def real() -> Iterator[TestClient]:
-    with TestClient(app) as client:
+def real(database_url: str) -> Iterator[TestClient]:
+    with client_for(INSTANCES_DIR, database_url) as client:
         yield client
 
 
 @pytest.fixture(scope="module")
-def synthetic(tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClient]:
+def synthetic(
+    tmp_path_factory: pytest.TempPathFactory, database_url: str
+) -> Iterator[TestClient]:
     root = tmp_path_factory.mktemp("instances")
     broken = generate(PRESETS["small"], 1)
     broken["lab_blocks"][0]["session_ids"].append("ghost")  # schema-valid, solver rejects it
@@ -49,7 +58,7 @@ def synthetic(tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClient]:
     for name, edge_list in edge_lists.items():
         (root / name).mkdir()
         (root / name / "edge_list.json").write_text(json.dumps(edge_list), encoding="utf-8")
-    with TestClient(create_app(root)) as client:
+    with client_for(root, database_url) as client:
         yield client
 
 
@@ -74,6 +83,8 @@ def test_openapi_lists_every_route(real: TestClient) -> None:
     paths = real.get("/openapi.json").json()["paths"]
     assert set(paths) == {
         "/health",
+        "/auth/login",
+        "/audit",
         "/instances",
         "/instances/{instance_id}/edge-list",
         "/instances/{instance_id}/display",
@@ -109,12 +120,12 @@ class TestRealInstanceFiles:
         assert conforms("solution_v2", response.json())
         assert response.json() == committed
 
-    def test_no_solution_file(self, tmp_path: Path) -> None:
+    def test_no_solution_file(self, tmp_path: Path, database_url: str) -> None:
         (tmp_path / "unsolved").mkdir()
         (tmp_path / "unsolved" / "edge_list.json").write_text(
             json.dumps(generate(PRESETS["small"], 1)), encoding="utf-8"
         )
-        with TestClient(create_app(tmp_path)) as client:
+        with client_for(tmp_path, database_url) as client:
             assert client.get("/instances/unsolved/solution").status_code == 404
 
 

@@ -1097,3 +1097,36 @@ def test_0005_downgrade_rebuilds_pinned_kind_without_out_of_scope(migration_conf
     assert [k for (k,) in _rows(url, "SELECT unnest(enum_range(NULL::pinned_kind))::text")] == [
         "mdm", "hss", "llc", "activity", "project", "exam", "break"]
     command.upgrade(cfg, "head")
+
+
+def test_0006_upgrade_and_downgrade(migration_config):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "head")
+    _run(url, "INSERT INTO app_user (username, password_hash, role) "
+              "VALUES ('a', 'scrypt$h', 'administrator')")
+    with pytest.raises(IntegrityError, match="uq_app_user_username"):
+        _run(url, "INSERT INTO app_user (username, password_hash, role) "
+                  "VALUES ('a', 'scrypt$h', 'student')")
+    _run(url, "DELETE FROM app_user")
+
+    command.downgrade(cfg, "0005_instance_seed")
+
+    assert "app_user" not in _table_names(url)
+    assert _rows(url, "SELECT count(*) FROM pg_type WHERE typname = 'user_role'") == [(0,)]
+    command.upgrade(cfg, "head")
+    assert [r for (r,) in _rows(url, "SELECT unnest(enum_range(NULL::user_role))::text")] == [
+        "administrator", "coordinator", "faculty", "student"]
+
+
+def test_0006_downgrade_refuses_to_drop_accounts(migration_config):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "head")
+    _run(url, "INSERT INTO app_user (username, password_hash, role) "
+              "VALUES ('a', 'scrypt$h', 'student')")
+
+    with pytest.raises(RuntimeError, match="1 user accounts"):
+        command.downgrade(cfg, "0005_instance_seed")
