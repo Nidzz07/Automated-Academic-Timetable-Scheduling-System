@@ -26,6 +26,8 @@ export interface RoleCapabilities {
   showSolverTelemetry: boolean;
   /** Can access diagnosis and relaxation simulation toggles */
   showSimulationControls: boolean;
+  /** Can run the solver on a backend instance (S13a: administrator and coordinator only) */
+  canSolve: boolean;
   /** Label for display */
   title: string;
   /** Description of role permissions */
@@ -39,6 +41,7 @@ export const ROLE_CAPABILITIES: Record<UserRole, RoleCapabilities> = {
     showQualityScore: true,
     showSolverTelemetry: true,
     showSimulationControls: true,
+    canSolve: true,
     title: 'Administrator',
     description: 'Full scheduling privileges across all divisions. Drag-and-drop enabled, quality scores and solver simulation active.',
   },
@@ -48,6 +51,7 @@ export const ROLE_CAPABILITIES: Record<UserRole, RoleCapabilities> = {
     showQualityScore: true,
     showSolverTelemetry: true,
     showSimulationControls: true,
+    canSolve: true,
     title: 'Timetable Coordinator',
     description: 'Department-wide timetable management and conflict resolution. Drag-and-drop enabled with validation.',
   },
@@ -57,6 +61,7 @@ export const ROLE_CAPABILITIES: Record<UserRole, RoleCapabilities> = {
     showQualityScore: false,
     showSolverTelemetry: false,
     showSimulationControls: false,
+    canSolve: false,
     title: 'Faculty Member',
     description: 'Personal teaching timetable with theory/practical workload metrics. Read-only view.',
   },
@@ -66,6 +71,7 @@ export const ROLE_CAPABILITIES: Record<UserRole, RoleCapabilities> = {
     showQualityScore: false,
     showSolverTelemetry: false,
     showSimulationControls: false,
+    canSolve: false,
     title: 'Student',
     description: 'Division and batch schedule. Clean read-only view with no internal solver metrics.',
   },

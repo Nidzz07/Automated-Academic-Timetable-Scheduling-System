@@ -5,7 +5,7 @@ import { TimetableGrid } from '../TimetableGrid';
 import { AnomalyReportPanel } from '../AnomalyReport';
 import { EdgeList, Labels, labelsFor } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline, toPrintedBaseline } from '@/adapters/realInstance';
-import { MockChronosApiClient } from '@/api/chronosApi';
+import { MockChronosApiClient, PRINTED_INSTANCE, REAL_INSTANCE } from '@/api/chronosApi';
 
 // S12f: the real EVEN 2025-26 instance's display.json membership and initials,
 // anomalies.json and the printed baseline (real_baseline.*.json)
@@ -15,10 +15,10 @@ let anomalies: AnomalyReport;
 let printed: PrintedBaseline;
 beforeAll(async () => {
   const client = new MockChronosApiClient();
-  edgeList = await client.getEdgeList('even_2025_26');
-  labels = labelsFor(await client.getDisplay('even_2025_26'));
-  anomalies = (await client.getAnomalies('even_2025_26'))!;
-  printed = (await client.getPrintedBaseline('even_2025_26_printed'))!;
+  edgeList = await client.getEdgeList(REAL_INSTANCE);
+  labels = labelsFor(await client.getDisplay(REAL_INSTANCE));
+  anomalies = (await client.getAnomalies(REAL_INSTANCE))!;
+  printed = (await client.getPrintedBaseline(PRINTED_INSTANCE))!;
 });
 
 const sessionOf = (cohort: string) => edgeList.sessions.find((s) => s.cohort_id === cohort)!.id;
@@ -83,7 +83,7 @@ describe('the EVEN 2025-26 printed (real) instance in the app', () => {
   const openPrinted = async () => {
     render(<App />);
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: 'even_2025_26_printed' } });
+    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: PRINTED_INSTANCE } });
     await screen.findByTestId('printed-violations');
   };
   const flaggedIds = () =>

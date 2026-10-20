@@ -10,7 +10,7 @@ import {
   labelsFor,
 } from '@/adapters/timetable';
 import { isSolvedSolution } from '@/adapters/solution';
-import { chronosApiClient, MockChronosApiClient } from '@/api/chronosApi';
+import { chronosApiClient, MockChronosApiClient, REAL_INSTANCE } from '@/api/chronosApi';
 
 const edgeList = getExampleEdgeList();
 const assignment = getSolvedSolutionFixture().assignment;
@@ -88,16 +88,16 @@ describe('The real EVEN 2025-26 instance in the app', () => {
   const openRealInstance = async () => {
     render(<App />);
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: 'even_2025_26' } });
+    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
     await screen.findByTestId('period-clock-0');
   };
 
   it('shows the solved room view from solution.json', async () => {
     const client = new MockChronosApiClient();
     const [real, display, solution] = await Promise.all([
-      client.getEdgeList('even_2025_26'),
-      client.getDisplay('even_2025_26'),
-      client.getInstanceSolution('even_2025_26'),
+      client.getEdgeList(REAL_INSTANCE),
+      client.getDisplay(REAL_INSTANCE),
+      client.getInstanceSolution(REAL_INSTANCE),
     ]);
     if (!solution || !isSolvedSolution(solution)) throw new Error('Expected a solved solution.json');
     const labels = labelsFor(display);
