@@ -178,19 +178,21 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | S11 | Rohan | track/frontend-v2-rooms | S3, S5 merged | Nidhi | Done (PR #30) |
 | S11b | Rohan | track/frontend-v2-rooms | S11 | Nidhi | Done (PR #30, #35) |
 | Row 9 | Nidhi | contracts/row9-presolve | row 9 signed | all three | Done (PR #31) |
-| S15a | Rohan | track/bench-harness | — | Nidhi | Done (PR #36) |
 | S12 | All | integration/real-even | S9, S10, S11 | all three | In progress (S12a–S12c) |
 | S12a | Dhruv | track/solver-real-even | S9, S10 merged | Nidhi | Done (PR #34): timeout, follow-up S12d |
 | S12b | Nidhi | track/data-real-baseline | S9 merged | Rohan | Done (PR #38) |
 | S12c | Rohan | track/frontend-real-even | S9, S11 merged | Nidhi | Done (PR #39) |
-| S12d | Dhruv | track/solver-search | S12a | Nidhi | In progress |
-| S12e | Nidhi | track/data-ui-feed | — | Rohan | Not started |
-| S12f | Rohan | track/frontend-real-data | S12e | Nidhi | Not started |
+| S12d | Dhruv | track/solver-search | S12a | Nidhi | Done (merged 2026-10-20): real instance solves in 0.26 s, score −162.5 |
+| S12e | Nidhi | track/data-ui-feed | — | Rohan | Done (merged 2026-10-19) |
+| S12f | Rohan | track/frontend-real-data | S12e | Nidhi | Done (merged 2026-10-19) |
+| S12g | Dhruv | track/solver-quality | S12d | Nidhi | In progress |
 | S13 | Nidhi + Rohan | track/backend-api, track/frontend-api | S12 | cross | Not started |
-| S13a | Nidhi | track/backend-api | S12e | Rohan | Not started |
-| S13c | Rohan | track/frontend-api | S13a | Nidhi | Not started |
+| S13a | Nidhi | track/backend-api | S12e | Rohan | Done (merged 2026-10-19) |
+| S13b | Nidhi | track/backend-auth | S13a | Rohan | In progress |
+| S13c | Rohan | track/frontend-api | S13a | Nidhi | In progress |
 | S14 | All | per track | S13 | cross | Not started |
 | S15 | All | eval/* | S14 | cross | Not started |
+| S15a | Rohan | track/bench-harness | — | Nidhi | Done (PR #36) |
 | S16 | All | docs/report | S15 | cross | Not started |
 
 ## 9. Weekly plan (week 1 = 2026-09-21)
@@ -285,3 +287,4 @@ Tags as in the old plan: [S] = should (cut only if behind schedule, note the cut
 - 2026-10-16: Wave 1 merged (S1–S6, S3b). Wave 2 started: S7, S8, S11. S4b folded into S8.
 - 2026-10-18: Wave 3 merged (S9, S10, S11/S11b, S15a, row 9). S12 started.
 - 2026-10-19: S12a–c merged; real instance times out at 300 s; S12d (search) started. Real printed timetable scores 21.5.
+- 2026-10-20: S12d merged: the real EVEN SE+TE instance solves in 0.26 s with no backtracking, validator clean, score −162.5 against 21.5 for the printed timetable. S12e, S12f, S13a merged. Proposed D46/D47 (electives blocking only some batches, combined lectures kept combined) parked: not needed for feasibility; revisit only if S12g cannot beat 21.5. Next: S12g quality search, S13b auth, S13c HTTP client.
