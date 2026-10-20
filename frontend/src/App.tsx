@@ -11,6 +11,8 @@ import { RejectionAlert } from '@/components/timetable/RejectionAlert';
 import { FreeRoomsPanel, RoomTimetable } from '@/components/timetable/RoomViews';
 import { AnomalyReportPanel } from '@/components/timetable/AnomalyReport';
 import { PrintedViolationsPanel } from '@/components/timetable/PrintedViolations';
+import { SolvePanel } from '@/components/timetable/SolvePanel';
+import { GeneratedVsPrintedCard } from '@/components/timetable/GeneratedVsPrintedCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserRole, ROLE_CAPABILITIES } from '@/types/roles';
@@ -33,7 +35,14 @@ import {
   labelsFor,
 } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline } from '@/adapters/realInstance';
-import { chronosApiClient, EdgeListInstance } from '@/api/chronosApi';
+import {
+  chronosApiClient,
+  EdgeListInstance,
+  HttpChronosApiClient,
+  InstanceOption,
+  MockChronosApiClient,
+  PRINTED_INSTANCE,
+} from '@/api/chronosApi';
 import { ContractValidationError } from '@/api/contractError';
 import {
   timetableQueryKey,
@@ -41,32 +50,40 @@ import {
   useDisplayQuery,
   useEdgeListQuery,
   useInstanceSolutionQuery,
+  useInstancesQuery,
   useMoveSessionMutation,
   usePrintedBaselineQuery,
   useTimetableQuery,
 } from '@/api/queries';
 
-export function App() {
+interface AppProps {
+  /** The API client; by default the one VITE_API_MODE picks */
+  client?: MockChronosApiClient;
+}
+
+export function App({ client = chronosApiClient }: AppProps) {
   // One client per App mount, so every render (and every test) starts with an empty cache.
   const [queryClient] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={queryClient}>
-      <TimetableApp />
+      <TimetableApp client={client} />
     </QueryClientProvider>
   );
 }
 
-function TimetableApp() {
+function TimetableApp({ client }: { client: MockChronosApiClient }) {
   const [instance, setInstance] = useState<EdgeListInstance>('example');
-  const timetable = useTimetableQuery();
-  const edgeList = useEdgeListQuery(instance);
-  const display = useDisplayQuery(instance);
-  const published = useInstanceSolutionQuery(instance);
-  const anomalies = useAnomaliesQuery(instance);
-  const printed = usePrintedBaselineQuery(instance);
-  const queries = [timetable, edgeList, display, published, anomalies, printed];
+  const instances = useInstancesQuery(client);
+  const timetable = useTimetableQuery(client);
+  const edgeList = useEdgeListQuery(instance, client);
+  const display = useDisplayQuery(instance, client);
+  const published = useInstanceSolutionQuery(instance, client);
+  const anomalies = useAnomaliesQuery(instance, client);
+  const printed = usePrintedBaselineQuery(instance, client);
+  const queries = [instances, timetable, edgeList, display, published, anomalies, printed];
 
   if (
+    instances.status !== 'success' ||
     timetable.status !== 'success' ||
     edgeList.status !== 'success' ||
     display.status !== 'success' ||
@@ -102,9 +119,11 @@ function TimetableApp() {
       display={display.data}
       publishedSolution={published.data}
       anomalies={anomalies.data}
-      printed={printed.data}
+      baseline={printed.data}
+      instances={instances.data}
       instance={instance}
       onInstanceChange={setInstance}
+      client={client}
     />
   );
 }
@@ -146,10 +165,12 @@ interface TimetableWorkspaceProps {
   publishedSolution: SolutionContract | null;
   /** The instance's ingestion anomaly report; null for the contract examples */
   anomalies: AnomalyReport | null;
-  /** The timetable as printed (the printed instance only); not a solution contract */
-  printed: PrintedBaseline | null;
+  /** The timetable as printed (the real instance and its printed view); not a solution contract */
+  baseline: PrintedBaseline | null;
+  instances: InstanceOption[];
   instance: EdgeListInstance;
   onInstanceChange: (instance: EdgeListInstance) => void;
+  client: MockChronosApiClient;
 }
 
 function TimetableWorkspace({
@@ -158,9 +179,11 @@ function TimetableWorkspace({
   display,
   publishedSolution,
   anomalies,
-  printed,
+  baseline,
+  instances,
   instance,
   onInstanceChange,
+  client,
 }: TimetableWorkspaceProps) {
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('administrator');
@@ -175,7 +198,7 @@ function TimetableWorkspace({
 
   // The query cache holds the solution; optimistic moves and reverts write straight into it
   const queryClient = useQueryClient();
-  const moveSession = useMoveSessionMutation();
+  const moveSession = useMoveSessionMutation(client);
   const setSolution = (next: SolutionContract) => queryClient.setQueryData(timetableQueryKey, next);
 
   // Track provisional session ID during optimistic move validation
@@ -197,13 +220,16 @@ function TimetableWorkspace({
   // published solution, or none (Not solved yet)
   const isExample = instance === 'example';
   const shown = isExample ? solution : publishedSolution;
+  // The printed view lays the printed timetable on the grid; the real instance compares with it
+  const printed = instance === PRINTED_INSTANCE ? baseline : null;
+  const solvable = instances.find((i) => i.id === instance)?.solvable ?? false;
   const labels = useMemo(() => labelsFor(display), [display]);
   // The mock validates moves against the example edge list only
   const canDrag = caps.canDragAndDrop && isExample;
 
   // Helper to toggle between solved timetable and infeasible diagnosis
   const handleToggleOutcome = async () => {
-    chronosApiClient.setSimulatedOutcome(isSolvedSolution(solution) ? 'infeasible' : 'solved');
+    client.setSimulatedOutcome(isSolvedSolution(solution) ? 'infeasible' : 'solved');
     await queryClient.refetchQueries({ queryKey: timetableQueryKey });
     setRejectionAlert(null);
   };
@@ -212,7 +238,7 @@ function TimetableWorkspace({
   const handleToggleRejectMode = () => {
     setRejectMoveMode((prev) => {
       const next = !prev;
-      chronosApiClient.setRejectMode(
+      client.setRejectMode(
         next,
         next
           ? 'Mock Backend Rejection: Target slot causes faculty overlap and violates room capacity.'
@@ -252,7 +278,7 @@ function TimetableWorkspace({
 
   const facultyOptions = useMemo(
     () =>
-      [...new Map(allSessions.map((s) => [s.facultyId, `${s.facultyName} (${s.facultyInitials})`]))]
+      [...new Map(allSessions.map((s) => [s.facultyId, s.facultyInitials ? `${s.facultyName} (${s.facultyInitials})` : s.facultyName]))]
         .map(([id, label]) => ({ id, label }))
         .sort((a, b) => a.label.localeCompare(b.label)),
     [allSessions]
@@ -414,6 +440,7 @@ function TimetableWorkspace({
           cohortFilter={selectedCohortFilter}
           onCohortFilterChange={setCohortFilter}
           cohortOptions={cohorts}
+          instanceOptions={instances}
           instance={instance}
           onInstanceChange={(next) => {
             setCohortFilter('all');
@@ -425,7 +452,7 @@ function TimetableWorkspace({
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
           currentRole={currentRole}
-          solutionStatus={shown?.status ?? null}
+          solutionStatus={printed ? 'printed' : shown?.status ?? null}
           onToggleOutcome={isExample ? handleToggleOutcome : undefined}
           rejectMoveMode={rejectMoveMode}
           onToggleRejectMode={handleToggleRejectMode}
@@ -453,10 +480,15 @@ function TimetableWorkspace({
           />
         )}
 
+        {/* Solve on the backend (administrator and coordinator; backend instances only) */}
+        {caps.canSolve && solvable && client instanceof HttpChronosApiClient && (
+          <SolvePanel key={`solve-${instance}`} client={client} instance={instance} />
+        )}
+
         {/* Faculty Workload View (Visible only to Faculty Role) */}
         {currentRole === 'faculty' && quality && (
           <FacultyWorkloadCard
-            facultyInitials={facultySessions[0]?.facultyInitials ?? ''}
+            facultyInitials={facultySessions[0]?.facultyInitials || facultySessions[0]?.facultyName || ''}
             facultySessions={facultySessions}
             loadRule={quality.rules.find((r) => r.rule_id === 'S-LOAD16')}
           />
@@ -477,6 +509,11 @@ function TimetableWorkspace({
             quality={toQualityView(shown)}
             metadata={shown.metadata}
           />
+        )}
+
+        {/* The real instance's generated timetable beside the printed one */}
+        {baseline && !printed && shown && caps.showQualityScore && isSolvedSolution(shown) && (
+          <GeneratedVsPrintedCard generated={toQualityView(shown)} printed={baseline} />
         )}
 
         {/* The printed timetable: its violations and score (not a solver output) */}

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { ContractValidationError, parseSolution, validateContract } from '@/api/contractValidation';
-import { MockChronosApiClient } from '@/api/chronosApi';
+import { MockChronosApiClient, REAL_INSTANCE } from '@/api/chronosApi';
 import {
   DIAGNOSIS_METHOD_LABELS,
   InfeasibleSolution,
@@ -244,8 +244,8 @@ describe('the real EVEN 2025-26 instance through its display sidecar (D41)', () 
   let display: Display;
   beforeAll(async () => {
     const client = new MockChronosApiClient();
-    edgeList = await client.getEdgeList('even_2025_26');
-    display = (await client.getDisplay('even_2025_26'))!;
+    edgeList = await client.getEdgeList(REAL_INSTANCE);
+    display = (await client.getDisplay(REAL_INSTANCE))!;
   });
 
   it('labels each pin by its display kind: each year’s lunch, frozen items, exams', () => {
@@ -267,7 +267,7 @@ describe('the real EVEN 2025-26 instance through its display sidecar (D41)', () 
     expect(labels.faculty('fac-kailas-devadkar')).toEqual({ initials: 'KKD', name: 'Kailas Devadkar' });
     // every initial across years; none in display.json is never guessed
     expect(labels.faculty('fac-surekha-dholay').initials).toBe('SD/SRD');
-    expect(labels.faculty('fac-dayanand-ambawade').initials).toBe('Unresolved');
+    expect(labels.faculty('fac-dayanand-ambawade')).toEqual({ initials: '', name: 'Dayanand Ambawade' });
     expect(labels.cohort('coh-se-a')).toBe('SE-Comp A');
     expect(labels.subject('subj-ce206')).toEqual({ code: 'CE206', name: 'Operating Systems' });
     expect(labels.room({ id: 'room-607b', code: 'x' })).toBe('607B');

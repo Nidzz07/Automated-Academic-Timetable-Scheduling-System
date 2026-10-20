@@ -24,6 +24,7 @@ function stubClient(overrides: Partial<ChronosApiClient>): ChronosApiClient {
     getInstanceSolution: vi.fn(),
     getAnomalies: vi.fn(),
     getPrintedBaseline: vi.fn(),
+    listInstances: vi.fn(),
     generateTimetable: vi.fn(),
     moveSession: vi.fn(),
     getSolvedSolution: vi.fn(),

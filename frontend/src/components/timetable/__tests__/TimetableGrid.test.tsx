@@ -4,7 +4,7 @@ import { TimetableGrid } from '../TimetableGrid';
 import { EdgeList, Labels, getSolvedSolutionFixture, labelsFor } from '@/adapters/timetable';
 import { SolvedSolution, SolutionContract } from '@/adapters/solution';
 import { validateContract } from '@/api/contractValidation';
-import { MockChronosApiClient } from '@/api/chronosApi';
+import { MockChronosApiClient, REAL_INSTANCE } from '@/api/chronosApi';
 import d6GridExample from '@contracts/examples/edge_list_v1.d6_grid.example.json';
 
 describe('TimetableGrid Component', () => {
@@ -181,8 +181,8 @@ describe('TimetableGrid on the real EVEN 2025-26 instance (display.json labels, 
   let labels: Labels;
   beforeAll(async () => {
     const client = new MockChronosApiClient();
-    edgeList = await client.getEdgeList('even_2025_26');
-    labels = labelsFor(await client.getDisplay('even_2025_26'));
+    edgeList = await client.getEdgeList(REAL_INSTANCE);
+    labels = labelsFor(await client.getDisplay(REAL_INSTANCE));
   });
 
   it('shows SE-Comp A’s lunch at P5 every day and TE-Comp A’s at P4, by display kind', () => {

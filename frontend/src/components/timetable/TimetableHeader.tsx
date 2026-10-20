@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserRole, ROLE_CAPABILITIES } from '@/types/roles';
-import type { EdgeListInstance } from '@/api/chronosApi';
+import type { EdgeListInstance, InstanceOption } from '@/api/chronosApi';
 import {
   CalendarDays,
   Filter,
@@ -19,6 +19,8 @@ interface TimetableHeaderProps {
   onCohortFilterChange: (filter: string) => void;
   /** Cohorts named in the edge list */
   cohortOptions: Array<{ id: string; label: string }>;
+  /** The instances the API client offers */
+  instanceOptions: InstanceOption[];
   instance: EdgeListInstance;
   onInstanceChange: (instance: EdgeListInstance) => void;
   showQualityCard: boolean;
@@ -26,8 +28,8 @@ interface TimetableHeaderProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   currentRole: UserRole;
-  /** null: the instance has no solution yet */
-  solutionStatus: 'solved' | 'infeasible' | null;
+  /** null: the instance has no solution yet; 'printed': it shows the timetable as printed */
+  solutionStatus: 'solved' | 'infeasible' | 'printed' | null;
   onToggleOutcome?: () => void;
   rejectMoveMode: boolean;
   onToggleRejectMode?: () => void;
@@ -37,6 +39,7 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
   cohortFilter,
   onCohortFilterChange,
   cohortOptions,
+  instanceOptions,
   instance,
   onInstanceChange,
   showQualityCard,
@@ -75,6 +78,10 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 <Badge variant="destructive" data-testid="status-badge-infeasible" className="text-[10px]">
                   Infeasible Instance
                 </Badge>
+              ) : solutionStatus === 'printed' ? (
+                <Badge variant="outline" data-testid="status-badge-printed" className="text-[10px]">
+                  Printed timetable (SPIT)
+                </Badge>
               ) : (
                 <Badge variant="outline" data-testid="status-badge-unsolved" className="text-[10px]">
                   Not solved yet
@@ -111,13 +118,14 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
               <select
                 aria-label="Select instance"
                 value={instance}
-                onChange={(e) => onInstanceChange(e.target.value as EdgeListInstance)}
+                onChange={(e) => onInstanceChange(e.target.value)}
                 className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
               >
-                <option value="example">Example instance</option>
-                <option value="d6_grid">D6 grid example (no solution)</option>
-                <option value="even_2025_26">EVEN 2025-26 SE+TE (real)</option>
-                <option value="even_2025_26_printed">EVEN 2025-26 printed (real)</option>
+                {instanceOptions.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.label}
+                  </option>
+                ))}
               </select>
             </div>
           )}

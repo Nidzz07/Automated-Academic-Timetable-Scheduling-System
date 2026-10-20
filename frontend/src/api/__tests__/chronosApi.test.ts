@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { MockChronosApiClient } from '../chronosApi';
+import { MockChronosApiClient, PRINTED_INSTANCE, REAL_INSTANCE } from '../chronosApi';
 import { isSolvedSolution, isInfeasibleSolution } from '@/adapters/solution';
 import solvedFixture from '@contracts/examples/solution_v2.solved.example.json';
 import infeasibleFixture from '@contracts/examples/solution_v2.infeasible.example.json';
@@ -117,14 +117,14 @@ describe('MockChronosApiClient', () => {
   });
 
   it('serves the real EVEN 2025-26 instance from data/instances/even-2025-26/', async () => {
-    const real = await client.getEdgeList('even_2025_26');
+    const real = await client.getEdgeList(REAL_INSTANCE);
     expect(real.sessions).toHaveLength(156);
     expect(real.lab_blocks).toHaveLength(31);
 
-    const display = await client.getDisplay('even_2025_26');
+    const display = await client.getDisplay(REAL_INSTANCE);
     expect(display?.pins).toHaveLength(real.pinned_occupancy.length);
     // S12d committed solution.json: validated as solution.v2, placing every session
-    const solution = await client.getInstanceSolution('even_2025_26');
+    const solution = await client.getInstanceSolution(REAL_INSTANCE);
     expect(solution?.schema_version).toBe('solution.v2');
     if (!solution || !isSolvedSolution(solution)) throw new Error('Expected a solved solution.json');
     expect(solution.assignment.map((a) => a.session_id).sort()).toEqual(real.sessions.map((s) => s.id).sort());
@@ -136,7 +136,7 @@ describe('MockChronosApiClient', () => {
     vi.doMock('@instances/even-2025-26/solution.json', () => ({ default: null }));
     try {
       const { MockChronosApiClient: Fresh } = await import('../chronosApi');
-      expect(await new Fresh().getInstanceSolution('even_2025_26')).toBeNull();
+      expect(await new Fresh().getInstanceSolution(REAL_INSTANCE)).toBeNull();
     } finally {
       vi.doUnmock('@instances/even-2025-26/solution.json');
       vi.resetModules();
@@ -151,12 +151,22 @@ describe('MockChronosApiClient', () => {
     expect(await client.getPrintedBaseline('example')).toBeNull();
   });
 
-  it('serves the real instance’s anomaly report, and the printed baseline on its own instance', async () => {
-    const report = await client.getAnomalies('even_2025_26');
+  it('serves the real instance’s anomaly report, and the printed baseline on it and its printed view', async () => {
+    const report = await client.getAnomalies(REAL_INSTANCE);
     expect(report?.anomalies).toHaveLength(report!.counts.total);
-    expect(await client.getPrintedBaseline('even_2025_26')).toBeNull();
-    const printed = await client.getPrintedBaseline('even_2025_26_printed');
-    expect(printed?.assignment).toHaveLength((await client.getEdgeList('even_2025_26_printed')).sessions.length);
+    expect(await client.getPrintedBaseline(REAL_INSTANCE)).toEqual(await client.getPrintedBaseline(PRINTED_INSTANCE));
+    const printed = await client.getPrintedBaseline(PRINTED_INSTANCE);
+    expect(printed?.assignment).toHaveLength((await client.getEdgeList(PRINTED_INSTANCE)).sessions.length);
+    expect(await client.getInstanceSolution(PRINTED_INSTANCE)).toBeNull();
+  });
+
+  it('lists the contract examples, the real instance and its printed view, none solvable', async () => {
+    expect(await client.listInstances()).toEqual([
+      { id: 'example', label: 'Example instance', solvable: false },
+      { id: 'd6_grid', label: 'D6 grid example (no solution)', solvable: false },
+      { id: REAL_INSTANCE, label: 'EVEN 2025-26 SE+TE (real)', solvable: false },
+      { id: PRINTED_INSTANCE, label: 'EVEN 2025-26 printed (real)', solvable: false },
+    ]);
   });
 
   it('exercises the reject-the-move path when rejectMode is explicitly toggled', async () => {

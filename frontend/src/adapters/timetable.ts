@@ -129,9 +129,10 @@ export function labelsFor(display: Display | null | undefined): Labels {
   const clock = new Map(display.periods.map((p) => [p.period, `${p.start}–${p.end}`]));
   return {
     faculty: (id) => {
-      // every initial the faculty is known by, across years; none is never guessed
+      // every initial the faculty is known by, across years; none is never guessed. Faculty who
+      // teach no SE/TE session (only frozen BE/M.Tech items) have none: the name stands alone.
       const initials = [...new Set(Object.values(display.initials[id] ?? {}).flat())];
-      return { initials: initials.join('/') || 'Unresolved', name: display.faculty[id] ?? id };
+      return { initials: initials.join('/'), name: display.faculty[id] ?? id };
     },
     cohort: (id) => display.cohorts[id]?.label ?? display.cohorts[id]?.name ?? id,
     subject: (id) => display.subjects[id],
@@ -345,7 +346,8 @@ export function buildPins(edgeList: EdgeList, labels: Labels = EXAMPLE_LABELS): 
         const room = rooms.get(id);
         return room ? labels.room(room) : id;
       }),
-      facultyInitials: p.faculty_ids.map((id) => labels.faculty(id).initials),
+      // faculty with no initials (they teach only frozen BE/M.Tech items) show their name
+      facultyInitials: p.faculty_ids.map((id) => labels.faculty(id).initials || labels.faculty(id).name),
     };
   });
 }

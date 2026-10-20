@@ -1,11 +1,12 @@
 /**
- * Chronos API Client interface and mock implementation.
- * 
- * Every solution payload is validated against contracts/solution_v1.schema.json or
- * solution_v2.schema.json, and every edge list against edge_list_v1.schema.json
- * (see contractValidation.ts); an invalid one throws ContractValidationError.
- * Swapping in the real backend later is a change of implementation,
- * not of call sites.
+ * Chronos API clients.
+ *
+ * VITE_API_MODE picks one: 'http' (the default) calls the S13a backend through the Vite
+ * proxy (/api); 'static' serves the files bundled from contracts/examples and
+ * data/instances (offline and tests). Every solution payload is validated against
+ * contracts/solution_v1.schema.json or solution_v2.schema.json, and every edge list against
+ * edge_list_v1.schema.json (see contractValidation.ts); an invalid one throws
+ * ContractValidationError.
  */
 
 import {
@@ -36,23 +37,56 @@ import { AnomalyReport, PrintedBaseline, toPrintedBaseline } from '@/adapters/re
 const validation = () => import('@/api/contractValidation');
 
 /**
- * Edge lists the mock serves. 'example' is the instance the solution examples were solved
- * for; 'd6_grid' shows the D6 grid (per-year lunch as pinned occupancy) and has no solution;
- * 'even_2025_26' is the real CE EVEN 2025-26 SE+TE instance (S9 export, D41 display sidecar);
- * 'even_2025_26_printed' is the same edge list with the timetable as printed (S12b baseline).
+ * The contract examples, bundled in both modes: 'example' is the instance the solution
+ * examples were solved for; 'd6_grid' shows the D6 grid (per-year lunch as pinned occupancy)
+ * and has no solution.
  */
 export const EDGE_LIST_INSTANCES = { example: edgeListExample, d6_grid: d6GridEdgeList };
-export type EdgeListInstance = keyof typeof EDGE_LIST_INSTANCES | 'even_2025_26' | 'even_2025_26_printed';
 
-const REAL_INSTANCES: EdgeListInstance[] = ['even_2025_26', 'even_2025_26_printed'];
+/**
+ * A contract example's key, a backend instance id (its data/instances/ directory name,
+ * e.g. 'even-2025-26'), or PRINTED_INSTANCE.
+ */
+export type EdgeListInstance = string;
 
-type RealEvenFile =
-  | 'edge_list'
-  | 'display'
-  | 'solution'
-  | 'anomalies'
-  | 'real_baseline.assignment'
-  | 'real_baseline.report';
+/** The real CE EVEN 2025-26 SE+TE instance (S9 export, D41 display sidecar). */
+export const REAL_INSTANCE = 'even-2025-26';
+/**
+ * The real instance with the timetable as printed (S12b baseline). Not a backend instance:
+ * the backend does not serve real_baseline.*.json, so they are bundled in both modes.
+ */
+export const PRINTED_INSTANCE = `${REAL_INSTANCE}:printed`;
+
+export interface InstanceOption {
+  id: EdgeListInstance;
+  label: string;
+  /** The backend can solve it (http mode, backend instances only) */
+  solvable: boolean;
+}
+
+const INSTANCE_LABELS: Record<string, string> = {
+  example: 'Example instance',
+  d6_grid: 'D6 grid example (no solution)',
+  [REAL_INSTANCE]: 'EVEN 2025-26 SE+TE (real)',
+  [PRINTED_INSTANCE]: 'EVEN 2025-26 printed (real)',
+};
+
+const option = (id: EdgeListInstance, solvable = false): InstanceOption => ({
+  id,
+  label: INSTANCE_LABELS[id] ?? id,
+  solvable,
+});
+
+const isExample = (instance: EdgeListInstance): instance is keyof typeof EDGE_LIST_INSTANCES =>
+  Object.keys(EDGE_LIST_INSTANCES).includes(instance);
+
+/** The backend instance whose files an instance reads. */
+const baseOf = (instance: EdgeListInstance) => (instance === PRINTED_INSTANCE ? REAL_INSTANCE : instance);
+
+/** The instance files the backend serves (S13a); any but the edge list may be absent. */
+type InstanceFile = 'edge_list' | 'display' | 'anomalies' | 'solution';
+
+type RealEvenFile = InstanceFile | 'real_baseline.assignment' | 'real_baseline.report';
 
 // Lazy, so each file loads only when picked; solution.json has no loader until it is solved
 const realEven = import.meta.glob(
@@ -116,8 +150,14 @@ export interface ChronosApiClient {
   /** The instance's ingestion anomaly report (anomalies.json); null when it has none. */
   getAnomalies(instance: EdgeListInstance): Promise<AnomalyReport | null>;
 
-  /** The timetable as printed, with its violations and score; null except for the printed instance. */
+  /**
+   * The timetable as printed, with its violations and score: for the real instance and its
+   * printed view, null for any other.
+   */
   getPrintedBaseline(instance: EdgeListInstance): Promise<PrintedBaseline | null>;
+
+  /** The instances to offer: the contract examples, then the real ones. */
+  listInstances(): Promise<InstanceOption[]>;
 
   /**
    * Request solver to generate a timetable.
@@ -185,15 +225,27 @@ export class MockChronosApiClient implements ChronosApiClient {
     return this.getSolvedSolution();
   }
 
+  /** An instance's file; null when it has none. The static client has the real instance only. */
+  protected async readInstanceFile(instance: EdgeListInstance, file: InstanceFile): Promise<unknown> {
+    return instance === REAL_INSTANCE ? loadRealEven(file) : null;
+  }
+
+  public async listInstances(): Promise<InstanceOption[]> {
+    return [...Object.keys(EDGE_LIST_INSTANCES), REAL_INSTANCE, PRINTED_INSTANCE].map((id) => option(id));
+  }
+
   public async getEdgeList(instance: EdgeListInstance = 'example'): Promise<EdgeList> {
     const { validateContract } = await validation();
-    if (REAL_INSTANCES.includes(instance)) return validateContract('edge_list', await loadRealEven('edge_list'));
-    return validateContract('edge_list', JSON.parse(JSON.stringify(EDGE_LIST_INSTANCES[instance as keyof typeof EDGE_LIST_INSTANCES])));
+    if (isExample(instance)) return validateContract('edge_list', JSON.parse(JSON.stringify(EDGE_LIST_INSTANCES[instance])));
+    const edgeList = await this.readInstanceFile(baseOf(instance), 'edge_list');
+    if (edgeList === null) throw new Error(`Unknown instance '${instance}'`);
+    return validateContract('edge_list', edgeList);
   }
 
   public async getDisplay(instance: EdgeListInstance): Promise<Display | null> {
-    if (!REAL_INSTANCES.includes(instance)) return null;
-    const display = (await loadRealEven('display')) as Display;
+    if (isExample(instance)) return null;
+    const display = (await this.readInstanceFile(baseOf(instance), 'display')) as Display | null;
+    if (display === null) return null;
     const pins = (await this.getEdgeList(instance)).pinned_occupancy.length;
     // pins[i] describes pinned_occupancy[i]: a sidecar out of step would mislabel every pin
     if (display.pins.length !== pins) {
@@ -203,22 +255,22 @@ export class MockChronosApiClient implements ChronosApiClient {
   }
 
   public async getInstanceSolution(instance: EdgeListInstance): Promise<SolutionContract | null> {
-    if (instance !== 'even_2025_26') return null;
-    const solution = await loadRealEven('solution');
+    if (isExample(instance) || instance === PRINTED_INSTANCE) return null;
+    const solution = await this.readInstanceFile(instance, 'solution');
     return solution === null ? null : (await validation()).parseSolution(solution);
   }
 
   public async getAnomalies(instance: EdgeListInstance): Promise<AnomalyReport | null> {
-    if (!REAL_INSTANCES.includes(instance)) return null;
-    return (await loadRealEven('anomalies')) as AnomalyReport;
+    if (isExample(instance)) return null;
+    return (await this.readInstanceFile(baseOf(instance), 'anomalies')) as AnomalyReport | null;
   }
 
   public async getPrintedBaseline(instance: EdgeListInstance): Promise<PrintedBaseline | null> {
-    if (instance !== 'even_2025_26_printed') return null;
+    if (baseOf(instance) !== REAL_INSTANCE) return null;
     const [assignment, report, edgeList] = await Promise.all([
       loadRealEven('real_baseline.assignment'),
       loadRealEven('real_baseline.report'),
-      this.getEdgeList(instance),
+      this.getEdgeList(REAL_INSTANCE),
     ]);
     return toPrintedBaseline(assignment, report, edgeList);
   }
@@ -385,7 +437,106 @@ export class MockChronosApiClient implements ChronosApiClient {
   }
 }
 
+export type JobStatus = 'queued' | 'running' | 'solved' | 'infeasible' | 'timeout' | 'error';
+
+const JOB_STATUSES: JobStatus[] = ['queued', 'running', 'solved', 'infeasible', 'timeout', 'error'];
+
+/** The job has ended: no further status follows. */
+export const isFinished = (status: JobStatus | undefined) =>
+  status !== undefined && status !== 'queued' && status !== 'running';
+
+/** GET /jobs/{id}. A timeout carries no solution (D33): it never proves infeasibility. */
+export interface SolveJob {
+  id: string;
+  instance_id: string;
+  time_limit_s: number;
+  status: JobStatus;
+  /** Present when status is solved or infeasible */
+  solution?: SolutionContract;
+  error?: string;
+}
+
+/** A non-2xx response from the backend. */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+// shortcut: VITE_API_TOKEN stands in for a login until a login screen calls setAccessToken
+let accessToken: string | null = import.meta.env.VITE_API_TOKEN || null;
+
+/** The bearer token sent with every request (null: none). */
+export function setAccessToken(token: string | null) {
+  accessToken = token;
+}
+
 /**
- * Singleton mock instance for application use.
+ * The S13a backend over HTTP. The contract examples stay bundled (the backend does not serve
+ * them), as do the printed baseline and the example's simulation toggles and moves.
  */
-export const chronosApiClient = new MockChronosApiClient();
+export class HttpChronosApiClient extends MockChronosApiClient {
+  constructor(private readonly baseUrl: string = import.meta.env.VITE_API_BASE_URL ?? '/api') {
+    super();
+  }
+
+  private async request(path: string, init: RequestInit = {}): Promise<unknown> {
+    const headers = new Headers(init.headers);
+    // the one place the Authorization header is attached
+    if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+    const response = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { detail?: unknown } | null;
+      const detail = typeof body?.detail === 'string' ? body.detail : response.statusText;
+      throw new ApiError(response.status, `${init.method ?? 'GET'} ${path}: ${response.status} ${detail}`);
+    }
+    return response.json();
+  }
+
+  protected async readInstanceFile(instance: EdgeListInstance, file: InstanceFile): Promise<unknown> {
+    try {
+      return await this.request(`/instances/${encodeURIComponent(instance)}/${file.replace('_', '-')}`);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
+  public async listInstances(): Promise<InstanceOption[]> {
+    const ids = (await this.request('/instances')) as Array<{ id: string }>;
+    return [
+      ...Object.keys(EDGE_LIST_INSTANCES).map((id) => option(id)),
+      ...ids.flatMap(({ id }) => [option(id, true), ...(id === REAL_INSTANCE ? [option(PRINTED_INSTANCE)] : [])]),
+    ];
+  }
+
+  /** POST /instances/{id}/solve: queue a solve (administrator and coordinator only). */
+  public async startSolve(
+    instance: EdgeListInstance,
+    timeLimitS: number
+  ): Promise<{ job_id: string; status: JobStatus }> {
+    return (await this.request(`/instances/${encodeURIComponent(instance)}/solve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ time_limit_s: timeLimitS }),
+    })) as { job_id: string; status: JobStatus };
+  }
+
+  public async getJob(jobId: string): Promise<SolveJob> {
+    const job = (await this.request(`/jobs/${encodeURIComponent(jobId)}`)) as SolveJob;
+    // an unknown status would be polled forever
+    if (!JOB_STATUSES.includes(job.status)) throw new Error(`Job ${jobId} has unknown status '${job.status}'`);
+    return job.solution === undefined ? job : { ...job, solution: (await validation()).parseSolution(job.solution) };
+  }
+}
+
+/** 'static' serves the bundled files (offline, tests); anything else calls the backend. */
+export const API_MODE: 'static' | 'http' = import.meta.env.VITE_API_MODE === 'static' ? 'static' : 'http';
+
+/** The client the app uses, by API_MODE. */
+export const chronosApiClient: MockChronosApiClient =
+  API_MODE === 'static' ? new MockChronosApiClient() : new HttpChronosApiClient();
