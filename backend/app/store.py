@@ -23,9 +23,14 @@ class InstanceStore:
         """Every directory with an ``edge_list.json``, sorted."""
         return sorted(p.name for p in self.root.iterdir() if (p / "edge_list.json").is_file())
 
-    def read(self, instance_id: str, name: str) -> Any | None:
-        """The parsed ``<name>.json`` of an instance; None when the instance or file is absent."""
+    def path(self, instance_id: str, name: str) -> Path | None:
+        """The instance's ``<name>.json``; None when the instance or file is absent."""
         if instance_id not in self.ids():  # also keeps the id from naming a path outside root
             return None
         path = self.root / instance_id / f"{name}.json"
-        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+        return path if path.is_file() else None
+
+    def read(self, instance_id: str, name: str) -> Any | None:
+        """The parsed ``<name>.json`` of an instance; None when the instance or file is absent."""
+        path = self.path(instance_id, name)
+        return json.loads(path.read_text(encoding="utf-8")) if path else None
