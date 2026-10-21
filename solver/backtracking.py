@@ -120,7 +120,7 @@ non-stdlib package (CONTEXT.md rule 3).
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -524,6 +524,9 @@ class _SolverState:
     day_use: dict[tuple[str, int], int] = field(default_factory=dict)
     break_symmetry: bool = True
     deadline: float | None = None  # time.perf_counter() value
+    node_limit: int | None = None  # a node budget: like the deadline, but machine-independent
+    # session_id -> (start, room) tried before any other value (repair: where it was)
+    prefer: dict[str, tuple[SlotId, str]] = field(default_factory=dict)
 
     # Deepest consistent partial placement so far: (start slots, rooms).
     deepest: tuple[dict[str, SlotId], dict[str, str]] = field(default_factory=lambda: ({}, {}))
@@ -991,9 +994,11 @@ def _start_order(
     A start costs the number of (neighbour, start) values it would remove from
     the unassigned conflict neighbours' domains - the least-constraining-value
     heuristic (Artificial Intelligence and Soft Computing, CE303).  Ties keep
-    slot order, so the result is deterministic.
+    slot order, so the result is deterministic.  A start in ``state.prefer``
+    goes first (minimal perturbation, :mod:`solver.repair`).
     """
     duration = state.graph.sessions[members[0]].duration_periods
+    preferred = state.prefer.get(members[0], (None,))[0]
     neighbour_starts = [
         (state.graph.sessions[n].duration_periods, _starts(state, n))
         for n in _live_neighbours(state, members)
@@ -1006,7 +1011,13 @@ def _start_order(
             for d, their in neighbour_starts
         )
 
-    return sorted(starts, key=lambda s: (cost(s), s))
+    return sorted(starts, key=lambda s: (s != preferred, cost(s), s))
+
+
+def _room_order(state: _SolverState, sid: str, rooms: Iterable[str]) -> list[str]:
+    """*rooms* by id, the one ``state.prefer`` names for *sid* first."""
+    preferred = state.prefer.get(sid, (None, None))[1]
+    return sorted(rooms, key=lambda r: (r != preferred, r))
 
 
 # ---------------------------------------------------------------------------
@@ -1065,10 +1076,10 @@ def _lab_block_candidates(
     for start in _start_order(state, members, _block_starts(state, members)):
         room_lists: list[list[str]] = []
         for sid in members:
-            rooms = sorted(
+            rooms = _room_order(state, sid, (
                 r for s, r in state.domains[sid]
                 if s == start and _placement_ok(state, sid, start, r) is not None
-            )
+            ))
             if not rooms:
                 break
             room_lists.append(rooms)
@@ -1097,6 +1108,8 @@ def _solve(state: _SolverState) -> bool:
     state.nodes_explored += 1
     if state.deadline is not None and time.perf_counter() >= state.deadline:
         raise _Timeout
+    if state.node_limit is not None and state.nodes_explored > state.node_limit:
+        raise _Timeout
 
     var = _select_variable(state)
     if var is None:
@@ -1113,7 +1126,7 @@ def _solve_session(state: _SolverState, sid: str) -> bool:
     for start, room_id in state.domains[sid]:
         rooms_at.setdefault(start, []).append(room_id)
     for start in _start_order(state, (sid,), set(rooms_at)):
-        for room_id in sorted(rooms_at[start]):
+        for room_id in _room_order(state, sid, rooms_at[start]):
             if _symmetric_duplicate(state, room_id, start.day):
                 continue
             slots = _placement_ok(state, sid, start, room_id)
@@ -1164,7 +1177,10 @@ def backtrack_solve(
     payload: dict[str, Any],
     *,
     seed_assignment: dict[str, SlotId] | None = None,
+    seed_rooms: dict[str, str] | None = None,
+    prefer: dict[str, tuple[SlotId, str]] | None = None,
     time_limit_s: float | None = None,
+    node_limit: int | None = None,
     break_symmetry: bool = True,
 ) -> BacktrackResult:
     """Solve the timetable by backtracking with forward checking and MRV.
@@ -1181,10 +1197,24 @@ def backtrack_solve(
         may only start at its seed slot - its domain is restricted to it, like
         a ``fixed_slot`` - and is checked like any other placement.  Ids not in
         the graph are ignored.
+    seed_rooms:
+        Optional rooms: a session named here may only use that room (with
+        *seed_assignment*, one ``(start, room)`` value - how
+        :func:`solver.repair.repair` freezes a placement).  Symmetry breaking
+        is then off: a frozen room is no longer interchangeable.
+    prefer:
+        Optional ``(start, room)`` per session, tried before its other values
+        (:func:`solver.repair.repair` passes the old timetable, so the first
+        solution found stays close to it).  Symmetry breaking is then off, so
+        a preferred room is never skipped.  It changes which solution is found
+        first, never whether one exists.
     time_limit_s:
         Wall-clock budget for the search (pre-solve is polynomial and not
         counted).  When it runs out the result has ``outcome == "timeout"``,
         which is never reported as infeasible.  ``None``: no limit.
+    node_limit:
+        Search-node budget, reported exactly like *time_limit_s* running out
+        (``"timeout"``), but the same on every machine.  ``None``: no limit.
     break_symmetry:
         Skip placements that differ only by an interchangeable room (see
         :func:`_symmetric_duplicate`).  It never changes the solution found;
@@ -1206,13 +1236,19 @@ def backtrack_solve(
     from solver.presolve import presolve  # presolve imports this module's helpers
 
     state = _new_state(graph, payload)
-    state.break_symmetry = break_symmetry
+    state.break_symmetry = break_symmetry and not seed_rooms and not prefer
+    state.node_limit = node_limit
+    state.prefer = dict(prefer or {})
     _build_initial_domains(state)
 
     if seed_assignment:
         for sid, slot in seed_assignment.items():
             if sid in state.domains:
                 state.domains[sid] = {v for v in state.domains[sid] if v[0] == slot}
+    if seed_rooms:
+        for sid, room_id in seed_rooms.items():
+            if sid in state.domains:
+                state.domains[sid] = {v for v in state.domains[sid] if v[1] == room_id}
 
     certificate = presolve(state)
     timed_out = False
