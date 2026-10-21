@@ -8,11 +8,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from sqlalchemy import create_engine
 
 from backend.app import routers
 from backend.app.auth import AuthSettings
-from backend.app.service import ChronosService
+from backend.app.service import BadChange, ChronosService, Conflict
 from backend.app.store import INSTANCES_DIR, InstanceStore
 from db.local_guard import local_database_url
 
@@ -34,6 +35,10 @@ def create_app(
         engine.dispose()
 
     app = FastAPI(title="Chronos API", lifespan=lifespan)
+    for error, code in ((BadChange, 422), (Conflict, 409)):
+        app.add_exception_handler(
+            error, lambda _request, exc, code=code: JSONResponse({"detail": str(exc)}, code)
+        )
     for router in (routers.health, routers.auth, routers.instances, routers.jobs, routers.audit):
         app.include_router(router)
     return app

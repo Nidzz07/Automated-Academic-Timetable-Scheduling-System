@@ -16,11 +16,19 @@ import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import Engine, create_engine, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as OrmSession
 
 from backend.app import create_user
 from backend.app import service as service_module
-from backend.app.auth import Actor, AuthSettings, hash_password, issue_token, verify_password
+from backend.app.auth import (
+    Actor,
+    AuthSettings,
+    hash_password,
+    issue_token,
+    read_token,
+    verify_password,
+)
 from backend.app.main import create_app
 from backend.app.service import ChronosService
 from backend.app.store import INSTANCES_DIR, InstanceStore
@@ -100,6 +108,13 @@ class TestLogin:
         assert claims["sub"] == "auth-coordinator" and claims["role"] == "coordinator"
         headers = {"Authorization": f"Bearer {body['access_token']}"}
         assert client.get("/instances", headers=headers).status_code == 200
+        # D50: no faculty or cohort link on this account
+        assert body["faculty_id"] is None and body["cohort_id"] is None
+        assert claims["faculty_id"] is None and claims["cohort_id"] is None
+
+    def test_a_linked_token_reads_back(self) -> None:
+        actor = Actor("x", UserRole.STUDENT, cohort_id="coh-se-a")
+        assert read_token(issue_token(actor, AUTH), AUTH) == actor
 
     @pytest.mark.parametrize("username", ["auth-student", "nobody"])
     def test_bad_password_or_unknown_user(self, client: TestClient, username: str) -> None:
@@ -251,6 +266,44 @@ class TestCreateUserCli:
         monkeypatch.setenv("DATABASE_URL", database_url)
         self.answers(monkeypatch, *typed)
         assert create_user.main(["cli-nobody", "--role", "student"]) == 1
+
+    @pytest.mark.parametrize("link, value, claim", [
+        ("--faculty", "fac-kailas-devadkar", "faculty_id"),
+        ("--cohort", "coh-se-a", "cohort_id"),
+    ])
+    def test_links_an_account(
+        self, client: TestClient, database_url: str, monkeypatch: pytest.MonkeyPatch,
+        link: str, value: str, claim: str,
+    ) -> None:
+        monkeypatch.setenv("DATABASE_URL", database_url)
+        self.answers(monkeypatch, "cli-pass-123", "cli-pass-123")
+        username = f"cli-link{link}"
+        assert create_user.main([username, "--role", "faculty", link, value]) == 0
+        body = client.post("/auth/login", json={"username": username,
+                                                "password": "cli-pass-123"}).json()
+        assert body[claim] == value
+        assert jwt.get_unverified_claims(body["access_token"])[claim] == value
+
+    @pytest.mark.parametrize("args", [["--faculty", "fac-nobody"], ["--cohort", "coh-nobody"],
+                                      ["--faculty", "coh-se-a"]])
+    def test_refuses_an_id_not_in_the_real_instance(
+        self, engine: Engine, database_url: str, monkeypatch: pytest.MonkeyPatch,
+        args: list[str],
+    ) -> None:
+        monkeypatch.setenv("DATABASE_URL", database_url)
+        self.answers(monkeypatch, "cli-pass-123", "cli-pass-123")
+        assert create_user.main(["cli-unlinked", "--role", "student", *args]) == 1
+        with OrmSession(engine) as db:
+            assert db.scalar(select(User).where(User.username == "cli-unlinked")) is None
+
+    def test_one_link_at_most(self, engine: Engine) -> None:
+        with pytest.raises(SystemExit):
+            create_user.main(["cli-both", "--role", "student", "--faculty",
+                              "fac-kailas-devadkar", "--cohort", "coh-se-a"])
+        with OrmSession(engine) as db, pytest.raises(IntegrityError, match="ck_app_user_one_link"):
+            db.add(User(username="db-both", password_hash="scrypt$h", role=UserRole.STUDENT,
+                        faculty_ref="fac-kailas-devadkar", cohort_ref="coh-se-a"))
+            db.commit()
 
     def test_refuses_a_remote_database(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg2://u:p@db.example.com/x")
