@@ -80,6 +80,8 @@ Agents: read this file and CLAUDE.md before any task. §1 (ownership) and §3 (d
 | D43 | Contract row 9: diagnosis.method "presolve" (proven, not minimal). Signed by all three. | Team | 2026-10-18 |
 | D44 | "CE faculty" for D3 means the people in Faculty___Subjects.xlsx plus D25/D38 resolutions. Teachers found only in timetable legends (Deepak Nair, Sonali Dudhihalli, Suman M., Aman Yadav for AS201 PCS; Asma Tambe for FOM - II) are treated as other-department, so AS201 PCS is frozen at its current slots (D24) instead of rescheduled. | Nidhi | 2026-10-17 |
 | D45 | Faculty name spelling: Faculty___Subjects.xlsx is canonical; legend variants (C. R. Gajbhiye, Vaishnavi Rathod, A. A. Godbole, Amey Nile, P. B. Bhavathankar, Sonali D.) are aliases. seed_legends.py's spelling tables were checked by Nidhi on 2026-10-17 for SE and TE (closes R3 for SE/TE). | Nidhi | 2026-10-17 |
+| D46 (rejected, 2026-10-21): frozen elective/MDM blocks keep blocking every batch of the division (D24); not confirmed as SPIT practice.
+| D47 (rejected, 2026-10-21): combined lectures stay split per division (D40). S12g measured D40's cost at 1 quality point (S-LOAD16 only).
 
 ## 4. Real data inventory (data/real/ unless stated)
 | File | What it gives | Status |
@@ -185,12 +187,15 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | S12d | Dhruv | track/solver-search | S12a | Nidhi | Done (merged 2026-10-20): real instance solves in 0.26 s, score −162.5 |
 | S12e | Nidhi | track/data-ui-feed | — | Rohan | Done (merged 2026-10-19) |
 | S12f | Rohan | track/frontend-real-data | S12e | Nidhi | Done (merged 2026-10-19) |
-| S12g | Dhruv | track/solver-quality | S12d | Nidhi | In progress |
+| S12g | Dhruv | track/solver-quality | S12d | Nidhi | Done (merged 2026-10-21): simulated-annealing quality search, score −162.5 → ⟨-18.5: final score⟩ against printed 21.5, 0 hard violations |
 | S13 | Nidhi + Rohan | track/backend-api, track/frontend-api | S12 | cross | Not started |
 | S13a | Nidhi | track/backend-api | S12e | Rohan | Done (merged 2026-10-19) |
-| S13b | Nidhi | track/backend-auth | S13a | Rohan | In progress |
-| S13c | Rohan | track/frontend-api | S13a | Nidhi | In progress |
+| S13b | Nidhi | track/backend-auth | S13a | Rohan | Done (merged 2026-10-20) |
+| S13c | Rohan | track/frontend-api | S13a | Nidhi | Done (merged 2026-10-20) |
+| S13d | Nidhi | track/backend-improve | S12g, S13b | Rohan | In progress |
+| S13e | Rohan | track/frontend-login | S13c | Nidhi | In progress |
 | S14 | All | per track | S13 | cross | Not started |
+| S14a | Dhruv | track/solver-repair | S12g | Nidhi | In progress |
 | S15 | All | eval/* | S14 | cross | Not started |
 | S15a | Rohan | track/bench-harness | — | Nidhi | Done (PR #36) |
 | S16 | All | docs/report | S15 | cross | Not started |
@@ -288,3 +293,4 @@ Tags as in the old plan: [S] = should (cut only if behind schedule, note the cut
 - 2026-10-18: Wave 3 merged (S9, S10, S11/S11b, S15a, row 9). S12 started.
 - 2026-10-19: S12a–c merged; real instance times out at 300 s; S12d (search) started. Real printed timetable scores 21.5.
 - 2026-10-20: S12d merged: the real EVEN SE+TE instance solves in 0.26 s with no backtracking, validator clean, score −162.5 against 21.5 for the printed timetable. S12e, S12f, S13a merged. Proposed D46/D47 (electives blocking only some batches, combined lectures kept combined) parked: not needed for feasibility; revisit only if S12g cannot beat 21.5. Next: S12g quality search, S13b auth, S13c HTTP client.
+- 2026-10-21: S12g, S13b, S13c merged. Real timetable score −162.5 → ⟨-18.5: final score⟩ (printed 21.5; 0 vs 36 hard violations); remaining gap is idle periods on batch-days holding only frozen items. Backend has login, roles (administrator, coordinator, faculty, student) and audit (migration 0006, local only). UI talks to the backend. D46/D47 decided. Next: S13d, S13e, S14a.
