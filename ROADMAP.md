@@ -82,6 +82,9 @@ Agents: read this file and CLAUDE.md before any task. §1 (ownership) and §3 (d
 | D45 | Faculty name spelling: Faculty___Subjects.xlsx is canonical; legend variants (C. R. Gajbhiye, Vaishnavi Rathod, A. A. Godbole, Amey Nile, P. B. Bhavathankar, Sonali D.) are aliases. seed_legends.py's spelling tables were checked by Nidhi on 2026-10-17 for SE and TE (closes R3 for SE/TE). | Nidhi | 2026-10-17 |
 | D46 (rejected, 2026-10-21): frozen elective/MDM blocks keep blocking every batch of the division (D24); not confirmed as SPIT practice.
 | D47 (rejected, 2026-10-21): combined lectures stay split per division (D40). S12g measured D40's cost at 1 quality point (S-LOAD16 only).
+| D48 (2026-10-21): a repair result keeps `displaced` as the contract defines it (sessions whose slot changed). Room-only changes are found by the UI by comparing the result with the solution the repair started from. No contract change.
+| D49 (2026-10-21): a finished solve becomes the official timetable. A repair result becomes official only when an administrator or coordinator accepts it, and only if the timetable it started from is still the official one.
+| D50 (2026-10-21): an account may be linked to one faculty member or one cohort. The UI opens on and locks to that timetable. The API does not filter, because timetables are not secret.
 
 ## 4. Real data inventory (data/real/ unless stated)
 | File | What it gives | Status |
@@ -187,17 +190,21 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | S12d | Dhruv | track/solver-search | S12a | Nidhi | Done (merged 2026-10-20): real instance solves in 0.26 s, score −162.5 |
 | S12e | Nidhi | track/data-ui-feed | — | Rohan | Done (merged 2026-10-19) |
 | S12f | Rohan | track/frontend-real-data | S12e | Nidhi | Done (merged 2026-10-19) |
-| S12g | Dhruv | track/solver-quality | S12d | Nidhi | Done (merged 2026-10-21): simulated-annealing quality search, score −162.5 → ⟨-18.5: final score⟩ against printed 21.5, 0 hard violations |
+| S12g | Dhruv | track/solver-quality | S12d | Nidhi | Done (merged 2026-10-21): simulated annealing, score −162.5 → −15.0 (1,000,000 moves, seed 0) against printed 21.5, 0 hard violations |
 | S13 | Nidhi + Rohan | track/backend-api, track/frontend-api | S12 | cross | Not started |
 | S13a | Nidhi | track/backend-api | S12e | Rohan | Done (merged 2026-10-19) |
 | S13b | Nidhi | track/backend-auth | S13a | Rohan | Done (merged 2026-10-20) |
 | S13c | Rohan | track/frontend-api | S13a | Nidhi | Done (merged 2026-10-20) |
-| S13d | Nidhi | track/backend-improve | S12g, S13b | Rohan | In progress |
-| S13e | Rohan | track/frontend-login | S13c | Nidhi | In progress |
+| S13d | Nidhi | track/backend-improve | S12g, S13b | Rohan | Done (merged 2026-10-21): backtracking + improve() in solve jobs; jobs stored in the database (migration 0007) |
+| S13e | Rohan | track/frontend-login | S13c | Nidhi | Done (merged 2026-10-21): login screen, audit view |
 | S14 | All | per track | S13 | cross | Not started |
-| S14a | Dhruv | track/solver-repair | S12g | Nidhi | In progress |
+| S14a | Dhruv | track/solver-repair | S12g | Nidhi | Done (merged 2026-10-21): minimal-change repair; 4 of 6 real scenarios repaired, 2 shown impossible by pre-solve |
+| S14b | Dhruv | track/solver-diagnosis | S14a | Nidhi | In progress |
+| S14c | Nidhi | track/backend-repair | S14a, S13d | Rohan | In progress |
+| S14d | Rohan | track/frontend-repair | S14c | Nidhi | Not started |
 | S15 | All | eval/* | S14 | cross | Not started |
 | S15a | Rohan | track/bench-harness | — | Nidhi | Done (PR #36) |
+| S15b | Rohan | track/bench-evaluation | S12g | Nidhi | In progress |
 | S16 | All | docs/report | S15 | cross | Not started |
 
 ## 9. Weekly plan (week 1 = 2026-09-21)
@@ -294,3 +301,4 @@ Tags as in the old plan: [S] = should (cut only if behind schedule, note the cut
 - 2026-10-19: S12a–c merged; real instance times out at 300 s; S12d (search) started. Real printed timetable scores 21.5.
 - 2026-10-20: S12d merged: the real EVEN SE+TE instance solves in 0.26 s with no backtracking, validator clean, score −162.5 against 21.5 for the printed timetable. S12e, S12f, S13a merged. Proposed D46/D47 (electives blocking only some batches, combined lectures kept combined) parked: not needed for feasibility; revisit only if S12g cannot beat 21.5. Next: S12g quality search, S13b auth, S13c HTTP client.
 - 2026-10-21: S12g, S13b, S13c merged. Real timetable score −162.5 → ⟨-18.5: final score⟩ (printed 21.5; 0 vs 36 hard violations); remaining gap is idle periods on batch-days holding only frozen items. Backend has login, roles (administrator, coordinator, faculty, student) and audit (migration 0006, local only). UI talks to the backend. D46/D47 decided. Next: S13d, S13e, S14a.
+- 2026-10-21: S12g (score −15.0), S13d, S13e, S14a merged. D46 not adopted, D47 rejected. A revert PR of S13d was opened by mistake and closed unmerged; S13d stays on main. D48–D50 recorded. Next: S14b diagnosis, S14c repair API, S15b evaluation, then S14d repair UI.
