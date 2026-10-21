@@ -1,0 +1,7 @@
+scenario,result,moved,room_only,score_before,score_after,score_change,rings,runtime_ms,machine
+Swapnali Kurhade unavailable all Tuesday,infeasible (presolve),,,-15.0,,,0: 7 infeasible; 1: 85 infeasible; all: 156 infeasible,183,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
+Lab 603 unavailable all Monday,repaired,5,2,-15.0,-41.0,-26.0,0: 7 infeasible; 1: 81 solved,589,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
+"CE207 lecture dragged to a free slot (Wed 09.00, 601)",repaired,1,0,-15.0,-36.5,-21.5,0: 1 solved,229,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
+"CE207 lecture dragged onto SE-Comp A's frozen MDM-I lab (Mon 09.00, 605)",infeasible (presolve),,,-15.0,,,0: 1 infeasible; 1: 38 infeasible; 2: 146 infeasible; all: 156 infeasible,220,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
+Swapnali Kurhade unavailable Tuesday afternoon (P5-P9),repaired,6,1,-15.0,-17.5,-2.5,0: 1 infeasible; 1: 39 timeout; 2: 130 solved,1501,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
+"CE207 lecture dragged onto an occupied slot (Mon 17.15, 605)",repaired,4,1,-15.0,-27.0,-12.0,0: 4 infeasible; 1: 80 solved,599,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
