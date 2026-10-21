@@ -1,16 +1,162 @@
-# Solving the real EVEN 2025-26 SE+TE instance (S12a, S12d)
+# Solving the real EVEN 2025-26 SE+TE instance (S12a, S12d, S12g)
 
 Track A · reproduce with `python -m solver.benchmarks.real_solve`
-(`solver/tests/test_real_solve.py` re-runs it and compares with the committed file, marked `slow`).
+(`solver/tests/test_real_solve.py` re-runs it under `pytest -m slow` and compares with the
+committed file; CI checks the committed file and a 5,000-move local search, nothing timed).
 
-**Outcome (S12d, 2026-10-19): solved in 0.26 s, 92 search nodes.** The timetable passes
-`solver.validate.validate_solution` with no violation and is committed as
-`data/instances/even-2025-26/solution.json` (`solution.v2`; deterministic except
-`metadata.runtime_ms`). Its quality score is **−162.5**, against **21.5** for the printed
-timetable: it is a feasible timetable, not a good one (see the side-by-side below).
+**Outcome (S12g, 2026-10-21): solved, then improved by local search from −162.5 to −15.0.**
+Backtracking solves the instance in 0.45 s (92 nodes, as in S12d); `solver.improve.improve`
+(simulated annealing, 1,000,000 moves, seed 0) then raises the score to **−15.0**. The result
+passes `solver.validate.validate_solution` with no violation and is committed as
+`data/instances/even-2025-26/solution.json` (`solution.v2`, algorithm
+`backtracking(forward-checking, mrv) + local-search(simulated-annealing, moves=1000000, seed=0)`;
+identical across runs apart from `metadata.runtime_ms`). **It does not beat the printed
+timetable's 21.5**: it is 36.5 points short, 22 of them in S-GAP (below).
 
-S12a (2026-10-18) timed out at 300 s with the earlier search order; that run and its analysis
-are kept below.
+## S12g: where the −162.5 came from
+
+The S12d timetable (backtracking only), by rule (`quality_rules.yaml` version 1, weights untouched):
+
+| Rule | Weight | Raw | Penalty | Where |
+|---|---|---|---|---|
+| S-GAP | 2 | 79 | 158 | TE Comp - C 20, TE Comp- B 16, TE Comp - D 15, TE-Comp A 8, each SE division 5 (division and its batches together) |
+| S-B2B | 1 | 42 | 42 | Anand Godbole, Swapnali Kurhade, Sudhir Dhage, Abhijeet Salunke 4 pairs each; Kailas Devadkar, Anant Nimkar 3 |
+| S-LOAD16 | 1 | 6 | 6 | Amey Ganesh Nile, Azman Qureshi, Isha Sawalkar, Jyoti Ramteke, Sudeep Mali 18 h; Jignesh Sisodia 17 h |
+| FAC_LOAD_IMBALANCE | 0.5 | 113 | 56.5 | Vaishnavee Rathod 8 h; Yogita Patil, Sudhir Dhage, Prasenjit Bhavathankar, Swapnali Kurhade, Surekha Dholay, Sanjyuktarani Jena, Rupali Sawant 5 h |
+| **Score** | | | **−162.5** | |
+
+S-GAP counts a cohort's idle periods, and a batch sits in its division's lectures, so one idle
+period of a whole division counts five times (the division and its four batches): 10 points.
+The search satisfied the hard rules and optimised nothing soft; S-GAP alone was 154 of the
+184 points between it and the printed timetable.
+
+**What D40 costs** (combined lectures scheduled as one lecture per division). In the printed
+timetable 26 slots are combined lectures of 9 teachers (Kailas Devadkar, Anant Nimkar, Jignesh
+Sisodia, Sunil Ghane, Anand Godbole, Swapnali Kurhade, Abhijeet Salunke, Prasenjit Bhavathankar
+3 each, Reeta Koshy 2), so D40 gives those teachers 26 more teaching hours. Measured:
+
+- S-LOAD16: exactly **+1 point**. Jignesh Sisodia teaches 17 h under D40 and would teach 14 h
+  with his 3 combined lectures counted once; the other five flags do not change.
+- FAC_LOAD_IMBALANCE: **no effect on its floor**. A lower bound per teacher (pins fixed,
+  sessions placed as whole 1 h / 2 h pieces, D36's unavailable Monday respected, every other
+  constraint ignored) sums to 68 with D40 and 68 without.
+- S-B2B: the 9 D40 teachers hold 26 of the 42 pairs (17 of 30 after S12g). More hours make
+  adjacent hours likelier, but no single number separates D40's share.
+- S-GAP: none. D40 changes teachers' hours, not students'.
+
+**What D24 costs** (frozen items pinned). 13 teachers teach only frozen items; their
+FAC_LOAD_IMBALANCE is fixed at 29 h, **14.5 points** in every timetable of this instance,
+the printed one included. 10 of the 42 S-B2B pairs (6 of 30 after S12g) pair a session with a
+frozen slot. Four of the six S-LOAD16 flags (Azman Qureshi, Isha Sawalkar, Jyoti Ramteke, Sudeep
+Mali) include pinned hours.
+
+## S12g: the local search
+
+`solver/improve.py`, hand-written; simulated annealing and hill climbing from Artificial
+Intelligence and Soft Computing (CE303). Public API, for the backend after `backtrack_solve`:
+
+```python
+improve(payload, solution, *, max_moves=200_000, seed=0, time_limit_s=None, stats=None) -> dict
+```
+
+- **Moves.** Relocate one session outside a lab block to another start and room; swap the
+  starts of two such sessions that share a cohort or a teacher; move a whole lab block to
+  another start. A block move trades places with what is in its way: 1-period sessions take the
+  block's old periods period for period, and a lab block starting exactly there takes the old
+  start whole.
+- **Hard rules on every move.** A placement must be in the session's static domain (the
+  backtracker's `_build_initial_domains`: grid, contiguity, availability, pinned faculty, cohort
+  and room slots, so a block never covers a year's lunch; room type, capacity, `fixed_slot`) and
+  pass the backtracker's `_placement_ok` (conflict edges, room occupancy with sub-room lockout,
+  every occupied period). Pins are not sessions and never move; sessions with a `fixed_slot`, and
+  blocks holding one, are never moved. `improve` validates its input and its result with
+  `validate_solution`, which shares no code with the search.
+- **Objective.** `scoring.py`'s penalty with the YAML weights, kept per (cohort, day), (teacher,
+  day) and teacher, so a move recomputes only what it touches. S-LOAD16 cannot change (who
+  teaches what is fixed) and is a constant. The start and the result are re-scored with
+  `scoring.score` and must agree with the incremental figures.
+- **Annealing.** A move that does not raise the penalty is kept; one that does is kept with
+  probability exp(−Δ/T), T cooling geometrically from 10 to 0.3 penalty points over the budget
+  (a one-gap loss is kept 80% of the time at the start, 0.1% at the end). The best timetable
+  seen is returned, so the score never drops. One `random.Random(seed)`, every choice drawn from a
+  sorted list: a seed and a budget fix the result. `time_limit_s` is only a safety cap
+  (`stopped_by_time` in `stats`); the real-solve runner passes 600 s. The default budget stays
+  200,000 moves (about 23 s here); the backend passes its own. The committed run uses
+  1,000,000 (`solver.benchmarks.real_solve.MOVES`).
+- **Tabu search: not built.** Nothing measured that it would do better.
+
+### Before and after
+
+| Rule | Weight | Backtracking raw | Penalty | **After local search raw** | **Penalty** |
+|---|---|---|---|---|---|
+| S-GAP | 2 | 79 | 158 | **13** | **26** |
+| S-B2B | 1 | 42 | 42 | **30** | **30** |
+| S-LOAD16 | 1 | 6 | 6 | 6 | 6 |
+| FAC_LOAD_IMBALANCE | 0.5 | 113 | 56.5 | **106** | **53** |
+| **Score** | | | **−162.5** | | **−15.0** |
+
+After: S-GAP is SE-Comp B 5 (one whole-division idle period, Friday 11.15), TE Comp - C 5 (one,
+Thursday 13.15), TE-Comp A batch A 2 (Wednesday 13.15–15.15), SE-Comp C batch B 1. S-B2B: Anand
+Godbole, Swapnali Kurhade, Vaishnavee Rathod 3 pairs each. FAC_LOAD_IMBALANCE: Sudeep Mali 6 h;
+Rupali Sawant, Sanjyuktarani Jena, Sudhir Dhage, Swapnali Kurhade (Monday off under D36), Yogita
+Patil, Vaishnavee Rathod 5 h. Against 200,000 moves (−18.5: S-GAP 15, S-B2B 32,
+FAC_LOAD_IMBALANCE 101) the gain is S-GAP −2 and S-B2B −2 raw (−6 points), against
+FAC_LOAD_IMBALANCE +5 raw (+2.5).
+
+### Moves used and runtime
+
+| | |
+|---|---|
+| Machine | AMD64 Family 23 Model 104 Stepping 1 (AuthenticAMD), Windows, Python 3.12.10 |
+| Backtracking | solved, 452.0 ms, 92 nodes |
+| Local search | 136,120.1 ms; committed `metadata.runtime_ms` 136,572 (both steps); whole runner 2 min 17 s |
+| `test_real_solve`, default (CI) | 3 tests, about 2.7 s (5,000 moves twice); safety cap 600 s |
+| `test_real_solve`, `-m slow` | 120.3 s (full reproduction, compared with `solution.json`) |
+| Moves proposed | 1,000,000 (the budget; not stopped by time) |
+| Infeasible | 880,038 (88%: the week is tight, most random targets clash) |
+| Accepted | 86,214: relocate 9,396, swap 74,719, block 2,099 |
+| New best | 47: relocate 27, swap 14, block 6 |
+
+The committed budget is chosen by score, no longer by CI time: 1,000,000 moves, seed 0 (the
+default, not picked by score; no other seed was run at this budget), −15.0 against −18.5 at
+200,000. The schedule (T 10 → 0.3) was chosen on this instance earlier. At 200,000 moves other
+seeds gave 1 −17.5, 2 −5.5, 3 −17.5, 4 −22.0, 5 −20.0; at 250,000 moves seeds 0–3 gave −10.0,
+−18.0, 8.5, −20.0. The best seen in any run (8.5) is still below 21.5. A first schedule (T 2 → 0.05) gave −38.5 at 100,000 moves.
+Before a block move could trade places with what is in its way, 113 of 100,000 moves were
+accepted block moves; 1-period sessions and other blocks almost always stand in the way.
+
+## S12g: side by side with the printed timetable
+
+| | Generated (S12g) | Printed (`docs/real-baseline-even-2025-26.md`) |
+|---|---|---|
+| Score | **−15.0** | **21.5** |
+| S-GAP | 13 raw, 26 | 2 raw, 4 |
+| S-B2B | 30 raw, 30 | 23 raw, 23 |
+| S-LOAD16 | 6 raw, 6 | 5 raw, 5 |
+| FAC_LOAD_IMBALANCE | 106 raw, 53 | 93 raw, 46.5 |
+| Hard violations (time only) | **0** | **36** (26 FACULTY_CLASH: combined lectures under D40; 10 PINNED_BLOCK) |
+
+**Why it cannot reach 21.5, and what blocks it.** The generated timetable is 36.5 points short:
+S-GAP +22, S-B2B +7, FAC_LOAD_IMBALANCE +6.5, S-LOAD16 +1. Annealing each rule alone with
+the same moves (100,000–500,000 moves, the other weights set to 0, in scratch runs only) bottoms
+out at S-GAP 7, S-B2B 19 and FAC_LOAD_IMBALANCE 93. Even those three floors together, which no
+single timetable reached, give 14 + 19 + 6 + 46.5 = 85.5, a score of 14.5: still 7 short.
+So:
+
+- **S-GAP blocks it**, by 5 raw (10 points) at its best, 11 raw (22 points) in the committed
+  timetable. Idle periods survive on batch-days holding only frozen items, e.g. TE-Comp A
+  batch A on Wednesday (no session that day), idle at 13.15–15.15 between frozen slots. No
+  period is unfillable in principle (some session's domain covers each one), so this is the floor this search reaches, not a proof. These frozen items
+  (D24) block some batches of a division and not others. The printed timetable reaches 2 partly
+  by putting practicals into slots frozen items hold (its 10 PINNED_BLOCK violations, all TE
+  batches). **This is D24**, together with the parked D46 (electives that block only some batches).
+- **S-LOAD16 +1 is D40**, exactly (Jignesh Sisodia).
+- **S-B2B and FAC_LOAD_IMBALANCE are not the blocker**: their floors (19, 93) match or beat the
+  printed values (23, 93). D24 fixes 14.5 points of FAC_LOAD_IMBALANCE in both timetables; D40
+  adds teaching hours, not a measurable floor.
+
+Revisiting D46/D47 (parked on 2026-10-20 until S12g) is a team decision; nothing here changes
+the edge list.
 
 ## S12d: why the old search got stuck
 
@@ -92,13 +238,13 @@ not measurably help.
 
 **(c) Min-conflicts local search — not built.** Only called for if (a) and (b) timed out.
 
-## S12d result
+## S12d result (before local search)
 
 | | |
 |---|---|
 | Machine | Intel64 Family 6 Model 183 (GenuineIntel), Windows, Python 3.12.10 |
 | Pre-solve (D21) | passed |
-| Backtracking | **solved**, 256 ms wall clock (pre-solve included; the committed `metadata.runtime_ms`), 92 nodes |
+| Backtracking | **solved**, 256 ms wall clock (pre-solve included; the `metadata.runtime_ms` committed in S12d), 92 nodes |
 | Validator | `validate_solution`: no violations |
 | Slots used | 34 |
 | Welsh-Powell | unchanged: 32 colours, 8 sessions uncoloured, time-only check clean |
