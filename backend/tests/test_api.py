@@ -1,13 +1,15 @@
 """S13a API: every endpoint, contract-checked responses, the job lifecycle and 404s.
 
-Solves use synthetic presets (D19) in a scratch instance directory; the real
-EVEN instance is only read, never solved here (it times out at 300 s, S12a).
+Solves use synthetic presets (D19) in a scratch instance directory. S13d: the real
+EVEN instance is solved and improved under another id in a scratch directory, so the
+committed solution stays what is served for ``even-2025-26``; jobs are database rows.
 Every client carries a coordinator token (S13b); auth itself is tested in test_auth.py.
 """
 
 from __future__ import annotations
 
 import json
+import shutil
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -16,11 +18,19 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session as OrmSession
 
 from backend.app.main import create_app
+from backend.app.service import MAX_MAX_MOVES, solve_edge_list
 from backend.app.store import INSTANCES_DIR, InstanceStore
 from backend.tests.conftest import AUTH, bearer
+from db.models import SolveJob
+from solver.backtracking import backtrack_solve
 from solver.benchmarks.synthetic import PRESETS, generate
+from solver.graph import build_conflict_graph
+from solver.improve import improve
+from solver.validate import validate_solution
 
 REPO = Path(__file__).resolve().parents[2]
 REAL = "even-2025-26"
@@ -62,9 +72,13 @@ def synthetic(
         yield client
 
 
-def solve(client: TestClient, instance: str, time_limit_s: float = 60.0) -> dict[str, Any]:
+def solve(
+    client: TestClient, instance: str, time_limit_s: float = 60.0, **body: Any
+) -> dict[str, Any]:
     """POST a solve, then poll the job until it leaves queued/running."""
-    accepted = client.post(f"/instances/{instance}/solve", json={"time_limit_s": time_limit_s})
+    accepted = client.post(
+        f"/instances/{instance}/solve", json={"time_limit_s": time_limit_s, **body}
+    )
     assert accepted.status_code == 202
     job_id = accepted.json()["job_id"]
     deadline = time.monotonic() + 120
@@ -72,6 +86,7 @@ def solve(client: TestClient, instance: str, time_limit_s: float = 60.0) -> dict
         assert time.monotonic() < deadline, job
         time.sleep(0.05)
     assert job["id"] == job_id and job["instance_id"] == instance
+    assert "phase" not in job  # only while running
     return job
 
 
@@ -154,7 +169,7 @@ class TestNotFound:
 
 class TestJobs:
     def test_solved(self, synthetic: TestClient) -> None:
-        job = solve(synthetic, "small")
+        job = solve(synthetic, "small", max_moves=2000)
         assert job["status"] == "solved"
         assert conforms("solution_v2", job["solution"])
         assert job["solution"]["status"] == "solved"
@@ -180,11 +195,131 @@ class TestJobs:
         assert "solution" not in job
 
     def test_first_status_is_queued_or_running(self, synthetic: TestClient) -> None:
-        body = synthetic.post("/instances/small/solve").json()
+        # infeasible by pre-solve: no local search left running at the default 200000 moves
+        body = synthetic.post("/instances/infeasible/solve").json()
         assert body["status"] in ("queued", "running")
-        assert synthetic.get(f"/jobs/{body['job_id']}").json()["time_limit_s"] == 300.0
+        job = synthetic.get(f"/jobs/{body['job_id']}").json()
+        assert (job["time_limit_s"], job["max_moves"]) == (300.0, 200_000)
 
     @pytest.mark.parametrize("limit", [0, -1, 1801])
     def test_rejects_a_bad_time_limit(self, synthetic: TestClient, limit: float) -> None:
         response = synthetic.post("/instances/small/solve", json={"time_limit_s": limit})
         assert response.status_code == 422
+
+    @pytest.mark.parametrize("moves", [-1, MAX_MAX_MOVES + 1, 1.5])
+    def test_rejects_a_bad_move_budget(self, synthetic: TestClient, moves: float) -> None:
+        response = synthetic.post("/instances/small/solve", json={"max_moves": moves})
+        assert response.status_code == 422
+
+
+def test_phases_in_order() -> None:
+    edge_list = generate(PRESETS["small"], 1)
+    for moves, expected in [(0, ["search"]), (100, ["search", "improve"])]:
+        heard: list[str] = []
+        assert solve_edge_list(edge_list, 60.0, moves, heard.append)[0] == "solved"
+        assert heard == expected
+
+
+@pytest.fixture(scope="module")
+def real_copy(
+    tmp_path_factory: pytest.TempPathFactory, database_url: str
+) -> Iterator[TestClient]:
+    root = tmp_path_factory.mktemp("real")
+    (root / "real-copy").mkdir()
+    shutil.copy(INSTANCES_DIR / REAL / "edge_list.json", root / "real-copy" / "edge_list.json")
+    with client_for(root, database_url) as client:
+        yield client
+
+
+@pytest.fixture(scope="module")
+def real_edge_list() -> dict[str, Any]:
+    return json.loads((INSTANCES_DIR / REAL / "edge_list.json").read_text("utf-8"))
+
+
+@pytest.fixture(scope="module")
+def backtracked(real_edge_list: dict[str, Any]) -> dict[str, Any]:
+    """The real instance solved by backtracking alone, outside the API."""
+    graph = build_conflict_graph(real_edge_list)
+    return backtrack_solve(graph, real_edge_list, time_limit_s=60).to_solution_v2_dict()
+
+
+def without_runtime(solution: dict[str, Any]) -> dict[str, Any]:
+    return solution | {"metadata": solution["metadata"] | {"runtime_ms": None}}
+
+
+class TestImprove:
+    """S13d on the real EVEN instance: search, then local search, in one job."""
+
+    def test_no_moves_is_plain_backtracking(
+        self, real_copy: TestClient, backtracked: dict[str, Any]
+    ) -> None:
+        job = solve(real_copy, "real-copy", max_moves=0)
+        assert job["status"] == "solved" and job["max_moves"] == 0
+        assert without_runtime(job["solution"]) == without_runtime(backtracked)
+
+    def test_improves_and_stays_valid(
+        self, real_copy: TestClient, real_edge_list: dict[str, Any],
+        backtracked: dict[str, Any],
+    ) -> None:
+        job = solve(real_copy, "real-copy", max_moves=2000)
+        solution = job["solution"]
+        assert job["status"] == "solved"
+        assert conforms("solution_v2", solution)
+        assert validate_solution(real_edge_list, solution) == []
+        assert solution["quality"]["score"] >= backtracked["quality"]["score"]
+        assert "local-search" in solution["metadata"]["algorithm"]
+        # seed 0 and a move budget fix the result (solver/improve.py)
+        expected = improve(real_edge_list, backtracked, max_moves=2000, seed=0)
+        assert without_runtime(solution) == without_runtime(expected)
+        assert real_copy.get("/instances/real-copy/solution").json() == solution
+
+    def test_phase_while_running(self, real_copy: TestClient) -> None:
+        # the move budget outlasts the time budget, so the job is in "improve" for ~3 s
+        accepted = real_copy.post(
+            "/instances/real-copy/solve", json={"time_limit_s": 3, "max_moves": MAX_MAX_MOVES}
+        ).json()
+        seen: set[str] = set()
+        deadline = time.monotonic() + 120
+        while (job := real_copy.get(f"/jobs/{accepted['job_id']}").json())["status"] in (
+            "queued", "running"
+        ):
+            assert time.monotonic() < deadline, job
+            assert ("phase" in job) == (job["status"] == "running")
+            seen.add(job.get("phase", "queued"))
+            time.sleep(0.05)
+        assert "improve" in seen and seen <= {"queued", "search", "improve"}
+        assert job["status"] == "solved" and "phase" not in job
+
+
+class TestPersistence:
+    def test_jobs_and_solution_survive_a_new_app(
+        self, tmp_path: Path, database_url: str
+    ) -> None:
+        (tmp_path / "persist").mkdir()
+        (tmp_path / "persist" / "edge_list.json").write_text(
+            json.dumps(generate(PRESETS["small"], 3)), encoding="utf-8"
+        )
+        with client_for(tmp_path, database_url) as first:
+            job = solve(first, "persist", max_moves=100)
+        assert job["status"] == "solved"
+        with client_for(tmp_path, database_url) as second:
+            assert second.get(f"/jobs/{job['id']}").json() == job
+            assert second.get("/instances/persist/solution").json() == job["solution"]
+
+    def test_restart_marks_unfinished_jobs_as_error(self, database_url: str) -> None:
+        engine = create_engine(database_url)
+        with OrmSession(engine) as db:
+            db.add_all([
+                SolveJob(id="restart-queued", instance_id="gone", requested_by="t",
+                         status="queued", params={"time_limit_s": 1.0, "max_moves": 0}),
+                SolveJob(id="restart-running", instance_id="gone", requested_by="t",
+                         status="running", phase="improve",
+                         params={"time_limit_s": 1.0, "max_moves": 5}),
+            ])
+            db.commit()
+        engine.dispose()
+        with client_for(INSTANCES_DIR, database_url) as client:
+            for job_id in ("restart-queued", "restart-running"):
+                job = client.get(f"/jobs/{job_id}").json()
+                assert (job["status"], job["error"]) == ("error", "server restarted")
+                assert "phase" not in job

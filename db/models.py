@@ -59,6 +59,7 @@ from sqlalchemy import (
     MetaData,
     String,
     Table,
+    Text,
     UniqueConstraint,
     func,
 )
@@ -994,9 +995,12 @@ class AuditEntry(Base):
     """Who changed what, when. Written on every mutating action.
 
     ``affected_session_ids`` is JSONB rather than an association table: the
-    audit log is append-only and read as a whole record, never joined against,
-    and keeping it denormalised means a session that is later deleted does not
-    erase the history of it having been moved.
+    audit log is read as a whole record, never joined against, and keeping it
+    denormalised means a session that is later deleted does not erase the
+    history of it having been moved.
+
+    Rows are append-only except a solve's (S13b): written when the job is
+    queued, then updated once with its final status when the job ends.
     """
 
     __tablename__ = "audit_entry"
@@ -1037,3 +1041,33 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class SolveJob(Base):
+    """One API solve request and its outcome (S13d), so jobs survive a restart.
+
+    ``status`` is queued, running, solved, infeasible, timeout or error; ``phase``
+    (search, improve) is set while it runs. ``params`` is the request
+    (``time_limit_s``, ``max_moves``). ``solution`` is the solution.v2 payload once
+    solved or infeasible, never on a timeout (ROADMAP D33).
+    """
+
+    __tablename__ = "solve_job"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    #: Null while instances are files with no department, as on AuditEntry.
+    department_id: Mapped[int | None] = mapped_column(
+        ForeignKey("department.id"), nullable=True, index=True
+    )
+    instance_id: Mapped[str] = mapped_column(String(128), index=True)
+    requested_by: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(16))
+    phase: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    params: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    solution: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
