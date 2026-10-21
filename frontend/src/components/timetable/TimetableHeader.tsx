@@ -114,21 +114,25 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                   </option>
                 ))}
               </select>
-              <span className="font-semibold text-muted-foreground">Instance:</span>
-              <select
-                aria-label="Select instance"
-                value={instance}
-                onChange={(e) => onInstanceChange(e.target.value)}
-                className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
-              >
-                {instanceOptions.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.label}
-                  </option>
-                ))}
-              </select>
             </div>
           )}
+
+          {/* Instance picker: every role (a logged-in faculty member or student picks it too) */}
+          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 text-xs shadow-xs">
+            <span className="font-semibold text-muted-foreground">Instance:</span>
+            <select
+              aria-label="Select instance"
+              value={instance}
+              onChange={(e) => onInstanceChange(e.target.value)}
+              className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
+            >
+              {instanceOptions.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Toggle Quality Breakdown (if role has permission) */}
           {caps.showQualityScore && solutionStatus === 'solved' && (

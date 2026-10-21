@@ -5,7 +5,8 @@ import { Shield, UserCheck, GraduationCap, School, Lock, Move } from 'lucide-rea
 
 interface RoleSelectorProps {
   currentRole: UserRole;
-  onRoleChange: (role: UserRole) => void;
+  /** Static/demo mode only; without it (http mode) the role is the login's and only shown */
+  onRoleChange?: (role: UserRole) => void;
   selectedFaculty: string;
   onFacultyChange: (faculty: string) => void;
   selectedStudentDivision: string;
@@ -42,6 +43,12 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
     >
       {/* Top: Role Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {!onRoleChange ? (
+          <Badge variant="outline" data-testid="session-role" className="text-xs gap-1.5 py-1">
+            {React.createElement(ROLE_ICONS[currentRole], { className: 'h-3.5 w-3.5 text-primary' })}
+            <span>{caps.title}</span>
+          </Badge>
+        ) : (
         <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-muted/60 border border-border/50">
           {(Object.keys(ROLE_CAPABILITIES) as UserRole[]).map((role) => {
             const Icon = ROLE_ICONS[role];
@@ -70,6 +77,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
             );
           })}
         </div>
+        )}
 
         {/* Capability Pill */}
         <div className="flex items-center gap-2">
