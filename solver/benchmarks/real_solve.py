@@ -1,9 +1,9 @@
-"""Solve the real EVEN SE+TE instance (S12a) and record what happened.
+"""Solve the real EVEN SE+TE instance (S12a, S12g) and record what happened.
 
 Usage (repo root, venv active)::
 
-    python -m solver.benchmarks.real_solve                 # 300 s search budget
-    python -m solver.benchmarks.real_solve --time-limit 60
+    python -m solver.benchmarks.real_solve                 # 600 s safety cap
+    python -m solver.benchmarks.real_solve --time-limit 900
 
 Reads ``data/instances/even-2025-26/edge_list.json`` (the S9 export) and runs:
 
@@ -13,13 +13,17 @@ Reads ``data/instances/even-2025-26/edge_list.json`` (the S9 export) and runs:
 2. Welsh-Powell (:func:`solver.colouring.welsh_powell`): colours (distinct start
    slots) used, the sessions it could not colour, and the room-free half of the
    validator (:func:`solver.validate.validate_slot_placements`) on the sessions
-   it did colour.
+   it did colour;
+3. solved only: local search (:func:`solver.improve.improve`, :data:`MOVES`
+   moves and seed 0, the time budget as its safety cap) from the backtracking
+   timetable: score before and after, and the move counts.
 
-Solved: the timetable must pass :func:`solver.validate.validate_solution`; it is
-scored and written as ``solution.json`` (``solution.v2``). Infeasible, by
+Solved: both timetables must pass :func:`solver.validate.validate_solution`; the
+improved one is written as ``solution.json`` (``solution.v2``). Infeasible, by
 pre-solve or search: the v2 infeasible result goes to the same path. Timeout:
 nothing is written (ROADMAP D33). The file depends only on the instance, except
-``metadata.runtime_ms``, which is wall-clock time. Prints the record as JSON.
+``metadata.runtime_ms``, which is wall-clock time (both steps), unless the
+local search hits its safety cap. Prints the record as JSON.
 """
 
 from __future__ import annotations
@@ -34,10 +38,12 @@ from typing import Any
 from solver.backtracking import backtrack_solve
 from solver.colouring import welsh_powell
 from solver.graph import build_conflict_graph
+from solver.improve import SEED, improve
 from solver.validate import validate_slot_placements, validate_solution
 
 INSTANCE = Path(__file__).resolve().parents[2] / "data" / "instances" / "even-2025-26"
-TIME_LIMIT_S = 300.0
+TIME_LIMIT_S = 600.0  # a safety cap only: both steps take about 2 min here
+MOVES = 1_000_000  # the committed run's budget, chosen by score (docs/real-solve-even-2025-26.md)
 
 
 def run(edge_list: dict[str, Any], time_limit_s: float = TIME_LIMIT_S
@@ -88,7 +94,13 @@ def run(edge_list: dict[str, Any], time_limit_s: float = TIME_LIMIT_S
         violations = validate_solution(edge_list, solution)
         if violations:
             raise AssertionError(f"solved but invalid: {[v.to_dict() for v in violations]}")
+        record["score_backtracking"] = solution["quality"]["score"]
+        stats: dict[str, Any] = {}
+        solution = improve(edge_list, solution, max_moves=MOVES, seed=SEED,
+                           time_limit_s=time_limit_s, stats=stats)
         record["score"] = solution["quality"]["score"]
+        improve_ms = solution["metadata"]["runtime_ms"] - runtime_ms
+        record["improve"] = {"runtime_ms": round(improve_ms, 1), "seed": SEED, **stats}
     return record, solution
 
 
