@@ -18,6 +18,7 @@ import pytest
 from solver.backtracking import backtrack_solve
 from solver.benchmarks.real_repair import CE207, INSTANCE, SCENARIOS, TEACHING
 from solver.graph import build_conflict_graph
+from solver.mus import apply_action
 from solver.repair import apply_change, repair
 from solver.slots import SlotId
 from solver.tests.test_property_solved_is_valid import SEED, generate_instance
@@ -93,18 +94,58 @@ def test_lab_603_monday_empties_603_and_moves_few(real: tuple[dict, dict]) -> No
     assert sum(new[sid] != old[sid] for sid in old) <= 10  # 156 sessions, 7 hit
 
 
-def test_infeasible_changes_return_the_presolve_diagnosis(real: tuple[dict, dict]) -> None:
+def test_drag_onto_a_frozen_item_names_the_pin(real: tuple[dict, dict]) -> None:
+    """S14b pre-check: SE-Comp A's frozen MDM-I lab is blamed, not Anant Nimkar,
+    before any search, with a proven-minimal set and a verified relaxation."""
     edge_list, solution = real
-    for change in (KURHADE_TUESDAY, FROZEN_DRAG):
-        stats: dict = {}
-        result = _check(edge_list, solution, change, stats)
-        assert result["status"] == "infeasible"
-        assert result["diagnosis"]["method"] == "presolve"
-        assert result["diagnosis"]["minimal_conflicting_set"]
-        assert stats["rings"][-1][0] == "all"  # only the run with everything free decides
-    kurhade = repair(edge_list, solution, KURHADE_TUESDAY)
-    assert "fac-swapnali-kurhade" in kurhade["diagnosis"]["minimal_conflicting_set"][0][
-        "entity_ids"]
+    stats: dict = {}
+    result = _check(edge_list, solution, FROZEN_DRAG, stats)
+    diagnosis = result["diagnosis"]
+    assert result["status"] == "infeasible" and diagnosis["method"] == "mus"
+    assert stats["rings"] == [] and stats["mus"]["proven_minimal"]
+    members = {m["constraint_id"]: m for m in diagnosis["minimal_conflicting_set"]}
+    assert set(members) == {"pin.238", "change"}
+    display = json.loads((INSTANCE / "display.json").read_text(encoding="utf-8"))
+    assert display["pins"][238]["source_ref"] == "pin-t0-r1-c1-l0"  # "MDM - I LABs", Mon P0-P1
+    assert "coh-se-a" in members["pin.238"]["entity_ids"]
+    assert members["change"]["kind"] == "FIXED_SLOT"
+    assert members["change"]["entity_ids"] == [CE207, "room-605"]
+    relaxation = diagnosis["suggested_relaxation"]
+    assert relaxation["action"] == {"action_type": "RELAX_PINNED_BLOCK", "params": {
+        "slot": {"day": 0, "period": 0}, "entity_kind": "cohort", "entity_id": "coh-se-a"}}
+    assert relaxation["verification"]["status"] == "restored"
+    # independently: with SE-Comp A freed from that pin the drag repairs
+    relaxed = apply_action(edge_list, relaxation["action"])
+    assert repair(relaxed, solution, FROZEN_DRAG)["status"] == "solved"
+
+
+@pytest.fixture(scope="module")
+def kurhade(real: tuple[dict, dict]) -> tuple[dict, dict]:
+    stats: dict = {}
+    return _check(*real, KURHADE_TUESDAY, stats), stats
+
+
+def test_kurhade_tuesday_is_explained(kurhade: tuple[dict, dict]) -> None:
+    """Her declared Monday off, the Tuesday absence and her not teaching two
+    classes at once are in the set; the set is proven infeasible, and is called
+    minimal only if every member was shown necessary."""
+    result, stats = kurhade
+    diagnosis = result["diagnosis"]
+    assert result["status"] == "infeasible"
+    assert stats["rings"][-1][0] == "all"  # only the run with everything free decides
+    members = {m["constraint_id"] for m in diagnosis["minimal_conflicting_set"]}
+    assert {"change", "unavailable.fac-swapnali-kurhade.0",
+            "faculty_clash.fac-swapnali-kurhade"} <= members
+    assert diagnosis["method"] == ("mus" if stats["mus"]["proven_minimal"] else "presolve")
+    assert set(stats["mus"]["unknown"]) <= members
+    relaxation = diagnosis["suggested_relaxation"]
+    restored = [a for a in stats["mus"]["relaxations"]
+                if a["verification"]["status"] == "restored"]
+    if relaxation["action"]["action_type"] == "MANUAL":
+        assert restored == []
+    else:
+        assert restored == [relaxation]
+    assert relaxation["constraint_id"] != "change"  # the absence itself is never relaxed
 
 
 def test_a_change_that_hits_nothing_keeps_the_timetable(real: tuple[dict, dict]) -> None:
@@ -122,10 +163,12 @@ def test_a_change_that_hits_nothing_keeps_the_timetable(real: tuple[dict, dict])
 
 def test_deterministic(real: tuple[dict, dict]) -> None:
     edge_list, solution = real
-    for change in (LAB_603_MONDAY, BUSY_DRAG, KURHADE_TUESDAY):
+    for change in (LAB_603_MONDAY, BUSY_DRAG, FROZEN_DRAG):
         runs = [repair(edge_list, solution, change) for _ in range(2)]
         for run in runs:
             run["metadata"].pop("runtime_ms")
+            if run["status"] == "infeasible":
+                run["diagnosis"]["suggested_relaxation"]["verification"].pop("runtime_ms")
         assert runs[0] == runs[1]
 
 
@@ -190,7 +233,8 @@ def test_property_instances() -> None:
         repaired = _check(edge_list, solution, change, stats)
         if repaired["status"] == "infeasible":
             infeasible += 1
-            assert stats["rings"][-1][0] == "all"
+            assert stats["rings"][-1][0] == "all" or (stats["rings"] == []
+                                                      and change["kind"] == "move_session")
             continue
         solved += 1
         if stats["rings"][-1][0] == 0:

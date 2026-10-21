@@ -38,9 +38,10 @@ an earlier run on the same machine took 0.33 / 1.10 / 0.41 / 0.43 / 3.16 / 1.25 
 5. **Improve**: `improve()` runs on a copy of the edge list in which every session still at its
    old start is fixed there. Only sessions that already moved can move again, so the moved count
    can never grow.
-6. **No repair at all**: if even the run with every session free fails, the result is that
-   run's own diagnosis (`presolve` or `search_exhaustion`). If that run runs out of time,
-   `repair` raises `TimeoutError` and never reports the change as infeasible (D21, D33).
+6. **No repair at all**: if even the run with every session free fails, that run's diagnosis
+   (`presolve` or `search_exhaustion`) is explained by `solver/mus.py` (S14b, below). If that
+   run runs out of time, `repair` raises `TimeoutError` and never reports the change as
+   infeasible (D21, D33). A drag onto a frozen item is explained before any search (S14b).
 
 The objective is lexicographic: first the number of sessions whose slot changed, then the number
 only moved to another room, then the score. The result is a heuristic minimum, not a proven one.
@@ -54,10 +55,10 @@ changes belong in `displaced` is a contract question for all three members (see 
 
 | Scenario | Result | Moved (slot) | Re-roomed only | Rings: freed sessions, outcome | Score before → after | Runtime |
 |---|---|---|---|---|---|---|
-| 1. Swapnali Kurhade unavailable all Tuesday | **cannot be repaired** (presolve) | n/a | n/a | 0: 7 infeasible; 1: 85 infeasible; all: 156 infeasible | −15.0 → n/a | 0.54 s |
+| 1. Swapnali Kurhade unavailable all Tuesday | **cannot be repaired** (presolve; S14b: explained, see below) | n/a | n/a | 0: 7 infeasible; 1: 85 infeasible; all: 156 infeasible | −15.0 → n/a | 0.54 s (S14b: 56.16 s) |
 | 2. Lab 603 unavailable all Monday | repaired | 5 | 2 | 0: 7 infeasible; 1: 81 solved | −15.0 → −41.0 | 1.91 s |
 | 3. One CE207 lecture dragged to a free slot | repaired | 1 | 0 | 0: 1 solved | −15.0 → −36.5 | 0.70 s |
-| 4. The same lecture dragged onto SE-Comp A's frozen MDM-I lab | **cannot be repaired** (presolve) | n/a | n/a | 0: 1; 1: 38; 2: 146; all: 156, all infeasible | −15.0 → n/a | 0.71 s |
+| 4. The same lecture dragged onto SE-Comp A's frozen MDM-I lab | **cannot be repaired** (S14b: pre-check, `mus`) | n/a | n/a | S14a: 0: 1; 1: 38; 2: 146; all: 156, all infeasible. S14b: none (answered before any search) | −15.0 → n/a | 0.71 s (S14b: 2.40 s) |
 | 5. (extra) Swapnali Kurhade unavailable Tuesday P5–P9 | repaired | 6 | 1 | 0: 1 infeasible; 1: 39 node budget out; 2: 130 solved | −15.0 → −17.5 | 3.75 s |
 | 6. (extra) The same lecture dragged onto an occupied slot | repaired | 4 | 1 | 0: 4 infeasible; 1: 80 solved | −15.0 → −27.0 | 1.48 s |
 
@@ -73,7 +74,8 @@ the pre-solve proves it impossible: she teaches 11 sessions, 16 periods in all, 
 periods are left in which she is free (Wed P0, P1, P3, P4, P8, P9; Thu P1, P3, P4; Fri P0, P3, P4,
 P6). Diagnosis: `method = "presolve"`, kind `FACULTY_CLASH`, constraint
 `presolve.faculty_load.fac-swapnali-kurhade`, relaxation `MANUAL`. All three ring searches and the
-run with everything free are refuted by pre-solve, so no search ran (0 search nodes).
+run with everything free are refuted by pre-solve, so no search ran (0 search nodes). Since S14b
+this certificate is explained further; see "S14b, scenario 1" below.
 
 ### 2. Lab 603 unavailable all Monday
 
@@ -117,7 +119,8 @@ a frozen D24 item (pin `pin-t0-r1-c1-l0`), so no timetable can honour the drag. 
 The diagnosis is correct (no timetable exists) but poorly aimed. It blames Anant Nimkar because
 the faculty Hall check is the first pre-solve check to fire, not SE-Comp A's pin. It also names
 ids rather than people, which the contract's `description` forbids. This comes from the existing
-pre-solve and is listed under Open questions; it was not changed here.
+pre-solve and is listed under Open questions; it was not changed here. **S14b fixes the aim:**
+the pre-check names the pin; see "S14b, scenario 4" below.
 
 ### 5. (extra) Swapnali Kurhade unavailable Tuesday afternoon (P5–P9)
 
@@ -148,6 +151,106 @@ cohort), Anant Nimkar's SE-Comp B CE207 lecture (same teacher), and SE-Comp D's 
 CE208 to Wed P1; Anant Nimkar's SE-Comp B lecture swapped with Jignesh Sisodia's SE-Comp B CE208
 on Thu P3), and SE-Comp D's lecture only changed room (605 → 601). Score −15.0 → −27.0.
 
+## S14b: explaining an infeasible change
+
+2026-10-21 · Dhruv (with Claude Code) · branch `track/solver-diagnosis`. `solver/mus.py` explains a
+change that cannot be repaired, and `repair()` answers a drag onto a frozen item before any search.
+The numbers below come from `python -m solver.benchmarks.real_repair` (same seed and machine as
+above). The solver's output names ids only; the names in this section come from `display.json`.
+
+### How it works
+
+- **Constraint groups.** Each member of the set is one thing in the edge list that can be switched
+  off as data. One `pinned_occupancy` entry is `pin.<i>`, PINNED_BLOCK. The edge list gives pins no
+  id, so the index is the id, and `display.json` `pins[i]` names it (D41). Other members: one
+  teacher's unavailable slots on one day (FACULTY_UNAVAILABLE), one `fixed_slot`, one lab block
+  (LAB_CONTIGUITY), the FACULTY or COHORT edges between one pair of teachers or cohorts, one room's
+  capacity, one non-lab room's type, and the change itself (`change`). Sessions, the grid and "one
+  session per room per period" always hold. The real instance has 493 groups.
+- **Checks.** Each check runs pre-solve first, then backtracking within 300 search nodes
+  (`MUS_NODES`). A check that runs out of nodes is *unknown*, never feasible or infeasible (D33).
+  Before searching from scratch, a check tries to reuse a known timetable (the one being repaired,
+  or a witness found earlier). It first tries one as-is, then repairs it locally with only the
+  sessions in the way free. Every timetable used as proof passes `validate_solution`.
+- **Deletion** (deletion filter, Chinneck and Dravnieks 1991; chunks as in QuickXplain, Junker
+  2004). The start set is the groups touching the sessions the proof names; for a load or Hall
+  certificate, only pins outside the slots it counts as free. Chunks are dropped while pre-solve
+  still proves the rest infeasible, then every member is tried alone with a full check. A member
+  whose removal is shown feasible stays necessary, so with no unknown check the set is a minimal
+  unsatisfiable subset (`method = "mus"`). With an unknown check the set is only proven
+  infeasible: it goes out as `presolve` (proven, not minimal, D43) if pre-solve proved it, and
+  otherwise the original diagnosis comes back unchanged.
+- **Relaxations.** For each member, the timetable that broke only that member (its witness) says
+  which pin entity to free and which unavailable slots the teacher needs. Candidate actions from
+  `relaxation_actions_v2.json` are tried smallest first (slots freed, then the contract's action
+  order) on the whole instance, and the first whose re-solve passes `validate_solution` is the
+  `suggested_relaxation` (`verification: restored`). The change itself is never relaxed. If none
+  restores, the relaxation is MANUAL (`not_attempted`).
+
+### Scenario 4: drag onto SE-Comp A's frozen MDM-I lab
+
+`obs-t0-r1-c3-l0` (CE207, SE-Comp A, Anant Nimkar) is dragged to Monday P0 in 605. The pre-check finds
+`pinned_occupancy[238]` holding `coh-se-a` at Monday P0. That entry is `display.json`
+`pins[238]` = "MDM - I LABs, Mon P0–P1", source `pin-t0-r1-c1-l0`, the frozen item S14a's
+diagnosis missed. No ring search runs.
+
+| Member | Kind | What it is |
+|---|---|---|
+| `pin.238` | PINNED_BLOCK | SE-Comp A's MDM-I lab at Mon P0; the witness puts `coh-se-a` there |
+| `change` | FIXED_SLOT | the drag: `obs-t0-r1-c3-l0` to Mon P0 in `room-605` |
+
+`method = "mus"`, proven minimal: 5 checks in all, including the verification. Relaxation:
+RELAX_PINNED_BLOCK, slot Mon P0, cohort `coh-se-a`, **verification `restored`** (re-solve 0.47 s).
+A separate test re-runs `repair` with that pin entity removed and gets a solved timetable. Total
+runtime 2.40 s.
+
+### Scenario 1: Swapnali Kurhade unavailable all Tuesday
+
+The pre-solve certificate (`faculty_load`, 16 periods in 13) is explained, starting from 124 of
+the 493 groups.
+
+| Members | Kind | What they are (`display.json`) |
+|---|---|---|
+| `change` | FACULTY_UNAVAILABLE | the absence: Tue P0–P9 |
+| `unavailable.fac-swapnali-kurhade.0` | FACULTY_UNAVAILABLE | "PHD Day OFF", all Monday (D36) |
+| `faculty_clash.fac-swapnali-kurhade` | FACULTY_CLASH | she cannot teach two sessions at once |
+| `pin.5`, `pin.7`, `pin.9` | PINNED_BLOCK | SE lunch, Wed/Thu/Fri P5 |
+| `pin.21`, `pin.29`, `pin.31` | PINNED_BLOCK | frozen FOM - II (Asma Tambe, D44), Fri P1, Wed P6, Thu P6 |
+| `pin.293`, `pin.307`, `pin.322`, `pin.308`, `pin.323` | PINNED_BLOCK | HSS, Wed P7 (SE-Comp B, C, D) and Thu P7 (C, D) |
+| `pin.295`, `pin.298`, `pin.312`, `pin.313`, `pin.327` | PINNED_BLOCK | LLC, Thu P8–P9 (SE-Comp B, C, D) |
+| `pin.296`, `pin.310`, `pin.311`, `pin.325`, `pin.326` | PINNED_BLOCK | STUDENT ACTIVITY, Fri P7–P9 (SE-Comp B, C, D) |
+
+That is 24 members. 23 were shown necessary. One, `pin.293` (HSS, Wed P7, SE-Comp B; it holds her
+SE-Comp B batch C lab cohort), was **unknown**: without it neither the local repair nor 300 search
+nodes found a timetable, and pre-solve did not refute it. So the set is proven infeasible but **not
+proven minimal**, and it goes out as `method = "presolve"`. It is far more specific than S14a's
+single certificate: the pins say *which* frozen and recurring blocks use up her Wednesday to Friday.
+
+Relaxations: 22 candidates were tried. Each of the 20 single-pin candidates (free one SE-Comp B,
+C or D cohort at one cell) is `still_infeasible`, which is a proof, since one cell cannot cover a
+3-period gap. The witness's Monday slot alone (Mon P0) is also `still_infeasible`. Freeing all of
+Monday is `timeout`: unknown, not fixed. Separately, `repair` with her whole Monday freed did not
+finish in 120 s. So the suggestion is **MANUAL**, verification `not_attempted`. The absence itself
+is never offered as a relaxation. Total runtime 56.16 s, against 0.54 s without the explanation.
+It is the same work every run (node budgets, no clock), but the wall clock varies a lot on this
+machine: 40 s to 90 s in single runs, and 249 s inside a pytest run.
+
+### An infeasible case pre-solve cannot explain: none found in reasonable time
+
+I looked for a real change that is infeasible but that pre-solve does not refute, so that only the
+search can prove it:
+
+- each of the 9 top-level lab rooms closed for a whole day (45 cases): all solve within 3,000 nodes;
+- each lab room closed all week: 4 of 9 (507, 604, 702, 703) are unknown at 3,000 nodes;
+- two lab rooms closed on the same day (180 cases): 20 are unknown at 3,000 nodes;
+- none of these is refuted by pre-solve. One of them, 507 and 702 both closed on Monday, was still
+  unknown after 150,000 nodes (387 s), and I stopped there.
+
+So no real search-proven infeasible case was found, and MUS's search-proven path is shown only on a
+synthetic instance (`solver/tests/test_mus.py::triangle`). Three sessions there are joined by a
+FACULTY, a COHORT and a ROOM edge with two periods to use: pre-solve sees no group to count, the
+search refutes it, and the MUS is all three edges.
+
 ## Limits
 
 - **Not a proven minimum.** The rings, the old-place-first ordering and the greedy restore keep
@@ -167,8 +270,26 @@ on Thu P3), and SE-Comp D's lecture only changed room (605 → 601). Score −15
   changed, so a pure room change (students go to another room at the same time) is not listed.
   `repair` reports such changes in `stats["room_changed"]`. Either the contract's description is
   widened, or the API carries room changes some other way. That needs all three members.
-- **Pre-solve diagnosis wording** (scenario 4): it blames the faculty Hall check instead of the
-  cohort pin, and names ids rather than people. This is existing pre-solve behaviour (Track A
-  follow-up). No `mus.py` exists yet, so pre-solve and `search_exhaustion` are the only diagnoses.
+- **Pre-solve diagnosis wording** (scenario 4): it blamed the faculty Hall check instead of the
+  cohort pin. S14b's pre-check now names the pin. Descriptions still name ids rather than people,
+  because the S14b task says "ids only; names are the UI's job"; the contract's `description`
+  asks for institutional terms. That conflict needs all three members.
+- **No `method` for "proven by search, not minimal"** (S14b). A set with an unknown member goes
+  out as `presolve` only if pre-solve proved it; otherwise the original diagnosis is returned and
+  the set is lost. Showing it would need a contract change.
+- **Pins have no id in `edge_list_v1`** (S14b). Members name a pin by its index, `pin.<i>`. That
+  is stable only for one exported edge list, the one `display.json` was written with.
+- **Lunch can be suggested** (S14b). The solver cannot tell lunch from any other pin, so a
+  RELAX_PINNED_BLOCK on a lunch slot may be suggested. The backend must refuse it (Row 8
+  assessment). The same holds for absence-derived slots outside the change itself.
+- **Explanation is slow and not covered by the time limit** (S14b). The Kurhade explanation takes
+  about a minute here. Each of its searches has a node budget, but none uses `repair`'s
+  `time_limit_s`, so the answer is the same on every machine. The cost is that `repair` can run
+  past `time_limit_s` when it explains. A first version did share the clock: under the backend
+  test's 60 s it cut the last verification short, and two runs differed in
+  `metadata.backtracks`.
+- **Only repair explains.** A fresh solve (`backtrack_solve`, the backend's solve job) still
+  returns the bare `presolve` / `search_exhaustion` diagnosis; `solver.mus.explain` can be called
+  on it.
 - **Where the dragged room lives.** `edge_list_v1` has `fixed_slot` but no fixed room. `repair`
   keeps the dragged room internally, so `apply_change(payload, change)` alone does not record it.
