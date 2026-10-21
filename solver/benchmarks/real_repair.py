@@ -10,7 +10,9 @@ runs :func:`solver.repair.repair` (seed 0, default budgets) once per scenario in
 ``display.json``. Per scenario it prints the outcome, the moved sessions
 (``displaced``), sessions only re-roomed, the rings searched, the score before
 (``solution.json``) and after (against the changed payload), and the wall-clock
-runtime, as a Markdown table and then as JSON. Results feed
+runtime, as a Markdown table and then as JSON; an infeasible scenario also
+records its explanation (:func:`solver.mus.explain`: the set, whether it is
+proven minimal, the relaxations tried). Results feed
 ``docs/repair-even-2025-26.md``. Everything but the runtime is the same on
 every run.
 """
@@ -70,10 +72,17 @@ def run(edge_list: dict[str, Any], solution: dict[str, Any]) -> list[dict[str, A
             record.update(moved=result["displaced"], room_changed=stats["room_changed"],
                           score_after=result["quality"]["score"])
         else:
-            diagnosis = result["diagnosis"]
-            record.update(method=diagnosis["method"],
-                          constraints=[c["description"]
-                                       for c in diagnosis["minimal_conflicting_set"]])
+            diagnosis, mus = result["diagnosis"], stats["mus"]
+            record.update(
+                method=diagnosis["method"],
+                constraints=[f"{c['constraint_id']} ({c['kind']})"
+                             for c in diagnosis["minimal_conflicting_set"]],
+                proven_minimal=mus["proven_minimal"], unknown=mus["unknown"],
+                checks=mus["checks"], groups=mus["groups"], start=mus["start"],
+                relaxation=diagnosis["suggested_relaxation"],
+                tried=[[a["constraint_id"], a["action"]["action_type"],
+                        a["verification"]["status"]] for a in mus["relaxations"]],
+            )
         records.append(record)
     return records
 

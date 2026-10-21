@@ -843,20 +843,20 @@ def _build_initial_domains(
     its fixed start.
     """
     graph = state.graph
+    # the same answers as _room_is_pinned, asked once per pinned slot instead of per value
+    pinned = {s: {r for r in state.rooms if _room_is_pinned(state, r, s)}
+              for s in graph.pinned_slots}
     for sid, session in graph.sessions.items():
         domain: set[tuple[SlotId, str]] = set()
+        suits = [room.id for room in state.rooms.values() if _room_suits(room, session)]
         for start in available_slots_for(graph, session):
             slots = _occupied_slots(state, sid, start)
             if slots is None:
                 continue
             if not all(slot_is_open(graph, session, s) for s in slots):
                 continue
-            for room in state.rooms.values():
-                if not _room_suits(room, session):
-                    continue
-                if any(_room_is_pinned(state, room.id, s) for s in slots):
-                    continue
-                domain.add((start, room.id))
+            closed = set().union(*(pinned.get(s, ()) for s in slots))
+            domain.update((start, r) for r in suits if r not in closed)
         state.domains[sid] = domain
 
 

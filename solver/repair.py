@@ -42,9 +42,20 @@ then the penalty. The result is a heuristic minimum, not a proven one.
 ``solution.v2`` defines it. A session that kept its slot but changed room is
 not in it; ``stats["room_changed"]`` lists those.
 
-**Infeasible and timeout.** If even the run with everything free fails, the
-result is that run's own diagnosis: the pre-solve certificate
-(``method = "presolve"``) or ``search_exhaustion``. If that run runs out of
+**Drag onto a frozen item (S14b).** Before any search, a drag whose session
+would occupy a period that ``pinned_occupancy`` holds for its faculty, its
+cohort or the dropped room is answered at once by :func:`solver.mus.explain`
+from that pin and the drag: a minimal conflicting set naming the pin
+(``pin.<index>``) and a verified relaxation.
+
+**Infeasible and timeout.** If even the run with everything free fails, its
+diagnosis (the pre-solve certificate or ``search_exhaustion``) is explained by
+:func:`solver.mus.explain`: a minimal conflicting set (``method = "mus"``) and
+the smallest relaxation verified to restore feasibility, or the original
+diagnosis when minimality cannot be proven. Every search of the explanation
+has a node budget and none uses ``time_limit_s``, so the explanation is the
+same on every machine (it can make ``repair`` run past ``time_limit_s``,
+never wait forever). If that run runs out of
 ``time_limit_s`` it raises :class:`TimeoutError`: running out of time proves
 nothing (ROADMAP D21, D33). Stdlib only.
 """
@@ -67,6 +78,7 @@ from solver.backtracking import (
 )
 from solver.graph import ConflictGraph, build_conflict_graph
 from solver.improve import improve
+from solver.mus import explain
 from solver.scoring import score
 from solver.slots import SlotId
 from solver.validate import validate_solution
@@ -174,6 +186,21 @@ def _in_the_way(state: _SolverState, sid: str, start: SlotId, room: str) -> set[
     return hit
 
 
+def _frozen_in_the_way(state: _SolverState, payload: dict[str, Any],
+                       change: dict[str, Any]) -> list[str]:
+    """``pin.<index>`` of every ``pinned_occupancy`` entry holding the dragged
+    session's faculty, cohort or dropped room in a period it would occupy."""
+    session = state.graph.sessions[change["session_id"]]
+    start = SlotId(change["day"], change["period"])
+    chain = state.chains.get((start, session.duration_periods), ())
+    room = _room_of(change)
+    units = {room, state.parent_of.get(room, room), *state.children_of.get(room, [])}
+    return [f"pin.{i}" for i, pin in enumerate(payload["pinned_occupancy"])
+            if SlotId(pin["day"], pin["period"]) in chain
+            and (session.faculty_id in pin["faculty_ids"] or session.cohort_id in pin["cohort_ids"]
+                 or not units.isdisjoint(pin["room_ids"]))]
+
+
 def repair(
     payload: dict[str, Any],
     solution: dict[str, Any],
@@ -204,17 +231,20 @@ def repair(
     time_limit_s:
         Wall-clock safety cap on each search, ``None`` for none. Hitting it on
         a ring only grows the ring (and the result then depends on the machine).
+        The explanation of an infeasible change has node budgets instead.
     stats:
         If given, filled with ``hit`` (sessions the change hit), ``rings``
         (``[ring, freed, outcome]`` per search), ``room_changed`` (same slot,
-        new room), ``nodes`` and ``improve`` (its stats).
+        new room), ``nodes``, ``improve`` (its stats) and, when infeasible,
+        ``mus`` (the stats of :func:`solver.mus.explain`).
 
     Returns
     -------
     dict
         Solved: the repaired timetable, ``displaced`` = sessions whose slot
-        changed, scored against the changed payload. Infeasible (no timetable
-        exists even with every session free): the diagnosis of that search.
+        changed, scored against the changed payload. Infeasible (a drag onto a
+        frozen item, or no timetable even with every session free): the
+        explained diagnosis.
 
     Raises
     ------
@@ -237,9 +267,28 @@ def repair(
         for i in solution["assignment"]
     }
     forced = {change["session_id"]: _room_of(change)} if change["kind"] == "move_session" else {}
+    deadline = None if time_limit_s is None else started + time_limit_s
+
+    def left() -> float | None:
+        return None if deadline is None else max(0.0, deadline - time.perf_counter())
+
+    # --- a drag onto a frozen item: explained before any search
+    state = _state(graph, changed, forced)
+    blocked = _frozen_in_the_way(state, payload, change) if forced else []
+    if blocked:
+        mus_stats: dict[str, Any] = {}
+        out = explain(payload, None, change=change, initial=blocked, timetable=solution,
+                      stats=mus_stats)
+        if out is not None:
+            out["metadata"].update(
+                algorithm=f"freeze-and-expand(pre-check) + {out['metadata']['algorithm']}",
+                runtime_ms=(time.perf_counter() - started) * 1000)
+            if stats is not None:
+                stats.update(hit=[change["session_id"]], rings=[], room_changed=[], nodes=0,
+                             improve={}, mus=mus_stats)
+            return out
 
     # --- hit: placements the change forbids, and for a drag what stands in its way
-    state = _state(graph, changed, forced)
     hit = {sid for sid in sorted(old) if old[sid] not in state.domains[sid]}
     for sid in sorted(set(old) - hit):
         start, room = old[sid]
@@ -267,13 +316,12 @@ def repair(
         return whole(grown)
 
     # --- freeze and expand
-    deadline = None if time_limit_s is None else started + time_limit_s
     hit = whole(hit)
     free, rings, nodes = set(hit), [], 0
     while True:
         everything = len(free) == len(graph.sessions)
         frozen = sorted(set(graph.sessions) - free)
-        budget = None if deadline is None else max(0.0, deadline - time.perf_counter())
+        budget = left()
         result = backtrack_solve(
             graph, changed,
             seed_assignment={sid: old[sid][0] for sid in frozen},
@@ -295,9 +343,13 @@ def repair(
             )
             out["metadata"].update(algorithm=f"freeze-and-expand(rings={len(rings)})",
                                    backtracks=nodes)
+            mus_stats = {}
+            out = explain(payload, out, change=change, timetable=solution,
+                          stats=mus_stats) or out
+            out["metadata"]["runtime_ms"] = (time.perf_counter() - started) * 1000
             if stats is not None:
                 stats.update(hit=sorted(hit), rings=rings, room_changed=[], nodes=nodes,
-                             improve={})
+                             improve={}, mus=mus_stats)
             return out
         grown = ring(free)
         free = grown if grown != free else set(graph.sessions)
