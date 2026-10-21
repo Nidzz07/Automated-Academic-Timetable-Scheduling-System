@@ -4,6 +4,9 @@ Passwords use ``hashlib.scrypt`` from the standard library: ``passlib[bcrypt]`` 
 fails against the bcrypt 5 that pip installs with it (dropped from requirements, S13d).
 Tokens are python-jose JWTs (already a dependency). A token carries the username
 and role, so checking one needs no database round trip.
+
+S14c (ROADMAP D50): it also carries the account's faculty or cohort link, if any, so
+the UI can open on that timetable. Nothing is filtered by it: timetables are not secret.
 """
 
 from __future__ import annotations
@@ -63,6 +66,8 @@ class Actor:
 
     username: str
     role: UserRole
+    faculty_id: str | None = None
+    cohort_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -87,7 +92,8 @@ class AuthSettings:
 
 def issue_token(actor: Actor, settings: AuthSettings) -> str:
     expires = datetime.now(UTC) + timedelta(minutes=settings.expire_minutes)
-    claims = {"sub": actor.username, "role": actor.role.value, "exp": expires}
+    claims = {"sub": actor.username, "role": actor.role.value, "exp": expires,
+              "faculty_id": actor.faculty_id, "cohort_id": actor.cohort_id}
     return jwt.encode(claims, settings.secret_key, algorithm=ALGORITHM)
 
 
@@ -95,4 +101,5 @@ def read_token(token: str, settings: AuthSettings) -> Actor:
     """The token's actor. Raises ``jose.JWTError`` (expired, bad signature, malformed),
     ``KeyError`` or ``ValueError`` (claims missing or not a role)."""
     claims = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
-    return Actor(claims["sub"], UserRole(claims["role"]))
+    return Actor(claims["sub"], UserRole(claims["role"]), claims.get("faculty_id"),
+                 claims.get("cohort_id"))

@@ -3,6 +3,10 @@
 S13b: /health and /auth/login are public; every other route needs a bearer token.
 Any role may read; only administrator and coordinator may solve; only administrator
 reads the audit log.
+
+S14c: administrator and coordinator may also repair the official solution and accept
+a solved repair (ROADMAP D49). A login returns the account's faculty or cohort link
+(D50).
 """
 
 from __future__ import annotations
@@ -17,6 +21,7 @@ from backend.app.auth import Actor, AuthSettings, issue_token
 from backend.app.deps import current_actor, get_auth_settings, get_service, require_role
 from backend.app.service import (
     DEFAULT_MAX_MOVES,
+    DEFAULT_REPAIR_MAX_MOVES,
     DEFAULT_TIME_LIMIT_S,
     MAX_MAX_MOVES,
     MAX_TIME_LIMIT_S,
@@ -41,6 +46,48 @@ class SolveRequest(BaseModel):
     )
 
 
+class Slot(BaseModel):
+    day: int = Field(ge=0)
+    period: int = Field(ge=0)
+
+
+# a week has at most 50 cells (solver/slots.py: 5 days x 10 periods)
+Slots = Annotated[list[Slot], Field(min_length=1, max_length=50)]
+
+
+class FacultyUnavailable(BaseModel):
+    kind: Literal["faculty_unavailable"]
+    faculty_id: str
+    slots: Slots
+
+
+class RoomUnavailable(BaseModel):
+    kind: Literal["room_unavailable"]
+    room_id: str
+    slots: Slots
+
+
+class MoveSession(BaseModel):
+    kind: Literal["move_session"]
+    session_id: str
+    day: int = Field(ge=0)
+    period: int = Field(ge=0)
+    room_id: str
+    sub_room_id: str | None = None
+
+
+class RepairRequest(SolveRequest):
+    """One change (solver.repair.apply_change), and the budgets as for a solve."""
+
+    change: Annotated[
+        FacultyUnavailable | RoomUnavailable | MoveSession, Field(discriminator="kind")
+    ]
+    max_moves: int = Field(
+        DEFAULT_REPAIR_MAX_MOVES, ge=0, le=MAX_MAX_MOVES,
+        description="local-search moves on the sessions the repair moved; 0 skips it",
+    )
+
+
 class SolveAccepted(BaseModel):
     job_id: str
     status: JobStatus
@@ -49,10 +96,18 @@ class SolveAccepted(BaseModel):
 class JobView(BaseModel):
     id: str
     instance_id: str
+    kind: Literal["solve", "repair"]
     time_limit_s: float
     max_moves: int
     status: JobStatus
-    phase: Literal["search", "improve"] | None = Field(None, description="while running")
+    phase: Literal["search", "improve", "repair"] | None = Field(
+        None, description="while running"
+    )
+    base: str | None = Field(
+        None, description="repair: the job id of the solution it started from, or 'committed'"
+    )
+    change: dict[str, Any] | None = Field(None, description="repair: the change")
+    accepted_at: datetime | None = Field(None, description="repair: when it became official")
     solution: dict[str, Any] | None = Field(
         None, description="solution.v2, present when status is solved or infeasible"
     )
@@ -68,6 +123,8 @@ class Token(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
     role: UserRole
+    faculty_id: str | None = None
+    cohort_id: str | None = None
 
 
 class AuditView(BaseModel):
@@ -112,7 +169,8 @@ def login(
             "incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return Token(access_token=issue_token(actor, settings), role=actor.role)
+    return Token(access_token=issue_token(actor, settings), role=actor.role,
+                 faculty_id=actor.faculty_id, cohort_id=actor.cohort_id)
 
 
 @instances.get("")
@@ -135,7 +193,11 @@ def get_anomalies(instance_id: str, service: Service) -> Any:
     return _found(service.anomalies(instance_id), "anomalies")
 
 
-@instances.get("/{instance_id}/solution", description="the latest solution.v2")
+@instances.get(
+    "/{instance_id}/solution",
+    description="the official solution.v2: the latest finished solve or accepted repair, "
+    "else the committed solution.json",
+)
 def get_solution(instance_id: str, service: Service) -> dict[str, Any]:
     return _found(service.solution(instance_id), "solution")
 
@@ -152,9 +214,33 @@ def start_solve(
     return SolveAccepted(job_id=job_id, status=_found(service.job(job_id), "job")["status"])
 
 
+@instances.post(
+    "/{instance_id}/repair", status_code=status.HTTP_202_ACCEPTED,
+    description="repair the official solution; 422 for an unknown id or slot, 409 when "
+    "there is no solved official solution",
+)
+def start_repair(
+    instance_id: str, req: RepairRequest, service: Service, actor: Solver
+) -> SolveAccepted:
+    job_id = _found(
+        service.start_repair(instance_id, req.change.model_dump(exclude_none=True),
+                             req.time_limit_s, req.max_moves, actor.username),
+        "instance",
+    )
+    return SolveAccepted(job_id=job_id, status=_found(service.job(job_id), "job")["status"])
+
+
 @jobs.get("/{job_id}", response_model_exclude_none=True)
 def get_job(job_id: str, service: Service) -> JobView:
     return JobView(**_found(service.job(job_id), "job"))
+
+
+@jobs.post(
+    "/{job_id}/accept", response_model_exclude_none=True,
+    description="make a solved repair official; 409 unless its base is still official",
+)
+def accept_repair(job_id: str, service: Service, actor: Solver) -> JobView:
+    return JobView(**_found(service.accept(job_id, actor.username), "job"))
 
 
 @audit.get("", description="newest first")

@@ -11,6 +11,12 @@ written when it is queued and completed with its final status when it ends.
 S13d: a solved timetable is then improved by local search (:func:`solver.improve.improve`)
 within the same time budget. Jobs and their solutions are rows of ``solve_job``, so they
 survive a restart; jobs a restart interrupted are marked ``error``.
+
+S14c: a repair job runs :func:`solver.repair.repair` on the instance's official solution
+for one change and records that solution as its ``base``. The official solution
+(ROADMAP D49) is the latest finished solve or accepted repair, else the committed
+``solution.json``; a solved repair becomes official only when accepted while its base is
+still official.
 """
 
 from __future__ import annotations
@@ -26,7 +32,7 @@ from functools import cache, partial
 from typing import Any
 
 from jsonschema import Draft202012Validator
-from sqlalchemy import Engine, create_engine, func, select, update
+from sqlalchemy import Engine, and_, create_engine, func, or_, select, update
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.pool import NullPool
 
@@ -36,6 +42,8 @@ from db.models import AuditEntry, SolveJob, User
 from solver.backtracking import backtrack_solve
 from solver.graph import build_conflict_graph
 from solver.improve import MAX_MOVES, improve
+from solver.repair import MAX_MOVES as REPAIR_MAX_MOVES
+from solver.repair import apply_change, repair
 from solver.validate import validate_solution
 
 CONTRACTS_DIR = REPO / "contracts"
@@ -43,10 +51,20 @@ DEFAULT_TIME_LIMIT_S = 300.0  # the budget of the S12a real solve (solver/benchm
 MAX_TIME_LIMIT_S = 1800.0
 DEFAULT_MAX_MOVES = MAX_MOVES  # solver.improve's default, about 20 s on the real instance
 MAX_MAX_MOVES = 2_000_000
+DEFAULT_REPAIR_MAX_MOVES = REPAIR_MAX_MOVES  # solver.repair's default
+COMMITTED = "committed"  # a repair's base when it started from the committed solution.json
 
 
 class ContractError(ValueError):
     """A payload does not conform to its contract schema."""
+
+
+class BadChange(ValueError):
+    """A repair change names an unknown faculty, room, session or slot (HTTP 422)."""
+
+
+class Conflict(Exception):
+    """The request does not fit the instance's current state (HTTP 409)."""
 
 
 @cache
@@ -94,6 +112,31 @@ def solve_edge_list(
     return result.outcome, solution
 
 
+def repair_edge_list(
+    edge_list: dict[str, Any],
+    solution: dict[str, Any],
+    change: dict[str, Any],
+    time_limit_s: float,
+    max_moves: int,
+    on_phase: Callable[[str], None] | None = None,
+) -> tuple[str, dict[str, Any] | None]:
+    """Runs in a pool worker: (outcome, solution.v2 payload or None on a timeout).
+
+    *time_limit_s* caps each search of :func:`solver.repair.repair`; running out of it
+    with every session free is a timeout, never infeasible (D33). *on_phase* hears
+    ``repair``.
+    """
+    if on_phase:
+        on_phase("repair")
+    try:
+        repaired = repair(edge_list, solution, change, max_moves=max_moves,
+                          time_limit_s=time_limit_s)
+    except TimeoutError:
+        return "timeout", None
+    check_contract("solution_v2", repaired)  # repair() itself validates the hard rules
+    return repaired["status"], repaired
+
+
 def _mark_running(database_url: str, job_id: str, phase: str) -> None:
     """Runs in the pool worker (as ``on_phase``): the job is running *phase*."""
     engine = create_engine(database_url, poolclass=NullPool)
@@ -117,16 +160,17 @@ class ChronosService:
         self._engine = engine  # users, the audit log and solve jobs
         self._pool = ProcessPoolExecutor(max_workers=max_workers)
         self._lock = threading.Lock()
+        self._official_lock = threading.Lock()  # accepting a repair vs. a job ending
         # instance id -> ((mtime_ns, size) of edge_list.json, the contract-checked payload)
         self._edge_lists: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
         # shortcut: assumes one API process per database (a second one starting would fail
         # the first one's live jobs); give jobs an owner id before running several workers.
         with OrmSession(engine) as db:
-            db.execute(
-                update(SolveJob)
-                .where(SolveJob.status.in_(("queued", "running")))
-                .values(status="error", error="server restarted", ended_at=func.now())
-            )
+            unfinished = select(SolveJob).where(SolveJob.status.in_(("queued", "running")))
+            for job in db.scalars(unfinished):
+                job.status, job.error, job.ended_at = "error", "server restarted", func.now()
+                if job.audit_id is not None:
+                    self._finish_audit(db, job.audit_id, "error")
             db.commit()
 
     def close(self) -> None:
@@ -160,21 +204,36 @@ class ChronosService:
         return self.store.read(instance_id, "anomalies")  # no contract
 
     def solution(self, instance_id: str) -> dict[str, Any] | None:
-        """The last-finished job's solution.v2, else the committed ``solution.json``."""
+        """The instance's official solution.v2 (see :meth:`_official`), else None."""
         if self.store.path(instance_id, "edge_list") is None:
             return None
         with OrmSession(self._engine) as db:
-            latest = db.scalar(
-                select(SolveJob.solution)
-                .where(SolveJob.instance_id == instance_id, SolveJob.solution.is_not(None))
-                .order_by(SolveJob.ended_at.desc())
-                .limit(1)
+            official = self._official(db, instance_id)
+        return official[1] if official else None
+
+    def _official(
+        self, db: OrmSession, instance_id: str
+    ) -> tuple[str, dict[str, Any]] | None:
+        """(base reference, solution.v2) of the official solution (D49): the latest
+        finished solve (solved or infeasible) or accepted repair, else the committed
+        ``solution.json`` (``COMMITTED``); None when there is neither."""
+        latest = db.execute(
+            select(SolveJob.id, SolveJob.solution)
+            .where(
+                SolveJob.instance_id == instance_id,
+                or_(and_(SolveJob.kind == "solve", SolveJob.solution.is_not(None)),
+                    SolveJob.accepted_at.is_not(None)),
             )
-        if latest is None:
-            latest = self.store.read(instance_id, "solution")
-            if latest is not None:
-                check_contract("solution_v2", latest)
-        return latest
+            .order_by(func.coalesce(SolveJob.accepted_at, SolveJob.ended_at).desc())
+            .limit(1)
+        ).first()
+        if latest is not None:
+            return latest.id, latest.solution
+        committed = self.store.read(instance_id, "solution")
+        if committed is None:
+            return None
+        check_contract("solution_v2", committed)
+        return COMMITTED, committed
 
     def login(self, username: str, password: str) -> Actor | None:
         """The account's actor when the password matches, else None. Audited either way."""
@@ -183,7 +242,9 @@ class ChronosService:
             ok = verify_password(password, user.password_hash if user else None)
             self._audit(db, username, "login", {"success": ok})
             db.commit()
-            return Actor(user.username, user.role) if ok and user else None
+            if not (ok and user):
+                return None
+            return Actor(user.username, user.role, user.faculty_ref, user.cohort_ref)
 
     def start_solve(
         self, instance_id: str, time_limit_s: float, max_moves: int, actor: str
@@ -193,31 +254,68 @@ class ChronosService:
         edge_list = self.edge_list(instance_id)
         if edge_list is None:
             return None
+        params = {"time_limit_s": time_limit_s, "max_moves": max_moves}
+        return self._start(instance_id, "solve", None, params, {}, actor,
+                           solve_edge_list, edge_list, time_limit_s, max_moves)
+
+    def start_repair(
+        self, instance_id: str, change: dict[str, Any], time_limit_s: float, max_moves: int,
+        actor: str,
+    ) -> str | None:
+        """Queue a repair of the instance's official solution for *change*: the job id,
+        or None when the instance is unknown. Raises :class:`BadChange` for an unknown
+        id or slot, :class:`Conflict` when the official solution is not a solved one."""
+        edge_list = self.edge_list(instance_id)
+        if edge_list is None:
+            return None
+        try:
+            apply_change(edge_list, change)
+        except ValueError as exc:
+            raise BadChange(str(exc)) from exc
+        with OrmSession(self._engine) as db:
+            official = self._official(db, instance_id)
+        if official is None or official[1]["status"] != "solved":
+            raise Conflict("the instance has no solved official timetable to repair")
+        base, solution = official
+        params = {"time_limit_s": time_limit_s, "max_moves": max_moves, "change": change}
+        # slots as [day, period] pairs keep the row inside audit_entry.detail's 1024 chars
+        logged = {k: v for k, v in change.items() if k != "slots"}
+        if "slots" in change:
+            logged["slots"] = [[s["day"], s["period"]] for s in change["slots"]]
+        return self._start(instance_id, "repair", base, params,
+                           {"base": base, "change": logged}, actor,
+                           repair_edge_list, edge_list, solution, change, time_limit_s,
+                           max_moves)
+
+    def _start(
+        self, instance_id: str, kind: str, base: str | None, params: dict[str, Any],
+        logged: dict[str, Any], actor: str, work: Callable[..., Any], *args: Any,
+    ) -> str:
+        """Audit and store a queued job of *kind*, then run ``work(*args, on_phase)``
+        in the pool."""
         job_id = uuid.uuid4().hex
         detail = {
             "instance_id": instance_id,
-            "time_limit_s": time_limit_s,
+            "time_limit_s": params["time_limit_s"],
             "job_id": job_id,
+            **logged,
             "status": "queued",
             "started_at": _now(),
             "ended_at": None,
         }
-        params = {"time_limit_s": time_limit_s, "max_moves": max_moves}
-        with OrmSession(self._engine) as db:  # audited before it runs: no unaudited solve
-            audit_id = self._audit(db, actor, "solve", detail)
-            db.add(SolveJob(id=job_id, instance_id=instance_id, requested_by=actor,
-                            status="queued", params=params))
+        with OrmSession(self._engine) as db:  # audited before it runs: no unaudited job
+            audit_id = self._audit(db, actor, kind, detail)
+            db.add(SolveJob(id=job_id, instance_id=instance_id, requested_by=actor, kind=kind,
+                            base=base, status="queued", params=params, audit_id=audit_id))
             db.commit()
         on_phase = partial(
             _mark_running, self._engine.url.render_as_string(hide_password=False), job_id
         )
-        future = self._pool.submit(solve_edge_list, edge_list, time_limit_s, max_moves, on_phase)
-        future.add_done_callback(lambda f: self._job_done(job_id, audit_id, detail, f))
+        future = self._pool.submit(work, *args, on_phase)
+        future.add_done_callback(lambda f: self._job_done(job_id, f))
         return job_id
 
-    def _job_done(
-        self, job_id: str, audit_id: int, detail: dict[str, Any], future: Future[Any]
-    ) -> None:
+    def _job_done(self, job_id: str, future: Future[Any]) -> None:
         solution, error = None, None
         if future.cancelled():
             status, error = "error", "cancelled"
@@ -225,14 +323,41 @@ class ChronosService:
             status, error = "error", f"{type(exc).__name__}: {exc}"
         else:
             status, solution = future.result()
-        with OrmSession(self._engine) as db:
+        with self._official_lock, OrmSession(self._engine) as db:
             job = db.get_one(SolveJob, job_id)
             job.status, job.error, job.ended_at = status, error, func.now()
             if solution is not None:  # assigning None would store JSON null, not SQL NULL
                 job.solution = solution
-            detail = detail | {"status": status, "ended_at": _now()}
-            db.get_one(AuditEntry, audit_id).detail = json.dumps(detail)
+            if job.audit_id is not None:
+                self._finish_audit(db, job.audit_id, status)
             db.commit()
+
+    def accept(self, job_id: str, actor: str) -> dict[str, Any] | None:
+        """Make a solved repair the official solution (D49): the job, or None if unknown.
+        Raises :class:`Conflict` unless it is a solved repair whose base is still the
+        official solution (so a repair is accepted at most once)."""
+        with self._official_lock, OrmSession(self._engine) as db:
+            job = db.get(SolveJob, job_id)
+            if job is None:
+                return None
+            if job.kind != "repair" or job.status != "solved":
+                raise Conflict("only a solved repair can be accepted")
+            official = self._official(db, job.instance_id)
+            if official is None or official[0] != job.base:
+                raise Conflict("the timetable this repair started from is no longer official")
+            job.accepted_at = func.now()
+            self._audit(db, actor, "accept",
+                        {"instance_id": job.instance_id, "job_id": job_id, "base": job.base})
+            db.commit()
+        return self.job(job_id)
+
+    @staticmethod
+    def _finish_audit(db: OrmSession, audit_id: int, status: str) -> None:
+        """Complete a job's audit row with its final *status*."""
+        entry = db.get_one(AuditEntry, audit_id)
+        entry.detail = json.dumps(
+            json.loads(entry.detail) | {"status": status, "ended_at": _now()}
+        )
 
     @staticmethod
     def _audit(db: OrmSession, actor: str, action: str, detail: dict[str, Any]) -> int:
@@ -257,15 +382,21 @@ class ChronosService:
             ]
 
     def job(self, job_id: str) -> dict[str, Any] | None:
-        """The job's status, its phase while running and, once solved or infeasible, its
-        solution; None if unknown."""
+        """The job's kind, status, its phase while running and, once solved or infeasible,
+        its solution; a repair's base and change, and when it was accepted. None if
+        unknown."""
         with OrmSession(self._engine) as db:
             job = db.get(SolveJob, job_id)
             if job is None:
                 return None
             view: dict[str, Any] = {
-                "id": job.id, "instance_id": job.instance_id, **job.params, "status": job.status
+                "id": job.id, "instance_id": job.instance_id, "kind": job.kind, **job.params,
+                "status": job.status,
             }
+            if job.kind == "repair":
+                view["base"] = job.base
+            if job.accepted_at is not None:
+                view["accepted_at"] = job.accepted_at
             if job.status == "running":
                 view["phase"] = job.phase
             if job.solution is not None:

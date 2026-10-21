@@ -9,9 +9,12 @@ Every client carries a coordinator token (S13b); auth itself is tested in test_a
 from __future__ import annotations
 
 import json
+import queue
 import shutil
+import threading
 import time
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -21,11 +24,12 @@ from jsonschema import Draft202012Validator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session as OrmSession
 
+from backend.app import service as service_module
 from backend.app.main import create_app
 from backend.app.service import MAX_MAX_MOVES, solve_edge_list
 from backend.app.store import INSTANCES_DIR, InstanceStore
 from backend.tests.conftest import AUTH, bearer
-from db.models import SolveJob
+from db.models import AuditEntry, SolveJob
 from solver.backtracking import backtrack_solve
 from solver.benchmarks.synthetic import PRESETS, generate
 from solver.graph import build_conflict_graph
@@ -106,7 +110,9 @@ def test_openapi_lists_every_route(real: TestClient) -> None:
         "/instances/{instance_id}/anomalies",
         "/instances/{instance_id}/solution",
         "/instances/{instance_id}/solve",
+        "/instances/{instance_id}/repair",
         "/jobs/{job_id}",
+        "/jobs/{job_id}/accept",
     }
 
 
@@ -273,22 +279,41 @@ class TestImprove:
         assert without_runtime(solution) == without_runtime(expected)
         assert real_copy.get("/instances/real-copy/solution").json() == solution
 
-    def test_phase_while_running(self, real_copy: TestClient) -> None:
-        # the move budget outlasts the time budget, so the job is in "improve" for ~3 s
-        accepted = real_copy.post(
-            "/instances/real-copy/solve", json={"time_limit_s": 3, "max_moves": MAX_MAX_MOVES}
-        ).json()
-        seen: set[str] = set()
-        deadline = time.monotonic() + 120
-        while (job := real_copy.get(f"/jobs/{accepted['job_id']}").json())["status"] in (
-            "queued", "running"
-        ):
-            assert time.monotonic() < deadline, job
-            assert ("phase" in job) == (job["status"] == "running")
-            seen.add(job.get("phase", "queued"))
-            time.sleep(0.05)
-        assert "improve" in seen and seen <= {"queued", "search", "improve"}
-        assert job["status"] == "solved" and "phase" not in job
+
+def test_phase_while_running(
+    tmp_path: Path, database_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each phase the worker reports is what GET /jobs shows, step by step: the worker
+    (in a thread here) waits for the test before moving on, so no timing is involved."""
+    phases = ("search", "improve")
+    reached: queue.Queue[str] = queue.Queue()
+    go = {phase: threading.Event() for phase in phases}
+
+    def worker(edge_list, time_limit_s, max_moves, on_phase) -> tuple[str, None]:
+        for phase in phases:
+            on_phase(phase)  # the real _mark_running: a database write
+            reached.put(phase)
+            assert go[phase].wait(60)
+        return "timeout", None
+
+    monkeypatch.setattr(service_module, "solve_edge_list", worker)
+    (tmp_path / "phases").mkdir()
+    (tmp_path / "phases" / "edge_list.json").write_text(
+        json.dumps(generate(PRESETS["small"], 1)), encoding="utf-8"
+    )
+    with client_for(tmp_path, database_url) as client:
+        service = client.app.state.service
+        service._pool.shutdown()
+        service._pool = ThreadPoolExecutor(max_workers=1)
+        job_id = client.post("/instances/phases/solve").json()["job_id"]
+        for phase in phases:
+            assert reached.get(timeout=60) == phase
+            job = client.get(f"/jobs/{job_id}").json()
+            assert (job["status"], job["phase"]) == ("running", phase)
+            go[phase].set()
+        service._pool.shutdown()  # returns once the job's done callback has run
+        job = client.get(f"/jobs/{job_id}").json()
+        assert job["status"] == "timeout" and "phase" not in job
 
 
 class TestPersistence:
@@ -309,17 +334,26 @@ class TestPersistence:
     def test_restart_marks_unfinished_jobs_as_error(self, database_url: str) -> None:
         engine = create_engine(database_url)
         with OrmSession(engine) as db:
+            entry = AuditEntry(actor="t", action="solve", detail=json.dumps(
+                {"job_id": "restart-running", "status": "queued", "ended_at": None}))
+            db.add(entry)
+            db.flush()
             db.add_all([
                 SolveJob(id="restart-queued", instance_id="gone", requested_by="t",
                          status="queued", params={"time_limit_s": 1.0, "max_moves": 0}),
                 SolveJob(id="restart-running", instance_id="gone", requested_by="t",
-                         status="running", phase="improve",
+                         status="running", phase="improve", audit_id=entry.id,
                          params={"time_limit_s": 1.0, "max_moves": 5}),
             ])
             db.commit()
-        engine.dispose()
+            audit_id = entry.id
         with client_for(INSTANCES_DIR, database_url) as client:
             for job_id in ("restart-queued", "restart-running"):
                 job = client.get(f"/jobs/{job_id}").json()
                 assert (job["status"], job["error"]) == ("error", "server restarted")
                 assert "phase" not in job
+        with OrmSession(engine) as db:
+            detail = json.loads(db.get_one(AuditEntry, audit_id).detail)
+        engine.dispose()
+        assert detail.pop("ended_at") is not None
+        assert detail == {"job_id": "restart-running", "status": "error"}

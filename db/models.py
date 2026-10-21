@@ -1024,9 +1024,17 @@ class User(Base):
 
     ``password_hash`` is ``backend.app.auth.hash_password`` output (scrypt); the
     password itself is never stored.
+
+    S14c (ROADMAP D50): an account may be linked to one faculty member
+    (``faculty_ref``) or one cohort (``cohort_ref``), as edge-list ids such as
+    ``fac-kailas-devadkar`` or ``coh-se-a``; strings, not foreign keys, because
+    instances are files (backend/app/store.py), not database rows.
     """
 
     __tablename__ = "app_user"
+    __table_args__ = (
+        CheckConstraint("faculty_ref IS NULL OR cohort_ref IS NULL", name="one_link"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     #: Null for an institute-wide account, as on AuditEntry.
@@ -1038,6 +1046,8 @@ class User(Base):
     role: Mapped[UserRole] = mapped_column(
         SAEnum(UserRole, name="user_role", values_callable=_values)
     )
+    faculty_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    cohort_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -1050,6 +1060,12 @@ class SolveJob(Base):
     (search, improve) is set while it runs. ``params`` is the request
     (``time_limit_s``, ``max_moves``). ``solution`` is the solution.v2 payload once
     solved or infeasible, never on a timeout (ROADMAP D33).
+
+    S14c: ``kind`` is ``solve`` or ``repair``. A repair's ``params`` also hold its
+    ``change``, and ``base`` names the solution it started from: a job id, or
+    ``committed`` for the instance's committed ``solution.json``. ``accepted_at``
+    is set when a solved repair is made official (ROADMAP D49). ``audit_id`` is
+    the request's ``audit_entry`` row, completed when the job ends.
     """
 
     __tablename__ = "solve_job"
@@ -1061,6 +1077,8 @@ class SolveJob(Base):
     )
     instance_id: Mapped[str] = mapped_column(String(128), index=True)
     requested_by: Mapped[str] = mapped_column(String(255))
+    kind: Mapped[str] = mapped_column(String(16), default="solve", server_default="solve")
+    base: Mapped[str | None] = mapped_column(String(32), nullable=True)
     status: Mapped[str] = mapped_column(String(16))
     phase: Mapped[str | None] = mapped_column(String(16), nullable=True)
     params: Mapped[dict[str, Any]] = mapped_column(JSONB)
@@ -1069,5 +1087,7 @@ class SolveJob(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     solution: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audit_id: Mapped[int | None] = mapped_column(ForeignKey("audit_entry.id"), nullable=True)

@@ -1169,3 +1169,59 @@ def test_0007_downgrade_refuses_to_drop_jobs(migration_config):
 
     with pytest.raises(RuntimeError, match="1 solve jobs"):
         command.downgrade(cfg, "0006_app_user")
+
+
+# ---------------------------------------------------------------------------
+# migration 0008
+# ---------------------------------------------------------------------------
+
+_INSERT_USER = ("INSERT INTO app_user (username, password_hash, role{cols}) "
+                "VALUES ('u', 'scrypt$h', 'student'{vals})")
+
+
+def _columns(url: str, table: str) -> set[str]:
+    eng = create_engine(url)
+    try:
+        return {c["name"] for c in inspect(eng).get_columns(table)}
+    finally:
+        eng.dispose()
+
+
+def test_0008_upgrade_and_downgrade(migration_config):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "0007_solve_job")
+    _run(url, _INSERT_JOB)
+
+    command.upgrade(cfg, "0008_repair_and_links")
+    assert _rows(url, "SELECT kind, base, accepted_at, audit_id FROM solve_job") == [
+        ("solve", None, None, None)]  # existing jobs are solves
+    with pytest.raises(IntegrityError, match="ck_app_user_one_link"):
+        _run(url, _INSERT_USER.format(cols=", faculty_ref, cohort_ref",
+                                      vals=", 'fac-kailas-devadkar', 'coh-se-a'"))
+    _run(url, _INSERT_USER.format(cols=", cohort_ref", vals=", 'coh-se-a'"))
+    _run(url, "DELETE FROM app_user")
+
+    command.downgrade(cfg, "0007_solve_job")
+    assert {"kind", "base", "accepted_at", "audit_id"}.isdisjoint(_columns(url, "solve_job"))
+    assert {"faculty_ref", "cohort_ref"}.isdisjoint(_columns(url, "app_user"))
+    assert _rows(url, "SELECT count(*) FROM solve_job") == [(1,)]
+    command.upgrade(cfg, "head")
+
+
+@pytest.mark.parametrize("sql, lost", [
+    ("UPDATE solve_job SET kind = 'repair', base = 'committed'", "1 repair jobs, 0 linked"),
+    (_INSERT_USER.format(cols=", faculty_ref", vals=", 'fac-kailas-devadkar'"),
+     "0 repair jobs, 1 linked accounts"),
+])
+def test_0008_downgrade_refuses_to_drop_repairs_or_links(migration_config, sql, lost):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "0008_repair_and_links")
+    _run(url, _INSERT_JOB)
+    _run(url, sql)
+
+    with pytest.raises(RuntimeError, match=lost):
+        command.downgrade(cfg, "0007_solve_job")
