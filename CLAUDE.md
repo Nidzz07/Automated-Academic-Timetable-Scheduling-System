@@ -95,8 +95,7 @@ Do not "fix" a failing test in another track's directory — report it instead.
 
 ## Migrations
 
-- Alembic head is **`0006_app_user`** (chain: `1c8c78738a94` (0001) →
-  `0002_room_used_as_raw` → `0003_subject_type_null` → `0006_app_user`).
+- Alembic head: the newest file in `migrations/versions/` (check with `alembic heads`).
 - `migrations/env.py` reads `DATABASE_URL` from the environment, then from `backend/.env`. It
   **refuses to migrate any non-local host** (`localhost`, `127.0.0.1`, `::1`, `db`, `postgres`
   only) unless `CHRONOS_ALLOW_REMOTE_DB=1`.
