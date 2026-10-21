@@ -2,7 +2,7 @@
 
 FastAPI app in `backend/app/`: routers (`routers.py`) → service (`service.py`, the only
 module that calls the solver) → data access (`store.py` for instance files, SQLAlchemy for
-users, the audit log and solve jobs). Run every command from the repo root, inside the venv.
+users and the audit log). Run every command from the repo root, inside the venv.
 
 ## Configuration
 
@@ -10,11 +10,11 @@ Read from the environment, else from `backend/.env` (never committed):
 
 | Variable | Use |
 |---|---|
-| `DATABASE_URL` | Postgres for users, the audit log and solve jobs. Local hosts only (`db/local_guard.py`). |
+| `DATABASE_URL` | Postgres for users and the audit log. Local hosts only (`db/local_guard.py`). |
 | `SECRET_KEY` | HS256 signing key for access tokens, at least 32 characters. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime, default 30. |
 
-The database must be at Alembic head (`0007_solve_job` or later):
+The database must be at Alembic head (`0006_app_user` or later):
 
 ```powershell
 alembic upgrade head
@@ -54,17 +54,3 @@ token with the wrong role gets 403.
 Every login attempt (username, success or failure, time; never the password) and every
 solve request (user, instance, time budget, job id, final status, start and end) is a row
 in `audit_entry`.
-
-## Solve jobs
-
-`POST /instances/{id}/solve` takes `{"time_limit_s", "max_moves"}` (defaults 300 s and
-200000; at most 1800 s and 2000000). The job backtracks, then, if solved, improves the
-timetable by local search (`solver.improve.improve`, seed 0) for at most `max_moves`
-moves; `max_moves: 0` skips the improvement. `time_limit_s` covers both. While it runs,
-`GET /jobs/{id}` has `"phase": "search"` or `"improve"`.
-
-Jobs and their solutions are rows of `solve_job`, so `GET /jobs/{id}` and
-`GET /instances/{id}/solution` (the last finished job's solution, else the committed
-`solution.json`) survive a restart. On startup, jobs left queued or running are marked
-`error` with `"server restarted"`. Run one API process per database: a second process
-starting would mark the first one's live jobs the same way.

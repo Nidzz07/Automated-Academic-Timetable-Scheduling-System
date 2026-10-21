@@ -1,7 +1,7 @@
 """Authentication (S13b): scrypt password hashes and signed HS256 access tokens.
 
-Passwords use ``hashlib.scrypt`` from the standard library: ``passlib[bcrypt]`` 1.7.4
-fails against the bcrypt 5 that pip installs with it (dropped from requirements, S13d).
+Passwords use ``hashlib.scrypt`` from the standard library: the declared
+``passlib[bcrypt]`` 1.7.4 fails against the bcrypt 5 that pip installs with it.
 Tokens are python-jose JWTs (already a dependency). A token carries the username
 and role, so checking one needs no database round trip.
 """

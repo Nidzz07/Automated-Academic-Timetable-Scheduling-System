@@ -539,8 +539,7 @@ def test_room_tables_have_no_foreign_key_to_department(engine, table_name):
 
 @pytest.mark.parametrize(
     "table_name",
-    ["programme", "semester", "cohort", "faculty", "subject", "session", "lab_block",
-     "solve_job"],
+    ["programme", "semester", "cohort", "faculty", "subject", "session", "lab_block"],
 )
 def test_entities_below_department_carry_department_id(engine, table_name):
     """The positive half of rule 5 - everything else IS department-scoped."""
@@ -1131,41 +1130,3 @@ def test_0006_downgrade_refuses_to_drop_accounts(migration_config):
 
     with pytest.raises(RuntimeError, match="1 user accounts"):
         command.downgrade(cfg, "0005_instance_seed")
-
-
-# ---------------------------------------------------------------------------
-# migration 0007
-# ---------------------------------------------------------------------------
-
-_INSERT_JOB = ("INSERT INTO solve_job (id, instance_id, requested_by, status, params) "
-               "VALUES ('j', 'i', 'u', 'solved', '{\"max_moves\": 0}')")
-
-
-def test_0007_upgrade_and_downgrade(migration_config):
-    from alembic import command
-
-    cfg, url = migration_config
-    command.upgrade(cfg, "0006_app_user")
-    assert "solve_job" not in _table_names(url)
-
-    command.upgrade(cfg, "0007_solve_job")
-    _run(url, _INSERT_JOB)
-    assert _rows(url, "SELECT params->>'max_moves', created_at IS NOT NULL, solution "
-                      "FROM solve_job") == [("0", True, None)]
-    _run(url, "DELETE FROM solve_job")
-
-    command.downgrade(cfg, "0006_app_user")
-    assert "solve_job" not in _table_names(url)
-    assert "app_user" in _table_names(url)
-    command.upgrade(cfg, "head")
-
-
-def test_0007_downgrade_refuses_to_drop_jobs(migration_config):
-    from alembic import command
-
-    cfg, url = migration_config
-    command.upgrade(cfg, "head")
-    _run(url, _INSERT_JOB)
-
-    with pytest.raises(RuntimeError, match="1 solve jobs"):
-        command.downgrade(cfg, "0006_app_user")
