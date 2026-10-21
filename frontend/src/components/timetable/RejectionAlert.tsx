@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, X, RotateCcw } from 'lucide-react';
+import { AlertCircle, X, RotateCcw, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export interface RejectionAlertProps {
@@ -7,6 +7,8 @@ export interface RejectionAlertProps {
   sessionId?: string;
   originalSlotLabel?: string;
   onDismiss: () => void;
+  /** Offered for a clashing drag on a backend instance: repair the timetable around the move (S14c) */
+  onRepair?: () => void;
 }
 
 export const RejectionAlert: React.FC<RejectionAlertProps> = ({
@@ -14,6 +16,7 @@ export const RejectionAlert: React.FC<RejectionAlertProps> = ({
   sessionId,
   originalSlotLabel,
   onDismiss,
+  onRepair,
 }) => {
   return (
     <div
@@ -51,6 +54,12 @@ export const RejectionAlert: React.FC<RejectionAlertProps> = ({
       </div>
 
       <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+        {onRepair && (
+          <Button size="sm" onClick={onRepair} className="text-xs h-7 px-2.5 gap-1" data-testid="repair-around-this">
+            <Wrench className="h-3.5 w-3.5" />
+            Repair around this
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"

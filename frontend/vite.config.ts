@@ -37,6 +37,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    // App tests render the real instance (156 sessions, 212 pins) in jsdom: 1-3 s alone, past 5 s with files in parallel
+    testTimeout: 20_000,
     css: true,
   },
 });

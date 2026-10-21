@@ -15,6 +15,8 @@ interface RoleSelectorProps {
   facultyOptions: Array<{ id: string; label: string }>;
   /** Cohorts named in the edge list */
   cohortOptions: Array<{ id: string; label: string }>;
+  /** The account is linked to this teacher or cohort (D50): its picker is locked */
+  personaLocked?: boolean;
 }
 
 const ROLE_ICONS: Record<UserRole, React.ComponentType<{ className?: string }>> = {
@@ -33,6 +35,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
   onStudentDivisionChange,
   facultyOptions,
   cohortOptions,
+  personaLocked = false,
 }) => {
   const caps = ROLE_CAPABILITIES[currentRole];
 
@@ -122,6 +125,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
             <span className="font-semibold text-foreground">Teacher:</span>
             <select
               aria-label="Select faculty persona"
+              disabled={personaLocked}
               value={selectedFaculty}
               onChange={(e) => onFacultyChange(e.target.value)}
               className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
@@ -144,6 +148,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
             <span className="font-semibold text-foreground">Cohort:</span>
             <select
               aria-label="Select student division"
+              disabled={personaLocked}
               value={selectedStudentDivision}
               onChange={(e) => onStudentDivisionChange(e.target.value)}
               className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
