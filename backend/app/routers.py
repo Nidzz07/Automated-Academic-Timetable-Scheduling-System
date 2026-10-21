@@ -15,7 +15,13 @@ from pydantic import BaseModel, Field
 
 from backend.app.auth import Actor, AuthSettings, issue_token
 from backend.app.deps import current_actor, get_auth_settings, get_service, require_role
-from backend.app.service import DEFAULT_TIME_LIMIT_S, MAX_TIME_LIMIT_S, ChronosService
+from backend.app.service import (
+    DEFAULT_MAX_MOVES,
+    DEFAULT_TIME_LIMIT_S,
+    MAX_MAX_MOVES,
+    MAX_TIME_LIMIT_S,
+    ChronosService,
+)
 from db.models import UserRole
 
 Service = Annotated[ChronosService, Depends(get_service)]
@@ -26,7 +32,13 @@ JobStatus = Literal["queued", "running", "solved", "infeasible", "timeout", "err
 
 
 class SolveRequest(BaseModel):
-    time_limit_s: float = Field(DEFAULT_TIME_LIMIT_S, gt=0, le=MAX_TIME_LIMIT_S)
+    time_limit_s: float = Field(
+        DEFAULT_TIME_LIMIT_S, gt=0, le=MAX_TIME_LIMIT_S, description="search and improve"
+    )
+    max_moves: int = Field(
+        DEFAULT_MAX_MOVES, ge=0, le=MAX_MAX_MOVES,
+        description="local-search moves after a solve; 0 skips the improvement",
+    )
 
 
 class SolveAccepted(BaseModel):
@@ -38,7 +50,9 @@ class JobView(BaseModel):
     id: str
     instance_id: str
     time_limit_s: float
+    max_moves: int
     status: JobStatus
+    phase: Literal["search", "improve"] | None = Field(None, description="while running")
     solution: dict[str, Any] | None = Field(
         None, description="solution.v2, present when status is solved or infeasible"
     )
@@ -130,9 +144,12 @@ def get_solution(instance_id: str, service: Service) -> dict[str, Any]:
 def start_solve(
     instance_id: str, service: Service, actor: Solver, req: SolveRequest | None = None
 ) -> SolveAccepted:
-    time_limit_s = (req or SolveRequest()).time_limit_s
-    job = _found(service.start_solve(instance_id, time_limit_s, actor.username), "instance")
-    return SolveAccepted(job_id=job.id, status=_found(service.job(job.id), "job")["status"])
+    req = req or SolveRequest()
+    job_id = _found(
+        service.start_solve(instance_id, req.time_limit_s, req.max_moves, actor.username),
+        "instance",
+    )
+    return SolveAccepted(job_id=job_id, status=_found(service.job(job_id), "job")["status"])
 
 
 @jobs.get("/{job_id}", response_model_exclude_none=True)
