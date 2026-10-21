@@ -46,6 +46,8 @@ export interface TimetableGridProps {
   solution?: Pick<SolvedSolution, 'assignment'> | null;
   /** Sessions outlined as in violation (the printed baseline's violations) */
   flaggedSessionIds?: ReadonlySet<string>;
+  /** 'change': the flagged sessions are a proposed repair's changes, outlined in amber */
+  flagTone?: 'violation' | 'change';
   /** Names, pin kinds and clock times for the edge list's ids; defaults to the contract examples' */
   labels?: Labels;
   /** Cohort filter: 'all' or a cohort id; overlapping cohorts (batches of a division) are shown */
@@ -207,7 +209,9 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   provisionalSessionId = null,
   onMoveSession,
   flaggedSessionIds,
+  flagTone = 'violation',
 }) => {
+  const flagClass = flagTone === 'change' ? 'ring-2 ring-amber-500' : 'ring-2 ring-destructive';
   const [activeDragSessionId, setActiveDragSessionId] = useState<string | null>(null);
 
   // Configure dnd-kit sensors
@@ -403,6 +407,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                             labBlock={labBlock}
                             onSelectSession={onSelectSession}
                             flaggedSessionIds={flaggedSessionIds}
+                            flagClass={flagClass}
                           />
                         )}
 
@@ -413,7 +418,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                             <div
                               key={session.sessionId}
                               data-flagged={flagged || undefined}
-                              className={flagged ? 'rounded-xl ring-2 ring-destructive' : undefined}
+                              className={flagged ? `rounded-xl ${flagClass}` : undefined}
                             >
                               <DraggableSessionItem
                                 session={session}

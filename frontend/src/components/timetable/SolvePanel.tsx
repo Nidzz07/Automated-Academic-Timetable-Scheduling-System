@@ -14,6 +14,7 @@ const MAX_TIME_LIMIT_S = 1800;
 const PHASE_MESSAGE = {
   search: 'Running (search): searching for a timetable.',
   improve: 'Running (improve): improving the timetable found.',
+  repair: 'Running (repair): repairing the timetable.',
 };
 
 interface SolvePanelProps {
