@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useCallback, useState, useMemo, useSyncExternalStore } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { TimetableGrid } from '@/components/timetable/TimetableGrid';
 import { TimetableHeader } from '@/components/timetable/TimetableHeader';
@@ -13,6 +13,8 @@ import { AnomalyReportPanel } from '@/components/timetable/AnomalyReport';
 import { PrintedViolationsPanel } from '@/components/timetable/PrintedViolations';
 import { SolvePanel } from '@/components/timetable/SolvePanel';
 import { GeneratedVsPrintedCard } from '@/components/timetable/GeneratedVsPrintedCard';
+import { LoginScreen } from '@/components/auth/LoginScreen';
+import { AuditLog } from '@/components/auth/AuditLog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserRole, ROLE_CAPABILITIES } from '@/types/roles';
@@ -36,12 +38,16 @@ import {
 } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline } from '@/adapters/realInstance';
 import {
+  AuthSession,
   chronosApiClient,
   EdgeListInstance,
+  getAuthState,
   HttpChronosApiClient,
   InstanceOption,
   MockChronosApiClient,
   PRINTED_INSTANCE,
+  setSession,
+  subscribeAuth,
 } from '@/api/chronosApi';
 import { ContractValidationError } from '@/api/contractError';
 import {
@@ -62,17 +68,46 @@ interface AppProps {
 }
 
 export function App({ client = chronosApiClient }: AppProps) {
+  const auth = useSyncExternalStore(subscribeAuth, getAuthState);
+  // http mode needs a login; static (demo) mode picks its role in the RoleSelector
+  const session = client instanceof HttpChronosApiClient ? auth.session : null;
+  if (client instanceof HttpChronosApiClient && !session) {
+    return <LoginScreen client={client} expired={auth.expired} />;
+  }
+  // keyed by the token: a new login starts with an empty cache and no jobs of the last user
+  return <SessionApp key={session?.token ?? 'static'} client={client} session={session} />;
+}
+
+function SessionApp({ client, session }: { client: MockChronosApiClient; session: AuthSession | null }) {
   // One client per App mount, so every render (and every test) starts with an empty cache.
   const [queryClient] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={queryClient}>
-      <TimetableApp client={client} />
+      {session && (
+        <div className="bg-background text-foreground">
+          <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-4 pt-4 text-xs sm:px-6 lg:px-8">
+            <span data-testid="signed-in-as">
+              Signed in as <span className="font-semibold">{session.username}</span> ({ROLE_CAPABILITIES[session.role].title})
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setSession(null)} data-testid="logout-button">
+              Log out
+            </Button>
+          </div>
+        </div>
+      )}
+      <TimetableApp client={client} sessionRole={session?.role ?? null} />
     </QueryClientProvider>
   );
 }
 
-function TimetableApp({ client }: { client: MockChronosApiClient }) {
+function TimetableApp({ client, sessionRole }: { client: MockChronosApiClient; sessionRole: UserRole | null }) {
   const [instance, setInstance] = useState<EdgeListInstance>('example');
+  // The latest solve job per instance, kept here so switching instance and back keeps tracking it
+  const [solveJobs, setSolveJobs] = useState<Record<EdgeListInstance, string>>({});
+  const onSolveStarted = useCallback(
+    (solved: EdgeListInstance, jobId: string) => setSolveJobs((jobs) => ({ ...jobs, [solved]: jobId })),
+    []
+  );
   const instances = useInstancesQuery(client);
   const timetable = useTimetableQuery(client);
   const edgeList = useEdgeListQuery(instance, client);
@@ -124,6 +159,9 @@ function TimetableApp({ client }: { client: MockChronosApiClient }) {
       instance={instance}
       onInstanceChange={setInstance}
       client={client}
+      sessionRole={sessionRole}
+      solveJobs={solveJobs}
+      onSolveStarted={onSolveStarted}
     />
   );
 }
@@ -171,6 +209,10 @@ interface TimetableWorkspaceProps {
   instance: EdgeListInstance;
   onInstanceChange: (instance: EdgeListInstance) => void;
   client: MockChronosApiClient;
+  /** The logged-in role (http mode); null in static mode, where the RoleSelector picks it */
+  sessionRole: UserRole | null;
+  solveJobs: Record<EdgeListInstance, string>;
+  onSolveStarted: (instance: EdgeListInstance, jobId: string) => void;
 }
 
 function TimetableWorkspace({
@@ -184,9 +226,13 @@ function TimetableWorkspace({
   instance,
   onInstanceChange,
   client,
+  sessionRole,
+  solveJobs,
+  onSolveStarted,
 }: TimetableWorkspaceProps) {
   const [darkMode, setDarkMode] = useState<boolean>(false);
-  const [currentRole, setCurrentRole] = useState<UserRole>('administrator');
+  const [roleChoice, setCurrentRole] = useState<UserRole>('administrator');
+  const currentRole = sessionRole ?? roleChoice;
   // Persona choices default to the first option the payload offers
   const [facultyChoice, setSelectedFaculty] = useState<string | null>(null);
   const [studentChoice, setSelectedStudentDivision] = useState<string | null>(null);
@@ -461,7 +507,7 @@ function TimetableWorkspace({
         {/* Four Role-Differentiated Views Selector */}
         <RoleSelector
           currentRole={currentRole}
-          onRoleChange={setCurrentRole}
+          onRoleChange={sessionRole ? undefined : setCurrentRole}
           selectedFaculty={selectedFaculty}
           onFacultyChange={setSelectedFaculty}
           selectedStudentDivision={selectedStudentDivision}
@@ -482,7 +528,13 @@ function TimetableWorkspace({
 
         {/* Solve on the backend (administrator and coordinator; backend instances only) */}
         {caps.canSolve && solvable && client instanceof HttpChronosApiClient && (
-          <SolvePanel key={`solve-${instance}`} client={client} instance={instance} />
+          <SolvePanel
+            key={`solve-${instance}`}
+            client={client}
+            instance={instance}
+            jobId={solveJobs[instance] ?? null}
+            onJobStarted={onSolveStarted}
+          />
         )}
 
         {/* Faculty Workload View (Visible only to Faculty Role) */}
@@ -587,6 +639,9 @@ function TimetableWorkspace({
 
         {/* Ingestion anomaly report (whole-department roles) */}
         {caps.viewScope === 'all' && anomalies && <AnomalyReportPanel report={anomalies} />}
+
+        {/* The audit log (administrator only; the backend refuses anyone else) */}
+        {currentRole === 'administrator' && client instanceof HttpChronosApiClient && <AuditLog client={client} />}
 
         {/* Session Details Modal */}
         <SessionDetailModal

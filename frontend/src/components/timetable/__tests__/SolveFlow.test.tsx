@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from '@/App';
@@ -8,7 +9,9 @@ import {
   MockChronosApiClient,
   PRINTED_INSTANCE,
   REAL_INSTANCE,
+  setSession,
 } from '@/api/chronosApi';
+import type { UserRole } from '@/types/roles';
 import { instanceSolutionQueryKey } from '@/api/queries';
 import { SolvedSolution, isSolvedSolution, toQualityView } from '@/adapters/solution';
 import { PrintedBaseline } from '@/adapters/realInstance';
@@ -61,17 +64,35 @@ function mockBackend(solve: () => Response = () => json({ job_id: 'job-1', statu
   return state;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  setSession(null);
+});
+
+const logIn = (role: UserRole) => setSession({ username: `test-${role}`, token: `token-${role}`, role });
 
 const status = () => screen.getByTestId('solve-status');
 const wait = (ms: number) => act(() => new Promise((resolve) => setTimeout(resolve, ms)));
 
 describe('SolvePanel: the job lifecycle', () => {
+  // the caller keeps the job id, as App does
+  function Panel() {
+    const [jobId, setJobId] = useState<string | null>(null);
+    return (
+      <SolvePanel
+        client={new HttpChronosApiClient('/api')}
+        instance={REAL_INSTANCE}
+        jobId={jobId}
+        onJobStarted={(_, id) => setJobId(id)}
+        pollMs={10}
+      />
+    );
+  }
   const renderPanel = () => {
     const queryClient = new QueryClient();
     const view = render(
       <QueryClientProvider client={queryClient}>
-        <SolvePanel client={new HttpChronosApiClient('/api')} instance={REAL_INSTANCE} pollMs={10} />
+        <Panel />
       </QueryClientProvider>
     );
     return { queryClient, ...view };
@@ -145,8 +166,9 @@ describe('SolvePanel: the job lifecycle', () => {
 });
 
 describe('Solving the real instance in the app (http mode)', () => {
-  const openReal = async () => {
+  const openReal = async (role: UserRole = 'administrator') => {
     const backend = mockBackend();
+    logIn(role);
     render(<App client={new HttpChronosApiClient('/api')} />);
     await screen.findByTestId('timetable-grid');
     fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
@@ -154,17 +176,19 @@ describe('Solving the real instance in the app (http mode)', () => {
     return backend;
   };
 
-  it('offers Solve to administrator and coordinator only, and on backend instances only', async () => {
+  it.each([
+    ['administrator', true],
+    ['coordinator', true],
+    ['faculty', false],
+    ['student', false],
+  ] as const)('offers Solve to the logged-in %s: %s', async (role, offered) => {
+    await openReal(role);
+    expect(!!screen.queryByTestId('solve-panel')).toBe(offered);
+  });
+
+  it('offers Solve on backend instances only', async () => {
     await openReal();
     expect(screen.getByTestId('solve-panel')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('role-button-coordinator'));
-    expect(screen.getByTestId('solve-panel')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('role-button-faculty'));
-    expect(screen.queryByTestId('solve-panel')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('role-button-student'));
-    expect(screen.queryByTestId('solve-panel')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByTestId('role-button-administrator'));
     fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: PRINTED_INSTANCE } });
     await screen.findByTestId('printed-violations');
     expect(screen.queryByTestId('solve-panel')).not.toBeInTheDocument();
@@ -196,14 +220,6 @@ describe('Solving the real instance in the app (http mode)', () => {
     expect(status()).toHaveTextContent('No timetable found within 300 s. This does not prove it is impossible.');
     expect(screen.queryByTestId('infeasibility-panel')).not.toBeInTheDocument();
     expect(screen.getByTestId('status-badge-solved')).toBeInTheDocument();
-  });
-
-  it('shows the backend’s refusal when not logged in', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => json({ detail: 'missing, invalid or expired token' }, 401)));
-    render(<App client={new HttpChronosApiClient('/api')} />);
-    expect(await screen.findByTestId('timetable-error')).toHaveTextContent(
-      'GET /instances: 401 missing, invalid or expired token'
-    );
   });
 });
 

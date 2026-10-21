@@ -5,7 +5,7 @@ import {
   MockChronosApiClient,
   PRINTED_INSTANCE,
   REAL_INSTANCE,
-  setAccessToken,
+  setSession,
 } from '../chronosApi';
 import { ContractValidationError } from '../contractError';
 import type { SolutionContract } from '@/adapters/solution';
@@ -39,7 +39,7 @@ const base = `/api/instances/${REAL_INSTANCE}`;
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  setAccessToken(null);
+  setSession(null);
 });
 
 describe('HttpChronosApiClient (S13a endpoints)', () => {
@@ -96,10 +96,10 @@ describe('HttpChronosApiClient (S13a endpoints)', () => {
     expect((error as ApiError).message).toBe('GET /instances: 401 missing, invalid or expired token');
   });
 
-  it('sends the bearer token from setAccessToken, and none without one', async () => {
+  it('sends the session’s bearer token, and none without one', async () => {
     const fetchMock = mockFetch({ '/api/instances': () => json([]) });
     await client.listInstances();
-    setAccessToken('tok');
+    setSession({ username: 'u', token: 'tok', role: 'student' });
     await client.listInstances();
     const auth = fetchMock.mock.calls.map(([, init]) => new Headers(init?.headers).get('Authorization'));
     expect(auth).toEqual([null, 'Bearer tok']);

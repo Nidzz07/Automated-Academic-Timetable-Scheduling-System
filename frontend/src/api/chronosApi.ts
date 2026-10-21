@@ -32,6 +32,7 @@ import {
   getFaculty,
 } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline, toPrintedBaseline } from '@/adapters/realInstance';
+import { ROLE_CAPABILITIES, UserRole } from '@/types/roles';
 
 // ajv and the schemas load on first use, off the main bundle
 const validation = () => import('@/api/contractValidation');
@@ -451,9 +452,20 @@ export interface SolveJob {
   instance_id: string;
   time_limit_s: number;
   status: JobStatus;
+  /** While running, when the backend reports it (S13d): finding a timetable, then improving it */
+  phase?: 'search' | 'improve';
   /** Present when status is solved or infeasible */
   solution?: SolutionContract;
   error?: string;
+}
+
+/** GET /audit row (S13b). */
+export interface AuditEntry {
+  id: number;
+  actor: string;
+  action: string;
+  timestamp: string;
+  detail: Record<string, unknown> | null;
 }
 
 /** A non-2xx response from the backend. */
@@ -467,13 +479,68 @@ export class ApiError extends Error {
   }
 }
 
-// shortcut: VITE_API_TOKEN stands in for a login until a login screen calls setAccessToken
-let accessToken: string | null = import.meta.env.VITE_API_TOKEN || null;
-
-/** The bearer token sent with every request (null: none). */
-export function setAccessToken(token: string | null) {
-  accessToken = token;
+/** Who is logged in (http mode). The role is for display only: the backend enforces it. */
+export interface AuthSession {
+  username: string;
+  token: string;
+  role: UserRole;
 }
+
+/** The session, and whether the last one ended on a 401 (the backend refused its token). */
+export interface AuthState {
+  session: AuthSession | null;
+  expired: boolean;
+}
+
+const SESSION_KEY = 'chronos.session';
+
+const isRole = (role: unknown): role is UserRole => typeof role === 'string' && role in ROLE_CAPABILITIES;
+
+/** The token's role claim, decoded without checking the signature (display only); null if none. */
+export function roleFromToken(token: string): UserRole | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return isRole(payload.role) ? payload.role : null;
+  } catch {
+    return null;
+  }
+}
+
+// sessionStorage may be unavailable (private mode, blocked storage): the session then lives in memory only
+function restoreSession(): AuthSession | null {
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') as AuthSession | null;
+    return typeof stored?.token === 'string' && isRole(stored.role) ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+let authState: AuthState = { session: restoreSession(), expired: false };
+const authListeners = new Set<() => void>();
+
+function setAuthState(next: AuthState) {
+  authState = next;
+  try {
+    if (next.session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(next.session));
+    else sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // memory only
+  }
+  authListeners.forEach((listener) => listener());
+}
+
+export const getAuthState = () => authState;
+
+export function subscribeAuth(listener: () => void) {
+  authListeners.add(listener);
+  return () => {
+    authListeners.delete(listener);
+  };
+}
+
+/** Log in (a session) or out (null); its token is sent with every request. */
+export const setSession = (session: AuthSession | null) => setAuthState({ session, expired: false });
 
 /**
  * The S13a backend over HTTP. The contract examples stay bundled (the backend does not serve
@@ -486,9 +553,14 @@ export class HttpChronosApiClient extends MockChronosApiClient {
 
   private async request(path: string, init: RequestInit = {}): Promise<unknown> {
     const headers = new Headers(init.headers);
+    const { session } = authState;
     // the one place the Authorization header is attached
-    if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+    if (session) headers.set('Authorization', `Bearer ${session.token}`);
     const response = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
+    // the token was refused (expired, revoked): back to the login screen
+    if (response.status === 401 && session && authState.session === session) {
+      setAuthState({ session: null, expired: true });
+    }
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { detail?: unknown } | null;
       const detail = typeof body?.detail === 'string' ? body.detail : response.statusText;
@@ -504,6 +576,23 @@ export class HttpChronosApiClient extends MockChronosApiClient {
       if (error instanceof ApiError && error.status === 404) return null;
       throw error;
     }
+  }
+
+  /** POST /auth/login. The role comes from the response, else from the token's claims. */
+  public async login(username: string, password: string): Promise<AuthSession> {
+    const body = (await this.request('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    })) as { access_token: string; role?: unknown };
+    const role = isRole(body.role) ? body.role : roleFromToken(body.access_token);
+    if (role === null) throw new Error('The login response names no role');
+    return { username, token: body.access_token, role };
+  }
+
+  /** GET /audit: the newest entries first (administrator only). */
+  public async getAudit(limit: number): Promise<AuditEntry[]> {
+    return (await this.request(`/audit?limit=${limit}`)) as AuditEntry[];
   }
 
   public async listInstances(): Promise<InstanceOption[]> {

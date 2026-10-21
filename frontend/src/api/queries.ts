@@ -100,11 +100,20 @@ export function usePrintedBaselineQuery(
   });
 }
 
-export function useSolveMutation(client: HttpChronosApiClient) {
+/** onStarted is a hook-level callback, so it still fires when the panel unmounts mid-POST. */
+export function useSolveMutation(
+  client: HttpChronosApiClient,
+  onStarted: (instance: EdgeListInstance, jobId: string) => void
+) {
   return useMutation({
     mutationFn: ({ instance, timeLimitS }: { instance: EdgeListInstance; timeLimitS: number }) =>
       client.startSolve(instance, timeLimitS),
+    onSuccess: ({ job_id }, { instance }) => onStarted(instance, job_id),
   });
+}
+
+export function useAuditQuery(client: HttpChronosApiClient, limit: number) {
+  return useQuery({ queryKey: ['audit', limit], queryFn: () => client.getAudit(limit), retry: retryable });
 }
 
 /** Polls GET /jobs/{id} every pollMs until the job ends or fails; stops when unmounted. */
