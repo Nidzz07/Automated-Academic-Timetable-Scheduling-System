@@ -247,7 +247,7 @@ against them in tests.
 | Solver | Python 3.12, stdlib only (`heapq`, `dataclasses`); `networkx` in tests only |
 | Ingestion | `python-docx`, `openpyxl`, Pydantic validation |
 | Backend | FastAPI, Pydantic, Uvicorn, SQLAlchemy 2.0, Alembic |
-| Auth | `python-jose` (JWT), `passlib[bcrypt]` |
+| Auth | `python-jose` (JWT), `hashlib.scrypt` (standard library) |
 | Database | PostgreSQL 16 — local via Docker Compose for development and migrations; Supabase for shared staging |
 | Frontend | React 18, Vite, TypeScript, TailwindCSS, shadcn/ui, dnd-kit, TanStack Query, Recharts |
 | Testing | pytest, pytest-cov, Hypothesis, httpx, Vitest, React Testing Library |
