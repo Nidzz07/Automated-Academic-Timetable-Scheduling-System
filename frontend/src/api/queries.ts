@@ -4,12 +4,14 @@
  * client are interchangeable.
  */
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChronosApiClient,
+  COMMITTED_BASE,
   EdgeListInstance,
   HttpChronosApiClient,
   MoveSessionRequest,
+  RepairChange,
   chronosApiClient,
   isFinished,
   ApiError,
@@ -126,6 +128,46 @@ export function useJobQuery(client: HttpChronosApiClient, jobId: string | null, 
     refetchInterval: (query) =>
       query.state.status === 'error' || isFinished(query.state.data?.status) ? false : pollMs,
   });
+}
+
+/**
+ * An instance's latest repair job (S14c): start one, poll it, read the solution it started
+ * from (its base, D48) once solved, and accept it (D49). Null client: static mode, never used.
+ */
+export function useRepair(
+  client: HttpChronosApiClient | null,
+  instance: EdgeListInstance,
+  jobId: string | null,
+  onStarted: (instance: EdgeListInstance, jobId: string) => void,
+  pollMs = 1000
+) {
+  const queryClient = useQueryClient();
+  const start = useMutation({
+    mutationFn: (change: RepairChange) => client!.startRepair(instance, change),
+    onSuccess: ({ job_id }) => onStarted(instance, job_id),
+  });
+  const job = useJobQuery(client!, client ? jobId : null, pollMs);
+  const solved = job.data?.status === 'solved' ? job.data : undefined;
+  const base = useQuery({
+    queryKey: ['repair-base', instance, solved?.base],
+    queryFn: async () =>
+      solved!.base === COMMITTED_BASE
+        ? // shortcut: the backend serves the committed solution.json only while it is official; if another
+          // solve or accept happened meanwhile this compares with that, and Accept is refused (409) anyway
+          client!.getInstanceSolution(instance)
+        : (await client!.getJob(solved!.base!)).solution ?? null,
+    enabled: !!solved?.base,
+    staleTime: Infinity,
+    retry: retryable,
+  });
+  const accept = useMutation({
+    mutationFn: (id: string) => client!.acceptRepair(id),
+    onSuccess: (accepted) => {
+      queryClient.setQueryData(['job', accepted.id], accepted);
+      if (accepted.solution) queryClient.setQueryData(instanceSolutionQueryKey(instance), accepted.solution);
+    },
+  });
+  return { start, job, base, accept };
 }
 
 export function useMoveSessionMutation(client: ChronosApiClient = chronosApiClient) {

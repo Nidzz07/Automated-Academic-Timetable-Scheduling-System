@@ -94,8 +94,8 @@ export interface Display {
   batches: Record<string, string[]>;
   rooms: Record<string, string>;
   subjects: Record<string, { code: string; name: string }>;
-  /** pins[i] describes pinned_occupancy[i] */
-  pins: Array<{ kind: string; label: string; decision?: string }>;
+  /** pins[i] describes pinned_occupancy[i]; unique_label tells apart blocks that share a label */
+  pins: Array<{ kind: string; label: string; decision?: string; unique_label?: string }>;
 }
 
 /** What the UI shows for an instance's ids. */
@@ -350,4 +350,112 @@ export function buildPins(edgeList: EdgeList, labels: Labels = EXAMPLE_LABELS): 
       facultyInitials: p.faculty_ids.map((id) => labels.faculty(id).initials || labels.faculty(id).name),
     };
   });
+}
+
+/** "Name (INITIALS)"; the name alone for faculty with no initials. */
+export function facultyText(labels: Labels, id: string): string {
+  const f = labels.faculty(id);
+  return f.initials ? `${f.name} (${f.initials})` : f.name;
+}
+
+/** What the UI calls an id of the edge list: a session, room, faculty member or cohort; else the id. */
+export function entityName(id: string, edgeList: EdgeList, labels: Labels = EXAMPLE_LABELS): string {
+  const session = edgeList.sessions.find((s) => s.id === id);
+  if (session) {
+    const code = labels.subject(session.subject_id)?.code ?? session.subject_id;
+    return `${code} · ${labels.cohort(session.cohort_id)} · ${facultyText(labels, session.faculty_id)}`;
+  }
+  const room = edgeList.rooms.find((r) => r.id === id);
+  if (room) return `Room ${labels.room(room)}`;
+  if (
+    edgeList.faculty_availability.some((f) => f.faculty_id === id) ||
+    edgeList.pinned_occupancy.some((p) => p.faculty_ids.includes(id))
+  ) {
+    return facultyText(labels, id);
+  }
+  const isCohort =
+    edgeList.sessions.some((s) => s.cohort_id === id) || edgeList.pinned_occupancy.some((p) => p.cohort_ids.includes(id));
+  return isCohort ? labels.cohort(id) : id;
+}
+
+/** The pins at any of `slots` holding any of `ids` (a division also holds its batches), by unique_label. */
+export function pinsHolding(
+  edgeList: EdgeList,
+  labels: Labels,
+  slots: Array<{ day: number; period: number }>,
+  ids: string[]
+): string[] {
+  const names = edgeList.pinned_occupancy.flatMap((p, i) =>
+    slots.some((s) => s.day === p.day && s.period === p.period) &&
+    [...p.cohort_ids, ...p.faculty_ids, ...p.room_ids].some((held) => ids.some((id) => labels.overlap(held, id)))
+      ? [labels.pin(i)?.unique_label ?? labels.pin(i)?.label ?? `Pinned occupancy, ${DAY_NAMES[p.day]} P${p.period}`]
+      : []
+  );
+  return [...new Set(names)];
+}
+
+/**
+ * Why moving a placed session to (day, period) in its own room breaks a hard rule, in words;
+ * null when it breaks none of these: fixed slot, teaching periods, faculty unavailability,
+ * pinned occupancy, and clashes with placed sessions (teacher, shared students, room). Only
+ * decides whether to offer a repair: the backend's repair is the judge.
+ */
+export function moveConflict(
+  edgeList: EdgeList,
+  labels: Labels,
+  sessions: EnrichedSession[],
+  sessionId: string,
+  day: number,
+  period: number
+): string | null {
+  const session = edgeList.sessions.find((s) => s.id === sessionId);
+  const placed = sessions.find((s) => s.sessionId === sessionId);
+  if (!session || !placed) return `Session '${sessionId}' is not in this timetable.`;
+  const name = `${placed.subjectCode} (${placed.cohortLabel})`;
+  if (session.fixed_slot) return `${name} is fixed to its slot.`;
+  const grid = buildWeekGrid(edgeList);
+  const periods = occupiedPeriods(grid, period, session.duration_periods);
+  if (!grid.teachingPeriods.includes(period) || periods.length < session.duration_periods) {
+    return `${name} does not fit at ${DAY_NAMES[day]} P${period}.`;
+  }
+  const at = (d: number, p: number) => d === day && periods.includes(p);
+  const where = (p: number) => `${DAY_NAMES[day]} P${p}`;
+
+  const blackout = edgeList.faculty_availability
+    .find((f) => f.faculty_id === session.faculty_id)
+    ?.unavailable_slots.find((s) => at(s.day, s.period));
+  if (blackout) return `${facultyText(labels, session.faculty_id)} is unavailable on ${where(blackout.period)}.`;
+
+  const parentOf = new Map(edgeList.rooms.map((r) => [r.id, r.parent_room_id]));
+  // a room in use locks its sub-rooms and a sub-room in use locks the room (ROOM_OCCUPANCY)
+  const holdsRoom = (id: string) =>
+    id === placed.roomId || id === placed.subRoomId || (parentOf.get(id) === placed.roomId && !placed.subRoomId);
+  const pin = edgeList.pinned_occupancy.findIndex(
+    (p) =>
+      at(p.day, p.period) &&
+      (p.faculty_ids.includes(session.faculty_id) ||
+        p.cohort_ids.some((c) => labels.overlap(c, session.cohort_id)) ||
+        p.room_ids.some(holdsRoom))
+  );
+  if (pin >= 0) {
+    const held = labels.pin(pin)?.unique_label ?? labels.pin(pin)?.label ?? 'pinned occupancy';
+    return `Slot conflict: ${where(edgeList.pinned_occupancy[pin].period)} is held by ${held}.`;
+  }
+
+  for (const other of sessions) {
+    if (other.sessionId === sessionId || other.day !== day) continue;
+    const shared = other.periods.find((p) => periods.includes(p));
+    if (shared === undefined) continue;
+    const what = `${other.subjectCode} (${other.cohortLabel})`;
+    if (other.facultyId === session.faculty_id) {
+      return `Faculty clash: ${facultyText(labels, session.faculty_id)} already teaches ${what} on ${where(shared)}.`;
+    }
+    if (labels.overlap(other.cohortId, session.cohort_id)) {
+      return `Cohort clash: ${placed.cohortLabel} already has ${what} on ${where(shared)}.`;
+    }
+    if (other.roomId === placed.roomId && (!other.subRoomId || !placed.subRoomId || other.subRoomId === placed.subRoomId)) {
+      return `Room clash: ${placed.roomCode} already holds ${what} on ${where(shared)}.`;
+    }
+  }
+  return null;
 }

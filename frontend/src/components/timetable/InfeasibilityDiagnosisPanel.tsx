@@ -1,6 +1,6 @@
 import React from 'react';
 import { InfeasibleSolution, toDiagnosisView } from '@/adapters/solution';
-import { DAY_NAMES } from '@/adapters/timetable';
+import { DAY_NAMES, EdgeList, Labels, entityName, EXAMPLE_LABELS, pinsHolding } from '@/adapters/timetable';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,17 +18,42 @@ import {
 const slotText = (slots: Array<{ day: number; period: number }>) =>
   slots.map((s) => `${DAY_NAMES[s.day]} P${s.period}`).join(', ');
 
+type Slot = { day: number; period: number };
+
+/** The ids a relaxation's params name (contracts/solution_v2 params_*), by name; a pin by its unique_label. */
+function relaxationTargets(
+  params: Record<string, unknown>,
+  name: (id: string) => string,
+  pins: (slots: Slot[], ids: string[]) => string[]
+): string[] {
+  const ids = ['session_id', 'faculty_id', 'room_id', 'entity_id'].flatMap((k) =>
+    typeof params[k] === 'string' ? [name(params[k] as string)] : []
+  );
+  const slots = [...((params.slots as Slot[] | undefined) ?? []), ...(params.slot ? [params.slot as Slot] : [])];
+  const pinned = params.slot && typeof params.entity_id === 'string' ? pins([params.slot as Slot], [params.entity_id]) : [];
+  return [...ids, ...pinned.map((p) => `pin ${p}`), ...(slots.length ? [slotText(slots)] : [])];
+}
+
 interface InfeasibilityDiagnosisPanelProps {
   infeasibleSolution: InfeasibleSolution;
+  /** The edge list diagnosed: ids are then shown by name, pins by their unique_label (D41) */
+  edgeList?: EdgeList;
+  labels?: Labels;
   onApplyRelaxation?: (constraintId: string) => void;
   onSwitchToSolved?: () => void;
 }
 
 export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelProps> = ({
   infeasibleSolution,
+  edgeList,
+  labels = EXAMPLE_LABELS,
   onApplyRelaxation,
   onSwitchToSolved,
 }) => {
+  const name = (id: string) => (edgeList ? entityName(id, edgeList, labels) : id);
+  // the pins a PINNED_BLOCK conflict or a RELAX_PINNED_BLOCK action is about
+  const pins = (slots: Array<{ day: number; period: number }>, ids: string[]) =>
+    edgeList ? pinsHolding(edgeList, labels, slots, ids) : [];
   const { metadata } = infeasibleSolution;
   const diagnosis = toDiagnosisView(infeasibleSolution);
   const { minimal_conflicting_set, suggested_relaxation, partial_placement, unplaced_session_ids } = diagnosis;
@@ -166,6 +191,12 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                   {constraint.description}
                 </p>
 
+                {constraint.kind === 'PINNED_BLOCK' && pins(constraint.slots, constraint.entity_ids).length > 0 && (
+                  <p data-testid={`constraint-pins-${constraint.constraint_id}`} className="text-[11px] text-muted-foreground">
+                    Pinned: {pins(constraint.slots, constraint.entity_ids).join('; ')}
+                  </p>
+                )}
+
                 {constraint.slots.length > 0 && (
                   <p
                     data-testid={`constraint-slots-${constraint.constraint_id}`}
@@ -183,9 +214,10 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                   {constraint.entity_ids.map((id) => (
                     <span
                       key={id}
+                      title={id}
                       className="inline-flex items-center rounded bg-background/80 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground border border-border/50"
                     >
-                      {id}
+                      {name(id)}
                     </span>
                   ))}
                 </div>
@@ -228,6 +260,11 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                 {suggested_relaxation.verification.status}
                 {suggested_relaxation.verification.runtime_ms !== null &&
                   ` (${suggested_relaxation.verification.runtime_ms} ms)`}
+              </p>
+            )}
+            {edgeList && suggested_relaxation.action_params && (
+              <p data-testid="relaxation-applies-to" className="text-[11px] text-muted-foreground">
+                Applies to: {relaxationTargets(suggested_relaxation.action_params, name, pins).join('; ') || 'nothing named'}
               </p>
             )}
           </div>

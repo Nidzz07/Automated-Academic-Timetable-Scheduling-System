@@ -180,6 +180,8 @@ export interface DiagnosisView {
     description: string;
     /** null in solution.v1, which has no typed action or verification. */
     action_type: RelaxationV2['action']['action_type'] | null;
+    /** The action's params (contracts/solution_v2 params_*); null in solution.v1 */
+    action_params: Record<string, unknown> | null;
     verification: RelaxationV2['verification'] | null;
   } | null;
   /** Diagnostic only, never a timetable. null: solution.v1 carries none. */
@@ -200,6 +202,7 @@ export function toDiagnosisView(sol: InfeasibleSolution): DiagnosisView {
             constraint_id: r.constraint_id,
             description: r.description,
             action_type: r.action.action_type,
+            action_params: r.action.params as Record<string, unknown>,
             verification: r.verification,
           }
         : null,
@@ -212,8 +215,32 @@ export function toDiagnosisView(sol: InfeasibleSolution): DiagnosisView {
     method: null,
     methodLabel: UNSTATED_METHOD_LABEL,
     minimal_conflicting_set: d.minimal_conflicting_set.map((c) => ({ ...c, slots: [] })),
-    suggested_relaxation: { ...d.suggested_relaxation, action_type: null, verification: null },
+    suggested_relaxation: { ...d.suggested_relaxation, action_type: null, action_params: null, verification: null },
     partial_placement: null,
     unplaced_session_ids: null,
   };
+}
+
+/** One session a repair changed against the solution it started from. */
+export interface RepairChangeView {
+  sessionId: string;
+  before: SessionAssignment;
+  after: SessionAssignment;
+  /** In the contract's `displaced` (its slot changed); else only its room changed */
+  slotChanged: boolean;
+}
+
+/**
+ * A repair's changes (D48): slot changes are the result's `displaced`, as the contract defines it;
+ * room-only changes are found by comparing with the solution the repair started from.
+ */
+export function repairChanges(base: SolvedSolution, result: SolvedSolution): RepairChangeView[] {
+  const before = new Map(base.assignment.map((a) => [a.session_id, a]));
+  const displaced = new Set(result.displaced);
+  return result.assignment.flatMap((after) => {
+    const was = before.get(after.session_id);
+    const slotChanged = displaced.has(after.session_id);
+    if (!was || (!slotChanged && was.room_id === after.room_id && was.sub_room_id === after.sub_room_id)) return [];
+    return [{ sessionId: after.session_id, before: was, after, slotChanged }];
+  });
 }

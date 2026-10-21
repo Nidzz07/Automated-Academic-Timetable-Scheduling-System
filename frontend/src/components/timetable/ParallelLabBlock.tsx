@@ -8,12 +8,15 @@ interface ParallelLabBlockProps {
   onSelectSession?: (sessionId: string) => void;
   /** Member sessions outlined as in violation */
   flaggedSessionIds?: ReadonlySet<string>;
+  /** The outline: red for a violation, amber for a session a proposed repair changed */
+  flagClass?: string;
 }
 
 export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
   labBlock,
   onSelectSession,
   flaggedSessionIds,
+  flagClass = 'ring-2 ring-destructive',
 }) => {
   return (
     <div
@@ -58,7 +61,7 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
             data-flagged={flaggedSessionIds?.has(sess.sessionId) || undefined}
             onClick={() => onSelectSession?.(sess.sessionId)}
             className={`group/batch relative flex flex-col justify-between rounded-lg border border-emerald-500/25 bg-background/80 p-2 shadow-xs backdrop-blur-xs transition-all hover:bg-emerald-500/10 hover:border-emerald-500/50 cursor-pointer ${
-              flaggedSessionIds?.has(sess.sessionId) ? 'ring-2 ring-destructive' : ''
+              flaggedSessionIds?.has(sess.sessionId) ? flagClass : ''
             }`}
           >
             {/* Top row: Batch Pill + Room */}

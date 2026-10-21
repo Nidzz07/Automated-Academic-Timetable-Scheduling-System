@@ -446,18 +446,35 @@ const JOB_STATUSES: JobStatus[] = ['queued', 'running', 'solved', 'infeasible', 
 export const isFinished = (status: JobStatus | undefined) =>
   status !== undefined && status !== 'queued' && status !== 'running';
 
+type Slot = { day: number; period: number };
+
+/** One change a repair job makes to the official timetable (S14c, solver.repair.apply_change). */
+export type RepairChange =
+  | { kind: 'faculty_unavailable'; faculty_id: string; slots: Slot[] }
+  | { kind: 'room_unavailable'; room_id: string; slots: Slot[] }
+  | { kind: 'move_session'; session_id: string; day: number; period: number; room_id: string; sub_room_id?: string };
+
 /** GET /jobs/{id}. A timeout carries no solution (D33): it never proves infeasibility. */
 export interface SolveJob {
   id: string;
   instance_id: string;
+  kind?: 'solve' | 'repair';
   time_limit_s: number;
   status: JobStatus;
-  /** While running, when the backend reports it (S13d): finding a timetable, then improving it */
-  phase?: 'search' | 'improve';
+  /** While running, when the backend reports it (S13d, S14c) */
+  phase?: 'search' | 'improve' | 'repair';
+  /** Repair: the job id of the solution it started from, or 'committed' (D48) */
+  base?: string;
+  change?: RepairChange;
+  /** Repair: when it became the official timetable (D49) */
+  accepted_at?: string;
   /** Present when status is solved or infeasible */
   solution?: SolutionContract;
   error?: string;
 }
+
+/** A repair's base when it started from the committed solution.json (backend/app/service.py). */
+export const COMMITTED_BASE = 'committed';
 
 /** GET /audit row (S13b). */
 export interface AuditEntry {
@@ -484,6 +501,9 @@ export interface AuthSession {
   username: string;
   token: string;
   role: UserRole;
+  /** The faculty member or cohort the account is linked to (D50); the UI locks to it */
+  facultyId?: string | null;
+  cohortId?: string | null;
 }
 
 /** The session, and whether the last one ended on a 401 (the backend refused its token). */
@@ -584,10 +604,10 @@ export class HttpChronosApiClient extends MockChronosApiClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
-    })) as { access_token: string; role?: unknown };
+    })) as { access_token: string; role?: unknown; faculty_id?: string | null; cohort_id?: string | null };
     const role = isRole(body.role) ? body.role : roleFromToken(body.access_token);
     if (role === null) throw new Error('The login response names no role');
-    return { username, token: body.access_token, role };
+    return { username, token: body.access_token, role, facultyId: body.faculty_id ?? null, cohortId: body.cohort_id ?? null };
   }
 
   /** GET /audit: the newest entries first (administrator only). */
@@ -613,6 +633,24 @@ export class HttpChronosApiClient extends MockChronosApiClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ time_limit_s: timeLimitS }),
     })) as { job_id: string; status: JobStatus };
+  }
+
+  /** POST /instances/{id}/repair: queue a repair of the official timetable (administrator and coordinator only). */
+  public async startRepair(
+    instance: EdgeListInstance,
+    change: RepairChange
+  ): Promise<{ job_id: string; status: JobStatus }> {
+    return (await this.request(`/instances/${encodeURIComponent(instance)}/repair`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ change }),
+    })) as { job_id: string; status: JobStatus };
+  }
+
+  /** POST /jobs/{id}/accept: make a solved repair official (D49); 409 when its base no longer is. */
+  public async acceptRepair(jobId: string): Promise<SolveJob> {
+    const job = (await this.request(`/jobs/${encodeURIComponent(jobId)}/accept`, { method: 'POST' })) as SolveJob;
+    return job.solution === undefined ? job : { ...job, solution: (await validation()).parseSolution(job.solution) };
   }
 
   public async getJob(jobId: string): Promise<SolveJob> {

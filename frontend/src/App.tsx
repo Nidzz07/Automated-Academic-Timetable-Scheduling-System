@@ -12,6 +12,7 @@ import { FreeRoomsPanel, RoomTimetable } from '@/components/timetable/RoomViews'
 import { AnomalyReportPanel } from '@/components/timetable/AnomalyReport';
 import { PrintedViolationsPanel } from '@/components/timetable/PrintedViolations';
 import { SolvePanel } from '@/components/timetable/SolvePanel';
+import { RepairPanel, RepairProposal } from '@/components/timetable/RepairPanel';
 import { GeneratedVsPrintedCard } from '@/components/timetable/GeneratedVsPrintedCard';
 import { LoginScreen } from '@/components/auth/LoginScreen';
 import { AuditLog } from '@/components/auth/AuditLog';
@@ -26,6 +27,7 @@ import {
   isInfeasibleSolution,
   toQualityView,
   DayIndex,
+  repairChanges,
 } from '@/adapters/solution';
 import {
   buildEnrichedSessions,
@@ -34,7 +36,10 @@ import {
   EdgeList,
   EnrichedSession,
   DAY_NAMES,
+  entityName,
+  facultyText,
   labelsFor,
+  moveConflict,
 } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline } from '@/adapters/realInstance';
 import {
@@ -44,8 +49,11 @@ import {
   getAuthState,
   HttpChronosApiClient,
   InstanceOption,
+  isFinished,
   MockChronosApiClient,
   PRINTED_INSTANCE,
+  REAL_INSTANCE,
+  RepairChange,
   setSession,
   subscribeAuth,
 } from '@/api/chronosApi';
@@ -59,6 +67,7 @@ import {
   useInstancesQuery,
   useMoveSessionMutation,
   usePrintedBaselineQuery,
+  useRepair,
   useTimetableQuery,
 } from '@/api/queries';
 
@@ -95,17 +104,30 @@ function SessionApp({ client, session }: { client: MockChronosApiClient; session
           </div>
         </div>
       )}
-      <TimetableApp client={client} sessionRole={session?.role ?? null} />
+      <TimetableApp client={client} session={session} />
     </QueryClientProvider>
   );
 }
 
-function TimetableApp({ client, sessionRole }: { client: MockChronosApiClient; sessionRole: UserRole | null }) {
-  const [instance, setInstance] = useState<EdgeListInstance>('example');
-  // The latest solve job per instance, kept here so switching instance and back keeps tracking it
+function TimetableApp({ client, session }: { client: MockChronosApiClient; session: AuthSession | null }) {
+  // an account linked to a faculty member or cohort (D50) opens on the real timetable they are in
+  const [instance, setInstance] = useState<EdgeListInstance>(
+    session?.facultyId || session?.cohortId ? REAL_INSTANCE : 'example'
+  );
+  // The latest solve and repair job per instance, kept here so switching instance and back keeps tracking them
   const [solveJobs, setSolveJobs] = useState<Record<EdgeListInstance, string>>({});
   const onSolveStarted = useCallback(
     (solved: EdgeListInstance, jobId: string) => setSolveJobs((jobs) => ({ ...jobs, [solved]: jobId })),
+    []
+  );
+  const [repairJobs, setRepairJobs] = useState<Record<EdgeListInstance, string>>({});
+  const onRepairStarted = useCallback(
+    (repaired: EdgeListInstance, jobId: string) => setRepairJobs((jobs) => ({ ...jobs, [repaired]: jobId })),
+    []
+  );
+  const onRepairDiscarded = useCallback(
+    (repaired: EdgeListInstance) =>
+      setRepairJobs(({ [repaired]: _discarded, ...jobs }) => jobs),
     []
   );
   const instances = useInstancesQuery(client);
@@ -159,9 +181,12 @@ function TimetableApp({ client, sessionRole }: { client: MockChronosApiClient; s
       instance={instance}
       onInstanceChange={setInstance}
       client={client}
-      sessionRole={sessionRole}
+      session={session}
       solveJobs={solveJobs}
       onSolveStarted={onSolveStarted}
+      repairJobId={repairJobs[instance] ?? null}
+      onRepairStarted={onRepairStarted}
+      onRepairDiscarded={onRepairDiscarded}
     />
   );
 }
@@ -209,10 +234,14 @@ interface TimetableWorkspaceProps {
   instance: EdgeListInstance;
   onInstanceChange: (instance: EdgeListInstance) => void;
   client: MockChronosApiClient;
-  /** The logged-in role (http mode); null in static mode, where the RoleSelector picks it */
-  sessionRole: UserRole | null;
+  /** Who is logged in (http mode): role and D50 link; null in static mode, where the RoleSelector picks the role */
+  session: AuthSession | null;
   solveJobs: Record<EdgeListInstance, string>;
   onSolveStarted: (instance: EdgeListInstance, jobId: string) => void;
+  /** The instance's latest repair job, until accepted-and-shown or discarded */
+  repairJobId: string | null;
+  onRepairStarted: (instance: EdgeListInstance, jobId: string) => void;
+  onRepairDiscarded: (instance: EdgeListInstance) => void;
 }
 
 function TimetableWorkspace({
@@ -226,10 +255,14 @@ function TimetableWorkspace({
   instance,
   onInstanceChange,
   client,
-  sessionRole,
+  session,
   solveJobs,
   onSolveStarted,
+  repairJobId,
+  onRepairStarted,
+  onRepairDiscarded,
 }: TimetableWorkspaceProps) {
+  const sessionRole = session?.role ?? null;
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [roleChoice, setCurrentRole] = useState<UserRole>('administrator');
   const currentRole = sessionRole ?? roleChoice;
@@ -255,6 +288,7 @@ function TimetableWorkspace({
     reason: string;
     sessionId?: string;
     originalSlotLabel?: string;
+    onRepair?: () => void;
   } | null>(null);
 
   // Toggle for testing rejection on move
@@ -270,8 +304,37 @@ function TimetableWorkspace({
   const printed = instance === PRINTED_INSTANCE ? baseline : null;
   const solvable = instances.find((i) => i.id === instance)?.solvable ?? false;
   const labels = useMemo(() => labelsFor(display), [display]);
-  // The mock validates moves against the example edge list only
-  const canDrag = caps.canDragAndDrop && isExample;
+
+  // Repairs of a backend instance's official timetable (S14c; administrator and coordinator)
+  const http = client instanceof HttpChronosApiClient ? client : null;
+  const repair = useRepair(http, instance, repairJobId, onRepairStarted);
+  const repairJob = repair.job.data;
+  const repairBase = repair.base.data;
+  const proposal = useMemo<RepairProposal | null>(() => {
+    const result = repairJob?.solution;
+    if (repairJob?.status !== 'solved' || repairJob.accepted_at || !result || !repairBase) return null;
+    if (!isSolvedSolution(result) || !isSolvedSolution(repairBase)) return null;
+    return { base: repairBase, result, changes: repairChanges(repairBase, result) };
+  }, [repairJob, repairBase]);
+  const canRepair = caps.canSolve && solvable && http !== null;
+  // one repair at a time: none while one runs or waits to be accepted or discarded
+  const repairOpen =
+    repair.start.isPending ||
+    (repairJobId !== null && !isFinished(repairJob?.status)) ||
+    (repairJob?.status === 'solved' && !repairJob.accepted_at);
+  const startRepair = (change: RepairChange) => {
+    setRejectionAlert(null);
+    repair.accept.reset();
+    repair.start.mutate(change);
+  };
+  const discardRepair = () => {
+    repair.accept.reset();
+    onRepairDiscarded(instance);
+  };
+  // The mock validates moves against the example edge list only; a backend instance's moves are repairs
+  const canDrag =
+    caps.canDragAndDrop &&
+    (isExample || (canRepair && !!publishedSolution && isSolvedSolution(publishedSolution) && !repairOpen));
 
   // Helper to toggle between solved timetable and infeasible diagnosis
   const handleToggleOutcome = async () => {
@@ -294,10 +357,11 @@ function TimetableWorkspace({
     });
   };
 
-  // Placements on the grid: the printed timetable, else the solved solution's
+  // Placements on the grid: the printed timetable, a proposed repair, else the solved solution's
   const placed = useMemo<SessionAssignment[] | null>(
-    () => printed?.assignment ?? (shown && isSolvedSolution(shown) ? shown.assignment : null),
-    [printed, shown]
+    () =>
+      printed?.assignment ?? proposal?.result.assignment ?? (shown && isSolvedSolution(shown) ? shown.assignment : null),
+    [printed, proposal, shown]
   );
   const quality = useMemo(
     () => printed?.quality ?? (shown && isSolvedSolution(shown) ? toQualityView(shown) : null),
@@ -305,10 +369,11 @@ function TimetableWorkspace({
   );
   // The printed timetable's violating sessions: the picked violation's, else every one
   const flaggedSessionIds = useMemo(() => {
+    if (proposal) return new Set(proposal.changes.map((c) => c.sessionId));
     if (!printed) return undefined;
     const picked = selectedViolation === null ? undefined : printed.violations[selectedViolation];
     return new Set((picked ? [picked] : printed.violations).flatMap((v) => v.session_ids));
-  }, [printed, selectedViolation]);
+  }, [printed, selectedViolation, proposal]);
 
   // Enriched sessions if solved (or printed)
   const allSessions = useMemo(
@@ -322,22 +387,32 @@ function TimetableWorkspace({
     return allSessions.find((s) => s.sessionId === selectedSessionId) ?? null;
   }, [selectedSessionId, allSessions]);
 
-  const facultyOptions = useMemo(
-    () =>
-      [...new Map(allSessions.map((s) => [s.facultyId, s.facultyInitials ? `${s.facultyName} (${s.facultyInitials})` : s.facultyName]))]
-        .map(([id, label]) => ({ id, label }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [allSessions]
-  );
-  const cohorts = useMemo(() => cohortOptions(edgeList, labels), [edgeList, labels]);
+  // D50: a faculty or student login linked to a teacher or cohort is locked to it
+  const lockedFaculty = sessionRole === 'faculty' ? session?.facultyId ?? null : null;
+  const lockedCohort = sessionRole === 'student' ? session?.cohortId ?? null : null;
+  const facultyOptions = useMemo(() => {
+    const options = new Map(
+      allSessions.map((s) => [s.facultyId, s.facultyInitials ? `${s.facultyName} (${s.facultyInitials})` : s.facultyName])
+    );
+    // a linked teacher with no placed session is still the one shown
+    if (lockedFaculty && !options.has(lockedFaculty)) options.set(lockedFaculty, facultyText(labels, lockedFaculty));
+    return [...options].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [allSessions, lockedFaculty, labels]);
+  const cohorts = useMemo(() => {
+    const options = cohortOptions(edgeList, labels);
+    return lockedCohort && !options.some((c) => c.id === lockedCohort)
+      ? [...options, { id: lockedCohort, label: labels.cohort(lockedCohort) }]
+      : options;
+  }, [edgeList, labels, lockedCohort]);
   // A choice made on another instance falls back to this instance's first option
   const hasCohort = (id: string | null) => cohorts.some((c) => c.id === id);
   const selectedFaculty =
-    facultyChoice !== null && facultyOptions.some((f) => f.id === facultyChoice)
+    lockedFaculty ??
+    (facultyChoice !== null && facultyOptions.some((f) => f.id === facultyChoice)
       ? facultyChoice
-      : facultyOptions[0]?.id ?? '';
+      : facultyOptions[0]?.id ?? '');
   const selectedStudentDivision =
-    studentChoice !== null && hasCohort(studentChoice) ? studentChoice : cohorts[0]?.id ?? 'all';
+    lockedCohort ?? (studentChoice !== null && hasCohort(studentChoice) ? studentChoice : cohorts[0]?.id ?? 'all');
   const selectedCohortFilter = hasCohort(cohortFilter) ? cohortFilter : 'all';
 
   // Compute sessions for selected faculty (for faculty role view)
@@ -374,6 +449,32 @@ function TimetableWorkspace({
   const handleMoveSession = async (sessionId: string, targetDay: DayIndex, targetPeriod: number) => {
     // Only drag-enabled roles may move sessions
     if (!canDrag) {
+      return;
+    }
+
+    // A backend instance: a clean move is posted as a repair; a clashing one offers to repair around it
+    if (!isExample) {
+      const from = allSessions.find((s) => s.sessionId === sessionId);
+      if (!from || (from.day === targetDay && from.wallClockPeriod === targetPeriod)) return;
+      const change: RepairChange = {
+        kind: 'move_session',
+        session_id: sessionId,
+        day: targetDay,
+        period: targetPeriod,
+        room_id: from.roomId,
+        ...(from.subRoomId ? { sub_room_id: from.subRoomId } : {}),
+      };
+      const reason = moveConflict(edgeList, labels, allSessions, sessionId, targetDay, targetPeriod);
+      if (reason === null) {
+        startRepair(change);
+      } else {
+        setRejectionAlert({
+          reason,
+          sessionId: entityName(sessionId, edgeList, labels),
+          originalSlotLabel: `${DAY_NAMES[from.day]} P${from.wallClockPeriod}`,
+          onRepair: () => startRepair(change),
+        });
+      }
       return;
     }
 
@@ -514,6 +615,7 @@ function TimetableWorkspace({
           onStudentDivisionChange={setSelectedStudentDivision}
           facultyOptions={facultyOptions}
           cohortOptions={cohorts}
+          personaLocked={!!(lockedFaculty || lockedCohort)}
         />
 
         {/* Rejection Alert Banner (when an optimistic move is rejected) */}
@@ -523,6 +625,7 @@ function TimetableWorkspace({
             sessionId={rejectionAlert.sessionId}
             originalSlotLabel={rejectionAlert.originalSlotLabel}
             onDismiss={() => setRejectionAlert(null)}
+            onRepair={rejectionAlert.onRepair}
           />
         )}
 
@@ -534,6 +637,19 @@ function TimetableWorkspace({
             instance={instance}
             jobId={solveJobs[instance] ?? null}
             onJobStarted={onSolveStarted}
+          />
+        )}
+
+        {/* Repair the official timetable (administrator and coordinator; backend instances only) */}
+        {canRepair && (
+          <RepairPanel
+            key={`repair-${instance}`}
+            repair={repair}
+            jobId={repairJobId}
+            proposal={proposal}
+            edgeList={edgeList}
+            labels={labels}
+            onDiscard={discardRepair}
           />
         )}
 
@@ -550,6 +666,8 @@ function TimetableWorkspace({
         {shown && isInfeasibleSolution(shown) && (
           <InfeasibilityDiagnosisPanel
             infeasibleSolution={shown}
+            edgeList={edgeList}
+            labels={labels}
             onApplyRelaxation={isExample ? handleToggleOutcome : undefined}
             onSwitchToSolved={isExample ? handleToggleOutcome : undefined}
           />
@@ -603,6 +721,12 @@ function TimetableWorkspace({
               </span>
             </div>
 
+            {proposal && (
+              <p data-testid="proposal-note" className="px-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                Proposed repair: the sessions it changes are outlined in amber. Not official until accepted.
+              </p>
+            )}
+
             {!shown && !printed && (
               <p data-testid="no-solution-note" className="px-1 text-xs text-muted-foreground">
                 Not solved yet. No solution is published for this instance; the grid shows its
@@ -625,6 +749,7 @@ function TimetableWorkspace({
               }}
               onMoveSession={handleMoveSession}
               flaggedSessionIds={flaggedSessionIds}
+              flagTone={proposal ? 'change' : 'violation'}
             />
           </main>
         )}
