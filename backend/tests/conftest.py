@@ -30,6 +30,11 @@ def bearer(role: str, username: str | None = None) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    # pyproject's addopts deselects these; run them with -m slow
+    config.addinivalue_line("markers", "slow: runs longer than 60 s (the full Kurhade explanation)")
+
+
 def _base_url() -> str:
     override = os.environ.get("CHRONOS_TEST_DATABASE_URL")
     if override:

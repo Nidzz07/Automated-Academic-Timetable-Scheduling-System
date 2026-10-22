@@ -1225,3 +1225,44 @@ def test_0008_downgrade_refuses_to_drop_repairs_or_links(migration_config, sql, 
 
     with pytest.raises(RuntimeError, match=lost):
         command.downgrade(cfg, "0007_solve_job")
+
+
+# ---------------------------------------------------------------------------
+# migration 0009
+# ---------------------------------------------------------------------------
+
+_NEW_0009 = {"accepted_by", "cleared_at", "built_with"}
+
+
+def test_0009_upgrade_and_downgrade(migration_config):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "0008_repair_and_links")
+    _run(url, _INSERT_JOB)
+
+    command.upgrade(cfg, "0009_accepted_changes")
+    assert _rows(url, "SELECT accepted_by, cleared_at, built_with FROM solve_job") == [
+        (None, None, None)]
+
+    command.downgrade(cfg, "0008_repair_and_links")
+    assert _NEW_0009.isdisjoint(_columns(url, "solve_job"))
+    assert _rows(url, "SELECT count(*) FROM solve_job") == [(1,)]
+    command.upgrade(cfg, "head")
+
+
+@pytest.mark.parametrize("sql", [
+    "UPDATE solve_job SET accepted_by = 'u'",
+    "UPDATE solve_job SET cleared_at = now()",
+    "UPDATE solve_job SET built_with = '[]'",
+], ids=["accepted_by", "cleared_at", "built_with"])
+def test_0009_downgrade_refuses_to_drop_what_it_records(migration_config, sql):
+    from alembic import command
+
+    cfg, url = migration_config
+    command.upgrade(cfg, "0009_accepted_changes")
+    _run(url, _INSERT_JOB)
+    _run(url, sql)
+
+    with pytest.raises(RuntimeError, match="1 solve jobs"):
+        command.downgrade(cfg, "0008_repair_and_links")
