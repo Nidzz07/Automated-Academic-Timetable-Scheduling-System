@@ -7,6 +7,10 @@ reads the audit log.
 S14c: administrator and coordinator may also repair the official solution and accept
 a solved repair (ROADMAP D49). A login returns the account's faculty or cohort link
 (D50).
+
+S14f (ROADMAP D52): any role may list the accepted changes every solve and repair
+includes; only administrator clears them. A job names the accepted changes it was
+built with, and a repair's base solution is served as it started from it.
 """
 
 from __future__ import annotations
@@ -33,6 +37,7 @@ Service = Annotated[ChronosService, Depends(get_service)]
 Solver = Annotated[
     Actor, Depends(require_role(UserRole.ADMINISTRATOR, UserRole.COORDINATOR))
 ]
+Administrator = Annotated[Actor, Depends(require_role(UserRole.ADMINISTRATOR))]
 JobStatus = Literal["queued", "running", "solved", "infeasible", "timeout", "error"]
 
 
@@ -108,10 +113,22 @@ class JobView(BaseModel):
     )
     change: dict[str, Any] | None = Field(None, description="repair: the change")
     accepted_at: datetime | None = Field(None, description="repair: when it became official")
+    accepted_by: str | None = Field(None, description="repair: who made it official")
+    built_with: list[str] | None = Field(
+        None, description="the job ids of the accepted changes its edge list includes (D52)"
+    )
     solution: dict[str, Any] | None = Field(
         None, description="solution.v2, present when status is solved or infeasible"
     )
     error: str | None = None
+
+
+class AcceptedChange(BaseModel):
+    job_id: str = Field(description="the accepted repair")
+    change: dict[str, Any]
+    requested_by: str
+    accepted_by: str | None = Field(description="null for repairs accepted before S14f")
+    accepted_at: datetime
 
 
 class LoginRequest(BaseModel):
@@ -230,9 +247,37 @@ def start_repair(
     return SolveAccepted(job_id=job_id, status=_found(service.job(job_id), "job")["status"])
 
 
+@instances.get(
+    "/{instance_id}/changes",
+    description="the accepted faculty and room unavailability changes every solve and "
+    "repair includes (D52), in acceptance order",
+)
+def get_changes(instance_id: str, service: Service) -> list[AcceptedChange]:
+    return [AcceptedChange(**c) for c in _found(service.changes(instance_id), "instance")]
+
+
+@instances.delete(
+    "/{instance_id}/changes",
+    description="administrator: clear the accepted changes (audited); returns the cleared ones",
+)
+def clear_changes(
+    instance_id: str, service: Service, actor: Administrator
+) -> list[AcceptedChange]:
+    cleared = service.clear_changes(instance_id, actor.username)
+    return [AcceptedChange(**c) for c in _found(cleared, "instance")]
+
+
 @jobs.get("/{job_id}", response_model_exclude_none=True)
 def get_job(job_id: str, service: Service) -> JobView:
     return JobView(**_found(service.job(job_id), "job"))
+
+
+@jobs.get(
+    "/{job_id}/base-solution",
+    description="the solution.v2 a repair started from; 404 for a solve",
+)
+def get_base_solution(job_id: str, service: Service) -> dict[str, Any]:
+    return _found(service.base_solution(job_id), "base solution")
 
 
 @jobs.post(

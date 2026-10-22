@@ -14,7 +14,7 @@ Read from the environment, else from `backend/.env` (never committed):
 | `SECRET_KEY` | HS256 signing key for access tokens, at least 32 characters. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime, default 30. |
 
-The database must be at Alembic head (`0008_repair_and_links` or later):
+The database must be at Alembic head (`0009_accepted_changes` or later):
 
 ```powershell
 alembic upgrade head
@@ -49,7 +49,7 @@ the shell history. Minimum 8 characters.
 | `GET /health`, `POST /auth/login` | anyone |
 | every other `GET` (`/instances...`, `/jobs/{id}`) | any logged-in user |
 | `POST /instances/{id}/solve`, `POST /instances/{id}/repair`, `POST /jobs/{id}/accept` | administrator, coordinator |
-| `GET /audit` | administrator |
+| `GET /audit`, `DELETE /instances/{id}/changes` | administrator |
 
 `POST /auth/login` takes `{"username", "password"}` and returns
 `{"access_token", "token_type": "bearer", "role", "faculty_id", "cohort_id"}` (the account's
@@ -59,8 +59,9 @@ token with the wrong role gets 403.
 
 Every login attempt (username, success or failure, time; never the password), every
 solve or repair request (user, instance, time budget, job id, final status, start and end;
-for a repair also its base and change, slots as `[day, period]`) and every accepted repair
-(user, instance, job id, base) is a row in `audit_entry`.
+for a repair also its base and change, slots as `[day, period]`), every accepted repair
+(user, instance, job id, base) and every clearing of the accepted changes (user, instance,
+how many) is a row in `audit_entry`.
 
 ## Solve jobs
 
@@ -106,10 +107,24 @@ change. `displaced` lists the sessions whose slot changed (D48); room-only chang
 by comparing with the base.
 
 `POST /jobs/{id}/accept` makes a solved repair official and returns the job with
-`accepted_at`. It answers 409 if the job is not a solved repair, or if its base is no longer
-the official solution (another repair was accepted or a solve finished since), so a repair
-is accepted at most once. Unknown job: 404.
+`accepted_at` and `accepted_by`. It answers 409 if the job is not a solved repair, or if its
+base is no longer the official solution (another repair was accepted or a solve finished
+since), so a repair is accepted at most once. Unknown job: 404.
 
-Each repair starts from the instance's edge list plus its own change only: changes of
-earlier accepted repairs are not carried forward, so a later repair may move a session back
-into a slot an earlier accepted change closed.
+`GET /jobs/{id}/base-solution` returns the exact solution.v2 a repair started from: the
+committed `solution.json` or its base job's solution. A solve or unknown job: 404.
+
+## Accepted changes accumulate (ROADMAP D52)
+
+Every solve and repair builds its edge list as the committed `edge_list.json` plus every
+accepted `faculty_unavailable` and `room_unavailable` change, in acceptance order
+(`solver.repair.apply_change`); a repair then adds its own change. An accepted
+`move_session` is only a placement and is not re-applied: later repairs keep it when they
+can, a fresh solve may place it elsewhere. A job's `built_with` lists the job ids of the
+accepted changes it was built with. `GET /instances/{id}/edge-list` still serves the
+committed file.
+
+`GET /instances/{id}/changes` lists the accepted changes (`job_id`, `change`,
+`requested_by`, `accepted_by`, `accepted_at`), oldest first. `DELETE
+/instances/{id}/changes` (administrator) clears them and returns the cleared ones; later
+jobs are built without them, and the official solution stays what it is.
