@@ -251,6 +251,92 @@ synthetic instance (`solver/tests/test_mus.py::triangle`). Three sessions there 
 FACULTY, a COHORT and a ROOM edge with two periods to use: pre-solve sees no group to count, the
 search refutes it, and the MUS is all three edges.
 
+## S14e: protected pins, substitutes, a pinned room
+
+2026-10-23 · Dhruv (with Claude Code) · branch `track/solver-substitution`. The numbers below come
+from the tests in `solver/tests/test_repair.py` and `solver/tests/test_mus.py` (same seed and
+budgets as above); runtimes are single runs on this machine. Names come from `display.json`.
+
+### Protected pins are never suggested
+
+`explain()` and `repair()` take `protected`: indices into `pinned_occupancy` that may never be
+relaxed or suggested. The backend will pass the lunch, coffee and other break pins from
+`display.json` (D41); the solver still cannot tell lunch from any other pin. A protected pin stays
+in the conflicting set when it is part of the conflict, but no action on it is tried, so the next
+candidate is. If only protected pins could fix it, the suggestion is MANUAL (`not_attempted`),
+naming the first member that is not protected, and its description lists the protected members.
+An index that is not a pin is a `ValueError`.
+
+- **Real: the CE207 lecture dragged onto SE lunch** (Wed P5 in 605, `pins[5]` = "SE lunch, Wed
+  P5"). Without protection: `mus` {`pin.5`, `change`}, RELAX_PINNED_BLOCK `coh-se-a` at Wed P5,
+  `restored` (0.65 s). That frees SE-Comp A's lunch. With the 10 lunch pins of `display.json`
+  protected: the same set, MANUAL on `change`, nothing tried (0.50 s).
+- **Synthetic: the next candidate** (`lunch_or_lab` in `test_mus.py`). Two practicals, one lab,
+  two periods, lunch in the second. Unprotected, the lunch is tried first and restores. Protected,
+  the set is still {`pin.0`, `room_type.class`} and RECLASSIFY_ROOM is verified instead. Without
+  the classroom only the lunch could help, so it is MANUAL.
+
+### A drag onto a pinned room
+
+So far only a drag onto a pinned cohort was tested. The CE207 lecture is now dragged to Thu P3 in
+609. SE-Comp A and Anant Nimkar are free then, but 609 is held by `pinned_occupancy[226]`, a frozen
+out-of-scope session (D35; `display.json` kind `out_of_scope`, source `oos-t19-r4-c4-l0`). The
+pre-check names it through the room: `mus` {`pin.226`, `change`}, proven minimal,
+RELAX_PINNED_BLOCK room `room-609` at Thu P3, `restored`, 0.77 s. Re-running `repair` with that
+room freed gives a solved timetable.
+
+### Substitutes (D53)
+
+- **`substitute_faculty` change** (`apply_change`, `repair`): `{"kind": "substitute_faculty",
+  "session_id", "faculty_id"}`. The session's `faculty_id` becomes the new teacher, and its FACULTY
+  edges are redrawn to exactly the new teacher's other sessions. FACULTY edges join the sessions of
+  one teacher; that holds for all 548 FACULTY edges of the real instance and for the synthetic
+  generators. The session keeps its slot and room. If the new teacher clashes there (their own
+  session, an unavailable slot, a pin), that session is hit and the repair runs as usual: rings,
+  restore, improve, and an explanation if nothing fits. In an explanation the substitution is
+  background, not a group: a coordinator chose it, so it is never relaxed. The set says why the new
+  teacher cannot take the session. An unknown session or faculty member, or the session's own
+  teacher, is a `ValueError`.
+- **Output stays `solution.v2`.** `solution.v2` has no teacher field, for any result. The new
+  teacher lives in the changed edge list (`sessions[].faculty_id`, an `edge_list_v1` field), just
+  as an absence lives in `unavailable_slots`, and the result is valid against
+  `apply_change(edge_list, change)`. No contract change. The backend keeps the change with the job
+  and accumulates accepted substitutions (D52).
+- **`substitute_candidates(payload, solution, session_id, qualified)`**: the caller passes who is
+  qualified; the solver never decides that. For everyone in `qualified` except the session's own
+  teacher, the substitution is written in, and `validate_solution` must accept the unchanged
+  timetable. Returns `{"faculty_id", "score_change"}`, best `score_change` first, ties by faculty
+  id. A qualified id with no `faculty_availability` entry in the payload is a `ValueError`: the
+  solver cannot check someone whose availability it does not know.
+
+Real instance, as a **mechanism check, not SPIT data**. The qualified list here is the instance's
+own CE207 teachers. The real lists come from Track B in S14f (Faculty___Subjects.xlsx,
+Subject-wise_faculty.xlsx).
+
+| Substitute for `obs-t0-r1-c3-l0` (CE207, SE-Comp A, Anant Nimkar, Thu P4, 605) | Fits at Thu P4? | Score change | Repair |
+|---|---|---|---|
+| Prasenjit Bhavathankar | yes | 0.0 | nothing moves, score −15.0 |
+| Nataasha Raul | yes | −2.0 (S-B2B +1, S-LOAD16 +1) | not run |
+| Sudhir Dhage | no (FACULTY_CLASH: he teaches at Thu P4) | n/a | only the lecture moves, to Wed P1 in 601 (ring 0); −15.0 → −27.0 (S-GAP 13 → 18, S-B2B 30 → 31, FAC_LOAD_IMBALANCE 106 → 108); 0.34 s |
+
+`substitute_candidates` takes 0.09 s for these four, and 0.9 s with all 37 faculty ids of the edge
+list as the list (30 fit). On 30 seeded property instances, with everyone as "qualified", the
+result is exactly the set the validator accepts (24 fit, 8 do not). On 40 instances, one random
+session each, `repair` with every other teacher as the substitute gives 28 that fit (nothing
+moves), 7 repaired and 5 infeasible. The infeasible ones are explained without the substitution in
+the set.
+
+### Test time
+
+`pytest solver/tests` on this machine: **before 102.0 s** (363 passed, 1 slow deselected), of which
+the Kurhade explanation fixture took 22.5 s. **After 79.3 s** (375 passed, 2 slow deselected). The
+full Kurhade explanation is now `slow` (`pytest -m slow`). The default run explains the same
+change with `repair(..., mus_nodes=0)`: pre-solve checks only, the same 24-member set, proven
+infeasible but not minimal (`presolve`), MANUAL, 7.2 s. The search-equivalence tests (15.2, 8.9 and
+4.8 s) are the other large items; they are not explanations and were not changed. Part of the drop
+is machine load: the unchanged symmetry-breaking test took 18.6 s in the first run and 15.2 s in the
+second.
+
 ## Limits
 
 - **Not a proven minimum.** The rings, the old-place-first ordering and the greedy restore keep
@@ -281,7 +367,16 @@ search refutes it, and the MUS is all three edges.
   is stable only for one exported edge list, the one `display.json` was written with.
 - **Lunch can be suggested** (S14b). The solver cannot tell lunch from any other pin, so a
   RELAX_PINNED_BLOCK on a lunch slot may be suggested. The backend must refuse it (Row 8
-  assessment). The same holds for absence-derived slots outside the change itself.
+  assessment). The same holds for absence-derived slots outside the change itself. S14e: the
+  backend can pass the break pins as `protected`, and they are then never suggested. Absence-derived
+  slots have no such option yet.
+- **Qualified people missing from the edge list** (S14e). `substitute_candidates` refuses an id
+  with no `faculty_availability` entry. The real edge list has 37 such entries (24 teach, 13 only
+  hold pins), so Track B must pass only those ids, or the export must list everyone who may
+  substitute.
+- **The backend tests still run the full Kurhade explanation** (S14e).
+  `backend/tests/test_repair.py::test_each_change_type[infeasible]` runs it through the API and
+  again directly. Track B can pass `mus_nodes=0` there, or mark the test slow.
 - **Explanation is slow and not covered by the time limit** (S14b). The Kurhade explanation takes
   about a minute here. Each of its searches has a node budget, but none uses `repair`'s
   `time_limit_s`, so the answer is the same on every machine. The cost is that `repair` can run

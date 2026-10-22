@@ -63,14 +63,23 @@ tried smallest first (slots freed, then the contract's action order) on the
 whole instance, and the first one whose re-solve finds a timetable that
 :func:`solver.validate.validate_solution` accepts is the
 ``suggested_relaxation`` (``verification: restored``). The change itself is
-never relaxed: it is what was asked for. If none restores, the relaxation is
-MANUAL. Stdlib only.
+never relaxed: it is what was asked for. Nor is a *protected* pin (S14e: the
+caller's lunch, coffee and other break pins, by index): it stays in the set
+when it is part of the conflict, but no action on it is tried or suggested, so
+the next candidate is. If none restores, the relaxation is MANUAL, naming the
+first member that is not protected.
+
+**Substitution** (``substitute_faculty``, D53). A coordinator chose the new
+teacher, so the substitution is not a group: it is written into the instance
+as background, and the set explains why the new teacher cannot take the
+session. Stdlib only.
 """
 
 from __future__ import annotations
 
 import json
 import time
+from collections.abc import Collection
 from dataclasses import dataclass
 from typing import Any
 
@@ -116,6 +125,17 @@ class _Group:
     text: str
 
 
+def _protected(payload: dict[str, Any], protected: Collection[int]) -> set[str]:
+    """``pin.<i>`` of every *protected* pin index.
+
+    Raises:
+        ValueError: if an index is not a pin of *payload*.
+    """
+    if not set(protected) <= set(range(len(payload["pinned_occupancy"]))):
+        raise ValueError(f"protected pins {sorted(protected)} are not all pins of the payload")
+    return {f"pin.{i}" for i in protected}
+
+
 def apply_action(payload: dict[str, Any], action: dict[str, Any]) -> dict[str, Any]:
     """A copy of *payload* with one ``solution.v2`` relaxation action applied.
 
@@ -157,6 +177,8 @@ class _Problem:
     def __init__(self, payload: dict[str, Any], change: dict[str, Any] | None) -> None:
         from solver.repair import _room_of, apply_change  # repair imports this module
 
+        if change is not None and change["kind"] == "substitute_faculty":
+            payload, change = apply_change(payload, change), None  # background (module docstring)
         self.base, self.change = payload, change
         self.full = payload if change is None else apply_change(payload, change)
         self.forced = ({change["session_id"]: _room_of(change)}
@@ -539,6 +561,7 @@ def explain(
     change: dict[str, Any] | None = None,
     initial: list[str] | None = None,
     timetable: dict[str, Any] | None = None,
+    protected: Collection[int] = (),
     node_limit: int = MUS_NODES,
     time_limit_s: float | None = None,
     stats: dict[str, Any] | None = None,
@@ -555,7 +578,8 @@ def explain(
         *initial* set must prove itself; if its check is not infeasible the
         result is ``None``.
     change:
-        A :func:`solver.repair.apply_change` change; it is one group, never relaxed.
+        A :func:`solver.repair.apply_change` change; it is one group, never
+        relaxed (a ``substitute_faculty`` change is background instead).
     initial:
         Group ids to start from (``pin.<i>``, ...); the change is added. Used
         only if its check is infeasible.
@@ -563,6 +587,9 @@ def explain(
         A solved ``solution.v2`` known to satisfy every group but the change
         (in a repair, the timetable being repaired); checks it satisfies need
         no search.
+    protected:
+        Indices into *payload*'s ``pinned_occupancy`` that are never relaxed
+        or suggested (breaks, lunch).
     node_limit:
         Search nodes per check and per verification (:data:`MUS_NODES`).
     time_limit_s:
@@ -581,9 +608,16 @@ def explain(
         ``method = "mus"`` if proven minimal, ``"presolve"`` if only proven
         infeasible by pre-solve, else *infeasible* unchanged (see the module
         docstring).
+
+    Raises
+    ------
+    ValueError
+        Without *infeasible* and *initial*, or if a *protected* index is not a
+        pin of *payload*.
     """
     started = time.perf_counter()
     deadline = None if time_limit_s is None else started + time_limit_s
+    kept = _protected(payload, protected)
     problem = _Problem(payload, change)
     if timetable is not None:
         problem.known(timetable)
@@ -648,6 +682,8 @@ def explain(
     # --- relaxations, smallest first, until one restores feasibility
     tried: dict[str, tuple[int, int, str, dict[str, Any]]] = {}
     for gid in core:
+        if gid in kept:
+            continue
         for action in problem.candidates(gid, witness.get(gid)):
             key = json.dumps(action, sort_keys=True)
             size_of = len(action["params"].get("slots", [None]))
@@ -668,9 +704,12 @@ def explain(
             chosen = attempt
             break
     if chosen is None:
-        chosen = {"constraint_id": core[0],
+        skipped = [g for g in core if g in kept]
+        chosen = {"constraint_id": next((g for g in core if g not in kept), core[0]),
                   "description": ("No single change to one of these constraints was verified "
-                                  "to restore feasibility; a person has to decide what to change."),
+                                  "to restore feasibility; a person has to decide what to change."
+                                  + (f" Protected, never relaxed: {', '.join(skipped)}."
+                                     if skipped else "")),
                   "action": {"action_type": "MANUAL", "params": {}},
                   "verification": {"status": "not_attempted", "runtime_ms": None}}
 
