@@ -17,6 +17,12 @@ for one change and records that solution as its ``base``. The official solution
 (ROADMAP D49) is the latest finished solve or accepted repair, else the committed
 ``solution.json``; a solved repair becomes official only when accepted while its base is
 still official.
+
+S14f (ROADMAP D52): every solve and repair builds its edge list as the committed one plus
+every accepted faculty and room unavailability change not yet cleared, in acceptance order
+(:func:`solver.repair.apply_change`), and records their job ids as ``built_with``. An
+accepted move is only a placement and is not re-applied. An administrator can clear the
+accepted changes.
 """
 
 from __future__ import annotations
@@ -53,6 +59,7 @@ DEFAULT_MAX_MOVES = MAX_MOVES  # solver.improve's default, about 20 s on the rea
 MAX_MAX_MOVES = 2_000_000
 DEFAULT_REPAIR_MAX_MOVES = REPAIR_MAX_MOVES  # solver.repair's default
 COMMITTED = "committed"  # a repair's base when it started from the committed solution.json
+ACCUMULATED = ("faculty_unavailable", "room_unavailable")  # D52; a move is not re-applied
 
 
 class ContractError(ValueError):
@@ -235,6 +242,27 @@ class ChronosService:
         check_contract("solution_v2", committed)
         return COMMITTED, committed
 
+    @staticmethod
+    def _accepted(db: OrmSession, instance_id: str) -> list[SolveJob]:
+        """The accepted repairs whose change accumulates (D52) and is not cleared, in
+        acceptance order."""
+        rows = db.scalars(
+            select(SolveJob)
+            .where(SolveJob.instance_id == instance_id, SolveJob.kind == "repair",
+                   SolveJob.accepted_at.is_not(None), SolveJob.cleared_at.is_(None))
+            .order_by(SolveJob.accepted_at, SolveJob.id)
+        )
+        return [job for job in rows if job.params["change"]["kind"] in ACCUMULATED]
+
+    def _built(
+        self, db: OrmSession, instance_id: str, edge_list: dict[str, Any]
+    ) -> tuple[dict[str, Any], list[str]]:
+        """*edge_list* with every accepted change applied (D52), and their job ids."""
+        accepted = self._accepted(db, instance_id)
+        for job in accepted:
+            edge_list = apply_change(edge_list, job.params["change"])
+        return edge_list, [job.id for job in accepted]
+
     def login(self, username: str, password: str) -> Actor | None:
         """The account's actor when the password matches, else None. Audited either way."""
         with OrmSession(self._engine) as db:
@@ -254,17 +282,20 @@ class ChronosService:
         edge_list = self.edge_list(instance_id)
         if edge_list is None:
             return None
+        with OrmSession(self._engine) as db:
+            edge_list, built_with = self._built(db, instance_id, edge_list)
         params = {"time_limit_s": time_limit_s, "max_moves": max_moves}
-        return self._start(instance_id, "solve", None, params, {}, actor,
+        return self._start(instance_id, "solve", None, params, {}, actor, built_with,
                            solve_edge_list, edge_list, time_limit_s, max_moves)
 
     def start_repair(
         self, instance_id: str, change: dict[str, Any], time_limit_s: float, max_moves: int,
         actor: str,
     ) -> str | None:
-        """Queue a repair of the instance's official solution for *change*: the job id,
-        or None when the instance is unknown. Raises :class:`BadChange` for an unknown
-        id or slot, :class:`Conflict` when the official solution is not a solved one."""
+        """Queue a repair of the instance's official solution for *change*, on the edge
+        list with every accepted change (D52): the job id, or None when the instance is
+        unknown. Raises :class:`BadChange` for an unknown id or slot, :class:`Conflict`
+        when the official solution is not a solved one."""
         edge_list = self.edge_list(instance_id)
         if edge_list is None:
             return None
@@ -274,6 +305,7 @@ class ChronosService:
             raise BadChange(str(exc)) from exc
         with OrmSession(self._engine) as db:
             official = self._official(db, instance_id)
+            edge_list, built_with = self._built(db, instance_id, edge_list)
         if official is None or official[1]["status"] != "solved":
             raise Conflict("the instance has no solved official timetable to repair")
         base, solution = official
@@ -283,13 +315,14 @@ class ChronosService:
         if "slots" in change:
             logged["slots"] = [[s["day"], s["period"]] for s in change["slots"]]
         return self._start(instance_id, "repair", base, params,
-                           {"base": base, "change": logged}, actor,
+                           {"base": base, "change": logged}, actor, built_with,
                            repair_edge_list, edge_list, solution, change, time_limit_s,
                            max_moves)
 
     def _start(
         self, instance_id: str, kind: str, base: str | None, params: dict[str, Any],
-        logged: dict[str, Any], actor: str, work: Callable[..., Any], *args: Any,
+        logged: dict[str, Any], actor: str, built_with: list[str], work: Callable[..., Any],
+        *args: Any,
     ) -> str:
         """Audit and store a queued job of *kind*, then run ``work(*args, on_phase)``
         in the pool."""
@@ -306,7 +339,8 @@ class ChronosService:
         with OrmSession(self._engine) as db:  # audited before it runs: no unaudited job
             audit_id = self._audit(db, actor, kind, detail)
             db.add(SolveJob(id=job_id, instance_id=instance_id, requested_by=actor, kind=kind,
-                            base=base, status="queued", params=params, audit_id=audit_id))
+                            base=base, status="queued", params=params, audit_id=audit_id,
+                            built_with=built_with))
             db.commit()
         on_phase = partial(
             _mark_running, self._engine.url.render_as_string(hide_password=False), job_id
@@ -345,11 +379,53 @@ class ChronosService:
             official = self._official(db, job.instance_id)
             if official is None or official[0] != job.base:
                 raise Conflict("the timetable this repair started from is no longer official")
-            job.accepted_at = func.now()
+            job.accepted_at, job.accepted_by = func.now(), actor
             self._audit(db, actor, "accept",
                         {"instance_id": job.instance_id, "job_id": job_id, "base": job.base})
             db.commit()
         return self.job(job_id)
+
+    @staticmethod
+    def _change_view(job: SolveJob) -> dict[str, Any]:
+        return {"job_id": job.id, "change": job.params["change"],
+                "requested_by": job.requested_by, "accepted_by": job.accepted_by,
+                "accepted_at": job.accepted_at}
+
+    def changes(self, instance_id: str) -> list[dict[str, Any]] | None:
+        """The accepted changes every solve and repair includes (D52), in acceptance
+        order; None when the instance is unknown."""
+        if self.store.path(instance_id, "edge_list") is None:
+            return None
+        with OrmSession(self._engine) as db:
+            return [self._change_view(job) for job in self._accepted(db, instance_id)]
+
+    def clear_changes(self, instance_id: str, actor: str) -> list[dict[str, Any]] | None:
+        """Clear the accepted changes (D52), audited: the cleared ones, or None when the
+        instance is unknown. The official solution stays what it is."""
+        if self.store.path(instance_id, "edge_list") is None:
+            return None
+        with self._official_lock, OrmSession(self._engine) as db:
+            accepted = self._accepted(db, instance_id)
+            cleared = [self._change_view(job) for job in accepted]
+            for job in accepted:
+                job.cleared_at = func.now()
+            # the count, not the ids: detail holds 1024 characters; the rows keep cleared_at
+            self._audit(db, actor, "clear_changes",
+                        {"instance_id": instance_id, "cleared": len(cleared)})
+            db.commit()
+        return cleared
+
+    def base_solution(self, job_id: str) -> dict[str, Any] | None:
+        """The solution.v2 a repair started from: the committed ``solution.json`` or its
+        base job's solution. None for an unknown job or one that is not a repair."""
+        with OrmSession(self._engine) as db:
+            job = db.get(SolveJob, job_id)
+            if job is None or job.base is None:
+                return None
+            if job.base == COMMITTED:
+                # shortcut: the committed file as it is now; it changes only by a commit
+                return self.store.read(job.instance_id, "solution")
+            return db.get_one(SolveJob, job.base).solution
 
     @staticmethod
     def _finish_audit(db: OrmSession, audit_id: int, status: str) -> None:
@@ -383,8 +459,8 @@ class ChronosService:
 
     def job(self, job_id: str) -> dict[str, Any] | None:
         """The job's kind, status, its phase while running and, once solved or infeasible,
-        its solution; a repair's base and change, and when it was accepted. None if
-        unknown."""
+        its solution; a repair's base and change, and when and by whom it was accepted;
+        the accepted changes it was built with (D52). None if unknown."""
         with OrmSession(self._engine) as db:
             job = db.get(SolveJob, job_id)
             if job is None:
@@ -396,7 +472,9 @@ class ChronosService:
             if job.kind == "repair":
                 view["base"] = job.base
             if job.accepted_at is not None:
-                view["accepted_at"] = job.accepted_at
+                view["accepted_at"], view["accepted_by"] = job.accepted_at, job.accepted_by
+            if job.built_with is not None:
+                view["built_with"] = job.built_with
             if job.status == "running":
                 view["phase"] = job.phase
             if job.solution is not None:

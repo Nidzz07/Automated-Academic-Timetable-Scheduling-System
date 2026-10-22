@@ -111,7 +111,9 @@ def test_openapi_lists_every_route(real: TestClient) -> None:
         "/instances/{instance_id}/solution",
         "/instances/{instance_id}/solve",
         "/instances/{instance_id}/repair",
+        "/instances/{instance_id}/changes",
         "/jobs/{job_id}",
+        "/jobs/{job_id}/base-solution",
         "/jobs/{job_id}/accept",
     }
 
@@ -250,7 +252,15 @@ def backtracked(real_edge_list: dict[str, Any]) -> dict[str, Any]:
 
 
 def without_runtime(solution: dict[str, Any]) -> dict[str, Any]:
-    return solution | {"metadata": solution["metadata"] | {"runtime_ms": None}}
+    """*solution* without its wall-clock fields: metadata.runtime_ms and, on an
+    infeasible one, diagnosis.suggested_relaxation.verification.runtime_ms (S14b)."""
+    stripped = solution | {"metadata": solution["metadata"] | {"runtime_ms": None}}
+    relaxation = (solution.get("diagnosis") or {}).get("suggested_relaxation")
+    if relaxation and "verification" in relaxation:
+        verification = relaxation["verification"] | {"runtime_ms": None}
+        stripped["diagnosis"] = solution["diagnosis"] | {
+            "suggested_relaxation": relaxation | {"verification": verification}}
+    return stripped
 
 
 class TestImprove:

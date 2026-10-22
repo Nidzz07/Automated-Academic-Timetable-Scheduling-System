@@ -28,9 +28,10 @@ from solver.benchmarks.synthetic import PRESETS, generate
 from solver.repair import apply_change, repair
 from solver.validate import validate_solution
 
-KURHADE_TUESDAY = SCENARIOS[0][1]  # pre-solve proves it impossible
+KURHADE_TUESDAY = SCENARIOS[0][1]  # pre-solve proves it impossible; explaining it is slow
 ROOM_603_MONDAY = SCENARIOS[1][1]
 FREE_DRAG = SCENARIOS[2][1]
+PIN_DRAG = SCENARIOS[3][1]  # infeasible, explained at once from the pin (S14b)
 KURHADE_AFTERNOON = SCENARIOS[4][1]
 
 
@@ -49,7 +50,7 @@ def client(tmp_path_factory: pytest.TempPathFactory, database_url: str) -> Itera
     """``changes`` and ``accepts``: the real instance with its committed solution;
     ``unsolved``: its edge list only; ``infeasible``: a synthetic preset (D19)."""
     root = tmp_path_factory.mktemp("repair")
-    for name in ("changes", "accepts", "unsolved"):
+    for name in ("changes", "accepts", "accumulates", "unsolved"):
         (root / name).mkdir()
         files = ["edge_list.json"] if name == "unsolved" else ["edge_list.json", "solution.json"]
         for file in files:
@@ -95,8 +96,11 @@ class TestChanges:
         (ROOM_603_MONDAY, "solved"),
         (FREE_DRAG, "solved"),
         (KURHADE_AFTERNOON, "solved"),
-        (KURHADE_TUESDAY, "infeasible"),
-    ], ids=["room-unavailable", "move-session", "faculty-unavailable", "infeasible"])
+        (PIN_DRAG, "infeasible"),
+        # about two minutes: the full explanation, run here and again for `expected`
+        pytest.param(KURHADE_TUESDAY, "infeasible", marks=pytest.mark.slow),
+    ], ids=["room-unavailable", "move-session", "faculty-unavailable", "infeasible",
+            "infeasible-explained"])
     def test_each_change_type(
         self, client: TestClient, real_edge_list: dict[str, Any], committed: dict[str, Any],
         change: dict[str, Any], outcome: str,
@@ -231,13 +235,14 @@ def test_accept_rules(
     second = run(client, "accepts", FREE_DRAG)
     third = run(client, "accepts", KURHADE_AFTERNOON)
     assert second["base"] == third["base"] == first["id"]
+    assert second["built_with"] == third["built_with"] == [first["id"]]  # D52
     assert accept(client, second["id"], "coordinator", "accepter").status_code == 200
     assert official() == second["solution"]
     assert accept(client, third["id"]).status_code == 409
     assert official() == second["solution"]
 
     # only a solved repair
-    infeasible = run(client, "accepts", KURHADE_TUESDAY)
+    infeasible = run(client, "accepts", PIN_DRAG)
     timed_out = run(client, "accepts", ROOM_603_MONDAY, time_limit_s=1e-9)
     assert (infeasible["status"], timed_out["status"]) == ("infeasible", "timeout")
     assert infeasible["base"] == second["id"]
@@ -272,3 +277,62 @@ def test_official_survives_a_new_app(
     with client_for(tmp_path, database_url) as second:
         assert second.get("/instances/persisted/solution").json() == job["solution"]
         assert second.get(f"/jobs/{job['id']}").json()["accepted_at"]
+
+
+def test_accepted_changes_accumulate(
+    client: TestClient, real_edge_list: dict[str, Any], committed: dict[str, Any],
+    database_url: str,
+) -> None:
+    """D52: once "Kurhade unavailable Tue P5-P9" is accepted, no later repair or solve
+    places her there, until an administrator clears it. A move is not re-applied."""
+    kurhade = apply_change(real_edge_list, KURHADE_AFTERNOON)
+    hers = {s["id"] for s in real_edge_list["sessions"]
+            if s["faculty_id"] == KURHADE_AFTERNOON["faculty_id"]}
+    afternoon = {(s["day"], s["period"]) for s in KURHADE_AFTERNOON["slots"]}
+
+    def respects_her(solution: dict[str, Any], edge_list: dict[str, Any]) -> bool:
+        starts = {(a["day"], a["period"]) for a in solution["assignment"]
+                  if a["session_id"] in hers}
+        return not starts & afternoon and validate_solution(edge_list, solution) == []
+
+    def changes() -> list[dict[str, Any]]:
+        return client.get("/instances/accumulates/changes").json()
+
+    assert changes() == []
+    first = run(client, "accumulates", KURHADE_AFTERNOON)
+    assert first["built_with"] == []
+    assert client.get(f"/jobs/{first['id']}/base-solution").json() == committed
+    assert accept(client, first["id"], "coordinator", "accumulator").status_code == 200
+    [listed] = changes()
+    assert listed.pop("accepted_at")
+    assert listed == {"job_id": first["id"], "change": KURHADE_AFTERNOON,
+                      "requested_by": "test-coordinator", "accepted_by": "accumulator"}
+
+    # a later repair (of another change) keeps her out of Tuesday afternoon
+    drag = run(client, "accumulates", FREE_DRAG)
+    assert (drag["status"], drag["base"], drag["built_with"]) == (
+        "solved", first["id"], [first["id"]])
+    assert client.get(f"/jobs/{drag['id']}/base-solution").json() == first["solution"]
+    assert respects_her(drag["solution"], apply_change(kurhade, FREE_DRAG))
+    assert accept(client, drag["id"]).status_code == 200
+    assert [c["job_id"] for c in changes()] == [first["id"]]  # a move is not a change
+
+    # and so does a fresh solve
+    solved = solve(client, "accumulates", max_moves=0)
+    assert solved["status"] == "solved" and solved["built_with"] == [first["id"]]
+    assert respects_her(solved["solution"], kurhade)
+    assert client.get(f"/jobs/{solved['id']}/base-solution").status_code == 404  # a solve
+    assert client.get("/jobs/no-such-job/base-solution").status_code == 404
+
+    # only an administrator clears them; audited; later jobs are built without them
+    delete = "/instances/accumulates/changes"
+    assert client.delete(delete).status_code == 403  # coordinator
+    cleared = client.delete(delete, headers=bearer("administrator", "clearer"))
+    assert cleared.status_code == 200
+    assert [c["job_id"] for c in cleared.json()] == [first["id"]]
+    assert changes() == []
+    assert client.delete("/instances/nope/changes",
+                         headers=bearer("administrator")).status_code == 404
+    [row] = audit(database_url, "clearer", "clear_changes")
+    assert json.loads(row.detail) == {"instance_id": "accumulates", "cleared": 1}
+    assert run(client, "accumulates", ROOM_603_MONDAY)["built_with"] == []
