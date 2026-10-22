@@ -48,7 +48,7 @@ the shell history. Minimum 8 characters.
 |---|---|
 | `GET /health`, `POST /auth/login` | anyone |
 | every other `GET` (`/instances...`, `/jobs/{id}`) | any logged-in user |
-| `POST /instances/{id}/solve`, `POST /instances/{id}/repair`, `POST /jobs/{id}/accept` | administrator, coordinator |
+| `POST /instances/{id}/solve`, `POST /instances/{id}/repair`, `POST /jobs/{id}/accept`, `GET /instances/{id}/sessions/{session_id}/substitutes` | administrator, coordinator |
 | `GET /audit`, `DELETE /instances/{id}/changes` | administrator |
 
 `POST /auth/login` takes `{"username", "password"}` and returns
@@ -95,16 +95,23 @@ result becomes official only when accepted.
 | `faculty_unavailable` | `faculty_id`, `slots: [{"day", "period"}, ...]` (1 to 50) |
 | `room_unavailable` | `room_id`, `slots` |
 | `move_session` | `session_id`, `day`, `period`, `room_id`, optional `sub_room_id` |
+| `substitute_faculty` | `session_id`, `faculty_id` (the new teacher) |
 
 `time_limit_s` (default 300, at most 1800) caps each search of the repair; `max_moves`
 (default 20000, the repair's own default; at most 2000000; 0 skips it) bounds the local
 search over the sessions the repair moved. A faculty, room or session that is not in the
-instance, or a slot off its grid, gets 422; no official solution, or an infeasible one,
+instance, a slot off its grid, or a substitute who already teaches the session or is not
+qualified for it (see Substitutes) gets 422; no official solution, or an infeasible one,
 gets 409. While it runs, the job's phase is `"repair"`. It ends `solved` or `infeasible`
 (the repair's diagnosis) with its solution.v2, or `timeout` with none (D33). The job's
 `base` is the job id of the solution it started from, or `"committed"`, and `change` is the
 change. `displaced` lists the sessions whose slot changed (D48); room-only changes are found
 by comparing with the base.
+
+An infeasible repair's suggested relaxation never frees a pin that the instance's
+`display.json` marks as kind `lunch`, `coffee` or `break` (D41: by its kind, never its
+shape); the backend passes those pin indices to the solver as `protected`. An instance
+without `display.json` protects none.
 
 `POST /jobs/{id}/accept` makes a solved repair official and returns the job with
 `accepted_at` and `accepted_by`. It answers 409 if the job is not a solved repair, or if its
@@ -117,7 +124,8 @@ committed `solution.json` or its base job's solution. A solve or unknown job: 40
 ## Accepted changes accumulate (ROADMAP D52)
 
 Every solve and repair builds its edge list as the committed `edge_list.json` plus every
-accepted `faculty_unavailable` and `room_unavailable` change, in acceptance order
+accepted `faculty_unavailable`, `room_unavailable` and `substitute_faculty` change, in
+acceptance order
 (`solver.repair.apply_change`); a repair then adds its own change. An accepted
 `move_session` is only a placement and is not re-applied: later repairs keep it when they
 can, a fresh solve may place it elsewhere. A job's `built_with` lists the job ids of the
@@ -128,3 +136,22 @@ committed file.
 `requested_by`, `accepted_by`, `accepted_at`), oldest first. `DELETE
 /instances/{id}/changes` (administrator) clears them and returns the cleared ones; later
 jobs are built without them, and the official solution stays what it is.
+
+## Substitutes (ROADMAP D53)
+
+A session's qualified faculty are those the instance's `qualifications.json` lists for its
+subject with its session type (`theory`, `lab`) or with none given; an instance without
+that file has none. `GET /instances/{id}/sessions/{session_id}/substitutes` returns
+`{"session_id", "faculty_id" (who teaches it now), "candidates", "left_out"}` for the
+official solution on the edge list with every accepted change:
+
+- `candidates`: `[{"faculty_id", "score_change"}]`, the qualified faculty who can take the
+  session where it is (`solver.repair.substitute_candidates`), best score change first,
+  ties by id;
+- `left_out`: every other qualified teacher but the current one, by id, with `reasons`
+  (`busy`: they teach or hold a frozen item then; `unavailable`: an unavailable slot) and
+  the `violations` (`solver.validate`) the timetable would have with them.
+
+Unknown instance or session: 404; no solved official solution, or one the accepted changes
+make invalid: 409. Chronos suggests; a coordinator decides, by posting a
+`substitute_faculty` repair.

@@ -23,6 +23,12 @@ every accepted faculty and room unavailability change not yet cleared, in accept
 (:func:`solver.repair.apply_change`), and records their job ids as ``built_with``. An
 accepted move is only a placement and is not re-applied. An administrator can clear the
 accepted changes.
+
+S14g: a repair (and the explanation of an infeasible one) never suggests relaxing a pin
+that ``display.json`` marks as a lunch, coffee or other break, by its kind (D41). A repair
+may substitute a session's teacher, only with one ``qualifications.json`` lists for the
+session's subject and type (D53); accepted substitutions accumulate (D52). The substitutes
+of a session are the qualified faculty free at its slot in the official solution.
 """
 
 from __future__ import annotations
@@ -31,7 +37,7 @@ import json
 import threading
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from concurrent.futures import Future, ProcessPoolExecutor
 from datetime import UTC, datetime
 from functools import cache, partial
@@ -49,7 +55,7 @@ from solver.backtracking import backtrack_solve
 from solver.graph import build_conflict_graph
 from solver.improve import MAX_MOVES, improve
 from solver.repair import MAX_MOVES as REPAIR_MAX_MOVES
-from solver.repair import apply_change, repair
+from solver.repair import apply_change, repair, substitute_candidates
 from solver.validate import validate_solution
 
 CONTRACTS_DIR = REPO / "contracts"
@@ -59,7 +65,12 @@ DEFAULT_MAX_MOVES = MAX_MOVES  # solver.improve's default, about 20 s on the rea
 MAX_MAX_MOVES = 2_000_000
 DEFAULT_REPAIR_MAX_MOVES = REPAIR_MAX_MOVES  # solver.repair's default
 COMMITTED = "committed"  # a repair's base when it started from the committed solution.json
-ACCUMULATED = ("faculty_unavailable", "room_unavailable")  # D52; a move is not re-applied
+# D52: the changes every later solve and repair includes; a move is not re-applied
+ACCUMULATED = ("faculty_unavailable", "room_unavailable", "substitute_faculty")
+BREAK_PIN_KINDS = ("lunch", "coffee", "break")  # display.json pin kinds never relaxed (D41)
+# why a qualified teacher cannot take a session where it is (solver.validate kinds)
+LEFT_OUT = {"FACULTY_CLASH": "busy", "PINNED_BLOCK": "busy",
+            "FACULTY_UNAVAILABLE": "unavailable"}
 
 
 class ContractError(ValueError):
@@ -125,19 +136,20 @@ def repair_edge_list(
     change: dict[str, Any],
     time_limit_s: float,
     max_moves: int,
+    protected: Collection[int] = (),
     on_phase: Callable[[str], None] | None = None,
 ) -> tuple[str, dict[str, Any] | None]:
     """Runs in a pool worker: (outcome, solution.v2 payload or None on a timeout).
 
     *time_limit_s* caps each search of :func:`solver.repair.repair`; running out of it
-    with every session free is a timeout, never infeasible (D33). *on_phase* hears
-    ``repair``.
+    with every session free is a timeout, never infeasible (D33). *protected* pins are
+    never suggested as the relaxation. *on_phase* hears ``repair``.
     """
     if on_phase:
         on_phase("repair")
     try:
         repaired = repair(edge_list, solution, change, max_moves=max_moves,
-                          time_limit_s=time_limit_s)
+                          time_limit_s=time_limit_s, protected=protected)
     except TimeoutError:
         return "timeout", None
     check_contract("solution_v2", repaired)  # repair() itself validates the hard rules
@@ -294,18 +306,24 @@ class ChronosService:
     ) -> str | None:
         """Queue a repair of the instance's official solution for *change*, on the edge
         list with every accepted change (D52): the job id, or None when the instance is
-        unknown. Raises :class:`BadChange` for an unknown id or slot, :class:`Conflict`
-        when the official solution is not a solved one."""
-        edge_list = self.edge_list(instance_id)
-        if edge_list is None:
+        unknown. Raises :class:`BadChange` for an unknown id or slot or a substitute not
+        qualified (D53), :class:`Conflict` when the official solution is not a solved
+        one."""
+        committed = self.edge_list(instance_id)
+        if committed is None:
             return None
-        try:
-            apply_change(edge_list, change)
-        except ValueError as exc:
-            raise BadChange(str(exc)) from exc
         with OrmSession(self._engine) as db:
             official = self._official(db, instance_id)
-            edge_list, built_with = self._built(db, instance_id, edge_list)
+            edge_list, built_with = self._built(db, instance_id, committed)
+        try:  # on the built edge list: a substitution may undo an accepted one
+            changed = apply_change(edge_list, change)
+        except ValueError as exc:
+            raise BadChange(str(exc)) from exc
+        if change["kind"] == "substitute_faculty":
+            session = next(s for s in changed["sessions"] if s["id"] == change["session_id"])
+            if change["faculty_id"] not in self.qualified(instance_id, session):
+                raise BadChange(f"{change['faculty_id']!r} is not listed for this session's "
+                                "subject and type in qualifications.json (D53)")
         if official is None or official[1]["status"] != "solved":
             raise Conflict("the instance has no solved official timetable to repair")
         base, solution = official
@@ -317,7 +335,63 @@ class ChronosService:
         return self._start(instance_id, "repair", base, params,
                            {"base": base, "change": logged}, actor, built_with,
                            repair_edge_list, edge_list, solution, change, time_limit_s,
-                           max_moves)
+                           max_moves, self.protected(instance_id, committed))
+
+    def protected(self, instance_id: str, edge_list: dict[str, Any]) -> list[int]:
+        """Indices of the pins ``display.json`` marks as a break (D41), by kind, never by
+        shape; none without a ``display.json``. Accepted room changes append pins, so the
+        indices hold in the built edge list too."""
+        display = self.display(instance_id)
+        if display is None:
+            return []
+        if len(display["pins"]) != len(edge_list["pinned_occupancy"]):
+            raise ContractError(f"{instance_id}: display.json pins do not match "
+                                "pinned_occupancy (D41)")
+        return [i for i, pin in enumerate(display["pins"]) if pin["kind"] in BREAK_PIN_KINDS]
+
+    def qualified(self, instance_id: str, session: dict[str, Any]) -> list[str]:
+        """The faculty ``qualifications.json`` lists for *session*'s subject, for its
+        session type or with none given (D53); none without that file."""
+        sheet = self.store.read(instance_id, "qualifications") or {"subjects": {}}
+        listed = sheet["subjects"].get(session["subject_id"], {"faculty": []})["faculty"]
+        return [f["faculty_id"] for f in listed
+                if f["session_type"] in (None, session["session_type"])]
+
+    def substitutes(self, instance_id: str, session_id: str) -> dict[str, Any] | None:
+        """Who can take *session_id* where it is in the official solution, on the edge list
+        with every accepted change (D52): the qualified faculty (D53) that fit, best score
+        change first (:func:`solver.repair.substitute_candidates`), and why each other one
+        was left out. None for an unknown instance or session; :class:`Conflict` when the
+        official solution is not a solved one valid for the accepted changes."""
+        edge_list = self.edge_list(instance_id)
+        if edge_list is None:
+            return None
+        with OrmSession(self._engine) as db:
+            official = self._official(db, instance_id)
+            edge_list, _ = self._built(db, instance_id, edge_list)
+        session = next((s for s in edge_list["sessions"] if s["id"] == session_id), None)
+        if session is None:
+            return None
+        if official is None or official[1]["status"] != "solved":
+            raise Conflict("the instance has no solved official timetable")
+        solution = official[1]
+        qualified = self.qualified(instance_id, session)
+        try:
+            candidates = substitute_candidates(edge_list, solution, session_id, qualified)
+        except ValueError as exc:  # the official solution is not valid for the changes
+            raise Conflict(str(exc)) from exc
+        fits = {c["faculty_id"] for c in candidates} | {session["faculty_id"]}
+        left_out = []
+        for fid in sorted(set(qualified) - fits):
+            changed = apply_change(edge_list, {"kind": "substitute_faculty",
+                                               "session_id": session_id, "faculty_id": fid})
+            violations = [v.to_dict() for v in validate_solution(changed, solution)]
+            left_out.append({"faculty_id": fid,
+                             "reasons": sorted({LEFT_OUT.get(v["kind"], v["kind"])
+                                                for v in violations}),
+                             "violations": violations})
+        return {"session_id": session_id, "faculty_id": session["faculty_id"],
+                "candidates": candidates, "left_out": left_out}
 
     def _start(
         self, instance_id: str, kind: str, base: str | None, params: dict[str, Any],
