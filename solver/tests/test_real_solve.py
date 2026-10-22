@@ -7,12 +7,15 @@ work, so re-running all of it and comparing with the file is ``slow``. No test
 here depends on wall-clock speed: CI checks that backtracking solves the
 instance, that the committed file is valid and carries its own score, and that
 a small local-search budget gives a valid, no-worse, reproducible timetable.
-``CAP_S`` is only a safety net, far above what any of them needs.
+``CAP_S`` is only a safety net, far above what any of them needs. S12h: the
+documented ``extended_moves`` run is re-run under ``slow`` too, checked by score
+and assignment digest.
 """
 
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 from typing import Any
 
@@ -29,6 +32,11 @@ from solver.validate import validate_solution
 
 CAP_S = 600.0
 MOVES = 5_000
+# S12h: the documented extended run (docs/real-solve-even-2025-26.md): from the backtracking
+# timetable, seed 0; its score and the sha256 of its assignment, for a second machine to confirm
+EXTENDED_MOVES = 1_000_000
+EXTENDED_SCORE = -4.0
+EXTENDED_SHA256 = "35f9bcd0e2c024797e57ee300b601b87e54b6c90e783e327bb8ddf9487d6d75d"
 
 
 def _without_runtime(solution: dict[str, Any]) -> dict[str, Any]:
@@ -89,3 +97,17 @@ def test_real_instance_reproduces_the_committed_result(edge_list: dict[str, Any]
     SOLUTION_V2.validate(solution)
     expected = json.loads((INSTANCE / "solution.json").read_text(encoding="utf-8"))
     assert _without_runtime(solution) == _without_runtime(expected)
+
+
+@pytest.mark.slow
+def test_extended_run_reproduces_the_documented_result(
+    edge_list: dict[str, Any], solved: dict[str, Any]
+) -> None:
+    stats: dict[str, Any] = {}
+    result = improve(edge_list, solved, max_moves=EXTENDED_MOVES, seed=0, extended_moves=True,
+                     time_limit_s=CAP_S, stats=stats)
+    assert not stats["stopped_by_time"] and stats["proposed"] == EXTENDED_MOVES
+    assert validate_solution(edge_list, result) == []
+    assert result["quality"]["score"] == EXTENDED_SCORE
+    digest = hashlib.sha256(json.dumps(result["assignment"], sort_keys=True).encode())
+    assert digest.hexdigest() == EXTENDED_SHA256

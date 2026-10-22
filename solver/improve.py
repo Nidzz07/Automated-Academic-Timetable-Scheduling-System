@@ -10,6 +10,30 @@ Moves (each one whole, or not at all):
 * **swap** - the starts of two such sessions that share a cohort or a teacher;
 * **block** - a whole lab block to another start, all members together.
 
+**Extended moves** (S12h, ``extended_moves=True``; off by default, and off
+draws nothing extra from the random generator, so every result is the one the
+three moves alone give). Ported from the unmerged S12g branch (commit 5d85c09)
+with its proportions. A *unit* is a movable session outside a lab block, or a
+movable lab block whole.
+
+* **kempe** - a Kempe-chain interchange (Discrete Structures and Graph Theory:
+  graph colouring). A unit at start ``t1`` and a start ``t2`` it allows; the
+  chain is the connected part of the conflict graph, grown breadth-first from
+  the unit, whose sessions start at ``t1`` or ``t2`` (a lab block joins whole).
+  Every chain session at ``t1`` goes to ``t2`` and every one at ``t2`` to
+  ``t1``, the two-colour interchange a single move or a pairwise swap cannot
+  make. A chain that reaches a session that may not move, or grows past
+  :data:`KEMPE_MAX` sessions, is not tried.
+* **gap** - a move aimed at a student gap (CE303: a guided neighbourhood). An
+  idle period S-GAP counts is drawn, then a unit holding that cohort's
+  students; half the time it is sent to a start covering the idle period,
+  otherwise to any start it allows. It gets there along a Kempe chain or, with
+  probability :data:`P_EJECT`, by an ejection chain of length one (CE303):
+  the one or two movable sessions outside lab blocks in its way take starts
+  among the periods it leaves.
+
+They go through the same checks as the three moves below.
+
 **Every move keeps every hard rule.** A move lifts its sessions and re-places
 them through the backtracker's own checks: a start and room must be in the
 session's static domain (:func:`solver.backtracking._build_initial_domains`:
@@ -75,6 +99,10 @@ SEED = 0
 T_START = 10.0
 T_END = 0.3
 P_BLOCK, P_SWAP = 0.3, 0.3  # share of block and swap moves; the rest relocate
+# Extended moves only, as on the S12g branch: 60% aimed at a gap, then 30% of the rest Kempe
+# (the other 28% are the three moves above); 80% of gap moves eject; chains of at most 24.
+P_GAP, P_KEMPE, P_EJECT = 0.6, 0.12, 0.8
+KEMPE_MAX = 24
 
 
 class _Penalty:
@@ -144,13 +172,17 @@ class _Penalty:
             del self.taught[(self.faculty_of[sid], slot.day)][slot.period]
         self._mark(sid, slots[0].day)
 
-    def _gap(self, key: tuple[str, int]) -> int:
+    def idle(self, key: tuple[str, int]) -> list[int]:
+        """The idle teaching periods S-GAP counts for (cohort, day)."""
         periods = self.classes.get(key, {}).keys() | self.fixed.get(key, set())
         if not periods:
-            return 0
+            return []
         lo, hi, held = min(periods), max(periods), self.held.get(key, set())
-        return sum(lo < p < hi and p not in periods and p not in held
-                   for p in self.grid.teaching_periods)
+        return [p for p in self.grid.teaching_periods
+                if lo < p < hi and p not in periods and p not in held]
+
+    def _gap(self, key: tuple[str, int]) -> int:
+        return len(self.idle(key))
 
     def _b2b(self, key: tuple[str, int]) -> int:
         owners = self.taught.get(key, {})
@@ -193,6 +225,7 @@ def improve(
     max_moves: int = MAX_MOVES,
     seed: int = SEED,
     time_limit_s: float | None = None,
+    extended_moves: bool = False,
     stats: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """A ``solution.v2`` timetable at least as good as *solution*, still valid.
@@ -212,10 +245,15 @@ def improve(
     time_limit_s:
         Wall-clock safety cap; ``None`` for none. If it stops the search the
         result is still valid and no worse, but no longer reproducible.
+    extended_moves:
+        Also propose Kempe-chain interchanges and moves aimed at student gaps
+        (module docstring). ``False`` gives exactly the result of the three
+        moves alone.
     stats:
         If given, filled with move counts: ``proposed``, ``infeasible``,
         ``accepted`` and ``improved`` (new best), the last two also per move
-        kind, ``penalty_start``, ``penalty_best`` and ``stopped_by_time``.
+        kind (``kempe`` and ``gap`` too with *extended_moves*),
+        ``penalty_start``, ``penalty_best`` and ``stopped_by_time``.
 
     Returns
     -------
@@ -330,11 +368,95 @@ def improve(
                 return None
         return old
 
+    # --- extended moves (S12h): units, neighbours in id order, the units holding each cohort
+    unit_of: dict[str, tuple[str, ...]] = {}
+    neighbours: dict[str, tuple[str, ...]] = {}
+    units_of_cohort: dict[str, list[tuple[str, ...]]] = {}
+    if extended_moves:
+        unit_of = {sid: (sid,) for sid in singles}
+        unit_of.update({sid: b.session_ids for b in blocks for sid in b.session_ids})
+        neighbours = {sid: tuple(sorted(graph.neighbours(sid))) for sid in graph.sessions}
+        holding: dict[str, set[tuple[str, ...]]] = {}
+        for sid, unit in unit_of.items():
+            for cohort in penalty.watchers[sid]:
+                holding.setdefault(cohort, set()).add(unit)
+        units_of_cohort = {cohort: sorted(units) for cohort, units in holding.items()}
+
+    def unit_starts(unit: tuple[str, ...]) -> list[SlotId]:
+        block = block_of.get(unit[0])
+        return block_starts[block.id] if block is not None else starts_of[unit[0]]
+
+    def interchange(unit: tuple[str, ...], t2: SlotId) -> list[tuple[str, SlotId]]:
+        """The Kempe chain of *unit*'s start and *t2*, as targets; [] if it cannot move."""
+        t1 = state.slot_assignment[unit[0]]
+        chain, seen = list(unit), set(unit)
+        for sid in chain:  # grows while it is walked: breadth-first search
+            for n in neighbours[sid]:
+                if n in seen or state.slot_assignment[n] not in (t1, t2):
+                    continue
+                more = unit_of.get(n)
+                if more is None or len(chain) + len(more) > KEMPE_MAX:
+                    return []
+                chain.extend(more)
+                seen.update(more)
+        targets = [(sid, t2 if state.slot_assignment[sid] == t1 else t1) for sid in chain]
+        return targets if all(start in rooms_at[sid] for sid, start in targets) else []
+
+    def eject(unit: tuple[str, ...], t2: SlotId) -> list[tuple[str, SlotId]]:
+        """*unit* to *t2*; the one or two singles in its way to the periods it leaves."""
+        there = set(state.chains[(t2, graph.sessions[unit[0]].duration_periods)])
+        ejected = sorted({n for sid in unit for n in neighbours[sid]
+                          if n not in unit and not there.isdisjoint(state.occupied[n])})
+        if len(ejected) > 2 or any(unit_of.get(n) != (n,) for n in ejected):
+            return []
+        vacated = sorted(state.occupied[unit[0]])
+        targets = [(sid, t2) for sid in unit]
+        for n in ejected:
+            free = [v for v in vacated if v in rooms_at[n]]
+            if not free:
+                return []
+            targets.append((n, free[0]))
+            vacated.remove(free[0])
+        return targets
+
+    def kempe() -> list[tuple[str, SlotId]]:
+        if not singles and not blocks:
+            return []
+        pick = rng.randrange(len(singles) + len(blocks))
+        unit = (singles[pick],) if pick < len(singles) else blocks[pick - len(singles)].session_ids
+        here = state.slot_assignment[unit[0]]
+        options = [s for s in unit_starts(unit) if s != here]
+        return interchange(unit, options[rng.randrange(len(options))]) if options else []
+
+    def aimed() -> list[tuple[str, SlotId]]:
+        gaps = [key for key, n in penalty.gap.items() if n]  # settled: the current timetable
+        if not gaps:
+            return []
+        cohort, day = gaps[rng.randrange(len(gaps))]
+        units = units_of_cohort.get(cohort, [])
+        if not units:
+            return []
+        unit = units[rng.randrange(len(units))]
+        here = state.slot_assignment[unit[0]]
+        if rng.random() < 0.5:  # onto the idle period
+            idle = penalty.idle((cohort, day))
+            period = idle[rng.randrange(len(idle))]
+            duration = graph.sessions[unit[0]].duration_periods
+            options = [s for s in unit_starts(unit) if s != here and s.day == day
+                       and any(x.period == period for x in state.chains[(s, duration)])]
+        else:
+            options = [s for s in unit_starts(unit) if s != here]
+        if not options:
+            return []
+        target = options[rng.randrange(len(options))]
+        return eject(unit, target) if rng.random() < P_EJECT else interchange(unit, target)
+
     rng = random.Random(seed)
+    kinds = ("relocate", "swap", "block", *(("kempe", "gap") if extended_moves else ()))
     counts: dict[str, Any] = {
         "proposed": 0, "infeasible": 0, "accepted": 0, "improved": 0,
-        "accepted_by_kind": {"relocate": 0, "swap": 0, "block": 0},
-        "improved_by_kind": {"relocate": 0, "swap": 0, "block": 0},
+        "accepted_by_kind": dict.fromkeys(kinds, 0),
+        "improved_by_kind": dict.fromkeys(kinds, 0),
         "stopped_by_time": False,
     }
     current = best_penalty = start_penalty = total()
@@ -349,9 +471,14 @@ def improve(
             break
         counts["proposed"] += 1
         temperature *= cooling
-        draw = rng.random()
+        pick = rng.random() if extended_moves else 1.0  # 1.0: no draw, so off is unchanged
+        draw = rng.random() if pick >= P_GAP + P_KEMPE else 1.0
         targets: list[tuple[str, SlotId]] = []
-        if blocks and draw < P_BLOCK:
+        if pick < P_GAP:
+            kind, targets = "gap", aimed()
+        elif pick < P_GAP + P_KEMPE:
+            kind, targets = "kempe", kempe()
+        elif blocks and draw < P_BLOCK:
             kind, block = "block", rng.choice(blocks)
             start = rng.choice(block_starts[block.id])
             here = state.occupied[block.session_ids[0]]
@@ -430,6 +557,7 @@ def improve(
         "metadata": {
             **meta,
             "algorithm": f"{meta['algorithm']} + local-search(simulated-annealing, "
+                         f"{'extended-moves, ' if extended_moves else ''}"
                          f"moves={counts['proposed']}, seed={seed})",
             "runtime_ms": meta["runtime_ms"] + (time.perf_counter() - started) * 1000,
             "slots_used": len({

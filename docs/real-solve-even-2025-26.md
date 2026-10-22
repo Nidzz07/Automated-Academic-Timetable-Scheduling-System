@@ -158,6 +158,128 @@ So:
 Revisiting D46/D47 (parked on 2026-10-20 until S12g) is a team decision; nothing here changes
 the edge list.
 
+## S12h: Kempe chains and gap-aimed moves, off by default
+
+2026-10-23 · Dhruv (with Claude Code) · branch `track/solver-extended-moves`.
+
+```python
+improve(payload, solution, *, max_moves=200_000, seed=0, time_limit_s=None,
+        extended_moves=False, stats=None) -> dict
+```
+
+**What it adds.** With `extended_moves=True`, two more move kinds, ported by hand from the
+unmerged S12g branch (`track/solver-quality-dhruv`, commit 5d85c09, which predates S13d–S15):
+
+- a **Kempe-chain interchange** (Discrete Structures and Graph Theory). A unit (a session, or a
+  lab block whole) and another start it allows. The chain is grown breadth-first through conflict
+  neighbours that start at either start, and every chain session swaps between the two;
+- a move **aimed at a student gap** (CE303). An idle period S-GAP counts is drawn, then a unit
+  holding that cohort's students, sent onto the idle period half the time (else anywhere). It
+  goes along a Kempe chain, or (80%) by ejecting the one or two sessions in its way into the
+  periods it leaves.
+
+The proportions are the branch's: 60% gap-aimed, 12% Kempe, the remaining 28% today's relocate,
+swap and block moves. Chains are capped at 24 sessions. Every move goes through the same domain
+and `_placement_ok` checks; pins, fixed sessions and blocks holding one never move; the result is
+checked with `validate_solution`. Only the moves were ported. The annealing stays today's
+(T 10 → 0.3 over the budget), not the branch's (15 → 0.05 in 100 stages, 300,000 proposals).
+So the branch's +2.0 was a different search and is not expected here. Nothing was retuned for
+this comparison.
+
+**Off is unchanged.** With the option off no extra random number is drawn. Results and move
+counts match digests recorded from `improve.py` before S12h (commit 748993e) on the real instance
+(seeds 0–2 at 5,000 moves, seed 0 at 20,000) and on 31 property instances
+(`test_option_off_reproduces_the_pre_s12h_results`). The slow test still re-derives the committed
+`solution.json` (−15.0). The backend, `repair()` and bench do not pass the option, so their
+results are unchanged.
+
+### Comparison
+
+Machine: Intel64 Family 6 Model 183 Stepping 1 (GenuineIntel), Windows 11, Python 3.12.10.
+Every run starts from the backtracking timetable (−162.5): seeds 0–9, both settings, the same
+budget, no time cap. The runs were sequential in one process, off and on alternating per seed,
+with no other heavy work on the machine. All 40 results pass `validate_solution`. Seeds 0–9
+were fixed before any run; no other seed was run. Penalties are mean (min–max) over the 10
+seeds.
+
+| Budget | Setting | Score mean | Score min | Score max | S-GAP | S-B2B | S-LOAD16 | FAC_LOAD_IMBALANCE | Runtime per run, s |
+|---|---|---|---|---|---|---|---|---|---|
+| 200,000 | off (default) | −15.50 | −29.0 | −4.0 | 28.4 (18–42) | 29.2 (27–33) | 6 (6–6) | 51.9 (50–55) | 16.7 (13.9–18.8) |
+| 200,000 | extended | −13.65 | −23.5 | −4.5 | 22.6 (14–34) | 30.2 (26–35) | 6 (6–6) | 54.85 (52.5–57.5) | 16.1 (12.8–18.2) |
+| 1,000,000 | off (default) | −8.30 | −22.5 | −0.5 | 21.6 (14–44) | 28.8 (23–33) | 6 (6–6) | 51.9 (48.5–55) | 70.9 (66.8–84.2) |
+| 1,000,000 | extended | −6.85 | −14.0 | −3.0 | 17.2 (14–26) | 30.3 (26–33) | 6 (6–6) | 53.35 (50–57) | 68.7 (64.0–80.6) |
+
+| Seed | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 200k off | −18.5 | −17.5 | −5.5 | −17.5 | −22.0 | −20.0 | −11.0 | −29.0 | −10.0 | −4.0 |
+| 200k extended | −15.5 | −4.5 | −11.0 | −23.5 | −14.5 | −15.0 | −5.5 | −10.0 | −15.0 | −22.0 |
+| 1M off | −15.0 | −1.5 | −13.5 | −6.5 | −1.0 | −0.5 | −5.0 | −16.5 | −1.0 | −22.5 |
+| 1M extended | −4.0 | −4.0 | −3.0 | −4.5 | −7.0 | −14.0 | −12.0 | −3.5 | −13.0 | −3.5 |
+
+The off rows reproduce the S12g numbers above (200k: seed 0 −18.5, seeds 1–5 as listed there;
+1M seed 0: −15.0, the committed file).
+
+Paired by seed, extended minus off, as mean and 95% interval (Student t, 9 degrees of freedom;
+Statistical Methods, CE205):
+
+| Budget | Score | S-GAP penalty | S-B2B penalty | FAC_LOAD_IMBALANCE penalty | Seeds where extended scores higher |
+|---|---|---|---|---|---|
+| 200,000 | +1.85 [−5.81, +9.51] | −5.80 [−13.56, +1.96] | +1.00 [−1.70, +3.70] | +2.95 [+1.76, +4.14] | 6 of 10 |
+| 1,000,000 | +1.45 [−6.68, +9.58] | −4.40 [−12.82, +4.02] | +1.50 [−0.38, +3.38] | +1.45 [−0.41, +3.31] | 5 of 10 |
+
+**What it shows.**
+
+- **No measurable score gain.** The mean is 1.5–1.9 points higher with the extended moves, but
+  the intervals are wide and include zero: over 10 seeds the two settings are not
+  distinguishable.
+- **The extended moves trade S-GAP for imbalance.** They lower S-GAP by 4–6 points on average
+  and pay back about two thirds of it in FAC_LOAD_IMBALANCE (+1.5 to +3.0; at 200k the only
+  interval clear of zero) and S-B2B (+1.0 to +1.5).
+- **They make the seeds agree more.** The standard deviation of the score is 6.19 against 7.78
+  at 200k, and 4.40 against 7.95 at 1M. The worst seed is −23.5 against −29.0, and −14.0
+  against −22.5. The best seed is not better: −3.0 against −0.5 at 1M.
+- **Runtime is the same per move**, within run-to-run noise.
+- They are used. Per 1M run, on average 22,948 Kempe and 56,286 gap-aimed moves are accepted.
+  In the seed-0 run, 50 of its 59 new bests came from them (Kempe 13, gap 37).
+
+**Honest caveats.**
+
+- **Neither setting beats the printed timetable's 21.5.** The best single run is −0.5 (off,
+  1M, seed 5); the best extended run is −3.0. Both are more than 21 points short.
+- **S-GAP is still the blocker.** At 1M the lowest S-GAP in either setting is 7 raw (14
+  points), the printed timetable's is 2. That is the floor S12g's single-rule runs reached. The
+  extended moves lower the average, not that floor: the gaps held by frozen items (D24, D35)
+  stay.
+- **The default is unchanged.** `extended_moves` is off unless a caller passes it. The
+  committed `solution.json`, `repair()`, the backend's solve job and bench all still run the
+  three moves, and every committed number stays as it was. Turning it on anywhere is a separate
+  decision; these results do not argue for it, beyond the narrower spread across seeds.
+- One instance, one machine, 10 seeds per cell.
+
+**The documented extended run**, for a second machine: from the backtracking timetable, seed 0
+(the default, fixed before the runs), 1,000,000 moves, `extended_moves=True`. Score **−4.0**
+(S-GAP 7, S-B2B 30, S-LOAD16 6, FAC_LOAD_IMBALANCE 108 raw); sha256 of `json.dumps(assignment,
+sort_keys=True)` `35f9bcd0e2c024797e57ee300b601b87e54b6c90e783e327bb8ddf9487d6d75d`; 64.0 s
+here. `pytest -m slow solver/tests/test_real_solve.py` re-runs it
+(`test_extended_run_reproduces_the_documented_result`).
+
+Reproduce one cell of the table (repo root, venv active):
+
+```python
+import json
+from solver.backtracking import backtrack_solve
+from solver.benchmarks.real_solve import INSTANCE
+from solver.graph import build_conflict_graph
+from solver.improve import improve
+
+edge_list = json.loads((INSTANCE / "edge_list.json").read_text(encoding="utf-8"))
+start = backtrack_solve(build_conflict_graph(edge_list), edge_list).to_solution_v2_dict()
+for seed in range(10):
+    for extended in (False, True):
+        result = improve(edge_list, start, max_moves=200_000, seed=seed, extended_moves=extended)
+        print(seed, extended, result["quality"]["score"])
+```
+
 ## S12d: why the old search got stuck
 
 Re-run of the S12a search (commit 75a3f31) for 300 s on the same machine: timeout, 563,081
