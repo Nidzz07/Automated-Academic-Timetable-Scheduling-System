@@ -11,6 +11,9 @@ a solved repair (ROADMAP D49). A login returns the account's faculty or cohort l
 S14f (ROADMAP D52): any role may list the accepted changes every solve and repair
 includes; only administrator clears them. A job names the accepted changes it was
 built with, and a repair's base solution is served as it started from it.
+
+S14g: administrator and coordinator may list a session's substitutes and repair with a
+substitution (ROADMAP D52, D53).
 """
 
 from __future__ import annotations
@@ -81,11 +84,18 @@ class MoveSession(BaseModel):
     sub_room_id: str | None = None
 
 
+class SubstituteFaculty(BaseModel):
+    kind: Literal["substitute_faculty"]
+    session_id: str
+    faculty_id: str = Field(description="the new teacher; must be qualified (D53)")
+
+
 class RepairRequest(SolveRequest):
     """One change (solver.repair.apply_change), and the budgets as for a solve."""
 
     change: Annotated[
-        FacultyUnavailable | RoomUnavailable | MoveSession, Field(discriminator="kind")
+        FacultyUnavailable | RoomUnavailable | MoveSession | SubstituteFaculty,
+        Field(discriminator="kind"),
     ]
     max_moves: int = Field(
         DEFAULT_REPAIR_MAX_MOVES, ge=0, le=MAX_MAX_MOVES,
@@ -129,6 +139,26 @@ class AcceptedChange(BaseModel):
     requested_by: str
     accepted_by: str | None = Field(description="null for repairs accepted before S14f")
     accepted_at: datetime
+
+
+class Substitute(BaseModel):
+    faculty_id: str
+    score_change: float = Field(description="the score with this substitute minus the score now")
+
+
+class LeftOut(BaseModel):
+    faculty_id: str
+    reasons: list[str] = Field(description="busy, unavailable")
+    violations: list[dict[str, Any]] = Field(
+        description="what the timetable would break with them (solver.validate)"
+    )
+
+
+class Substitutes(BaseModel):
+    session_id: str
+    faculty_id: str = Field(description="who teaches it now")
+    candidates: list[Substitute] = Field(description="best first, ties by id")
+    left_out: list[LeftOut] = Field(description="the other qualified faculty, by id")
 
 
 class LoginRequest(BaseModel):
@@ -233,8 +263,8 @@ def start_solve(
 
 @instances.post(
     "/{instance_id}/repair", status_code=status.HTTP_202_ACCEPTED,
-    description="repair the official solution; 422 for an unknown id or slot, 409 when "
-    "there is no solved official solution",
+    description="repair the official solution; 422 for an unknown id or slot or an "
+    "unqualified substitute, 409 when there is no solved official solution",
 )
 def start_repair(
     instance_id: str, req: RepairRequest, service: Service, actor: Solver
@@ -249,8 +279,8 @@ def start_repair(
 
 @instances.get(
     "/{instance_id}/changes",
-    description="the accepted faculty and room unavailability changes every solve and "
-    "repair includes (D52), in acceptance order",
+    description="the accepted faculty and room unavailability changes and substitutions "
+    "every solve and repair includes (D52), in acceptance order",
 )
 def get_changes(instance_id: str, service: Service) -> list[AcceptedChange]:
     return [AcceptedChange(**c) for c in _found(service.changes(instance_id), "instance")]
@@ -265,6 +295,18 @@ def clear_changes(
 ) -> list[AcceptedChange]:
     cleared = service.clear_changes(instance_id, actor.username)
     return [AcceptedChange(**c) for c in _found(cleared, "instance")]
+
+
+@instances.get(
+    "/{instance_id}/sessions/{session_id}/substitutes",
+    description="the qualified faculty (D53) free to take the session where it is in the "
+    "official solution with the accepted changes (D52); 409 when there is no solved "
+    "official solution",
+)
+def get_substitutes(
+    instance_id: str, session_id: str, service: Service, _actor: Solver
+) -> Substitutes:
+    return Substitutes(**_found(service.substitutes(instance_id, session_id), "session"))
 
 
 @jobs.get("/{job_id}", response_model_exclude_none=True)
