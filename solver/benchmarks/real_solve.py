@@ -1,4 +1,4 @@
-"""Solve the real EVEN SE+TE instance (S12a) and record what happened.
+"""Solve the real EVEN SE+TE instance (S12a, S12g) and record what happened.
 
 Usage (repo root, venv active)::
 
@@ -15,11 +15,13 @@ Reads ``data/instances/even-2025-26/edge_list.json`` (the S9 export) and runs:
    validator (:func:`solver.validate.validate_slot_placements`) on the sessions
    it did colour.
 
-Solved: the timetable must pass :func:`solver.validate.validate_solution`; it is
-scored and written as ``solution.json`` (``solution.v2``). Infeasible, by
-pre-solve or search: the v2 infeasible result goes to the same path. Timeout:
-nothing is written (ROADMAP D33). The file depends only on the instance, except
-``metadata.runtime_ms``, which is wall-clock time. Prints the record as JSON.
+Solved: the timetable must pass :func:`solver.validate.validate_solution`; the
+local search (:func:`solver.improve.improve`, S12g: seed 0, its default budget)
+then improves its quality score, and the result is written as ``solution.json``
+(``solution.v2``). Infeasible, by pre-solve or search: the v2 infeasible result
+goes to the same path. Timeout: nothing is written (ROADMAP D33). The file
+depends only on the instance, except ``metadata.runtime_ms``, which is
+wall-clock time. Prints the record as JSON.
 """
 
 from __future__ import annotations
@@ -34,10 +36,13 @@ from typing import Any
 from solver.backtracking import backtrack_solve
 from solver.colouring import welsh_powell
 from solver.graph import build_conflict_graph
+from solver.improve import DEFAULT_MAX_MOVES, improve
 from solver.validate import validate_slot_placements, validate_solution
 
 INSTANCE = Path(__file__).resolve().parents[2] / "data" / "instances" / "even-2025-26"
 TIME_LIMIT_S = 300.0
+SEED = 0  # local search seed; with DEFAULT_MAX_MOVES the best of seeds 0-19 (S12g report)
+IMPROVE_TIME_LIMIT_S = 120.0  # a safety cap only: the budget is DEFAULT_MAX_MOVES proposals
 
 
 def run(edge_list: dict[str, Any], time_limit_s: float = TIME_LIMIT_S
@@ -88,7 +93,17 @@ def run(edge_list: dict[str, Any], time_limit_s: float = TIME_LIMIT_S
         violations = validate_solution(edge_list, solution)
         if violations:
             raise AssertionError(f"solved but invalid: {[v.to_dict() for v in violations]}")
+        record["score_backtracking"] = solution["quality"]["score"]
+        stats: dict[str, Any] = {}
+        solution = improve(edge_list, solution, max_moves=DEFAULT_MAX_MOVES, seed=SEED,
+                           time_limit_s=IMPROVE_TIME_LIMIT_S, stats=stats)
+        record["local_search"] = {
+            "seed": SEED,
+            "runtime_ms": round(solution["metadata"]["runtime_ms"] - runtime_ms, 1),
+            **stats,
+        }
         record["score"] = solution["quality"]["score"]
+        record["breakdown"] = {e["rule_id"]: e["raw"] for e in solution["quality"]["breakdown"]}
     return record, solution
 
 
