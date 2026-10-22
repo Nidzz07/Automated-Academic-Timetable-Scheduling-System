@@ -5,20 +5,27 @@
 * ``faculty_unavailable`` - a faculty member cannot teach at given slots
   (an absence, D36);
 * ``room_unavailable`` - a room cannot be used at given slots;
-* ``move_session`` - a person drags one session to a given slot and room.
+* ``move_session`` - a person drags one session to a given slot and room;
+* ``substitute_faculty`` - another faculty member takes one session (S14e,
+  D53), which keeps its slot and room unless the new teacher clashes there.
 
 :func:`apply_change` writes the change into the ``edge_list_v1`` payload with
 the fields the contract already has: an absence is ``unavailable_slots``, a
 closed room is a room-only ``pinned_occupancy`` entry per slot (a closed parent
 also closes its sub-rooms, as for any pin), and a drag is the session's
 ``fixed_slot``; the dragged room has no payload field, so :func:`repair` holds
-it as that session's only room. The result is valid against the changed
-payload.
+it as that session's only room. A substitution is the session's
+``faculty_id``, and its ``FACULTY`` edges are re-drawn to the new teacher's
+sessions (FACULTY edges join exactly the sessions of one teacher, as the
+export and the synthetic generators write them). ``solution.v2`` names no
+teachers, so the new teacher lives in the changed payload, like an absence.
+The result is valid against the changed payload.
 
 **Freeze and expand** (Design and Analysis of Algorithms, CE207: backtracking;
 Discrete Structures and Graph Theory: breadth-first search). A session is *hit*
-when its placement is no longer allowed (outside its new static domain) or,
-for a drag, stands in the dragged session's way; a lab block is hit whole.
+when its placement is no longer allowed (outside its new static domain, or a
+substituted session clashing with its new teacher's sessions) or, for a drag,
+stands in the dragged session's way; a lab block is hit whole.
 Every other session is frozen at its slot and room
 (:func:`solver.backtracking.backtrack_solve` with ``seed_assignment`` and
 ``seed_rooms``) and only the hit sessions are re-placed. If that fails, the
@@ -57,13 +64,22 @@ has a node budget and none uses ``time_limit_s``, so the explanation is the
 same on every machine (it can make ``repair`` run past ``time_limit_s``,
 never wait forever). If that run runs out of
 ``time_limit_s`` it raises :class:`TimeoutError`: running out of time proves
-nothing (ROADMAP D21, D33). Stdlib only.
+nothing (ROADMAP D21, D33). Pins the caller marks *protected* (breaks, lunch)
+are never suggested as the relaxation (S14e).
+
+**Substitutes** (S14e, D53). :func:`substitute_candidates` filters the
+faculty members the caller says are qualified - the solver never decides who
+is - down to those who can take a session where it is: the substitution is
+written in and :func:`solver.validate.validate_solution` must accept the
+unchanged timetable. Each comes with its score change; they are sorted best
+first, ties by id. Stdlib only.
 """
 
 from __future__ import annotations
 
 import copy
 import time
+from collections.abc import Collection, Iterable
 from typing import Any
 
 from solver.backtracking import (
@@ -78,14 +94,15 @@ from solver.backtracking import (
 )
 from solver.graph import ConflictGraph, build_conflict_graph
 from solver.improve import improve
-from solver.mus import explain
+from solver.mus import MUS_NODES, _protected, explain
 from solver.scoring import score
 from solver.slots import SlotId
 from solver.validate import validate_solution
 
-__all__ = ["CHANGE_KINDS", "MAX_MOVES", "RING_NODES", "SEED", "apply_change", "repair"]
+__all__ = ["CHANGE_KINDS", "MAX_MOVES", "RING_NODES", "SEED", "apply_change", "repair",
+           "substitute_candidates"]
 
-CHANGE_KINDS = ("faculty_unavailable", "room_unavailable", "move_session")
+CHANGE_KINDS = ("faculty_unavailable", "room_unavailable", "move_session", "substitute_faculty")
 MAX_MOVES = 20_000  # local-search moves after the repair; it only touches moved sessions
 RING_NODES = 5_000  # search nodes per ring before the free set grows
 SEED = 0
@@ -109,10 +126,12 @@ def apply_change(payload: dict[str, Any], change: dict[str, Any]) -> dict[str, A
     * ``{"kind": "room_unavailable", "room_id", "slots"}``
     * ``{"kind": "move_session", "session_id", "day", "period", "room_id", "sub_room_id"}``
       - rooms as in a ``solution.v2`` placement; ``sub_room_id`` may be omitted.
+    * ``{"kind": "substitute_faculty", "session_id", "faculty_id"}`` - the new teacher.
 
     Raises:
-        ValueError: on an unknown kind, faculty, room or session, no slots, or a
-            slot off the payload's grid.
+        ValueError: on an unknown kind, faculty, room or session, no slots, a
+            slot off the payload's grid, or a substitute who already teaches
+            the session.
     """
     changed = copy.deepcopy(payload)
     kind = change.get("kind")
@@ -139,6 +158,21 @@ def apply_change(payload: dict[str, Any], change: dict[str, Any]) -> dict[str, A
         if _room_of(change) not in {r["id"] for r in changed["rooms"]}:
             raise ValueError(f"unknown room {_room_of(change)!r}")
         session["fixed_slot"] = {"day": change["day"], "period": change["period"]}
+    elif kind == "substitute_faculty":
+        sid, fid = change["session_id"], change["faculty_id"]
+        session = next((s for s in changed["sessions"] if s["id"] == sid), None)
+        if session is None:
+            raise ValueError(f"unknown session {sid!r}")
+        if fid not in {e["faculty_id"] for e in changed["faculty_availability"]}:
+            raise ValueError(f"unknown faculty {fid!r}")
+        if session["faculty_id"] == fid:
+            raise ValueError(f"{fid!r} already teaches {sid!r}")
+        session["faculty_id"] = fid
+        changed["edges"] = [e for e in changed["edges"]
+                            if e["reason"] != "FACULTY" or sid not in (e["u"], e["v"])]
+        changed["edges"] += [{"u": min(sid, s["id"]), "v": max(sid, s["id"]), "reason": "FACULTY"}
+                             for s in changed["sessions"]
+                             if s["faculty_id"] == fid and s["id"] != sid]
     else:
         raise ValueError(f"unknown change kind {kind!r}; expected one of {CHANGE_KINDS}")
     build_conflict_graph(changed)  # every new slot must lie on the grid
@@ -148,6 +182,15 @@ def apply_change(payload: dict[str, Any], change: dict[str, Any]) -> dict[str, A
 def _room_of(item: dict[str, Any]) -> str:
     """The solver's room id of a placement-shaped dict: the sub-room when there is one."""
     return item.get("sub_room_id") or item["room_id"]
+
+
+def _check_solved(payload: dict[str, Any], solution: dict[str, Any], who: str) -> None:
+    """ValueError unless *solution* is a solved timetable valid for *payload*."""
+    if solution["status"] != "solved":
+        raise ValueError(f"{who} needs a solved timetable")
+    violations = validate_solution(payload, solution)
+    if violations:
+        raise ValueError(f"{who} needs a valid timetable: {[v.to_dict() for v in violations]}")
 
 
 def _state(graph: ConflictGraph, payload: dict[str, Any],
@@ -210,6 +253,8 @@ def repair(
     max_moves: int = MAX_MOVES,
     ring_nodes: int = RING_NODES,
     time_limit_s: float | None = None,
+    protected: Collection[int] = (),
+    mus_nodes: int = MUS_NODES,
     stats: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """*solution* repaired for *change*: a ``solution.v2`` valid against
@@ -232,6 +277,11 @@ def repair(
         Wall-clock safety cap on each search, ``None`` for none. Hitting it on
         a ring only grows the ring (and the result then depends on the machine).
         The explanation of an infeasible change has node budgets instead.
+    protected:
+        Indices into *payload*'s ``pinned_occupancy`` (lunch, breaks) that an
+        explanation never suggests relaxing (:func:`solver.mus.explain`).
+    mus_nodes:
+        Search nodes per check of an explanation (:data:`solver.mus.MUS_NODES`).
     stats:
         If given, filled with ``hit`` (sessions the change hit), ``rings``
         (``[ring, freed, outcome]`` per search), ``room_changed`` (same slot,
@@ -249,17 +299,14 @@ def repair(
     Raises
     ------
     ValueError
-        If *solution* is not solved or not valid for *payload*, or *change* is
-        malformed (see :func:`apply_change`).
+        If *solution* is not solved or not valid for *payload*, *change* is
+        malformed (see :func:`apply_change`) or a *protected* index is not a pin.
     TimeoutError
         If the search with every session free ran out of *time_limit_s*.
     """
     started = time.perf_counter()
-    if solution["status"] != "solved":
-        raise ValueError("repair needs a solved timetable")
-    violations = validate_solution(payload, solution)
-    if violations:
-        raise ValueError(f"repair needs a valid timetable: {[v.to_dict() for v in violations]}")
+    _check_solved(payload, solution, "repair")
+    _protected(payload, protected)
     changed = apply_change(payload, change)
     graph = build_conflict_graph(changed)
     old: dict[str, Placement] = {
@@ -278,7 +325,7 @@ def repair(
     if blocked:
         mus_stats: dict[str, Any] = {}
         out = explain(payload, None, change=change, initial=blocked, timetable=solution,
-                      stats=mus_stats)
+                      protected=protected, node_limit=mus_nodes, stats=mus_stats)
         if out is not None:
             out["metadata"].update(
                 algorithm=f"freeze-and-expand(pre-check) + {out['metadata']['algorithm']}",
@@ -290,10 +337,13 @@ def repair(
 
     # --- hit: placements the change forbids, and for a drag what stands in its way
     hit = {sid for sid in sorted(old) if old[sid] not in state.domains[sid]}
-    for sid in sorted(set(old) - hit):
+    subbed = {change["session_id"]} - hit if change["kind"] == "substitute_faculty" else set()
+    for sid in sorted(set(old) - hit - subbed):
         start, room = old[sid]
         _assign(state, sid, start, room,
                 state.chains[(start, graph.sessions[sid].duration_periods)])
+    # a substitute may clash with their own sessions where the old teacher did not
+    hit |= {sid for sid in subbed if not _put(state, sid, *old[sid])}
     for sid, room in forced.items():
         if sid in hit:
             hit |= _in_the_way(state, sid, SlotId(change["day"], change["period"]), room)
@@ -344,8 +394,8 @@ def repair(
             out["metadata"].update(algorithm=f"freeze-and-expand(rings={len(rings)})",
                                    backtracks=nodes)
             mus_stats = {}
-            out = explain(payload, out, change=change, timetable=solution,
-                          stats=mus_stats) or out
+            out = explain(payload, out, change=change, timetable=solution, protected=protected,
+                          node_limit=mus_nodes, stats=mus_stats) or out
             out["metadata"]["runtime_ms"] = (time.perf_counter() - started) * 1000
             if stats is not None:
                 stats.update(hit=sorted(hit), rings=rings, room_changed=[], nodes=nodes,
@@ -434,3 +484,55 @@ def repair(
                                 if final[sid][0] == old[sid][0] and final[sid][1] != old[sid][1]),
         )
     return repaired
+
+
+def substitute_candidates(
+    payload: dict[str, Any],
+    solution: dict[str, Any],
+    session_id: str,
+    qualified: Iterable[str],
+) -> list[dict[str, Any]]:
+    """Who of *qualified* can take *session_id* at its current slot and room, best first.
+
+    *qualified* is the caller's: the faculty members listed for the session's
+    subject in SPIT's faculty-subject sheets (D53). The solver never decides
+    who is qualified; it only checks who is free. For each of them but the
+    session's own teacher, the ``substitute_faculty`` change is written in
+    (:func:`apply_change`) and :func:`solver.validate.validate_solution` must
+    accept the unchanged timetable against it: no clash with their own
+    sessions or frozen items, no unavailable slot. A filter, then a sort by key
+    (Data Structures).
+
+    Returns
+    -------
+    list of dict
+        ``{"faculty_id", "score_change"}`` per candidate, where
+        ``score_change`` is the :func:`solver.scoring.score` of the timetable
+        with the substitute minus its score now. Highest ``score_change``
+        first, ties by faculty id; empty when nobody fits (then
+        :func:`repair` with a ``substitute_faculty`` change moves sessions).
+
+    Raises
+    ------
+    ValueError
+        If *solution* is not solved or not valid for *payload*, the session is
+        unknown, or a qualified id has no ``faculty_availability`` entry in
+        *payload* (their availability is unknown, so they cannot be checked).
+    """
+    _check_solved(payload, solution, "substitute_candidates")
+    session = next((s for s in payload["sessions"] if s["id"] == session_id), None)
+    if session is None:
+        raise ValueError(f"unknown session {session_id!r}")
+    wanted = set(qualified)
+    unknown = sorted(wanted - {a["faculty_id"] for a in payload["faculty_availability"]})
+    if unknown:
+        raise ValueError(f"unknown faculty {unknown}: not in the payload's faculty_availability")
+    starts = {i["session_id"]: SlotId(i["day"], i["period"]) for i in solution["assignment"]}
+    now = score(payload, starts)["score"]
+    found = []
+    for fid in sorted(wanted - {session["faculty_id"]}):
+        changed = apply_change(payload, {"kind": "substitute_faculty", "session_id": session_id,
+                                         "faculty_id": fid})
+        if not validate_solution(changed, solution):
+            found.append({"faculty_id": fid, "score_change": score(changed, starts)["score"] - now})
+    return sorted(found, key=lambda c: (-c["score_change"], c["faculty_id"]))

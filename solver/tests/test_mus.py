@@ -4,7 +4,8 @@ Synthetic infeasible instances only (the real EVEN scenarios are in
 test_repair.py). Minimality is checked against the validator, not against
 explain(): the set alone is infeasible for a search with no budget, and for
 each member the witness explain() reports is a timetable the validator accepts
-once that member is dropped.
+once that member is dropped. A protected lunch pin (S14e) is never suggested:
+:func:`lunch_or_lab`.
 """
 
 from __future__ import annotations
@@ -95,6 +96,33 @@ def triangle() -> dict:
                                  for i in range(3)],
         "lab_blocks": [],
         "pinned_occupancy": [],
+    }
+
+
+def lunch_or_lab(classroom: bool = True) -> dict:
+    """Two one-period practicals of two cohorts, one lab, two periods, and a lunch pin
+    (``pin.0``) holding both cohorts in the second: freeing one cohort from lunch
+    restores feasibility, and so does classifying the classroom as a lab, if there is
+    one. The lunch is tried first (one slot, and pins sort before rooms)."""
+    sessions = [{"id": f"s{i}", "subject_id": "subj", "faculty_id": f"f{i}", "cohort_id": f"c{i}",
+                 "session_type": "lab", "duration_periods": 1, "cohort_size": 20,
+                 "requires_lab": True, "fixed_slot": None} for i in range(2)]
+    rooms = [{"id": "lab", "code": "LAB", "capacity": 20, "is_lab": True, "parent_room_id": None}]
+    if classroom:
+        rooms.append({"id": "class", "code": "CLASS", "capacity": 20, "is_lab": False,
+                      "parent_room_id": None})
+    return {
+        "schema_version": "edge_list.v1",
+        "slot_grid": {"days": 1, "periods_per_day": 2, "teaching_periods": [0, 1],
+                      "adjacency": [[0, 1]]},
+        "sessions": sessions,
+        "edges": [],
+        "rooms": rooms,
+        "faculty_availability": [{"faculty_id": f"f{i}", "unavailable_slots": []}
+                                 for i in range(2)],
+        "lab_blocks": [],
+        "pinned_occupancy": [{"day": 0, "period": 1, "faculty_ids": [], "room_ids": [],
+                              "cohort_ids": ["c0", "c1"]}],
     }
 
 
@@ -209,6 +237,57 @@ def test_deterministic() -> None:
 
     for build in CASES.values():
         assert run(build) == run(build)
+
+
+def test_a_protected_pin_is_skipped_for_the_next_candidate() -> None:
+    """S14e: unprotected, the first suggestion frees a cohort from lunch; with the
+    lunch protected it stays in the set, no action on it is tried, and the next
+    candidate (the classroom as a lab) is verified instead."""
+    payload = lunch_or_lab()
+    infeasible = _infeasible(payload)
+    today = explain(payload, infeasible)
+    assert today is not None
+    assert today["diagnosis"]["suggested_relaxation"]["action"]["action_type"] == (
+        "RELAX_PINNED_BLOCK")
+    stats: dict = {}
+    result = explain(payload, infeasible, protected={0}, stats=stats)
+    assert result is not None
+    SOLUTION_V2.validate(result)
+    diagnosis = result["diagnosis"]
+    assert diagnosis["method"] == "mus"
+    assert {m["constraint_id"] for m in diagnosis["minimal_conflicting_set"]} == {
+        "pin.0", "room_type.class"}
+    relaxation = diagnosis["suggested_relaxation"]
+    assert relaxation["action"] == {"action_type": "RECLASSIFY_ROOM",
+                                    "params": {"room_id": "class", "is_lab": True}}
+    assert relaxation["verification"]["status"] == "restored"
+    assert [a["constraint_id"] for a in stats["relaxations"]] == ["room_type.class"]
+    assert _solved(apply_action(payload, relaxation["action"]))
+
+
+def test_only_protected_pins_could_fix_it_so_manual() -> None:
+    """Without the classroom only the lunch could be relaxed: protected, that is MANUAL,
+    never attempted, still naming the lunch as the cause."""
+    payload = lunch_or_lab(classroom=False)
+    infeasible = _infeasible(payload)
+    stats: dict = {}
+    result = explain(payload, infeasible, protected=[0], stats=stats)
+    assert result is not None
+    SOLUTION_V2.validate(result)
+    diagnosis = result["diagnosis"]
+    assert [m["constraint_id"] for m in diagnosis["minimal_conflicting_set"]] == ["pin.0"]
+    relaxation = diagnosis["suggested_relaxation"]
+    assert relaxation["action"] == {"action_type": "MANUAL", "params": {}}
+    assert relaxation["verification"] == {"status": "not_attempted", "runtime_ms": None}
+    assert relaxation["constraint_id"] == "pin.0"  # the only member; the schema needs one
+    assert "Protected, never relaxed: pin.0." in relaxation["description"]
+    assert stats["relaxations"] == []
+
+
+def test_protected_must_name_pins() -> None:
+    payload = lunch_or_lab()
+    with pytest.raises(ValueError, match="protected"):
+        explain(payload, _infeasible(payload), protected={1})
 
 
 def test_apply_action_leaves_its_input_alone() -> None:
