@@ -100,7 +100,8 @@ Do not "fix" a failing test in another track's directory — report it instead.
   **refuses to migrate any non-local host** (`localhost`, `127.0.0.1`, `::1`, `db`, `postgres`
   only) unless `CHRONOS_ALLOW_REMOTE_DB=1`.
 - **Agents never set `CHRONOS_ALLOW_REMOTE_DB=1`.** Supabase is shared staging; promoting a
-  migration there is a deliberate human decision coordinated with the team.
+  migration there is a deliberate human decision coordinated with the team.    
+- Never kill processes by name (`taskkill /IM`, `pkill`, `killall`). Stop only processes you started, by their PID.
 - Every schema change goes through a new Alembic revision. Never edit the schema out of band.
 
 ```powershell
