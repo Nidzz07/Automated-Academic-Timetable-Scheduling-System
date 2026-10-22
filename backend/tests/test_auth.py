@@ -180,7 +180,8 @@ def job_id(client: TestClient) -> str:
 
 
 READ = ["/instances", f"/instances/{REAL}/edge-list", f"/instances/{REAL}/display",
-        f"/instances/{REAL}/anomalies", f"/instances/{REAL}/solution", "/jobs/{job}"]
+        f"/instances/{REAL}/anomalies", f"/instances/{REAL}/solution",
+        f"/instances/{REAL}/changes", "/jobs/{job}"]
 EXPECTED = {
     # route -> role -> status
     **{("GET", path): dict.fromkeys(ROLES, 200) for path in READ},
@@ -188,6 +189,8 @@ EXPECTED = {
         "administrator": 202, "coordinator": 202, "faculty": 403, "student": 403},
     ("GET", "/audit"): {"administrator": 200, "coordinator": 403, "faculty": 403,
                         "student": 403},
+    ("DELETE", f"/instances/{REAL}/changes"): {
+        "administrator": 200, "coordinator": 403, "faculty": 403, "student": 403},
 }
 
 

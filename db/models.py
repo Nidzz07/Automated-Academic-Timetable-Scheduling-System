@@ -1066,6 +1066,10 @@ class SolveJob(Base):
     ``committed`` for the instance's committed ``solution.json``. ``accepted_at``
     is set when a solved repair is made official (ROADMAP D49). ``audit_id`` is
     the request's ``audit_entry`` row, completed when the job ends.
+
+    S14f (ROADMAP D52): ``accepted_by`` is who accepted a repair; ``cleared_at`` is
+    set when an administrator clears its accepted change; ``built_with`` lists the
+    job ids of the accepted changes a job's edge list was built with, in order.
     """
 
     __tablename__ = "solve_job"
@@ -1091,3 +1095,6 @@ class SolveJob(Base):
     solution: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     audit_id: Mapped[int | None] = mapped_column(ForeignKey("audit_entry.id"), nullable=True)
+    accepted_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    cleared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    built_with: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)

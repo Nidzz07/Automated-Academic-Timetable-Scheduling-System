@@ -1,0 +1,195 @@
+{
+ "note": "D53 sidecar for edge_list.json, not a contract: per subject, the faculty Faculty___Subjects.xlsx lists for it (session_type null where the sheet does not say lecture or practical). Chronos suggests; a coordinator decides.",
+ "generated_by": "python -m ingestion.qualifications",
+ "sources": [
+  "data/real/Faculty___Subjects.xlsx",
+  "data/real/Subject-wise_faculty.xlsx",
+  "data/instances/even-2025-26/display.json",
+  "ingestion.class_tt.SUBJECT_ALIASES"
+ ],
+ "subjects": {
+  "subj-ce206": {
+   "code": "CE206",
+   "sheet_codes": [
+    "OS"
+   ],
+   "faculty": [
+    {
+     "faculty_id": "fac-aishwarya-nalawade",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-amey-ganesh-nile",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-kailas-devadkar",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-swapnali-kurhade",
+     "session_type": null
+    }
+   ]
+  },
+  "subj-ce207": {
+   "code": "CE207",
+   "sheet_codes": [
+    "DAA"
+   ],
+   "faculty": [
+    {
+     "faculty_id": "fac-anant-nimkar",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-nataasha-raul",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-prasenjit-bhavathankar",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-sudhir-dhage",
+     "session_type": null
+    }
+   ]
+  },
+  "subj-ce208": {
+   "code": "CE208",
+   "sheet_codes": [
+    "CCN"
+   ],
+   "faculty": [
+    {
+     "faculty_id": "fac-abhijeet-salunke",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-anuj-tawari",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-isha-sawalkar",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-jignesh-sisodia",
+     "session_type": null
+    }
+   ]
+  },
+  "subj-ce306": {
+   "code": "CE306",
+   "sheet_codes": [
+    "SPCC"
+   ],
+   "faculty": [
+    {
+     "faculty_id": "fac-aishwarya-nalawade",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-anand-godbole",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-anuj-tawari",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-isha-sawalkar",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-sunil-ghane",
+     "session_type": null
+    }
+   ]
+  },
+  "subj-ce307": {
+   "code": "CE307",
+   "sheet_codes": [
+    "ML"
+   ],
+   "faculty": [
+    {
+     "faculty_id": "fac-jyoti-ramteke",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-sanjyuktarani-jena",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-surekha-dholay",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-vaishnavee-rathod",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-yogita-patil",
+     "session_type": null
+    }
+   ]
+  },
+  "subj-ce308": {
+   "code": "CE308",
+   "sheet_codes": [
+    "Devop"
+   ],
+   "faculty": [
+    {
+     "faculty_id": "fac-amey-ganesh-nile",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-anas-ansari",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-azman-qureshi",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-jostna-bhagat",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-reeta-koshy",
+     "session_type": null
+    },
+    {
+     "faculty_id": "fac-sudeep-mali",
+     "session_type": null
+    }
+   ]
+  }
+ },
+ "subjects_without_qualified_faculty": [],
+ "unmatched_names": [],
+ "sheet_codes_not_in_instance": [
+  "ANC",
+  "BDA",
+  "BDAV",
+  "DCS",
+  "DFIR",
+  "DL",
+  "ET Lab",
+  "HMI",
+  "HPC",
+  "IV",
+  "MDCF",
+  "MDM-I (DBMS)",
+  "MDM-I Lab",
+  "MDM-III Lab (CC)",
+  "MDM-III Theory (CC)",
+  "NLP",
+  "PSOOP",
+  "SMCS"
+ ],
+ "cross_check_disagreements": []
+}
