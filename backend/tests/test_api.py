@@ -112,6 +112,7 @@ def test_openapi_lists_every_route(real: TestClient) -> None:
         "/instances/{instance_id}/solve",
         "/instances/{instance_id}/repair",
         "/instances/{instance_id}/changes",
+        "/instances/{instance_id}/sessions/{session_id}/substitutes",
         "/jobs/{job_id}",
         "/jobs/{job_id}/base-solution",
         "/jobs/{job_id}/accept",
