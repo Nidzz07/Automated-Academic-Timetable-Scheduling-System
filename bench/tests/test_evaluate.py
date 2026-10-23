@@ -7,7 +7,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from bench.evaluate import INSTANCE, algorithm_rows, main, real_vs_printed, room_use
+from solver.benchmarks import real_repair
 from solver.benchmarks.synthetic import PRESETS, generate
 
 
@@ -96,7 +99,7 @@ def test_real_vs_printed() -> None:
     assert (generated["time_only_violations"], generated["full_violations"]) == (0, 0)
 
 
-def test_main_writes_dated_csvs(tmp_path: Path) -> None:
+def _main_writes_dated_csvs(tmp_path: Path, scenarios: int) -> None:
     tables = main(["--preset", "small", "--seed", "1", "--runs", "1", "--moves", "100",
                    "--out-dir", str(tmp_path)])
     files = sorted(p.name for p in tmp_path.iterdir())
@@ -107,5 +110,16 @@ def test_main_writes_dated_csvs(tmp_path: Path) -> None:
             assert len(list(csv.DictReader(f))) == len(rows)
     assert [r["instance"] for r in tables["algorithms"]] == ["small"] * 3 + [
         "real even-2025-26"] * 3
-    assert len(tables["repair"]) == 6
+    assert len(tables["repair"]) == scenarios
     assert len(tables["free-rooms"]) == 45
+
+
+def test_main_writes_dated_csvs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # one quick scenario (the drag to a free slot); all six run in the slow test
+    monkeypatch.setattr(real_repair, "SCENARIOS", real_repair.SCENARIOS[2:3])
+    _main_writes_dated_csvs(tmp_path, 1)
+
+
+@pytest.mark.slow
+def test_main_writes_dated_csvs_all_scenarios(tmp_path: Path) -> None:
+    _main_writes_dated_csvs(tmp_path, 6)

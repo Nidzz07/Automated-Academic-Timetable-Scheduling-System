@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400" font-family="system-ui, sans-serif" font-size="12">
+<title>Runtime vs sessions, synthetic large-shape instances, seed 1</title>
+<rect width="640" height="400" fill="#fcfcfb"/>
+<text x="80.0" y="22.0" text-anchor="start" fill="#0b0b0b" font-size="15" font-weight="600">Runtime vs sessions, synthetic large-shape instances, seed 1</text>
+<line x1="80" x2="620" y1="344.0" y2="344.0" stroke="#e4e3df"/>
+<text x="72.0" y="348.0" text-anchor="end" fill="#52514e">100</text>
+<line x1="80" x2="620" y1="250.7" y2="250.7" stroke="#e4e3df"/>
+<text x="72.0" y="254.7" text-anchor="end" fill="#52514e">1,000</text>
+<line x1="80" x2="620" y1="157.3" y2="157.3" stroke="#e4e3df"/>
+<text x="72.0" y="161.3" text-anchor="end" fill="#52514e">10,000</text>
+<line x1="80" x2="620" y1="64.0" y2="64.0" stroke="#e4e3df"/>
+<text x="72.0" y="68.0" text-anchor="end" fill="#52514e">100,000</text>
+<text x="80.0" y="362.0" text-anchor="middle" fill="#52514e">50</text>
+<text x="188.0" y="362.0" text-anchor="middle" fill="#52514e">100</text>
+<text x="296.0" y="362.0" text-anchor="middle" fill="#52514e">150</text>
+<text x="404.0" y="362.0" text-anchor="middle" fill="#52514e">200</text>
+<text x="512.0" y="362.0" text-anchor="middle" fill="#52514e">250</text>
+<text x="620.0" y="362.0" text-anchor="middle" fill="#52514e">300</text>
+<line x1="80" x2="620" y1="344" y2="344" stroke="#52514e"/>
+<text x="350.0" y="386.0" text-anchor="middle" fill="#52514e">sessions</text>
+<text x="18.0" y="204.0" text-anchor="middle" fill="#52514e" transform="rotate(-90 18 204.0)">ms, median (log scale)</text>
+<circle cx="86.0" cy="44.0" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="96.0" y="48.0" text-anchor="start" fill="#0b0b0b">backtracking</text>
+<polyline points="80.0,325.5 131.8,302.7 183.7,285.2 235.5,274.7 287.4,264.0 339.2,253.0 391.0,239.8 442.9,230.8 494.7,229.7 598.4,207.2" fill="none" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="80.0" cy="325.5" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="131.8" cy="302.7" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="183.7" cy="285.2" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="235.5" cy="274.7" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="287.4" cy="264.0" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="339.2" cy="253.0" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="391.0" cy="239.8" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="442.9" cy="230.8" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="494.7" cy="229.7" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="598.4" cy="207.2" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="189.0" y="39.0" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<text x="204.0" y="48.0" text-anchor="start" fill="#0b0b0b">backtracking + improve</text>
+<polyline points="80.0,145.5 131.8,144.1 183.7,143.4 235.5,145.6 287.4,145.6 339.2,143.9 391.0,141.2 442.9,141.2 494.7,142.1 598.4,135.9" fill="none" stroke="#eb6834" stroke-width="2"/>
+<rect x="75.0" y="140.5" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="126.8" y="139.1" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="178.7" y="138.4" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="230.5" y="140.6" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="282.4" y="140.6" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="334.2" y="138.9" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="386.0" y="136.2" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="437.9" y="136.2" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="489.7" y="137.1" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="593.4" y="130.9" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+</svg>

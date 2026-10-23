@@ -18,6 +18,13 @@ comes from those CSVs. Tests: `bench/tests/test_evaluate.py`.
 | `2026-10-21-eval-rooms.csv` | 4 |
 | `2026-10-21-eval-free-rooms.csv` | 4 |
 | `2026-10-21-eval-repair.csv` | 5 |
+| `2026-10-24-eval-size-sweep.csv` | 6 |
+| `2026-10-24-eval-repair-vs-regen.csv`, `2026-10-24-eval-repair-vs-regen-summary.csv` | 7 |
+
+Sections 6 and 7 were added on 2026-10-24 (S15c). Reproduce them with
+`python -m bench.size_sweep` (about 7 minutes here) and `python -m bench.repair_vs_regen`
+(about 75 minutes here, mostly 300 s timeouts). These also write the charts in `docs/figures/`. Tests:
+`bench/tests/test_s15c.py`. The full runs are marked `slow`, so they are deselected by default.
 
 - **Machine:** AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows.
   Every `ms` figure is wall clock, machine-dependent, and the **median of 3 runs**. Every other
@@ -210,6 +217,154 @@ Runtimes are single runs, not medians. Moved, room-only and score are the same o
 Moved, room-only, rings and scores are identical to `docs/repair-even-2025-26.md`. The runtimes
 are lower than the ones recorded there, which came from a different machine.
 
+## 6. Runtime and score vs size (S15c)
+
+Source: `bench/results/2026-10-24-eval-size-sweep.csv`, written by `python -m bench.size_sweep`.
+
+- **Instances.** These are synthetic (D19), not SPIT data. Each one is the `large` preset with
+  only two parameters changed:
+  - `divisions` is 2–9, which falls between the `small` (12 sessions) and `large` (242)
+    presets; 10, which *is* `large`; and 12, which is above it.
+  - `faculty` scales with divisions: 41 per 10 divisions, rounded, so 8, 12, 16, 21, 25, 29, 33,
+    37, 41 and 49.
+
+  Everything else is unchanged: 4 batches, 4 theory subjects × 3 hours, 3 lab blocks per
+  division, 2 combined lectures, 2 pins per division, 4 unavailable slots per faculty member,
+  and the 20 real rooms. All instances use seed 1.
+- **Algorithms and runs.** The algorithms and checks are those of section 1. Every `ms` figure
+  is the median of 3 runs on the machine above. The script stops if two runs disagree on
+  anything except time.
+- **Check.** The 10-division row matches section 1's `large` seed 1 on everything except time:
+  153 nodes, backtracking −489.0, + improve 69.0.
+
+| Divisions | Sessions | Edges | Backtracking nodes | Welsh-Powell ms | Backtracking ms | Backtracking + improve ms | Backtracking score | + improve score | + improve FAC_LOAD_IMBALANCE |
+|---|---|---|---|---|---|---|---|---|---|
+| 2 | 50 | 673 | 33 | 3.9 | 157.9 | 13,379.0 | −37.5 | 96.0 | 4.0 |
+| 3 | 74 | 961 | 48 | 5.8 | 276.9 | 13,871.6 | −175.5 | 87.0 | 13.0 |
+| 4 | 98 | 1,236 | 63 | 8.4 | 426.5 | 14,091.2 | −187.0 | 90.0 | 10.0 |
+| 5 | 122 | 1,506 | 78 | 9.9 | 552.8 | 13,358.9 | −266.0 | 84.5 | 15.5 |
+| 6 | 146 | 1,807 | 93 | 11.5 | 718.8 | 13,342.3 | −266.0 | 80.5 | 19.5 |
+| 7 | 170 | 2,088 | 108 | 13.3 | 943.6 | 13,944.8 | −574.5 | 78.0 | 22.0 |
+| 8 | 194 | 2,373 | 123 | 15.2 | 1,307.1 | 14,871.2 | −388.0 | 75.0 | 25.0 |
+| 9 | 218 | 2,665 | 138 | 18.6 | 1,634.2 | 14,900.9 | −385.5 | 66.0 | 34.0 |
+| 10 (`large`) | 242 | 2,936 | 153 | 19.1 | 1,677.8 | 14,579.3 | −489.0 | 69.0 | 31.0 |
+| 12 | 290 | 3,507 | 183 | 23.9 | 2,921.2 | 16,956.8 | −561.5 | 59.0 | 41.0 |
+
+The other outcomes were the same in every row:
+
+- All 30 rows (10 sizes × 3 algorithms) have 0 hard violations.
+- Welsh-Powell coloured every session.
+- Backtracking solved every instance.
+- After `improve()`, S-GAP, S-B2B and S-LOAD16 were 0 at every size, so the + improve score is
+  100 − FAC_LOAD_IMBALANCE.
+
+![Runtime vs sessions](figures/runtime-vs-sessions.svg)
+
+![Score vs sessions](figures/score-vs-sessions.svg)
+
+## 7. Repair vs regeneration on the real instance (S15c)
+
+Source: `bench/results/2026-10-24-eval-repair-vs-regen.csv` (per change) and
+`2026-10-24-eval-repair-vs-regen-summary.csv`, written by `python -m bench.repair_vs_regen`.
+
+- **Changes.** 30 seeded random changes (seed 0) to the committed `solution.json`. They
+  alternate between two kinds, and the draw is with replacement:
+  - Odd numbers: a faculty member who teaches is unavailable at 1–3 of the periods they teach
+    in `solution.json`.
+  - Even numbers: a top-level room is unavailable for a half-day in which `solution.json`
+    uses it or one of its sub-rooms. Morning is P0, P1, P3 and P4 (09:00–13:15); afternoon is
+    P5–P9 (13:15–18:15), from ROADMAP §5.
+
+  So every change displaces at least one session. Two room changes were drawn twice: 14 and 28,
+  and 18 and 30. Each pair gave the same results except for runtime.
+- **Two ways.** Each change is handled two ways, both starting from `solution.json`:
+  - **Repair** is `solver.repair.repair`, with seed 0 and the default budgets, plus two settings
+    for this benchmark. `time_limit_s=300` matches regeneration's budget: without it, the last
+    ring (every session free) has no limit. One change ran for over 2 minutes with no answer
+    while this was being set up. `mus_nodes=0` keeps the pre-solve or search diagnosis of an
+    unsolvable change and skips the minimal-conflicting-set search; that search ran for over
+    20 minutes on change 9 without finishing.
+  - **Regeneration** is `solver.backtracking.backtrack_solve` on the changed edge list, with a
+    300 s budget, followed by `solver.improve.improve` with 200,000 moves and seed 0. (The
+    committed `solution.json` used 1,000,000 moves.)
+- **Measures.**
+  - *Moved* counts sessions whose start slot differs from `solution.json`.
+  - *Room-only* counts sessions with the same slot but a different room.
+  - *Score* is scored against the changed edge list.
+  - Every solved result passed `validate_solution` against the changed edge list; the script
+    stops otherwise.
+  - Runtimes come from one run each, on the machine above.
+  - No solved repair reached its 300 s cap (the longest took 55.4 s), so its moves and score do
+    not depend on the machine.
+- **Unsolved changes are kept.** A `timeout` means no answer within 300 s. It is not a proof of
+  infeasibility (D33).
+
+| # | Change | Repair | Moved | Room-only | Score | ms | Regeneration | Moved | Room-only | Score | ms |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | fac-kailas-devadkar unavailable Mon P4, Wed P0 | solved | 11 | 0 | −27.5 | 451.2 | solved | 70 | 40 | −19.5 | 8,831.8 |
+| 2 | room-608 unavailable Fri morning | solved | 0 | 3 | −15.0 | 125.2 | timeout | n/a | n/a | n/a | 300,034.7 |
+| 3 | fac-reeta-koshy unavailable Tue P5, Tue P6 | solved | 2 | 0 | −34.5 | 421.9 | solved | 86 | 26 | −27.0 | 9,133.7 |
+| 4 | room-606 unavailable Mon afternoon | solved | 5 | 2 | −41.0 | 501.2 | solved | 86 | 30 | −14.5 | 9,255.4 |
+| 5 | fac-sudhir-dhage unavailable Wed P3 | solved | 5 | 3 | −15.0 | 914.1 | timeout | n/a | n/a | n/a | 300,034.9 |
+| 6 | room-604 unavailable Thu morning | solved | 0 | 2 | −15.0 | 112.2 | solved | 89 | 29 | −18.5 | 9,450.5 |
+| 7 | fac-anant-nimkar unavailable Thu P4 | solved | 1 | 0 | −36.5 | 230.3 | solved | 63 | 44 | −9.5 | 8,983.9 |
+| 8 | room-604 unavailable Mon morning | solved | 0 | 3 | −15.0 | 115.4 | solved | 93 | 30 | −4.0 | 9,226.1 |
+| 9 | fac-sudeep-mali unavailable Mon P6, Mon P7, Thu P5 | infeasible (presolve) | n/a | n/a | n/a | 7,952.3 | infeasible (presolve: faculty_load) | n/a | n/a | n/a | 27.8 |
+| 10 | room-509 unavailable Wed morning | solved | 0 | 1 | −15.0 | 131.0 | solved | 89 | 28 | −18.5 | 9,279.7 |
+| 11 | fac-yogita-patil unavailable Fri P1 | solved | 16 | 7 | −50.0 | 5,423.1 | solved | 89 | 41 | −27.5 | 9,288.5 |
+| 12 | room-605 unavailable Thu afternoon | solved | 0 | 2 | −15.0 | 111.9 | solved | 74 | 29 | −10.5 | 9,289.4 |
+| 13 | fac-reeta-koshy unavailable Mon P8, Mon P9, Tue P5 | solved | 8 | 0 | −34.0 | 702.5 | solved | 85 | 35 | −28.5 | 9,047.8 |
+| 14 | room-605 unavailable Tue afternoon | solved | 3 | 2 | −17.0 | 1,360.0 | solved | 74 | 33 | −11.0 | 9,134.0 |
+| 15 | fac-sunil-ghane unavailable Wed P5, Thu P6, Thu P9 | timeout | n/a | n/a | n/a | 300,054.8 | timeout | n/a | n/a | n/a | 300,069.3 |
+| 16 | room-607b unavailable Thu afternoon | solved | 0 | 4 | −15.0 | 121.3 | solved | 89 | 33 | −18.5 | 9,344.7 |
+| 17 | fac-sanjyuktarani-jena unavailable Mon P5, Thu P5 | timeout | n/a | n/a | n/a | 300,287.1 | solved | 102 | 45 | −12.0 | 9,322.6 |
+| 18 | room-609 unavailable Wed morning | solved | 0 | 1 | −15.0 | 107.0 | solved | 89 | 29 | −18.5 | 9,399.9 |
+| 19 | fac-abhijeet-salunke unavailable Fri P3 | timeout | n/a | n/a | n/a | 300,031.3 | timeout | n/a | n/a | n/a | 300,035.9 |
+| 20 | room-606 unavailable Fri morning | solved | 0 | 1 | −15.0 | 120.8 | timeout | n/a | n/a | n/a | 300,030.7 |
+| 21 | fac-vaishnavee-rathod unavailable Mon P5, Thu P9, Fri P0 | timeout | n/a | n/a | n/a | 300,032.2 | timeout | n/a | n/a | n/a | 300,032.4 |
+| 22 | room-608 unavailable Thu morning | solved | 3 | 0 | −23.0 | 326.8 | solved | 89 | 29 | −18.5 | 9,363.7 |
+| 23 | fac-jostna-bhagat unavailable Mon P8 | solved | 5 | 0 | −15.5 | 330.7 | solved | 109 | 25 | −51.5 | 16,090.7 |
+| 24 | room-702 unavailable Fri afternoon | solved | 0 | 2 | −15.0 | 115.0 | solved | 89 | 29 | −18.5 | 9,505.5 |
+| 25 | fac-amey-ganesh-nile unavailable Tue P6 | solved | 29 | 11 | −23.0 | 55,414.7 | solved | 102 | 27 | −32.0 | 16,618.3 |
+| 26 | room-603 unavailable Fri morning | solved | 0 | 4 | −15.0 | 196.0 | timeout | n/a | n/a | n/a | 300,050.9 |
+| 27 | fac-anant-nimkar unavailable Mon P4, Wed P9, Fri P6 | timeout | n/a | n/a | n/a | 300,035.9 | timeout | n/a | n/a | n/a | 300,029.1 |
+| 28 | room-605 unavailable Tue afternoon | solved | 3 | 2 | −17.0 | 1,310.1 | solved | 74 | 33 | −11.0 | 9,019.0 |
+| 29 | fac-sanjyuktarani-jena unavailable Mon P6, Tue P5 | timeout | n/a | n/a | n/a | 305,751.5 | solved | 96 | 37 | −27.5 | 8,371.7 |
+| 30 | room-609 unavailable Wed morning | solved | 0 | 1 | −15.0 | 106.8 | solved | 89 | 29 | −18.5 | 8,628.1 |
+
+| | Repair | Regeneration |
+|---|---|---|
+| Solved (of 30) | 23 | 21 |
+| Infeasible, proved by pre-solve | 1 (change 9) | 1 (change 9) |
+| Timeout at 300 s | 6 (15, 17, 19, 21, 27, 29) | 8 (2, 5, 15, 19, 20, 21, 26, 27) |
+| Unsolved both ways | 5 (9, 15, 19, 21, 27) | |
+| Moved, mean [95% CI], over the 19 changes solved both ways | 4.53 [0.98, 8.07] | 85.68 [80.45, 90.92] |
+| Score, mean [95% CI], same 19 | −23.11 [−28.37, −17.84] | −19.79 [−24.84, −14.74] |
+| Runtime ms, mean [95% CI], all 30 changes | 62,763.14 [17,360.58, 108,165.71] | 86,897.69 [38,074.30, 135,721.08] |
+
+The intervals are 95% Student-t intervals of the mean (Statistical Methods). The script
+computes the critical value itself: Simpson's rule on the t density, then bisection. These
+values match the printed t tables for 1, 4 and 29 degrees of freedom (tested).
+
+The next figures were computed from the per-change CSV over the same 19 changes; the summary
+CSV does not contain them:
+
+- **Moved.** Regeneration moved 81.16 more sessions than repair on average (95% CI 75.68 to
+  86.64). The smallest gap was 59.
+- **Score.** Repair scored higher on 8 changes and lower on 11. Repair minus regeneration is
+  −3.32 on average (95% CI −10.10 to 3.47).
+- **Runtime.** Repair's median was 326.8 ms (range 106.8 to 55,414.7). Regeneration's median was
+  9,279.7 ms (range 8,628.1 to 16,618.3).
+- **Runtime over all 30 changes.** These means are dominated by the 300 s timeouts. Computed
+  the same way over the 19 changes, repair's interval would be −2,535.07 to 9,629.08 ms. It
+  reaches below 0 because one 55.4 s change skews it, so the medians above describe that set
+  better.
+
+![Sessions moved per change](figures/repair-vs-regen-moved.svg)
+
+Unsolved changes have no point in the chart: repair at 15, 17, 19, 21, 27, 29 and 9;
+regeneration at 2, 5, 9, 15, 19, 20, 21, 26, 27.
+
 ## Findings
 
 1. **Hard constraints.**
@@ -252,14 +407,43 @@ are lower than the ones recorded there, which came from a different machine.
      changes. Each took under 1.6 s here.
    - The other 2 were proved infeasible by pre-solve.
    - The score fell in every repaired scenario, by 2.5 to 26.0 points.
+8. **Size (S15c, synthetic, seed 1).**
+   - From 50 to 290 sessions, backtracking's median time rose from 157.9 ms to 2,921.2 ms,
+     and its nodes from 33 to 183, 15 more per added division.
+   - Backtracking + improve took 13.3–17.0 s at every size; most of that is the fixed
+     200,000-move local search.
+   - Its score fell from 96.0 to 59.0. All of its penalty at every size was
+     FAC_LOAD_IMBALANCE.
+   - Every timetable had 0 hard violations.
+9. **Repair vs regeneration (S15c, real instance, 30 changes).**
+   - Over the 19 changes both solved, repair moved 4.53 sessions on average (95% CI 0.98 to
+     8.07) and regeneration 85.68 (80.45 to 90.92).
+   - Mean scores were −23.11 (repair) and −19.79 (regeneration). The intervals overlap, and
+     repair scored higher on 8 of the 19.
+   - Repair solved 23 changes and regeneration 21. 5 were unsolved both ways: 1 proved
+     infeasible by pre-solve, 4 timeouts.
+   - Repair timed out on 2 changes that regeneration solved, and regeneration on 4 that repair
+     solved.
 
 ## Limits
 
-- **Runtimes are medians of 3 runs on one machine**, with no confidence intervals. The Phase 5
-  item "displaced sessions, repair vs regeneration (mean + CI)" is not covered here.
+- **Runtimes are medians of 3 runs on one machine**, with no confidence intervals (sections
+  1, 2, 6). Section 7's runtimes are single runs; their interval is over changes, not repeated
+  runs.
+- **Size sweep (section 6).** It uses one seed and one instance shape, the `large` preset
+  with divisions and faculty scaled. Other shapes and seeds were not swept.
+- **Repair vs regeneration (section 7).**
+  - It covers 30 changes of two kinds on one instance, drawn with replacement, so two are
+    repeats. Drags and substitutions are not included.
+  - Repair ran with `mus_nodes=0` and a 300 s cap, not its defaults, so unsolvable changes
+    carry no minimal conflicting set here.
+  - Repair's runtime is affected by these settings; regeneration's comes from a 200,000-move
+    `improve()`.
+  - Timeouts are unknowns: 4 changes were neither solved nor refuted by either method within
+    300 s.
 - **The comparison is not like for like:**
   - The printed timetable is checked on time only, and its room use counts only the 98
     sessions in edge-list rooms.
   - The printed timetable uses rooms outside the edge list (002, 508, 203, 505, 403-A). The
     generated one may not use them (D10, D28, D29).
-- **No plot.** Runtime vs size is a table only.
+- **Plots** are hand-written SVG (`bench/charts.py`); no plotting library is installed.
