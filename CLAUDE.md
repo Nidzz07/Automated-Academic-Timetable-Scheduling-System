@@ -9,7 +9,7 @@ before making changes.
 2. `ROADMAP.md` (repo root) — the phased plan, the [M]/[S]/[C] tags, and the parallel-work protocol.
 3. `docs/CURRENT-PROGRESS.md` — what is actually done, blockers, decision log, contract change log.
 
-`ROADMAP.md` §1 (ownership) and §3 (decisions D1–D22) are binding; they override anything here that disagrees.
+`ROADMAP.md` §1 (ownership) and §3 (decisions D1–D56) are binding; they override anything here that disagrees.
 
 `docs/CURRENT-STATUS.md` is a **historical snapshot from 2026-09-24** (before any application
 code existed). Do not treat it as the current inventory — check the code and
@@ -40,7 +40,7 @@ These come from `docs/CONTEXT.md` §2. Breaking one invalidates the project's ac
    Purity tests enforce this (`TestSolverPurity`, `TestSolverPurityBacktracking`,
    `solver/tests/test_validate.py::TestIndependence`).
 4. **Quality rules are versioned YAML data, not code.** Rules and weights live in
-   `solver/rules/quality_rules.yaml` (not written yet — Phase 3). A department must be able to
+   `solver/rules/quality_rules.yaml` (PR #29; rules S-GAP, S-B2B, S-LOAD16, FAC_LOAD_IMBALANCE). A department must be able to
    change a weight without a code change.
 5. **Multi-department schema.** `Room` / `SubRoom` belong to the institute and carry no
    `department_id`; every other entity is department-scoped.
@@ -52,10 +52,12 @@ fix them** (`docs/CONTEXT.md` §3.5).
 
 ## Contracts are frozen
 
-`contracts/` holds `ingestion_v1`, `edge_list_v1` and `solution_v1` JSON Schemas plus examples.
-Changing one needs all three members' agreement and an entry in the Contract change log in
-`docs/CURRENT-PROGRESS.md`. `docs/contract-change-proposal-v2.md` was **signed off on 2026-10-06**,
-but the v2 schema files do not exist yet — so do not emit or consume v2 shapes until they do.
+`contracts/` on `main` holds the v1 schemas `ingestion_v1`, `edge_list_v1` and `solution_v1`
+(frozen) and the v2 files `ingestion_v2.schema.json`, `solution_v2.schema.json` and
+`relaxation_actions_v2.json` (PR #20; row 8 PR #25; row 9 `presolve` PR #31), with examples in
+`contracts/examples/` and tests in `tests/contracts/`. There is no `edge_list_v2`: the solver
+reads `edge_list_v1` (with the D6 grid) and writes `solution.v2`. Changing any contract needs all
+three members' agreement and an entry in the Contract change log in `docs/CURRENT-PROGRESS.md`.
 
 ## Ownership — stay inside your track's directory
 
@@ -127,15 +129,31 @@ cd frontend; npm run dev                       # Vite dev server
 
 ## What exists today (verify before relying on it)
 
-- `solver/`: `slots.py`, `graph.py`, `colouring.py` (Welsh-Powell),
-  `backtracking.py` (forward checking + MRV, lab blocks, sub-rooms), `validate.py`
-  (independent checker). **Placeholders:** infeasible results carry a placeholder diagnosis
-  (`unplaced.<id>` / `UNSATISFIABLE_DOMAIN`), and solved results carry a hardcoded
-  `{"score": 100.0, "breakdown": []}`. No `scoring.py`, `mus.py`, `repair.py` yet.
-- `db/models.py` + migrations 0001–0004; `ingestion/` has the docx reader, initials-legend
-  extraction and reference seeders. No timetable parsers (`class_tt.py` etc.) yet.
-- `backend/app/main.py` is a bare `FastAPI()` with no routes.
-- `frontend/` renders contract fixtures through a mock API client — not wired to a backend.
+Checked against `main` on 2026-10-24.
+
+- `solver/`: `slots.py`, `graph.py`, `colouring.py` (Welsh-Powell), `backtracking.py` (forward
+  checking + MRV, lab blocks, sub-rooms), `presolve.py`, `scoring.py`, `improve.py` (local
+  search; Kempe-chain and gap moves off by default, D54), `mus.py` (diagnosis), `repair.py`
+  (repair, `substitute_candidates`), `validate.py`, `rules/quality_rules.yaml`,
+  `benchmarks/` (synthetic generator, real solve/repair scripts). The v1 output
+  (`to_solution_dict`) still carries the placeholder diagnosis and a hardcoded score;
+  `solution.v2` does not.
+- `ingestion/`: docx reader, initials legends, scheme, `class_tt.py`, `lab_tt.py`,
+  `faculty.py`, `anomalies.py`, `emit_v2.py`, `seed_even.py`, `real_baseline.py`,
+  `qualifications.py`. `data/instances/even-2025-26/` holds the committed edge list, display,
+  anomalies, qualifications, solution and printed baseline.
+- `db/models.py`, `db/export_edge_list.py`; migrations 0001–0009, head `0009_accepted_changes`.
+- `backend/app/` (`create_app`): `GET /health`, `POST /auth/login`; under `/instances`: list,
+  `/{id}/edge-list`, `/display`, `/anomalies`, `/solution`, `POST /{id}/solve`,
+  `POST /{id}/repair`, `GET`/`DELETE /{id}/changes`,
+  `GET /{id}/sessions/{session_id}/substitutes`; `GET /jobs/{id}`, `/jobs/{id}/base-solution`,
+  `POST /jobs/{id}/accept`; `GET /audit` (administrator). No deployment yet (D55, S16b).
+- `frontend/`: http mode (default, `VITE_API_BASE_URL`, default `/api`) or static mode
+  (`VITE_API_MODE=static`); login, solve, repair and diagnosis, accepted changes, substitutes,
+  room views, anomaly panel, audit log.
+- `bench/`: `run_bench.py`, `evaluate.py`, `size_sweep.py`, `repair_vs_regen.py`, `charts.py`;
+  results in `bench/results/`, figures in `docs/figures/`. It reuses `solver.benchmarks`.
+- No `tests/e2e/` yet.
 
 ## Conventions
 
