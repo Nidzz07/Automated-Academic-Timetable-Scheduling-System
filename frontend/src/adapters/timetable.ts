@@ -378,20 +378,31 @@ export function entityName(id: string, edgeList: EdgeList, labels: Labels = EXAM
   return isCohort ? labels.cohort(id) : id;
 }
 
-/** The pins at any of `slots` holding any of `ids` (a division also holds its batches), by unique_label. */
-export function pinsHolding(
+/**
+ * A diagnosis's `pin.<i>` by display.json pins[i] (D51): "unique_label (pin.<i>)"; null for any other id.
+ * Past the edge list's pins it is a room an accepted change made unavailable (D52, solver.repair.apply_change).
+ */
+export function pinName(id: string, edgeList: EdgeList, labels: Labels): string | null {
+  const i = id.match(/^pin\.(\d+)$/)?.[1];
+  if (i === undefined) return null;
+  const pin = edgeList.pinned_occupancy[Number(i)];
+  const shown = labels.pin(Number(i));
+  const name = !pin
+    ? 'Room made unavailable by an accepted change'
+    : shown?.unique_label ?? shown?.label ?? `Pinned occupancy, ${DAY_NAMES[pin.day]} P${pin.period}`;
+  return `${name} (${id})`;
+}
+
+/** The edge list with the given changes' substitutions written in (D52): the grid shows who teaches now. */
+export function withSubstitutions(
   edgeList: EdgeList,
-  labels: Labels,
-  slots: Array<{ day: number; period: number }>,
-  ids: string[]
-): string[] {
-  const names = edgeList.pinned_occupancy.flatMap((p, i) =>
-    slots.some((s) => s.day === p.day && s.period === p.period) &&
-    [...p.cohort_ids, ...p.faculty_ids, ...p.room_ids].some((held) => ids.some((id) => labels.overlap(held, id)))
-      ? [labels.pin(i)?.unique_label ?? labels.pin(i)?.label ?? `Pinned occupancy, ${DAY_NAMES[p.day]} P${p.period}`]
-      : []
+  changes: Array<{ kind: string; session_id?: string; faculty_id?: string }>
+): EdgeList {
+  const teacher = new Map(
+    changes.flatMap((c) => (c.kind === 'substitute_faculty' ? [[c.session_id!, c.faculty_id!] as const] : []))
   );
-  return [...new Set(names)];
+  if (!teacher.size) return edgeList;
+  return { ...edgeList, sessions: edgeList.sessions.map((s) => ({ ...s, faculty_id: teacher.get(s.id) ?? s.faculty_id })) };
 }
 
 /**

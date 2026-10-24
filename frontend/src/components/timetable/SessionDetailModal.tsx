@@ -7,11 +7,14 @@ import { X, BookOpen, User, DoorOpen, Users, Clock, Pin, FileCode } from 'lucide
 interface SessionDetailModalProps {
   session: EnrichedSession | null;
   onClose: () => void;
+  /** Administrator and coordinator on a backend instance: list who may take the session (S14g) */
+  onFindSubstitute?: () => void;
 }
 
 export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
   session,
   onClose,
+  onFindSubstitute,
 }) => {
   if (!session) return null;
 
@@ -131,7 +134,12 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
           </pre>
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end gap-2">
+          {onFindSubstitute && (
+            <Button size="sm" onClick={onFindSubstitute} data-testid="find-substitute">
+              Find substitute
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={onClose}>
             Close
           </Button>

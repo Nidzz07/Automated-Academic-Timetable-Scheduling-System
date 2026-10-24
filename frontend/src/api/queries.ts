@@ -7,7 +7,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChronosApiClient,
-  COMMITTED_BASE,
   EdgeListInstance,
   HttpChronosApiClient,
   MoveSessionRequest,
@@ -149,14 +148,9 @@ export function useRepair(
   const job = useJobQuery(client!, client ? jobId : null, pollMs);
   const solved = job.data?.status === 'solved' ? job.data : undefined;
   const base = useQuery({
-    queryKey: ['repair-base', instance, solved?.base],
-    queryFn: async () =>
-      solved!.base === COMMITTED_BASE
-        ? // shortcut: the backend serves the committed solution.json only while it is official; if another
-          // solve or accept happened meanwhile this compares with that, and Accept is refused (409) anyway
-          client!.getInstanceSolution(instance)
-        : (await client!.getJob(solved!.base!)).solution ?? null,
-    enabled: !!solved?.base,
+    queryKey: ['repair-base', solved?.id],
+    queryFn: () => client!.getBaseSolution(solved!.id),
+    enabled: !!solved,
     staleTime: Infinity,
     retry: retryable,
   });
@@ -165,9 +159,41 @@ export function useRepair(
     onSuccess: (accepted) => {
       queryClient.setQueryData(['job', accepted.id], accepted);
       if (accepted.solution) queryClient.setQueryData(instanceSolutionQueryKey(instance), accepted.solution);
+      queryClient.invalidateQueries({ queryKey: changesQueryKey(instance) });
     },
   });
   return { start, job, base, accept };
+}
+
+export const changesQueryKey = (instance: EdgeListInstance) => ['changes', instance] as const;
+
+/** The accepted changes (D52) of a backend instance; null client: static mode, never fetched. */
+export function useChangesQuery(client: HttpChronosApiClient | null, instance: EdgeListInstance, enabled: boolean) {
+  return useQuery({
+    queryKey: changesQueryKey(instance),
+    queryFn: () => client!.getChanges(instance),
+    enabled: !!client && enabled,
+    retry: retryable,
+  });
+}
+
+export function useClearChangesMutation(client: HttpChronosApiClient, instance: EdgeListInstance) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => client.clearChanges(instance),
+    onSuccess: () => queryClient.setQueryData(changesQueryKey(instance), []),
+  });
+}
+
+/** Who may substitute for a session where it is now; refetched each time it is opened. */
+export function useSubstitutesQuery(client: HttpChronosApiClient, instance: EdgeListInstance, sessionId: string) {
+  return useQuery({
+    queryKey: ['substitutes', instance, sessionId],
+    queryFn: () => client.getSubstitutes(instance, sessionId),
+    staleTime: 0,
+    gcTime: 0,
+    retry: retryable,
+  });
 }
 
 export function useMoveSessionMutation(client: ChronosApiClient = chronosApiClient) {

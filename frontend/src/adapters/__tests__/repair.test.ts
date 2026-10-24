@@ -10,7 +10,7 @@ import {
   entityName,
   labelsFor,
   moveConflict,
-  pinsHolding,
+  pinName,
 } from '@/adapters/timetable';
 
 // The real EVEN instance (S9 export, D41 display.json) and its committed solution
@@ -55,7 +55,7 @@ describe('repairChanges (D48)', () => {
   });
 });
 
-describe('entityName and pinsHolding on the real instance (display.json)', () => {
+describe('entityName and pinName on the real instance (display.json)', () => {
   it('names faculty "Name (INITIALS)", cohorts, rooms and sessions; an unknown id stays an id', () => {
     expect(entityName(KURHADE, edgeList, labels)).toBe('Swapnali Kurhade (SK)');
     expect(entityName('coh-se-a', edgeList, labels)).toBe('SE-Comp A');
@@ -67,10 +67,13 @@ describe('entityName and pinsHolding on the real instance (display.json)', () =>
     expect(entityName('no-such-id', edgeList, labels)).toBe('no-such-id');
   });
 
-  it('names pins by unique_label, a division holding its batches', () => {
+  it('names pin.<i> by display.json pins[i] (D51); past the edge list a pin is an accepted room unavailability', () => {
     expect(display.pins[0].unique_label).toBe('TE lunch, Mon P4');
-    expect(pinsHolding(edgeList, labels, [{ day: 0, period: 4 }], ['coh-te-a-b'])).toContain('TE lunch, Mon P4');
-    expect(pinsHolding(edgeList, labels, [{ day: 0, period: 4 }], ['no-such-id'])).toEqual([]);
+    expect(pinName('pin.0', edgeList, labels)).toBe('TE lunch, Mon P4 (pin.0)');
+    const last = edgeList.pinned_occupancy.length - 1;
+    expect(pinName(`pin.${last}`, edgeList, labels)).toBe(`${display.pins[last].unique_label} (pin.${last})`);
+    expect(pinName(`pin.${last + 1}`, edgeList, labels)).toBe(`Room made unavailable by an accepted change (pin.${last + 1})`);
+    expect(pinName('unavailable.fac-swapnali-kurhade.0', edgeList, labels)).toBeNull();
   });
 });
 

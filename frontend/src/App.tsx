@@ -13,6 +13,8 @@ import { AnomalyReportPanel } from '@/components/timetable/AnomalyReport';
 import { PrintedViolationsPanel } from '@/components/timetable/PrintedViolations';
 import { SolvePanel } from '@/components/timetable/SolvePanel';
 import { RepairPanel, RepairProposal } from '@/components/timetable/RepairPanel';
+import { AcceptedChangesPanel } from '@/components/timetable/AcceptedChangesPanel';
+import { SubstitutePanel } from '@/components/timetable/SubstitutePanel';
 import { GeneratedVsPrintedCard } from '@/components/timetable/GeneratedVsPrintedCard';
 import { LoginScreen } from '@/components/auth/LoginScreen';
 import { AuditLog } from '@/components/auth/AuditLog';
@@ -40,6 +42,7 @@ import {
   facultyText,
   labelsFor,
   moveConflict,
+  withSubstitutions,
 } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline } from '@/adapters/realInstance';
 import {
@@ -61,6 +64,7 @@ import { ContractValidationError } from '@/api/contractError';
 import {
   timetableQueryKey,
   useAnomaliesQuery,
+  useChangesQuery,
   useDisplayQuery,
   useEdgeListQuery,
   useInstanceSolutionQuery,
@@ -246,7 +250,7 @@ interface TimetableWorkspaceProps {
 
 function TimetableWorkspace({
   solution,
-  edgeList,
+  edgeList: servedEdgeList,
   display,
   publishedSolution,
   anomalies,
@@ -274,6 +278,8 @@ function TimetableWorkspace({
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedViolation, setSelectedViolation] = useState<number | null>(null);
+  // The session whose substitutes are listed, per instance
+  const [substituteFor, setSubstituteFor] = useState<{ instance: EdgeListInstance; sessionId: string } | null>(null);
 
   // The query cache holds the solution; optimistic moves and reverts write straight into it
   const queryClient = useQueryClient();
@@ -316,6 +322,16 @@ function TimetableWorkspace({
     if (!isSolvedSolution(result) || !isSolvedSolution(repairBase)) return null;
     return { base: repairBase, result, changes: repairChanges(repairBase, result) };
   }, [repairJob, repairBase]);
+  // The edge list with the accepted substitutions (D52) and a proposed one: the grid shows who teaches now
+  const changes = useChangesQuery(http, instance, solvable);
+  const edgeList = useMemo(
+    () =>
+      withSubstitutions(servedEdgeList, [
+        ...(changes.data ?? []).map((c) => c.change),
+        ...(proposal && repairJob?.change ? [repairJob.change] : []),
+      ]),
+    [servedEdgeList, changes.data, proposal, repairJob]
+  );
   const canRepair = caps.canSolve && solvable && http !== null;
   // one repair at a time: none while one runs or waits to be accepted or discarded
   const repairOpen =
@@ -369,11 +385,14 @@ function TimetableWorkspace({
   );
   // The printed timetable's violating sessions: the picked violation's, else every one
   const flaggedSessionIds = useMemo(() => {
-    if (proposal) return new Set(proposal.changes.map((c) => c.sessionId));
+    if (proposal) {
+      const substituted = repairJob?.change?.kind === 'substitute_faculty' ? [repairJob.change.session_id] : [];
+      return new Set([...proposal.changes.map((c) => c.sessionId), ...substituted]);
+    }
     if (!printed) return undefined;
     const picked = selectedViolation === null ? undefined : printed.violations[selectedViolation];
     return new Set((picked ? [picked] : printed.violations).flatMap((v) => v.session_ids));
-  }, [printed, selectedViolation, proposal]);
+  }, [printed, selectedViolation, proposal, repairJob]);
 
   // Enriched sessions if solved (or printed)
   const allSessions = useMemo(
@@ -652,6 +671,32 @@ function TimetableWorkspace({
             onDiscard={discardRepair}
           />
         )}
+        {canRepair && http && substituteFor?.instance === instance && (
+          <SubstitutePanel
+            key={substituteFor.sessionId}
+            client={http}
+            instance={instance}
+            sessionId={substituteFor.sessionId}
+            edgeList={edgeList}
+            labels={labels}
+            disabled={repairOpen}
+            onPick={(facultyId) => {
+              startRepair({ kind: 'substitute_faculty', session_id: substituteFor.sessionId, faculty_id: facultyId });
+              setSubstituteFor(null);
+            }}
+            onClose={() => setSubstituteFor(null)}
+          />
+        )}
+        {canRepair && http && (
+          <AcceptedChangesPanel
+            key={`changes-${instance}`}
+            client={http}
+            instance={instance}
+            edgeList={edgeList}
+            labels={labels}
+            canClear={currentRole === 'administrator'}
+          />
+        )}
 
         {/* Faculty Workload View (Visible only to Faculty Role) */}
         {currentRole === 'faculty' && quality && (
@@ -772,6 +817,14 @@ function TimetableWorkspace({
         <SessionDetailModal
           session={isModalOpen ? selectedSession : null}
           onClose={() => setIsModalOpen(false)}
+          onFindSubstitute={
+            canRepair && !repairOpen && selectedSession
+              ? () => {
+                  setSubstituteFor({ instance, sessionId: selectedSession.sessionId });
+                  setIsModalOpen(false);
+                }
+              : undefined
+          }
         />
 
         {/* Institutional Traceability Footer */}
