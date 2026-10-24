@@ -4,7 +4,7 @@ import App from '@/App';
 import { TimetableGrid } from '../TimetableGrid';
 import { AnomalyReportPanel } from '../AnomalyReport';
 import { EdgeList, Labels, labelsFor } from '@/adapters/timetable';
-import { AnomalyReport, PrintedBaseline, toPrintedBaseline } from '@/adapters/realInstance';
+import { AnomalyReport, NEEDS_HUMAN, PrintedBaseline, toPrintedBaseline } from '@/adapters/realInstance';
 import { MockChronosApiClient, PRINTED_INSTANCE, REAL_INSTANCE } from '@/api/chronosApi';
 
 // S12f: the real EVEN 2025-26 instance's display.json membership and initials,
@@ -52,7 +52,7 @@ describe('anomaly report viewer', () => {
     fireEvent.click(screen.getByLabelText('Needs human only'));
     const human = screen.getAllByTestId('anomaly-row');
     expect(human).toHaveLength(anomalies.counts.needs_human);
-    human.forEach((row) => expect(row).toHaveTextContent('Needs human'));
+    human.forEach((row) => expect(row).toHaveTextContent(NEEDS_HUMAN));
 
     fireEvent.click(screen.getByLabelText('Needs human only'));
     fireEvent.change(screen.getByLabelText('Anomaly category'), { target: { value: 'frozen_d44' } });

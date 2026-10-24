@@ -807,8 +807,10 @@ function TimetableWorkspace({
           </section>
         )}
 
-        {/* Ingestion anomaly report (whole-department roles) */}
-        {caps.viewScope === 'all' && anomalies && <AnomalyReportPanel report={anomalies} />}
+        {/* Ingestion anomaly report (whole-department roles); "no report" when the instance has none */}
+        {caps.viewScope === 'all' && (
+          <AnomalyReportPanel report={anomalies} display={display} edgeList={servedEdgeList} />
+        )}
 
         {/* The audit log (administrator only; the backend refuses anyone else) */}
         {currentRole === 'administrator' && client instanceof HttpChronosApiClient && <AuditLog client={client} />}

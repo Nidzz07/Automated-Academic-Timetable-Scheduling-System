@@ -10,7 +10,13 @@ import type { EdgeList } from '@/adapters/timetable';
 
 /** anomalies.json, written by `python -m ingestion.anomalies`. */
 export interface AnomalyReport {
-  counts: { total: number; needs_human: number };
+  counts: {
+    total: number;
+    needs_human: number;
+    /** Anomalies per category, as the report counts them */
+    by_category?: Record<string, number>;
+    by_resolution?: Record<string, number>;
+  };
   anomalies: Array<{
     category: string;
     source_file: string;

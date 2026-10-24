@@ -1,33 +1,137 @@
 import React, { useMemo, useState } from 'react';
 import { AnomalyReport, NEEDS_HUMAN } from '@/adapters/realInstance';
+import { Display, EdgeList, Labels, entityName, facultyText, labelsFor } from '@/adapters/timetable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+type Anomaly = AnomalyReport['anomalies'][number];
+
+/** One category's rows, with the count the report gives for it (undefined when it gives none). */
+interface Group {
+  category: string;
+  rows: Anomaly[];
+  reported: number | undefined;
+}
+
+/** The report's rows by category, in report order; a category counted but never listed is kept. */
+function groupsOf(report: AnomalyReport): Group[] {
+  const byCategory = report.counts.by_category;
+  const rows = new Map<string, Anomaly[]>();
+  report.anomalies.forEach((a) => rows.set(a.category, [...(rows.get(a.category) ?? []), a]));
+  Object.keys(byCategory ?? {}).forEach((c) => rows.has(c) || rows.set(c, []));
+  return [...rows].map(([category, list]) => ({ category, rows: list, reported: byCategory?.[category] }));
+}
+
 /**
- * The ingestion anomaly report (anomalies.json; ROADMAP Phase 2, Track C): every anomaly as
- * reported, never fixed here, with the decision that resolves it or "needs human".
+ * "Name · id" for each display.json id (faculty, cohort, room or sub-room) or edge-list session that
+ * the text names, in order of appearance. The text itself is left as the report gives it.
  */
-export const AnomalyReportPanel: React.FC<{ report: AnomalyReport }> = ({ report }) => {
+function namedIds(text: string, display: Display, edgeList: EdgeList | undefined, labels: Labels): string[] {
+  const name = (id: string): string | null => {
+    if (display.faculty[id]) return facultyText(labels, id);
+    if (display.cohorts[id]) return labels.cohort(id);
+    if (display.rooms[id]) return `Room ${display.rooms[id]}`;
+    if (edgeList?.sessions.some((s) => s.id === id)) return entityName(id, edgeList, labels);
+    return null;
+  };
+  const ids = [...new Set((text.match(/[A-Za-z0-9_.-]+/g) ?? []).map((t) => t.replace(/[.-]+$/, '')))];
+  return ids.flatMap((id) => {
+    const n = name(id);
+    return n ? [`${n} · ${id}`] : [];
+  });
+}
+
+/** Where a count the report states differs from the rows it lists: both shown, neither adjusted. */
+const Mismatch: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span data-testid="anomaly-count-mismatch" className="text-destructive">
+    {children}
+  </span>
+);
+
+/**
+ * The ingestion anomaly report (anomalies.json; ROADMAP Phase 2, Track C; S11c): every anomaly as
+ * reported, never fixed here, grouped by category with the report's own counts, and the decision
+ * that resolves it or "needs human", as the report spells it (CONTEXT §3.5). Ids the report names
+ * are shown with their display.json names beside them; the report's text is never rewritten.
+ */
+export const AnomalyReportPanel: React.FC<{
+  /** null when the instance has no report (a 404, or the contract examples) */
+  report: AnomalyReport | null;
+  /** D41 display sidecar, for names; without it ids stand alone */
+  display?: Display | null;
+  /** The edge list as served, for session names */
+  edgeList?: EdgeList;
+}> = ({ report, display, edgeList }) => {
   const [category, setCategory] = useState('all');
   const [needsHumanOnly, setNeedsHumanOnly] = useState(false);
 
-  const categories = useMemo(
-    () => [...new Set(report.anomalies.map((a) => a.category))].sort(),
-    [report]
+  const groups = useMemo(() => (report ? groupsOf(report) : []), [report]);
+  const categories = useMemo(() => groups.map((g) => g.category).sort(), [groups]);
+  const labels = useMemo(() => (display ? labelsFor(display) : null), [display]);
+  const names = (a: Anomaly) =>
+    display && labels ? namedIds(`${a.location} ${a.message}`, display, edgeList, labels) : [];
+
+  const header = (description: React.ReactNode) => (
+    <CardHeader className="pb-3">
+      <CardTitle className="text-base">Ingestion anomaly report</CardTitle>
+      <CardDescription data-testid="anomaly-report-status">{description}</CardDescription>
+    </CardHeader>
   );
-  const rows = report.anomalies.filter(
-    (a) =>
-      (category === 'all' || a.category === category) &&
-      (!needsHumanOnly || a.resolution === NEEDS_HUMAN)
+
+  if (!report) {
+    return <Card data-testid="anomaly-report">{header('No anomaly report for this instance.')}</Card>;
+  }
+
+  const listedHuman = report.anomalies.filter((a) => a.resolution === NEEDS_HUMAN).length;
+  const totalsDiffer = (
+    <>
+      {report.counts.total !== report.anomalies.length && (
+        <Mismatch>
+          {' '}
+          The report counts {report.counts.total} in total but lists {report.anomalies.length}; they
+          differ and neither is adjusted.
+        </Mismatch>
+      )}
+      {report.counts.needs_human !== listedHuman && (
+        <Mismatch>
+          {' '}
+          The report counts {report.counts.needs_human} as needing a human but lists {listedHuman}; they
+          differ and neither is adjusted.
+        </Mismatch>
+      )}
+    </>
   );
+
+  if (report.anomalies.length === 0) {
+    return (
+      <Card data-testid="anomaly-report">
+        {header(
+          <>
+            The report lists no anomalies.
+            {totalsDiffer}
+          </>
+        )}
+      </Card>
+    );
+  }
+
+  const shownIn = (g: Group) =>
+    g.rows.filter((a) => !needsHumanOnly || a.resolution === NEEDS_HUMAN);
+  const visible = groups.filter(
+    (g) =>
+      (category === 'all' || g.category === category) &&
+      (shownIn(g).length > 0 || (!needsHumanOnly && g.rows.length === 0))
+  );
+  const shownCount = visible.reduce((n, g) => n + shownIn(g).length, 0);
 
   return (
     <Card data-testid="anomaly-report">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Ingestion anomaly report</CardTitle>
         <CardDescription>
-          {report.counts.total} anomalies, {report.counts.needs_human} need a human decision. Reported
-          as found in the source files; none is fixed silently.
+          {report.counts.total} anomalies in {groups.length} categories, {report.counts.needs_human} need
+          a human decision. Reported as found in the source files; none is fixed silently.
+          {totalsDiffer}
         </CardDescription>
         <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
           <select
@@ -52,7 +156,7 @@ export const AnomalyReportPanel: React.FC<{ report: AnomalyReport }> = ({ report
             Needs human only
           </label>
           <span data-testid="anomaly-count" className="text-muted-foreground">
-            {rows.length} of {report.counts.total} shown
+            {shownCount} of {report.counts.total} shown
           </span>
         </div>
       </CardHeader>
@@ -67,25 +171,61 @@ export const AnomalyReportPanel: React.FC<{ report: AnomalyReport }> = ({ report
               <th className="p-2">Resolved by</th>
             </tr>
           </thead>
-          <tbody>
-            {rows.map((a, i) => (
-              <tr key={i} data-testid="anomaly-row" className="border-b border-border/40 align-top">
-                <td className="p-2 font-mono">{a.category}</td>
-                <td className="p-2">{a.source_file}</td>
-                <td className="p-2">{a.location}</td>
-                <td className="p-2">{a.message}</td>
-                <td className="p-2">
-                  {a.resolution === NEEDS_HUMAN ? (
-                    <Badge variant="warning">Needs human</Badge>
-                  ) : (
-                    <Badge variant="outline" className="font-mono">
-                      {a.resolution}
+          {visible.map((g) => {
+            const rows = shownIn(g);
+            return (
+              <tbody key={g.category} data-testid="anomaly-group" data-category={g.category}>
+                <tr className="border-b border-border bg-muted/40">
+                  <th colSpan={5} className="p-2 font-normal">
+                    <span className="font-mono font-semibold">{g.category}</span>{' '}
+                    <Badge variant="secondary" data-testid="anomaly-group-count">
+                      {g.reported ?? g.rows.length}
                     </Badge>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
+                    {rows.length !== g.rows.length && (
+                      <span className="text-muted-foreground"> · {rows.length} shown</span>
+                    )}
+                    {g.reported === undefined ? (
+                      <Mismatch>
+                        {' '}
+                        The report gives no count for this category; it lists {g.rows.length}.
+                      </Mismatch>
+                    ) : (
+                      g.reported !== g.rows.length && (
+                        <Mismatch>
+                          {' '}
+                          The report counts {g.reported} but lists {g.rows.length}; they differ and
+                          neither is adjusted.
+                        </Mismatch>
+                      )
+                    )}
+                  </th>
+                </tr>
+                {rows.map((a, i) => (
+                  <tr key={i} data-testid="anomaly-row" className="border-b border-border/40 align-top">
+                    <td className="p-2 font-mono">{a.category}</td>
+                    <td className="p-2">{a.source_file}</td>
+                    <td className="p-2">{a.location}</td>
+                    <td className="p-2">
+                      {a.message}
+                      {names(a).map((n) => (
+                        <div key={n} data-testid="anomaly-name" className="text-muted-foreground">
+                          {n}
+                        </div>
+                      ))}
+                    </td>
+                    <td className="p-2">
+                      <Badge
+                        variant={a.resolution === NEEDS_HUMAN ? 'warning' : 'outline'}
+                        className="font-mono"
+                      >
+                        {a.resolution}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            );
+          })}
         </table>
       </CardContent>
     </Card>
