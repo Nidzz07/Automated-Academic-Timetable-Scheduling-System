@@ -4,7 +4,7 @@
 > Read `docs/CONTEXT.md` for what the system is, `ROADMAP.md` (repo root) for what to build
 > next, and this file for what is already done.
 
-**Last updated:** 2026-10-19 · **by:** Nidhi — weekly sync with Claude Code (branch `chore/progress-repair`): Wave 3 merged, S12 started, this file repaired · **Current phase:** 0–2 in progress; no phase exit criterion met yet
+**Last updated:** 2026-10-24 · **by:** Nidhi — status sync after S14h, with Claude Code (branch `chore/sync-after-s14h`) · **Current phase:** 0, 1 and 3 complete; 2, 4 and 5 finishing (S11c, S14i–S14k, S15d); 6 not started
 
 ---
 
@@ -25,13 +25,13 @@ A task is **done** when it is merged to `main`, CI is green, and it has a test. 
 
 | Phase                                | Weeks  | Status         | Exit criterion met? |
 | ------------------------------------ | ------ | -------------- | ------------------- |
-| 0 — Foundation and contracts        | 1      | 🟡 In progress | ⬜                  |
-| 1 — Schema, graph builder, UI shell | 2–3   | 🟡 In progress | ⬜                  |
-| 2 — Real data, core solver          | 4–5   | 🟡 In progress | ⬜                  |
-| 3 — API, scoring, role views        | 6–7   | ⬜ Not started | ⬜                  |
-| 4 — Novelty features                | 8–9   | ⬜ Not started | ⬜                  |
-| 5 — Validation and benchmarking     | 10–11 | ⬜ Not started | ⬜                  |
-| 6 — Deployment and delivery         | 12     | ⬜ Not started | ⬜                  |
+| 0 — Foundation and contracts        | 1      | ✅ Complete    | ✅                  |
+| 1 — Schema, graph builder, UI shell | 2–3   | ✅ Complete (optional chromatic lower bound: S12i) | ✅ (ROADMAP §7, PR #39, #43, #45) |
+| 2 — Real data, core solver          | 4–5   | 🟡 In progress (anomaly viewer: S11c) | 🟡 solved and validated (PR #45, #49); lab-utilisation % not reproduced (S15d) |
+| 3 — API, scoring, role views        | 6–7   | ✅ Complete    | 🟡 tests pass (PR #48); local browser check pending |
+| 4 — Novelty features                | 8–9   | 🟡 In progress (S14i, S14j, S14k) | 🟡 tests pass (PR #57–#66); qualifications not human-verified (S14i) |
+| 5 — Validation and benchmarking     | 10–11 | 🟡 In progress (S15d) | ⬜ lab utilisation and edge cases open (S15d) |
+| 6 — Deployment and delivery         | 12     | ⬜ Not started (S16a–S16f) | ⬜                  |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked · ✂️ cut (note why)
 
@@ -42,7 +42,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 | Track                      | Owner | Branch                                                        | Current task                                                                                                                                                                                                                                                                                                                                     | State |
 | -------------------------- | ----- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
 | A — Solver                 | Dhruv | `track/solver-extended-moves`                                 | Merged: S4 pre-solve, lazy lab rooms, timeout (PR #23); S8 payload grid, per-year lunch, `solution.v2` (PR #27); S10 scoring and `quality_rules.yaml` (PR #29); S12a first part, pre-solve certificates emitted as `method = "presolve"` (D43) and the first solve of the real EVEN SE+TE instance (PR #34, timeout). Merged: S12d (search order; the real instance solves in 0.26 s). Merged: S12g (PR #49): `solver/improve.py` local search; the real instance scores −15.0. Merged: S14a (`solver/repair.py`), S14b (`solver/mus.py`, PR #59). Merged: S14e (PR #62): protected pins never suggested in `explain()`/`repair()`; `substitute_faculty` change and `substitute_candidates()` (D53); `repair(..., mus_nodes=)`; full Kurhade explanation moved to `slow`. Current: S12h (`track/solver-extended-moves`): `improve(..., extended_moves=False)`, Kempe-chain and gap-aimed moves ported from the S12g branch, off by default (results unchanged); over seeds 0–9 no measurable score gain (+1.45 to +1.85, intervals include 0), lower S-GAP and spread; written, not merged. Open: no `method` for "proven by search, not minimal" (contract); pins named by index; `substitute_candidates` refuses qualified ids missing from the edge list's `faculty_availability` (Track B, S14g); S-GAP floor 7 vs printed 2 (D24 frozen items; D46/D47 are team decisions); fresh solves are not explained yet. Next: S14g with Track B | 🟡    |
-| B — Data & Backend         | Nidhi | `track/backend-substitution`                                  | Merged: reference seed (PR #3) + division-scoped faculty initials (41 faculty, migration 0004, PR #10); S1 Welsh-Powell fix and synthetic baseline (PR #18); S2 docs (PR #24); S3 v2 schemas (PR #20); S6 `class_tt.py` (PR #21); S3b row 8 in `ingestion.v2` (PR #25); S7 `lab_tt`, `faculty`, `anomalies`, `emit_v2` (PR #28); contract row 9 `presolve` (PR #31); S9 migration 0005, `ingestion/seed_even.py`, `db/export_edge_list.py`, committed `data/instances/even-2025-26/edge_list.json` + `display.json` (D41) (PR #33). S12b real baseline, `ingestion/real_baseline.py`: the printed week scores 21.5 with 36 time-only violations (PR #38). S12e UI feed from the real instance (PR #41). S13a first FastAPI endpoints (PR #42). S13b JWT login, four roles, audit log, migration 0006 `app_user` (PR #47). S13d solve job also runs local search; jobs and results in `solve_job`, migration 0007 (PR #52). S14c repair jobs, accepting a repair (D49), linked accounts (D50), migration 0008 (merged 2026-10-22). S14f accepted changes accumulate (D52), `qualifications.json` (D53), migration 0009 (PR #61). Current: S14g (break pins protected in every repair (D41), `GET /instances/{id}/sessions/{session_id}/substitutes`, `substitute_faculty` repairs checked against `qualifications.json` and accumulated (D52, D53)): written, not merged. Open: 61 anomalies need a human; migrations 0005–0009 applied locally only (Supabase is a team decision); the sheets never say lecture or practical for the six instance subjects; clearing an accepted substitution can leave the official timetable invalid for the restored teacher (then substitutes and repairs answer 409 / error until a solve). Next: instance reads from the database | 🟡    |
+| B — Data & Backend         | Nidhi | `track/backend-fixes`                                         | Merged: reference seed (PR #3) + division-scoped faculty initials (41 faculty, migration 0004, PR #10); S1 Welsh-Powell fix and synthetic baseline (PR #18); S2 docs (PR #24); S3 v2 schemas (PR #20); S6 `class_tt.py` (PR #21); S3b row 8 in `ingestion.v2` (PR #25); S7 `lab_tt`, `faculty`, `anomalies`, `emit_v2` (PR #28); contract row 9 `presolve` (PR #31); S9 migration 0005, `ingestion/seed_even.py`, `db/export_edge_list.py`, committed `data/instances/even-2025-26/edge_list.json` + `display.json` (D41) (PR #33). S12b real baseline, `ingestion/real_baseline.py`: the printed week scores 21.5 with 36 time-only violations (PR #38). S12e UI feed from the real instance (PR #41). S13a first FastAPI endpoints (PR #42). S13b JWT login, four roles, audit log, migration 0006 `app_user` (PR #47). S13d solve job also runs local search; jobs and results in `solve_job`, migration 0007 (PR #52). S14c repair jobs, accepting a repair (D49), linked accounts (D50), migration 0008 (PR #57). S14f accepted changes accumulate (D52), `qualifications.json` (D53), migration 0009 (PR #61). S14g break pins protected in every repair (D41), `GET /instances/{id}/sessions/{session_id}/substitutes`, `substitute_faculty` repairs checked against `qualifications.json` and accumulated (D52, D53) (PR #64). Current: S14i next (`track/backend-fixes`, after S14k; D56). Open: 61 anomalies need a human; migrations 0005–0009 applied locally only (Supabase only by hand, D55); the sheets never say lecture or practical for the six instance subjects; clearing an accepted substitution can leave the official timetable invalid for the restored teacher (then substitutes and repairs answer 409 / error until a solve), fixed by S14i under D56. Next: instance reads from the database | 🟡    |
 | C — Frontend & Validation  | Rohan | `track/frontend-changes`                                      | Merged: Phase 1 grid and Phase 2 drag-and-drop / role views / mock API (PR #6, #14); S5 schema-validated v1 contracts, generated types, TanStack Query (PR #22); S11 `solution.v2`, grid read from the edge list (D6 per-year lunch), room timetable, free rooms, quality flags with not-evaluated rules (PR #30); S11b invented UI content removed (PR #30, #35); S15a evaluation harness, synthetic data only (PR #36). S12c the real instance in the UI (PR #39): the mock serves `data/instances/even-2025-26/`, names and pin kinds come from `display.json` (D41), "Not solved yet" until `solution.json` exists; `presolve` label (D43). S12f merged. S13c merged (PR #48): UI on the real S13a/S13b API. S13e (login, audit view) and S15b (evaluation numbers, PR #56) merged. S14d (repair and diagnosis in the UI) merged. S15c (size sweep, repair vs regeneration, charts) merged (PR #65). Current: S14h (accepted changes list and clear, repair base from `GET /jobs/{id}/base-solution`, diagnosis pins by `pin.<i>`, Find substitute): written, not merged | 🟡    |
 
 ---
@@ -50,7 +50,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 ## Phase 0 checklist — Foundation and contract freeze
 
 - [X] Repo reconciled against `CONTEXT.md` §7 layout
-- [ ] Branch protection on `main`; three track branches created
+- [~] Branch protection on `main` _(1 approving review required, no required status check; `gh api`, 2026-10-24)_; per-step branches (ROADMAP §10) replaced the three track branches
 - [X] CI running `pytest`, `ruff`, `tsc --noEmit`, `vitest` on push _(`.github/workflows/ci.yml`; frontend job added in PR #16 — `tsc` runs via `npm run build`)_
 - [X] `contracts/ingestion_v1.schema.json` written
 - [X] `contracts/edge_list_v1.schema.json` written
@@ -58,7 +58,7 @@ Legend: ⬜ not started · 🟡 in progress · ✅ complete · ⚠️ blocked ·
 - [X] Example payload committed for each contract
 - [X] Schema-validation test passing on both sides of each contract
 - [X] `SlotId` convention agreed; `is_adjacent()` handles the short break
-- [ ] `solver/rules/quality_rules.yaml` seeded with four rules
+- [X] `solver/rules/quality_rules.yaml` seeded with four rules _(PR #29)_
 - [X] `docker-compose.yml` for local Postgres
 
 **Exit:** contract tests green in CI, and all three members can state the three contracts from
@@ -72,13 +72,13 @@ memory.
 
 - [X] SQLAlchemy models for the full entity model
 - [X] `department_id` scoping present; `Room` is institute-level
-- [ ] Alembic migration 0001 applied to Supabase
+- [ ] Alembic migration 0001 applied to Supabase _(local only; Nidhi by hand, D55)_
 - [X] `Cohort` polymorphic resolution implemented
-- [ ] 32 faculty seeded with T/P workloads
+- [X] 32 faculty seeded with T/P workloads _(the list has 41, D11; PR #10, #28, #33)_
 - [X] 20 rooms seeded, sub-rooms expanded from the separation column
-- [ ] Faculty initials → name mapping derived and **human-verified**
-- [ ] *(S)* Synthetic instance generator
-- [ ] *(S)* Constraint-derivation SQL
+- [X] Faculty initials → name mapping derived and **human-verified** _(SE/TE, D38, D45; PR #10)_
+- [X] *(S)* Synthetic instance generator _(PR #18, `solver/benchmarks/synthetic.py`, D19)_
+- [X] *(S)* Constraint-derivation SQL _(PR #33, `db/export_edge_list.py`)_
 
 ### Track A — Solver
 
@@ -95,7 +95,7 @@ memory.
 - [X] Vite + React + TS + Tailwind + shadcn/ui scaffold _(PR #6)_
 - [X] Grid renders an 8×5 week from a static `solution_v1` fixture _(PR #6; `TimetableGrid.test.tsx`)_
 - [X] Renders: double-period lab, four parallel batches, combined lecture, pinned block _(PR #6)_
-- [ ] TypeScript types mirror the contracts _(S5, not merged: generated from `contracts/*_v1.schema.json` by `npm run gen:types`, rerun on every `npm run build`)_
+- [X] TypeScript types mirror the contracts _(PR #22: generated from `contracts/*_v1.schema.json` by `npm run gen:types`, rerun on every `npm run build`)_
 - [ ] *(S)* Theming and tablet-width responsiveness
 
 **Exit:** greedy colouring produces a conflict-free timetable on a synthetic 40-session instance
@@ -107,16 +107,16 @@ and it renders in the browser.
 
 ### Track B — Ingestion
 
-- [ ] `ingestion/rooms.py` — xlsx + separation expansion
-- [ ] `ingestion/faculty.py` — names, T/P workloads, assigned sessions
-- [ ] `ingestion/class_tt.py` — both class timetables, per-source field order
-- [ ] `ingestion/lab_tt.py` — room-wise labs, room overrides, utilisation %
-- [ ] Pinned blocks classified, not failed on
-- [ ] `ingestion/anomalies.py` — report committed as evidence
-- [ ] Seeder writes canonical JSON to the database transactionally
-- [ ] **Real CE EVEN data in the database**
+- [X] `ingestion/rooms.py` — xlsx + separation expansion _(in `ingestion/seed_reference.py`; there is no `rooms.py`)_
+- [X] `ingestion/faculty.py` — names, T/P workloads, assigned sessions _(PR #28)_
+- [X] `ingestion/class_tt.py` — both class timetables, per-source field order _(PR #21)_
+- [X] `ingestion/lab_tt.py` — room-wise labs, room overrides, utilisation % _(PR #28; reproducing a published % is S15d)_
+- [X] Pinned blocks classified, not failed on _(PR #28, #33; D24, D35, D39)_
+- [X] `ingestion/anomalies.py` — report committed as evidence _(PR #28; `data/instances/even-2025-26/anomalies.json`)_
+- [X] Seeder writes canonical JSON to the database transactionally _(PR #33, `ingestion/seed_even.py`)_
+- [X] **Real CE EVEN data in the database** _(PR #33; local Postgres only)_
 - [ ] *(S)* ODD semester ingested
-- [ ] *(S)* Re-ingestion is idempotent
+- [X] *(S)* Re-ingestion is idempotent _(PR #33, `test_seeding_twice_changes_nothing`)_
 
 ### Track A — Solver
 
@@ -151,7 +151,7 @@ and it renders in the browser.
 - [X] Four role-differentiated views _(PR #14; `RoleViews.test.tsx`)_
 - [X] Mock API layer _(PR #14; `MockChronosApiClient`, `chronosApi.test.ts`)_
 - [X] *(S)* Vitest coverage of grid and drag _(PR #6, #14)_
-- [ ] *(S)* Anomaly report viewer
+- [~] *(S)* Anomaly report viewer _(read-only panel since PR #43; S11c)_
 
 **Exit:** real CE EVEN instance solved conflict-free; at least one published lab-utilisation
 percentage reproduced.
@@ -162,27 +162,27 @@ percentage reproduced.
 
 ### Track B
 
-- [ ] `POST /timetables/generate`, `GET /timetables/{id}`, validate, `PATCH /sessions/{id}`
-- [ ] JWT auth, four personas, server-side authorisation on every route
-- [ ] Pydantic models validated against contracts
-- [ ] `AuditEntry` on every mutating action
+- [~] `POST /timetables/generate`, `GET /timetables/{id}`, validate, `PATCH /sessions/{id}` _(built as `POST /instances/{id}/solve`, `GET /jobs/{id}`, `GET /instances/{id}/solution`, PR #42, #52; no validate or `PATCH /sessions/{id}` route)_
+- [X] JWT auth, four personas, server-side authorisation on every route _(PR #47)_
+- [X] Pydantic models validated against contracts _(PR #42, `check_contract`)_
+- [X] `AuditEntry` on every mutating action _(PR #47, #57, #61: login, solve, repair, accept, clear changes)_
 - [ ] *(S)* OpenAPI docs tidied
 
 ### Track A
 
-- [ ] `scoring.py` — YAML rule engine with registry
-- [ ] Four rules implemented
-- [ ] `FAC_LOAD_IMBALANCE` uses T/P-weighted workload
-- [ ] `score()` returns `(total, breakdown)`
-- [ ] YAML validated against registry at load
+- [X] `scoring.py` — YAML rule engine with registry _(PR #29)_
+- [X] Four rules implemented _(PR #29)_
+- [X] `FAC_LOAD_IMBALANCE` uses T/P-weighted workload _(PR #29)_
+- [X] `score()` returns `(total, breakdown)` _(PR #29: the `solution.v2` quality block, score and breakdown)_
+- [X] YAML validated against registry at load _(PR #29)_
 - [ ] *(S)* Weights calibrated against the real published timetable
 
 ### Track C
 
-- [ ] Real API wired via TanStack Query _(S5, not merged: TanStack Query wraps `ChronosApiClient` with loading / error / empty states; still `MockChronosApiClient` until S13)_
-- [ ] Quality score panel with rule-by-rule breakdown
-- [ ] Generate flow with progress and error states
-- [ ] *(S)* Faculty workload view with T/P split
+- [X] Real API wired via TanStack Query _(PR #22, #48: TanStack Query wraps `ChronosApiClient`; http mode is the default)_
+- [X] Quality score panel with rule-by-rule breakdown _(PR #30)_
+- [X] Generate flow with progress and error states _(PR #48, `SolveFlow.test.tsx`)_
+- [X] *(S)* Faculty workload view with T/P split _(PR #30, #35)_
 - [ ] *(S)* Grid filters
 
 **Exit:** click Generate in the browser, see a scored timetable from real data.
@@ -193,25 +193,25 @@ percentage reproduced.
 
 ### Absence rescheduling
 
-- [ ] `Qualification` populated and human-verified
-- [ ] `POST /absences`, `POST /substitutions`
-- [ ] Candidate query: qualified + free, ordered by T/P workload
+- [ ] `Qualification` populated and human-verified _(populated as `qualifications.json`, PR #61; human verification: S14i)_
+- [X] `POST /absences`, `POST /substitutions` _(as `POST /instances/{id}/repair` with `faculty_unavailable` / `substitute_faculty` changes, PR #57, #61, #64)_
+- [~] Candidate query: qualified + free, ordered by T/P workload _(`GET .../substitutes`, PR #62, #64; ordered by score change, not workload)_
 - [ ] Workload recalculated for both faculty
 - [ ] Coordinator dual view (free ‖ engaged) for a selected slot
-- [ ] Substitution confirm flow; both timetables update
-- [ ] Every swap audited
+- [X] Substitution confirm flow; both timetables update _(PR #57, #66: Accept)_
+- [X] Every swap audited _(PR #57: accept is audited)_
 - [ ] *(S)* "No qualified faculty free" path offers repair
 
 ### Diagnosis and repair
 
-- [ ] `mus.py` — deletion-based extraction; timeout counts as infeasible _(today's infeasible output is a placeholder — see Phase 2 Track A) _(superseded by D33: a timeout is a job status, never infeasible)_
-- [ ] Core translated to named faculty / rooms / cohorts
-- [ ] Smallest relaxation suggested
-- [ ] `repair.py` — freeze-and-expand with BFS ring expansion
-- [ ] Displaced-session set returned with every repair
-- [ ] `POST /timetables/{id}/repair`, `GET /diagnoses/{id}`
-- [ ] Diagnosis panel in the UI
-- [ ] *(S)* Repair preview
+- [X] `mus.py` — deletion-based extraction _(PR #59)_; timeout counts as infeasible _(today's infeasible output is a placeholder — see Phase 2 Track A) _(superseded by D33: a timeout is a job status, never infeasible)_
+- [X] Core translated to named faculty / rooms / cohorts _(PR #58, #66; D51)_
+- [X] Smallest relaxation suggested _(PR #59: verified relaxations)_
+- [X] `repair.py` — freeze-and-expand with BFS ring expansion _(PR #50)_
+- [X] Displaced-session set returned with every repair _(PR #50; D48)_
+- [X] `POST /timetables/{id}/repair`, `GET /diagnoses/{id}` _(as `POST /instances/{id}/repair` and `GET /jobs/{id}`, PR #57)_
+- [X] Diagnosis panel in the UI _(PR #58)_
+- [X] *(S)* Repair preview _(PR #58)_
 
 **Exit:** coordinator resolves an absence end to end; infeasible instance returns a readable
 diagnosis.
@@ -220,14 +220,14 @@ diagnosis.
 
 ## Phase 5 checklist — Validation and benchmarking
 
-- [ ] Hypothesis property test: no timetable ever contains a conflict _(a seeded-random property test now exists: `solver/tests/test_property_solved_is_valid.py`, 400 instances, seed 20261003 — backtracking and, since PR #18, Welsh-Powell too)_
-- [ ] Edge cases: empty, single session, no replacement, infeasible, over-subscribed division
-- [ ] Benchmark: runtime vs instance size (plot) _(S15a harness, not merged: `bench/run_bench.py` writes the table, `docs/bench-2026-10-17.md`; no plot yet)_
-- [ ] Benchmark: **displaced sessions, repair vs regeneration** (mean + CI)
-- [ ] Benchmark: greedy-only vs greedy + backtracking quality
-- [ ] Lab-utilisation percentages reproduced
-- [ ] Generated timetable compared against the department's real one
-- [ ] API integration tests; frontend tests
+- [X] Hypothesis property test: no timetable ever contains a conflict _(PR #15, #18; a seeded-random property test now exists: `solver/tests/test_property_solved_is_valid.py`, 400 instances, seed 20261003 — backtracking and, since PR #18, Welsh-Powell too)_
+- [ ] Edge cases: empty, single session, no replacement, infeasible, over-subscribed division _(S15d)_
+- [X] Benchmark: runtime vs instance size (plot) _(PR #36, #65: `bench/size_sweep.py`, `docs/figures/runtime-vs-sessions.svg`)_
+- [X] Benchmark: **displaced sessions, repair vs regeneration** (mean + CI) _(PR #65)_
+- [X] Benchmark: greedy-only vs greedy + backtracking quality _(PR #56)_
+- [ ] Lab-utilisation percentages reproduced _(S15d)_
+- [X] Generated timetable compared against the department's real one _(PR #38, #56)_
+- [X] API integration tests; frontend tests _(`backend/tests`, PR #42, #47, #57, #64; Vitest)_
 - [ ] *(S)* Constraint-coverage table vs FET
 - [ ] *(C)* Weight sensitivity analysis
 
@@ -237,13 +237,13 @@ diagnosis.
 
 ## Phase 6 checklist — Deployment and delivery
 
-- [ ] Production deploy (API, frontend, database)
-- [ ] Seeded demo data with safe reset
-- [ ] Report written
-- [ ] Demo arc rehearsed
-- [ ] README a stranger can follow
-- [ ] *(S)* Screencast fallback
-- [ ] *(S)* `docs/` SRS and UML match what was built
+- [ ] Production deploy (API, frontend, database) _(S16b, S16c; D55)_
+- [ ] Seeded demo data with safe reset _(S16b script, D55)_
+- [ ] Report written _(S16a, S16f)_
+- [ ] Demo arc rehearsed _(S16d)_
+- [ ] README a stranger can follow _(S16f)_
+- [ ] *(S)* Screencast fallback _(S16d)_
+- [ ] *(S)* `docs/` SRS and UML match what was built _(S16e)_
 
 ---
 
@@ -251,7 +251,7 @@ diagnosis.
 
 _Newest first. Format: `YYYY-MM-DD · initials · what landed · PR #`_
 
-- `2026-10-24` · Nidhi · **Sync after S14h.** ROADMAP §13 dated line for PRs #61–#66: S14f (#61), S14e (#62), S14g (#64), S12h (#63), S15c (#65), S14h (#66) merged to main. · _branch `chore/sync-after-s14h`_
+- `2026-10-24` · Nidhi · **Sync after S14h.** ROADMAP §13 dated line for PRs #61–#66: S14f (#61), S14e (#62), S14g (#64), S12h (#63), S15c (#65), S14h (#66) merged to main. Status sync, checked against the code and `git log --first-parent main`: ROADMAP §7 ticks with PR numbers for Phases 0–5 (faculty_initials verified for SE/TE per D38/D45; both S12 exit lines; left open, by step: official timetable after clearing changes and qualifications human-verified (S14i), chromatic lower bound (S12i, optional), anomaly report viewer (S11c; a read-only panel exists since PR #43, marked [~]), lab utilisation and edge cases (S15d), Phase 6 (S16a–S16f)); GitHub branch protection read with `gh api` (1 approving review, no required status check). §8: S12–S15 Done, PR numbers for S15b, S14c, S14d, S14b, S14f, S14e, S12h, S14g, S15c, S14h; new rows S14k, S14i, S14j, S11c, S12i, S15d, S16a–S16f. §3: D55 (deployment: Render + Supabase, migrations by hand) and D56 (official timetable always valid for the accepted changes in force). §9 replanned; §11 Open line (Supabase decided by D55; bench/ reuses `solver.benchmarks`); §13 "Next:". This file: Last updated, Phase status, Track B row, phase checklists. CLAUDE.md: D1–D56, contracts on main, rule 4, verified inventory. S12h second-machine check: 2 passed, 3 deselected in 171.20s (0:02:51). · _branch `chore/sync-after-s14h`_
 - `2026-10-24` · Rohan (with Claude Code) · **S14h: accepted changes, exact bases, pin names and substitutes in the UI.** http mode, administrator and coordinator, backend instances. (1) New `AcceptedChangesPanel`: `GET /instances/{id}/changes` (D52) as a table: when accepted, the change by name ("Swapnali Kurhade (SK) unavailable: Tuesday P6, Tuesday P7", "Room 603 unavailable: Monday P1", "CE207 · SE-Comp A: taught by Prasenjit Bhavathankar (PBB)"), requested by, accepted by ("not recorded" for pre-S14f rows); the administrator gets "Clear accepted changes…" → a confirm step → `DELETE /instances/{id}/changes`; the list is read again after every Accept. Accepted substitutions (and a proposed one) are written into the edge list the UI shows (`withSubstitutions`), so the grid, modal and faculty view name the teacher who teaches now; the backend serves the raw edge list. (2) `useRepair` reads the base from `GET /jobs/{id}/base-solution` (validated as solution.v2) for every repair; the S14d shortcut (official solution for `committed`, `GET /jobs/{base}` otherwise) and `COMMITTED_BASE` are gone. (3) Diagnosis (D51): a `pin.<i>` constraint or relaxation is named "display.json pins[i].unique_label (pin.<i>)" (`pinName`); `pinsHolding` (slot + entity matching) is deleted. An index past the edge list's pins reads "Room made unavailable by an accepted change" (accepted `room_unavailable` changes are appended to `pinned_occupancy` by `solver.repair.apply_change`). (4) "Find substitute" in a session's details (administrator, coordinator; not while a repair is open) opens `SubstitutePanel`: `GET .../sessions/{sid}/substitutes`, candidates as "Name (INITIALS)" with "score +0.0", left-out faculty with the backend's reasons and, for a teacher clash, the session they teach then; a pick posts a `substitute_faculty` repair and the usual proposal follows (the change shown as "Change: …", the session outlined), Accept / Discard as before. A 409 reads "There is no solved official timetable to substitute in." Tests (fetch mocked): `RepairFlow.test.tsx` mock gains base-solution, changes (GET/DELETE) and substitutes; base test now checks `base-solution` is used and neither the base job nor the official solution is; infeasible test uses `pin.0`; new: pin relaxation by id, accepted changes by name with clear/cancel and the substitute in the grid, coordinator/faculty/student visibility, Find substitute end to end (names, scores, left out, POST, proposal, Accept, list refetch), not offered to faculty/student; `repair.test.ts` `pinName`; `httpClient.test.ts` base-solution validation, DELETE, substitutes path. `npm run test` 175 passed, 5 runs in a row; `npm run build` ok; `ruff check .` clean; `pytest -q -rs` 1088 passed, 0 skipped (6 slow deselected). · _branch `track/frontend-changes`, PR #66
 - `2026-10-24` · Rohan (with Claude Code) · **S15c: size sweep, repair vs regeneration, charts.** New `bench/size_sweep.py` (`python -m bench.size_sweep`): the synthetic `large` preset (D19) with divisions 2–10 and 12 and faculty scaled with them (41 per 10), seed 1, through `bench.evaluate.algorithm_rows` (median of 3, machine-labelled) → `bench/results/2026-10-24-eval-size-sweep.csv`; 50–290 sessions, 0 hard violations in all 30 rows, backtracking 157.9 ms → 2,921.2 ms, + improve (200,000 moves) 13.3–17.0 s, + improve score 96.0 → 59.0; the 10-division row reproduces S15b's `large` seed 1. New `bench/repair_vs_regen.py` (`python -m bench.repair_vs_regen`): 30 seeded changes to the committed `solution.json` (alternating: a teaching faculty member unavailable at 1–3 of their taught periods; a top-level room unavailable for a half-day it is used, morning P0–P4 / afternoon P5–P9), each by `repair()` and by full backtracking + `improve()` (200,000, seed 0) → `2026-10-24-eval-repair-vs-regen{,-summary}.csv`. Repair runs with `time_limit_s=300` (its all-free ring is otherwise unbounded) and `mus_nodes=0` (the MUS explanation ran > 20 min on one change). Repair solved 23, regeneration 21; 5 unsolved both ways (1 pre-solve infeasible, 4 timeouts), all kept as rows. Over the 19 solved both ways: moved 4.53 [0.98, 8.07] vs 85.68 [80.45, 90.92], score −23.11 [−28.37, −17.84] vs −19.79 [−24.84, −14.74] (95% t intervals; t critical value computed by Simpson + bisection, stdlib). New `bench/charts.py` (hand-written SVG, matplotlib is not installed): `docs/figures/{runtime,score}-vs-sessions.svg`, `repair-vs-regen-moved.svg`. `docs/evaluation-even-2025-26.md` sections 6 and 7, findings 8 and 9, limits updated. Speed: `bench/tests` 20.3 s → 1.7 s by default; `test_main_writes_dated_csvs` runs one real repair scenario, all six and both full S15c runs are `slow` (new `bench/tests/conftest.py`). Tests: new `bench/tests/test_s15c.py` (8: SVG output linear/log, sweep sizes and `main`, t values for 1/4/29 df and `mean_ci`, the 30 changes each hit `solution.json`, `compare` + `summary` on `small`, a repair timeout kept as a row; 1 slow). `ruff check .` clean; `pytest -q -rs` 1088 passed, 0 skipped (6 slow deselected). · _branch `track/bench-evaluation-2`, PR #65
 - `2026-10-23` · Nidhi (with Claude Code) · **S14g: substitution and protected break pins through the API.** Every repair job passes `protected` = the indices of the pins `display.json` marks as kind `lunch`, `coffee` or `break` (D41, by kind, never shape; only `lunch` occurs in the real instance: 10 pins); no `display.json`, none protected; a pin count that differs from `pinned_occupancy` is an error. New `GET /instances/{id}/sessions/{session_id}/substitutes` (administrator, coordinator): the faculty `qualifications.json` lists for the session's subject with its type or none given (D53), passed to `solver.repair.substitute_candidates` on the official solution and the edge list with every accepted change (D52); returns the current teacher, `candidates` (`faculty_id`, `score_change`) and `left_out` with `reasons` (`busy` = FACULTY_CLASH or PINNED_BLOCK, `unavailable` = FACULTY_UNAVAILABLE) and the `solver.validate` violations; 404 unknown instance or session, 409 no solved official. `POST /instances/{id}/repair` takes `{"kind": "substitute_faculty", "session_id", "faculty_id"}`: 422 if not qualified or already teaching it; the change is now checked on the built edge list, so a substitution can undo an accepted one. Accepted substitutions accumulate like absences (D52) and are audited (repair and accept rows). Real instance (committed solution): CE207 lecture of SE-Comp A (Anant Nimkar, Thu P4, 605): Prasenjit Bhavathankar 0.0, Nataasha Raul −2.0; Sudhir Dhage busy. CE206 practical of SE-Comp A batch A (Amey Ganesh Nile, Mon P3, 604): Aishwarya Nalawade −1.0; Kailas Devadkar busy, Swapnali Kurhade unavailable (D36 Monday). New `backend/tests/test_substitution.py` (15 tests, ~18 s); `test_api.py` route list gains the new route. `ruff check .` clean; `pytest -q -rs` 1075 passed, 0 skipped (3 slow deselected; local Docker Postgres on 55432); uvicorn booted once (health ok, the new route 401 without a token), stopped by PID. · (branch `track/backend-substitution`)_, PR #64
