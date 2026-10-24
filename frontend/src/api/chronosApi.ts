@@ -452,7 +452,8 @@ type Slot = { day: number; period: number };
 export type RepairChange =
   | { kind: 'faculty_unavailable'; faculty_id: string; slots: Slot[] }
   | { kind: 'room_unavailable'; room_id: string; slots: Slot[] }
-  | { kind: 'move_session'; session_id: string; day: number; period: number; room_id: string; sub_room_id?: string };
+  | { kind: 'move_session'; session_id: string; day: number; period: number; room_id: string; sub_room_id?: string }
+  | { kind: 'substitute_faculty'; session_id: string; faculty_id: string };
 
 /** GET /jobs/{id}. A timeout carries no solution (D33): it never proves infeasibility. */
 export interface SolveJob {
@@ -473,8 +474,30 @@ export interface SolveJob {
   error?: string;
 }
 
-/** A repair's base when it started from the committed solution.json (backend/app/service.py). */
-export const COMMITTED_BASE = 'committed';
+/** GET /instances/{id}/changes row: an accepted change every solve and repair includes (D52). */
+export interface AcceptedChange {
+  job_id: string;
+  change: RepairChange;
+  requested_by: string;
+  /** null for repairs accepted before S14f */
+  accepted_by: string | null;
+  accepted_at: string;
+}
+
+/** GET /instances/{id}/sessions/{sid}/substitutes (S14g, D53). */
+export interface Substitutes {
+  session_id: string;
+  /** Who teaches it now */
+  faculty_id: string;
+  /** Best first: the score with this substitute minus the score now */
+  candidates: Array<{ faculty_id: string; score_change: number }>;
+  /** The other qualified faculty: 'busy', 'unavailable', and what they would break (solver.validate) */
+  left_out: Array<{
+    faculty_id: string;
+    reasons: string[];
+    violations: Array<{ kind: string; session_ids: string[]; slots: Slot[]; entity_ids: string[]; detail: string }>;
+  }>;
+}
 
 /** GET /audit row (S13b). */
 export interface AuditEntry {
@@ -651,6 +674,28 @@ export class HttpChronosApiClient extends MockChronosApiClient {
   public async acceptRepair(jobId: string): Promise<SolveJob> {
     const job = (await this.request(`/jobs/${encodeURIComponent(jobId)}/accept`, { method: 'POST' })) as SolveJob;
     return job.solution === undefined ? job : { ...job, solution: (await validation()).parseSolution(job.solution) };
+  }
+
+  /** GET /jobs/{id}/base-solution: the solution a repair started from (D48). */
+  public async getBaseSolution(jobId: string): Promise<SolutionContract> {
+    return (await validation()).parseSolution(await this.request(`/jobs/${encodeURIComponent(jobId)}/base-solution`));
+  }
+
+  /** GET /instances/{id}/changes: the accepted changes, in acceptance order (D52). */
+  public async getChanges(instance: EdgeListInstance): Promise<AcceptedChange[]> {
+    return (await this.request(`/instances/${encodeURIComponent(instance)}/changes`)) as AcceptedChange[];
+  }
+
+  /** DELETE /instances/{id}/changes: clear the accepted changes (administrator only); returns the cleared ones. */
+  public async clearChanges(instance: EdgeListInstance): Promise<AcceptedChange[]> {
+    return (await this.request(`/instances/${encodeURIComponent(instance)}/changes`, { method: 'DELETE' })) as AcceptedChange[];
+  }
+
+  /** GET .../sessions/{sid}/substitutes: who may take the session where it is (administrator and coordinator only). */
+  public async getSubstitutes(instance: EdgeListInstance, sessionId: string): Promise<Substitutes> {
+    return (await this.request(
+      `/instances/${encodeURIComponent(instance)}/sessions/${encodeURIComponent(sessionId)}/substitutes`
+    )) as Substitutes;
   }
 
   public async getJob(jobId: string): Promise<SolveJob> {

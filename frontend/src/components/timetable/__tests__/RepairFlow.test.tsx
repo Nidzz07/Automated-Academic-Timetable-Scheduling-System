@@ -1,14 +1,16 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
+import { InfeasibilityDiagnosisPanel } from '@/components/timetable/InfeasibilityDiagnosisPanel';
 import { HttpChronosApiClient, MockChronosApiClient, REAL_INSTANCE, setSession } from '@/api/chronosApi';
 import type { UserRole } from '@/types/roles';
-import { SolvedSolution, isSolvedSolution } from '@/adapters/solution';
+import { SolvedSolution, isInfeasibleSolution, isSolvedSolution } from '@/adapters/solution';
 import {
   Display,
   EdgeList,
   EnrichedSession,
   buildEnrichedSessions,
+  entityName,
   labelsFor,
   moveConflict,
 } from '@/adapters/timetable';
@@ -45,13 +47,21 @@ const repairJob = (fields: Record<string, unknown>) => ({
   ...fields,
 });
 
-/** The S14c backend: the real instance, one repair job and its accept, whose answers the test sets. */
+/**
+ * The S14c-S14g backend: the real instance, one repair job, its base solution and its accept,
+ * the accepted changes and a session's substitutes, whose answers the test sets.
+ */
 function mockBackend() {
   const state = {
     job: repairJob({}) as Record<string, unknown>,
     accept: () => json({ ...state.job, accepted_at: '2026-10-21T12:00:00Z' }),
     jobs: {} as Record<string, unknown>,
     posted: [] as unknown[],
+    /** GET /jobs/rep-1/base-solution; the committed solution when unset */
+    base: null as unknown,
+    changes: [] as unknown[],
+    cleared: 0,
+    substitutes: null as unknown,
   };
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url === '/api/instances') return json([{ id: REAL_INSTANCE }]);
@@ -59,7 +69,16 @@ function mockBackend() {
       state.posted.push(JSON.parse(init?.body as string));
       return json({ job_id: 'rep-1', status: 'queued' }, 202);
     }
+    if (url === `/api/instances/${REAL_INSTANCE}/changes`) {
+      if (init?.method !== 'DELETE') return json(state.changes);
+      const cleared = state.changes;
+      state.changes = [];
+      state.cleared += 1;
+      return json(cleared);
+    }
+    if (url.startsWith(`/api/instances/${REAL_INSTANCE}/sessions/`)) return json(state.substitutes);
     if (url === '/api/jobs/rep-1/accept') return state.accept();
+    if (url === '/api/jobs/rep-1/base-solution') return json(state.base ?? solution);
     if (url === '/api/jobs/rep-1') return json(state.job);
     if (url.startsWith('/api/jobs/')) return json(state.jobs[url.slice('/api/jobs/'.length)]);
     const file = url.match(new RegExp(`^/api/instances/${REAL_INSTANCE}/(.+)$`))?.[1];
@@ -74,8 +93,9 @@ afterEach(() => {
   setSession(null);
 });
 
-const openReal = async (role: UserRole = 'coordinator') => {
+const openReal = async (role: UserRole = 'coordinator', setUp?: (backend: ReturnType<typeof mockBackend>) => void) => {
   const backend = mockBackend();
+  setUp?.(backend);
   setSession({ username: `test-${role}`, token: `token-${role}`, role });
   render(<App client={new HttpChronosApiClient('/api')} />);
   await screen.findByTestId('timetable-grid');
@@ -220,17 +240,21 @@ describe('Repair in the app (http mode, S14d)', () => {
     expect(screen.getByTestId('accept-repair')).toBeDisabled();
   });
 
-  it('compares with the base job’s solution when the repair started from one (D48)', async () => {
+  it('compares with GET /jobs/{id}/base-solution, the solution the repair started from (D48)', async () => {
     const backend = await openReal();
     const { s, day, period } = pickMove(true);
     const other = sessions.find((o) => theory(o) && o.sessionId !== s.sessionId)!;
-    // the base job has `other` in another room than the official solution
-    const base = repaired(s.sessionId, s.day, s.wallClockPeriod, other.sessionId);
-    backend.jobs['solve-9'] = { id: 'solve-9', instance_id: REAL_INSTANCE, kind: 'solve', time_limit_s: 300, status: 'solved', solution: base };
+    // the base has `other` in another room than the official solution
+    backend.base = repaired(s.sessionId, s.day, s.wallClockPeriod, other.sessionId);
     const result = { ...solution, assignment: solution.assignment.map((a) => (a.session_id === s.sessionId ? { ...a, day, period } : a)), displaced: [s.sessionId] };
     backend.job = repairJob({ status: 'solved', base: 'solve-9', solution: result });
     drop(s.sessionId, day, period);
     expect(await screen.findByTestId(`repair-change-${other.sessionId}`)).toHaveAttribute('data-change', 'room');
+    const urls = vi.mocked(fetch).mock.calls.map(([url]) => url);
+    expect(urls).toContain('/api/jobs/rep-1/base-solution');
+    // neither the base job nor the official solution stands in for the base
+    expect(urls).not.toContain('/api/jobs/solve-9');
+    expect(urls.filter((u) => u === `/api/instances/${REAL_INSTANCE}/solution`)).toHaveLength(1);
   });
 
   it('marks a faculty member unavailable at picked slots, then a room, as repairs', async () => {
@@ -278,7 +302,7 @@ describe('Repair in the app (http mode, S14d)', () => {
             slots: [{ day: 1, period: 0 }],
           },
           {
-            constraint_id: 'mus.pinned.te-lunch-mon',
+            constraint_id: 'pin.0',
             kind: 'PINNED_BLOCK',
             description: 'TE lunch holds TE-Comp A on Monday P4.',
             entity_ids: ['coh-te-a'],
@@ -308,10 +332,187 @@ describe('Repair in the app (http mode, S14d)', () => {
       expect(within(first).getByText(name)).toBeInTheDocument();
     }
     expect(within(first).queryByText('fac-swapnali-kurhade')).not.toBeInTheDocument();
-    expect(within(panel).getByTestId('constraint-pins-mus.pinned.te-lunch-mon')).toHaveTextContent('TE lunch, Mon P4');
+    // D51: pin.0 is pinned_occupancy[0], named by display.json pins[0]
+    expect(within(panel).getByTestId('constraint-pins-pin.0')).toHaveTextContent('Pinned: TE lunch, Mon P4 (pin.0)');
     expect(within(panel).getByTestId('relaxation-action')).toHaveTextContent('verification: restored (12 ms)');
     expect(within(panel).getByTestId('relaxation-applies-to')).toHaveTextContent('Swapnali Kurhade (SK); Tuesday P0');
     expect(status()).toHaveAttribute('data-status', 'infeasible');
+  });
+});
+
+describe('Diagnosis pins by pin.<i> (S14h, D51)', () => {
+  it('names a pin relaxation by its constraint id, not by the slot and entity it frees', () => {
+    const infeasible = parseSolution({
+      schema_version: 'solution.v2',
+      status: 'infeasible',
+      diagnosis: {
+        method: 'mus',
+        minimal_conflicting_set: [
+          {
+            constraint_id: 'pin.1',
+            kind: 'PINNED_BLOCK',
+            description: 'Pinned occupancy 1 holds coh-se-a at Monday P5.',
+            entity_ids: ['coh-se-a'],
+            slots: [{ day: 0, period: 5 }],
+          },
+        ],
+        suggested_relaxation: {
+          constraint_id: 'pin.1',
+          description: 'Free SE-Comp A on Monday P5.',
+          action: { action_type: 'RELAX_PINNED_BLOCK', params: { slot: { day: 0, period: 5 }, entity_kind: 'cohort', entity_id: 'coh-se-a' } },
+          verification: { status: 'restored', runtime_ms: 3 },
+        },
+        partial_placement: [],
+        unplaced_session_ids: [edgeList.sessions[0].id],
+      },
+      metadata: { algorithm: 'repair', runtime_ms: 10, sessions_total: 156, sessions_assigned: 155, slots_used: null, backtracks: 0 },
+    });
+    if (!isInfeasibleSolution(infeasible)) throw new Error('expected an infeasible payload');
+    render(<InfeasibilityDiagnosisPanel infeasibleSolution={infeasible} edgeList={edgeList} labels={labelsFor(display)} />);
+    const pin = `${display.pins[1].unique_label} (pin.1)`;
+    expect(screen.getByTestId('constraint-pins-pin.1')).toHaveTextContent(`Pinned: ${pin}`);
+    expect(screen.getByTestId('relaxation-applies-to')).toHaveTextContent(`SE-Comp A; pin ${pin}; Monday P5`);
+  });
+});
+
+const LECTURE = 'obs-t0-r1-c3-l0'; // CE207 lecture of SE-Comp A, Anant Nimkar (backend/tests/test_substitution.py)
+const BHAVATHANKAR = 'fac-prasenjit-bhavathankar';
+const substitution = { kind: 'substitute_faculty', session_id: LECTURE, faculty_id: BHAVATHANKAR };
+const openSession = (sessionId: string) => fireEvent.click(screen.getByTestId(`session-cell-${sessionId}`));
+/** Show SE-Comp A (whose lecture it is), or the teacher, so no lab block of another division covers its cell. */
+const showLecture = (role: UserRole, teacher = 'fac-anant-nimkar') => {
+  const [label, value] =
+    role === 'faculty'
+      ? ['Select faculty persona', teacher]
+      : role === 'student'
+        ? ['Select student division', 'coh-se-a']
+        : ['Filter timetable by division', 'coh-se-a'];
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+};
+
+describe('Accepted changes (S14h, D52)', () => {
+  const accepted = [
+    {
+      job_id: 'rep-7',
+      change: { kind: 'faculty_unavailable', faculty_id: 'fac-swapnali-kurhade', slots: [{ day: 1, period: 6 }, { day: 1, period: 7 }] },
+      requested_by: 'coord-1',
+      accepted_by: 'admin-1',
+      accepted_at: '2026-10-22T09:30:00Z',
+    },
+    { job_id: 'rep-8', change: { kind: 'room_unavailable', room_id: 'room-603', slots: [{ day: 0, period: 1 }] }, requested_by: 'coord-1', accepted_by: null, accepted_at: '2026-10-22T09:45:00Z' },
+    { job_id: 'rep-9', change: substitution, requested_by: 'coord-2', accepted_by: 'coord-2', accepted_at: '2026-10-22T10:00:00Z' },
+  ];
+
+  it('lists who, when and what by name; the grid shows the accepted substitute; an administrator clears them after confirming', async () => {
+    const backend = await openReal('administrator', (b) => {
+      b.changes = accepted;
+    });
+    const panel = await screen.findByTestId('accepted-changes');
+    const row = (id: string) => within(panel).getByTestId(`accepted-change-${id}`);
+    await waitFor(() => expect(row('rep-7')).toHaveTextContent('Swapnali Kurhade (SK) unavailable: Tuesday P6, Tuesday P7'));
+    expect(row('rep-7')).toHaveTextContent('coord-1');
+    expect(row('rep-7')).toHaveTextContent('admin-1');
+    expect(row('rep-7')).toHaveTextContent(new Date('2026-10-22T09:30:00Z').toLocaleString());
+    expect(row('rep-8')).toHaveTextContent('Room 603 unavailable: Monday P1');
+    expect(row('rep-8')).toHaveTextContent('not recorded');
+    expect(row('rep-9')).toHaveTextContent('CE207 · SE-Comp A: taught by Prasenjit Bhavathankar (PBB)');
+
+    // D52: the accepted substitute teaches the session now
+    showLecture('administrator');
+    openSession(LECTURE);
+    expect(within(screen.getByRole('dialog')).getByText('Prasenjit Bhavathankar')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog')).getByText('Close'));
+
+    fireEvent.click(within(panel).getByTestId('clear-changes'));
+    expect(within(panel).getByTestId('confirm-clear')).toHaveTextContent('Clear all 3 accepted changes?');
+    fireEvent.click(within(panel).getByText('Cancel'));
+    expect(within(panel).queryByTestId('confirm-clear')).not.toBeInTheDocument();
+    expect(backend.cleared).toBe(0);
+
+    fireEvent.click(within(panel).getByTestId('clear-changes'));
+    fireEvent.click(within(panel).getByTestId('confirm-clear-button'));
+    expect(await within(panel).findByTestId('no-accepted-changes')).toBeInTheDocument();
+    expect(backend.cleared).toBe(1);
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(`/api/instances/${REAL_INSTANCE}/changes`, expect.objectContaining({ method: 'DELETE' }));
+    openSession(LECTURE);
+    expect(within(screen.getByRole('dialog')).getByText('Anant Nimkar')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['coordinator', true],
+    ['faculty', false],
+    ['student', false],
+  ] as const)('the %s sees the list: %s, and never Clear', async (role, listed) => {
+    await openReal(role, (b) => {
+      b.changes = accepted;
+    });
+    if (listed) await screen.findByTestId('accepted-change-rep-7');
+    expect(!!screen.queryByTestId('accepted-changes')).toBe(listed);
+    expect(screen.queryByTestId('clear-changes')).not.toBeInTheDocument();
+  });
+});
+
+describe('Find substitute (S14h, D53)', () => {
+  // backend/tests/test_substitution.py TestSubstitutes.test_lecture
+  const listed = {
+    session_id: LECTURE,
+    faculty_id: 'fac-anant-nimkar',
+    candidates: [
+      { faculty_id: BHAVATHANKAR, score_change: 0.0 },
+      { faculty_id: 'fac-nataasha-raul', score_change: -2.0 },
+    ],
+    left_out: [
+      {
+        faculty_id: 'fac-sudhir-dhage',
+        reasons: ['busy'],
+        violations: [{ kind: 'FACULTY_CLASH', session_ids: [LECTURE, 'obs-t6-r4-c4-l1'], slots: [], entity_ids: ['fac-sudhir-dhage'], detail: '' }],
+      },
+    ],
+  };
+
+  it('lists candidates as "Name (INITIALS)" with the score change and why others were left out; a pick is proposed, then accepted', async () => {
+    const backend = await openReal('coordinator', (b) => {
+      b.substitutes = listed;
+    });
+    showLecture('coordinator');
+    openSession(LECTURE);
+    fireEvent.click(screen.getByTestId('find-substitute'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const panel = await screen.findByTestId('substitute-panel');
+    await within(panel).findByTestId(`substitute-${BHAVATHANKAR}`);
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(`/api/instances/${REAL_INSTANCE}/sessions/${LECTURE}/substitutes`, expect.anything());
+    expect(within(panel).getByTestId(`substitute-${BHAVATHANKAR}`)).toHaveTextContent('Prasenjit Bhavathankar (PBB)');
+    expect(within(panel).getByTestId(`substitute-score-${BHAVATHANKAR}`)).toHaveTextContent('score +0.0');
+    expect(within(panel).getByTestId('substitute-fac-nataasha-raul')).toHaveTextContent('Nataasha Raul (NR)');
+    expect(within(panel).getByTestId('substitute-score-fac-nataasha-raul')).toHaveTextContent('score -2.0');
+    expect(within(panel).getByTestId('left-out-fac-sudhir-dhage')).toHaveTextContent(
+      `Sudhir Dhage (SND): busy (teaches ${entityName('obs-t6-r4-c4-l1', edgeList, labelsFor(display))} then)`
+    );
+
+    // nobody moves: the result is the official placement with the new teacher
+    backend.job = repairJob({ status: 'solved', change: substitution, solution: { ...solution, displaced: [] } });
+    fireEvent.click(within(panel).getByTestId(`substitute-${BHAVATHANKAR}`));
+    await screen.findByTestId('repair-proposal');
+    expect(backend.posted).toEqual([{ change: substitution }]);
+    expect(screen.queryByTestId('substitute-panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('repair-change-text')).toHaveTextContent('Change: CE207 · SE-Comp A: taught by Prasenjit Bhavathankar (PBB)');
+    await waitFor(() => expect(screen.getByTestId(`session-cell-${LECTURE}`).closest('[data-flagged]')).toBeInTheDocument());
+
+    backend.changes = [{ job_id: 'rep-1', change: substitution, requested_by: 'test-coordinator', accepted_by: 'test-coordinator', accepted_at: '2026-10-21T12:00:00Z' }];
+    fireEvent.click(screen.getByTestId('accept-repair'));
+    await waitFor(() => expect(status()).toHaveTextContent('Accepted: the repaired timetable is now the official one.'));
+    // the accepted list is read again, and the grid keeps the substitute once the proposal is gone
+    expect(await screen.findByTestId('accepted-change-rep-1')).toHaveTextContent('taught by Prasenjit Bhavathankar (PBB)');
+    openSession(LECTURE);
+    expect(within(screen.getByRole('dialog')).getByText('Prasenjit Bhavathankar')).toBeInTheDocument();
+  });
+
+  it.each(['faculty', 'student'] as const)('is not offered to the %s', async (role) => {
+    await openReal(role);
+    showLecture(role);
+    openSession(LECTURE);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByTestId('find-substitute')).not.toBeInTheDocument();
   });
 });
 

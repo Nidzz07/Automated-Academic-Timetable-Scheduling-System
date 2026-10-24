@@ -136,4 +136,18 @@ describe('HttpChronosApiClient (S13a endpoints)', () => {
     expect(await client.getJob('j2')).toEqual({ ...job, id: 'j2', status: 'timeout' });
     await expect(client.getJob('j3')).rejects.toThrow("unknown status 'paused'");
   });
+
+  it('GET /jobs/{id}/base-solution is validated; DELETE /changes and the substitutes path (S14f, S14g)', async () => {
+    const fetchMock = mockFetch({
+      '/api/jobs/r1/base-solution': () => json(solution),
+      '/api/jobs/r2/base-solution': () => json({ ...solution, status: 'maybe' }),
+      [`${base}/changes`]: () => json([]),
+      [`${base}/sessions/obs%2F1/substitutes`]: () => json({ session_id: 'obs/1', faculty_id: 'f', candidates: [], left_out: [] }),
+    });
+    expect(await client.getBaseSolution('r1')).toEqual(solution);
+    await expect(client.getBaseSolution('r2')).rejects.toBeInstanceOf(ContractValidationError);
+    expect(await client.clearChanges(REAL_INSTANCE)).toEqual([]);
+    expect(fetchMock.mock.calls.at(-1)?.[1]?.method).toBe('DELETE');
+    expect((await client.getSubstitutes(REAL_INSTANCE, 'obs/1')).session_id).toBe('obs/1');
+  });
 });

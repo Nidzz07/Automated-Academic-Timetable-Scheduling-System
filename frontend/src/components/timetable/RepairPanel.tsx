@@ -10,6 +10,7 @@ import {
 } from '@/adapters/solution';
 import { DAY_NAMES, EdgeList, Labels, buildWeekGrid, entityName, facultyText } from '@/adapters/timetable';
 import { InfeasibilityDiagnosisPanel } from './InfeasibilityDiagnosisPanel';
+import { changeText } from './AcceptedChangesPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Check, Wrench, X } from 'lucide-react';
@@ -96,8 +97,8 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({ repair, jobId, proposa
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Repair the timetable</CardTitle>
         <CardDescription>
-          Changes the official timetable as little as possible. Drag a session on the grid to move it, or mark a
-          faculty member or a room unavailable.
+          Changes the official timetable as little as possible. Drag a session on the grid to move it, mark a
+          faculty member or a room unavailable, or find a substitute from a session's details.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 pt-0 text-xs">
@@ -184,6 +185,7 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({ repair, jobId, proposa
 
         {pending && (
           <div data-testid="repair-proposal" className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+            {data.change && <p data-testid="repair-change-text">Change: {changeText(data.change, edgeList, labels)}</p>}
             {proposal ? (
               <>
                 <p data-testid="repair-score">
