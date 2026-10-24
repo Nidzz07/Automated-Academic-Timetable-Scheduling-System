@@ -88,6 +88,7 @@ Agents: read this file and CLAUDE.md before any task. §1 (ownership) and §3 (d
 | D51 (2026-10-22): the solver's diagnoses name things by id. `pin.<i>` is pinned_occupancy[i] of the same export, and display.json pins[i] gives its label (D41 keeps them aligned). The UI shows names; no contract change. A set proven infeasible by search but not proven minimal is reported as the original diagnosis (known limit).
 | D52 (2026-10-22): accepted faculty and room unavailability, and accepted substitutions, accumulate: every later repair and solve includes all of them. An accepted move is only a placement: later repairs keep it when they can, a fresh solve may place it elsewhere. An administrator can clear the accepted changes.
 | D53 (2026-10-22): a substitute teacher must be listed for that subject (and lecture/practical, where the sheet says) in SPIT's faculty–subject sheets (Faculty___Subjects.xlsx, Subject-wise_faculty.xlsx). Chronos suggests; a coordinator decides.
+| D54 (2026-10-23): Kempe-chain interchange and gap-targeted moves are available in improve() behind an option that is off by default, so committed results, repair, backend and evaluation numbers stay unchanged. Making them the default is a later all-track decision (regenerate solution.json, repair and evaluation numbers, and update the reports).
 
 ## 4. Real data inventory (data/real/ unless stated)
 | File | What it gives | Status |
@@ -194,6 +195,7 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | S12e | Nidhi | track/data-ui-feed | — | Rohan | Done (merged 2026-10-19) |
 | S12f | Rohan | track/frontend-real-data | S12e | Nidhi | Done (merged 2026-10-19) |
 | S12g | Dhruv | track/solver-quality | S12d | Nidhi | Done (merged 2026-10-21): simulated annealing, score −162.5 → −15.0 (1,000,000 moves, seed 0) against printed 21.5, 0 hard violations |
+| S12h | Dhruv | track/solver-extended-moves | S14e | Nidhi | Done (merged 2026-10-23) |
 | S13 | Nidhi + Rohan | track/backend-api, track/frontend-api | S12 | cross | Not started |
 | S13a | Nidhi | track/backend-api | S12e | Rohan | Done (merged 2026-10-19) |
 | S13b | Nidhi | track/backend-auth | S13a | Rohan | Done (merged 2026-10-20) |
@@ -205,14 +207,14 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | S14b | Dhruv | track/solver-diagnosis | S14a | Nidhi | Done (merged 2026-10-22) |
 | S14c | Nidhi | track/backend-repair | S14a, S13d | Rohan | Done (merged 2026-10-22) |
 | S14d | Rohan | track/frontend-repair | S14c | Nidhi | Done (merged 2026-10-22) |
-| S14e | Dhruv | track/solver-substitution | S14b | Nidhi | In progress |
-| S14f | Nidhi | track/backend-changes | S14c | Rohan | In progress |
-| S14g | Nidhi | track/backend-substitution | S14e, S14f | Rohan | Not started |
-| S14h | Rohan | track/frontend-changes | S14g | Nidhi | Not started |
+| S14e | Dhruv | track/solver-substitution | S14b | Nidhi | Done (merged 2026-10-22) |
+| S14f | Nidhi | track/backend-changes | S14c | Rohan | Done (merged 2026-10-22) |
+| S14g | Nidhi | track/backend-substitution | S14e, S14f | Rohan | Done (merged 2026-10-22) |
+| S14h | Rohan | track/frontend-changes | S14g | Nidhi | Done (merged 2026-10-23) |
 | S15 | All | eval/* | S14 | cross | Not started |
 | S15a | Rohan | track/bench-harness | — | Nidhi | Done (PR #36) |
 | S15b | Rohan | track/bench-evaluation | S12g | Nidhi | Done (merged 2026-10-22) |
-| S15c | Rohan | track/bench-evaluation-2 | S15b | Nidhi | In progress |
+| S15c | Rohan | track/bench-evaluation-2 | S15b | Nidhi | Done (merged 2026-10-23) |
 | S16 | All | docs/report | S15 | cross | Not started |
 
 ## 9. Weekly plan (week 1 = 2026-09-21)
@@ -311,3 +313,4 @@ Tags as in the old plan: [S] = should (cut only if behind schedule, note the cut
 - 2026-10-21: S12g, S13b, S13c merged. Real timetable score −162.5 → ⟨-18.5: final score⟩ (printed 21.5; 0 vs 36 hard violations); remaining gap is idle periods on batch-days holding only frozen items. Backend has login, roles (administrator, coordinator, faculty, student) and audit (migration 0006, local only). UI talks to the backend. D46/D47 decided. Next: S13d, S13e, S14a.
 - 2026-10-21: S12g (score −15.0), S13d, S13e, S14a merged. D46 not adopted, D47 rejected. A revert PR of S13d was opened by mistake and closed unmerged; S13d stays on main. D48–D50 recorded. Next: S14b diagnosis, S14c repair API, S15b evaluation, then S14d repair UI.
 - 2026-10-22: S14b (minimal conflicting sets, verified relaxations, drag pre-check), S14c (repair API, accept, linked accounts, migration 0008), S14d (repair UI), S15b (evaluation tables) merged. D51–D53 recorded. Next: S14e/S14f/S15c, then S14g, S14h.
+- 2026-10-24: S14e (protected pins, `substitute_faculty`, `substitute_candidates`), S14f (accepted changes accumulate, `qualifications.json`, migration 0009), S14g (substitutes API, lunch pins protected in every repair), S12h (Kempe-chain and gap moves, off by default; no measurable score gain), S15c (size sweep, repair vs regeneration: 4.53 vs 85.68 sessions moved over 19 changes, charts), S14h (accepted-changes panel, exact repair bases, pin names, substitute finder in the UI) merged (PRs #61–#66). Next: full browser check, S16 report and slides, Supabase decision.
