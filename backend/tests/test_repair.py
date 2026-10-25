@@ -334,5 +334,8 @@ def test_accepted_changes_accumulate(
     assert client.delete("/instances/nope/changes",
                          headers=bearer("administrator")).status_code == 404
     [row] = audit(database_url, "clearer", "clear_changes")
-    assert json.loads(row.detail) == {"instance_id": "accumulates", "cleared": 1}
+    # every finished job here depends on the cleared change (D56)
+    assert json.loads(row.detail) == {"instance_id": "accumulates", "cleared": 1,
+                                      "official": "committed"}
+    assert client.get("/instances/accumulates/solution").json() == committed
     assert run(client, "accumulates", ROOM_603_MONDAY)["built_with"] == []
