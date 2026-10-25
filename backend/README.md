@@ -47,7 +47,7 @@ the shell history. Minimum 8 characters.
 | Route | Who |
 |---|---|
 | `GET /health`, `POST /auth/login` | anyone |
-| every other `GET` (`/instances...`, `/jobs/{id}`) | any logged-in user |
+| every other `GET` (`/instances...`, `/instances/{id}/edge-list/current`, `/jobs/{id}`, `/jobs/{id}/edge-list`) | any logged-in user |
 | `POST /instances/{id}/solve`, `POST /instances/{id}/repair`, `POST /jobs/{id}/accept`, `GET /instances/{id}/sessions/{session_id}/substitutes` | administrator, coordinator |
 | `GET /audit`, `DELETE /instances/{id}/changes` | administrator |
 
@@ -59,9 +59,10 @@ token with the wrong role gets 403.
 
 Every login attempt (username, success or failure, time; never the password), every
 solve or repair request (user, instance, time budget, job id, final status, start and end;
-for a repair also its base and change, slots as `[day, period]`), every accepted repair
-(user, instance, job id, base) and every clearing of the accepted changes (user, instance,
-how many) is a row in `audit_entry`.
+for a repair also its base and change, slots as `[day, period]`; for a stale solve also
+`"stale": true`), every accepted repair (user, instance, job id, base) and every clearing of
+the accepted changes (user, instance, how many, and `official`: the job id or `"committed"`
+official after it, null when there is none) is a row in `audit_entry`.
 
 ## Solve jobs
 
@@ -71,6 +72,16 @@ timetable by local search (`solver.improve.improve`, seed 0) for at most `max_mo
 moves; `max_moves: 0` skips the improvement. `time_limit_s` covers both. While it runs,
 `GET /jobs/{id}` has `"phase": "search"` or `"improve"`.
 
+A solve that ends infeasible is explained as an infeasible repair is (`solver.mus.explain`,
+S14i): a minimal conflicting set (`method: "mus"`) and the smallest relaxation verified to
+restore feasibility where one exists, never relaxing a break pin (see Repair jobs), in what
+is left of `time_limit_s`. Cut short by it, the diagnosis is the unfinished one
+(`"presolve"`, or the solver's own); the verdict stays infeasible, never a timeout (D33).
+
+A finished solve (solved or infeasible) has `"stale"`: `true` when the accepted changes in
+force when it ended differ from its `built_with` (one was accepted or cleared while it
+ran). A stale solve is kept but never official (D56).
+
 Jobs and their solutions are rows of `solve_job`, so `GET /jobs/{id}` and
 `GET /instances/{id}/solution` survive a restart. On startup, jobs left queued or running
 are marked `error` with `"server restarted"`, and so are their audit rows. Run one API
@@ -79,11 +90,14 @@ same way.
 
 `GET /jobs/{id}` has `"kind": "solve"` or `"repair"`.
 
-## The official solution (ROADMAP D49)
+## The official solution (ROADMAP D49, D56)
 
-`GET /instances/{id}/solution` serves the official solution: the latest finished solve
-(solved or infeasible) or accepted repair, else the committed `solution.json`. A repair
-result becomes official only when accepted.
+`GET /instances/{id}/solution` serves the official solution: the newest finished solve
+(solved or infeasible) or accepted repair that was built with exactly the accepted changes
+in force when it ended or was accepted (not stale) and depends on no cleared change (its
+own included), else the committed `solution.json`. A repair result becomes official only
+when accepted. So the official solution is always valid for the accepted changes in force,
+also after they are cleared.
 
 ## Repair jobs
 
@@ -97,7 +111,9 @@ result becomes official only when accepted.
 | `move_session` | `session_id`, `day`, `period`, `room_id`, optional `sub_room_id` |
 | `substitute_faculty` | `session_id`, `faculty_id` (the new teacher) |
 
-`time_limit_s` (default 300, at most 1800) caps each search of the repair; `max_moves`
+`time_limit_s` (default 300, at most 1800) covers the whole repair, the explanation of an
+infeasible change and the closing local search included (S14k); an explanation cut by it
+returns its unfinished diagnosis, which can differ between machines like a timeout; `max_moves`
 (default 20000, the repair's own default; at most 2000000; 0 skips it) bounds the local
 search over the sessions the repair moved. A faculty, room or session that is not in the
 instance, a slot off its grid, or a substitute who already teaches the session or is not
@@ -116,7 +132,8 @@ without `display.json` protects none.
 `POST /jobs/{id}/accept` makes a solved repair official and returns the job with
 `accepted_at` and `accepted_by`. It answers 409 if the job is not a solved repair, or if its
 base is no longer the official solution (another repair was accepted or a solve finished
-since), so a repair is accepted at most once. Unknown job: 404.
+since), so a repair is accepted at most once, or if its `built_with` is not the accepted
+changes now in force (D56). Unknown job: 404.
 
 `GET /jobs/{id}/base-solution` returns the exact solution.v2 a repair started from: the
 committed `solution.json` or its base job's solution. A solve or unknown job: 404.
@@ -132,10 +149,20 @@ can, a fresh solve may place it elsewhere. A job's `built_with` lists the job id
 accepted changes it was built with. `GET /instances/{id}/edge-list` still serves the
 committed file.
 
+The edge lists jobs really use (edge_list_v1, contract-checked; any logged-in user):
+
+- `GET /instances/{id}/edge-list/current`: the committed edge list with every accepted,
+  uncleared change applied, exactly as the next solve or repair builds it;
+- `GET /jobs/{id}/edge-list`: the edge list that job ran on: the committed one with the
+  changes in its `built_with` and, for a repair, its own change. Unknown job: 404.
+
+Both start from the committed file as it is now (it changes only by a commit).
+
 `GET /instances/{id}/changes` lists the accepted changes (`job_id`, `change`,
 `requested_by`, `accepted_by`, `accepted_at`), oldest first. `DELETE
 /instances/{id}/changes` (administrator) clears them and returns the cleared ones; later
-jobs are built without them, and the official solution stays what it is.
+jobs are built without them, and the official solution becomes the newest finished solve
+or accepted repair that depends on none of them, else the committed `solution.json` (D56).
 
 ## Substitutes (ROADMAP D53)
 
@@ -150,7 +177,10 @@ official solution on the edge list with every accepted change:
   ties by id;
 - `left_out`: every other qualified teacher but the current one, by id, with `reasons`
   (`busy`: they teach or hold a frozen item then; `unavailable`: an unavailable slot) and
-  the `violations` (`solver.validate`) the timetable would have with them.
+  the `violations` (`solver.validate`) the timetable would have with them; a teacher listed
+  but without a `faculty_availability` entry in the edge list is left out with
+  `not_in_instance` and no violations (their week is unknown, so they cannot be checked,
+  nor be the substitute of a repair: 422).
 
 Unknown instance or session: 404; no solved official solution, or one the accepted changes
 make invalid: 409. Chronos suggests; a coordinator decides, by posting a

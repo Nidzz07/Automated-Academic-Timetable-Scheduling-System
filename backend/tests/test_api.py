@@ -106,6 +106,7 @@ def test_openapi_lists_every_route(real: TestClient) -> None:
         "/audit",
         "/instances",
         "/instances/{instance_id}/edge-list",
+        "/instances/{instance_id}/edge-list/current",
         "/instances/{instance_id}/display",
         "/instances/{instance_id}/anomalies",
         "/instances/{instance_id}/solution",
@@ -115,6 +116,7 @@ def test_openapi_lists_every_route(real: TestClient) -> None:
         "/instances/{instance_id}/sessions/{session_id}/substitutes",
         "/jobs/{job_id}",
         "/jobs/{job_id}/base-solution",
+        "/jobs/{job_id}/edge-list",
         "/jobs/{job_id}/accept",
     }
 
@@ -188,7 +190,7 @@ class TestJobs:
         job = solve(synthetic, "infeasible")
         assert job["status"] == "infeasible"
         assert conforms("solution_v2", job["solution"])
-        assert job["solution"]["diagnosis"]["method"] == "presolve"
+        assert job["solution"]["diagnosis"]["method"] == "mus"  # explained (S14i)
         assert synthetic.get("/instances/infeasible/solution").json() == job["solution"]
 
     def test_timeout_is_a_status_not_a_solution(self, synthetic: TestClient) -> None:
@@ -225,7 +227,7 @@ def test_phases_in_order() -> None:
     edge_list = generate(PRESETS["small"], 1)
     for moves, expected in [(0, ["search"]), (100, ["search", "improve"])]:
         heard: list[str] = []
-        assert solve_edge_list(edge_list, 60.0, moves, heard.append)[0] == "solved"
+        assert solve_edge_list(edge_list, 60.0, moves, on_phase=heard.append)[0] == "solved"
         assert heard == expected
 
 
@@ -300,7 +302,7 @@ def test_phase_while_running(
     reached: queue.Queue[str] = queue.Queue()
     go = {phase: threading.Event() for phase in phases}
 
-    def worker(edge_list, time_limit_s, max_moves, on_phase) -> tuple[str, None]:
+    def worker(edge_list, time_limit_s, max_moves, protected, on_phase) -> tuple[str, None]:
         for phase in phases:
             on_phase(phase)  # the real _mark_running: a database write
             reached.put(phase)

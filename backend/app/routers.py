@@ -14,6 +14,9 @@ built with, and a repair's base solution is served as it started from it.
 
 S14g: administrator and coordinator may list a session's substitutes and repair with a
 substitution (ROADMAP D52, D53).
+
+S14i: any role may read the edge list in force and the one a job ran on; a finished
+solve says whether it is stale (ROADMAP D56).
 """
 
 from __future__ import annotations
@@ -130,6 +133,10 @@ class JobView(BaseModel):
     solution: dict[str, Any] | None = Field(
         None, description="solution.v2, present when status is solved or infeasible"
     )
+    stale: bool | None = Field(
+        None, description="finished solve: true when built with other accepted changes than "
+        "those in force when it ended, so it is kept but never official (D56)",
+    )
     error: str | None = None
 
 
@@ -148,7 +155,7 @@ class Substitute(BaseModel):
 
 class LeftOut(BaseModel):
     faculty_id: str
-    reasons: list[str] = Field(description="busy, unavailable")
+    reasons: list[str] = Field(description="busy, unavailable, not_in_instance")
     violations: list[dict[str, Any]] = Field(
         description="what the timetable would break with them (solver.validate)"
     )
@@ -230,6 +237,15 @@ def get_edge_list(instance_id: str, service: Service) -> dict[str, Any]:
     return _found(service.edge_list(instance_id), "instance")
 
 
+@instances.get(
+    "/{instance_id}/edge-list/current",
+    description="edge_list_v1: the committed edge list with every accepted change in force "
+    "(D52), as solves and repairs build it",
+)
+def get_current_edge_list(instance_id: str, service: Service) -> dict[str, Any]:
+    return _found(service.current_edge_list(instance_id), "instance")
+
+
 @instances.get("/{instance_id}/display", description="display.json (D41 sidecar)")
 def get_display(instance_id: str, service: Service) -> Any:
     return _found(service.display(instance_id), "display")
@@ -242,7 +258,8 @@ def get_anomalies(instance_id: str, service: Service) -> Any:
 
 @instances.get(
     "/{instance_id}/solution",
-    description="the official solution.v2: the latest finished solve or accepted repair, "
+    description="the official solution.v2: the newest finished solve or accepted repair "
+    "built with the accepted changes then in force and depending on no cleared one (D56), "
     "else the committed solution.json",
 )
 def get_solution(instance_id: str, service: Service) -> dict[str, Any]:
@@ -320,6 +337,15 @@ def get_job(job_id: str, service: Service) -> JobView:
 )
 def get_base_solution(job_id: str, service: Service) -> dict[str, Any]:
     return _found(service.base_solution(job_id), "base solution")
+
+
+@jobs.get(
+    "/{job_id}/edge-list",
+    description="edge_list_v1 the job ran on: the committed edge list with the changes it "
+    "was built with and, for a repair, its own change",
+)
+def get_job_edge_list(job_id: str, service: Service) -> dict[str, Any]:
+    return _found(service.job_edge_list(job_id), "job")
 
 
 @jobs.post(
