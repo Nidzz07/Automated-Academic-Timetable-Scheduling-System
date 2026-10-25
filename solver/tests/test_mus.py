@@ -290,6 +290,73 @@ def test_protected_must_name_pins() -> None:
         explain(payload, _infeasible(payload), protected={1})
 
 
+def _without_runtimes(out: dict) -> dict:
+    out = copy.deepcopy(out)
+    out["metadata"].pop("runtime_ms")
+    if "suggested_relaxation" in out["diagnosis"]:
+        out["diagnosis"]["suggested_relaxation"]["verification"].pop("runtime_ms")
+    return out
+
+
+def test_a_near_zero_deadline_returns_the_input() -> None:
+    """S14k: cut before anything is extracted, the proof comes back unchanged, whatever
+    the method."""
+    for build in CASES.values():
+        payload = build()
+        infeasible = _infeasible(payload)
+        assert explain(payload, infeasible, time_limit_s=0.0) == infeasible
+
+
+def test_a_deadline_never_reached_changes_nothing() -> None:
+    for build in CASES.values():
+        payload = build()
+        infeasible = _infeasible(payload)
+        assert (_without_runtimes(explain(payload, infeasible, time_limit_s=600.0))
+                == _without_runtimes(explain(payload, infeasible)))
+
+
+def test_a_cut_never_changes_the_verdict() -> None:
+    """Wherever the deadline falls, the result is an infeasible diagnosis: the input, the
+    set so far (``presolve``, not proven minimal, MANUAL), or the finished set."""
+    payload = generate(PRESETS["infeasible"], seed=0)
+    infeasible = _infeasible(payload)
+    full = explain(payload, infeasible)
+    assert full is not None
+    members = [m["constraint_id"] for m in full["diagnosis"]["minimal_conflicting_set"]]
+    cuts = 0
+    for limit in (0.001, 0.01, 0.05, 0.2, 0.5):
+        stats: dict = {}
+        out = explain(payload, infeasible, time_limit_s=limit, stats=stats)
+        assert out is not None
+        SOLUTION_V2.validate(out)
+        assert out["status"] == "infeasible"
+        cuts += stats["cut"]
+        if out == infeasible:
+            continue
+        if stats["cut"]:
+            assert out["diagnosis"]["method"] == "presolve"
+            assert "not proven minimal" in out["metadata"]["algorithm"]
+            assert out["diagnosis"]["suggested_relaxation"]["action"]["action_type"] == "MANUAL"
+        else:
+            assert [m["constraint_id"] for m in out["diagnosis"]["minimal_conflicting_set"]] == (
+                members)
+    assert cuts  # the full explanation takes about 0.9 s here
+
+
+@pytest.mark.parametrize("build", [lambda: generate(PRESETS["infeasible"], seed=0), triangle],
+                         ids=["presolve", "search_exhaustion"])
+def test_a_fresh_solve_is_explained_on_its_own(build) -> None:
+    """S14i explains an infeasible solve job: backtrack_solve's solution.v2 as a job writes it
+    (no repair, no change, no known timetable), with a deadline."""
+    payload = build()
+    fresh = backtrack_solve(build_conflict_graph(payload), payload).to_solution_v2_dict()
+    assert fresh["status"] == "infeasible"
+    out = explain(payload, fresh, time_limit_s=60.0)
+    assert out is not None
+    SOLUTION_V2.validate(out)
+    assert out["diagnosis"]["method"] == "mus" and out["diagnosis"]["minimal_conflicting_set"]
+
+
 def test_apply_action_leaves_its_input_alone() -> None:
     payload = squeezed_faculty()
     before = copy.deepcopy(payload)

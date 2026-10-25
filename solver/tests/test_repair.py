@@ -16,13 +16,14 @@ from __future__ import annotations
 import copy
 import json
 import random
+import time
 
 import pytest
 
 from solver.backtracking import backtrack_solve
 from solver.benchmarks.real_repair import CE207, INSTANCE, SCENARIOS, TEACHING
 from solver.graph import build_conflict_graph
-from solver.mus import apply_action
+from solver.mus import apply_action, explain
 from solver.repair import apply_change, repair, substitute_candidates
 from solver.scoring import score
 from solver.slots import SlotId
@@ -520,3 +521,40 @@ def test_substitution_repair_on_the_real_timetable(real: tuple[dict, dict]) -> N
     assert stats["hit"] == [CE207] and moved["displaced"] == [CE207]
     old, new = _by_id(solution), _by_id(moved)
     assert all(new[sid] == old[sid] for sid in old if sid != CE207)
+
+
+# --- S14k: deadlines ------------------------------------------------------------------------
+
+# S15c's change 9 (bench/repair_vs_regen.py, seed 0), whose explanation ran over 20 minutes
+SUDEEP_MALI = {"kind": "faculty_unavailable", "faculty_id": "fac-sudeep-mali",
+               "slots": [{"day": 0, "period": 6}, {"day": 0, "period": 7}, {"day": 3, "period": 5}]}
+MARGIN_S = 3.0  # the check in flight when the deadline passes, then the result is assembled
+
+
+def test_a_fresh_infeasible_solve_is_explained_within_its_limit(real: tuple[dict, dict]) -> None:
+    """explain() alone, as an infeasible solve job (S14i) calls it: a fresh solve of the
+    changed edge list, proved by pre-solve; a 1 s deadline cuts the explanation and
+    leaves the verdict alone."""
+    changed = apply_change(real[0], SUDEEP_MALI)
+    fresh = backtrack_solve(build_conflict_graph(changed), changed).to_solution_v2_dict()
+    assert fresh["diagnosis"]["method"] == "presolve"
+    stats: dict = {}
+    began = time.perf_counter()
+    out = explain(changed, fresh, time_limit_s=1.0, stats=stats)
+    assert time.perf_counter() - began < 1.0 + MARGIN_S
+    assert out is not None
+    SOLUTION_V2.validate(out)
+    assert out == fresh or (stats["cut"] and out["diagnosis"]["method"] == "presolve")
+
+
+@pytest.mark.slow
+def test_the_twenty_minute_change_ends_within_its_limit(real: tuple[dict, dict]) -> None:
+    """repair(time_limit_s=10) on change 9: the whole call, explanation included, ends
+    within the limit plus the margin, and the change is still infeasible (pre-solve)."""
+    stats: dict = {}
+    began = time.perf_counter()
+    result = _check(*real, SUDEEP_MALI, stats, time_limit_s=10.0)
+    assert time.perf_counter() - began < 10.0 + MARGIN_S
+    assert result["status"] == "infeasible" and stats["rings"][-1] == ["all", 156, "infeasible"]
+    method = result["diagnosis"]["method"]
+    assert method == ("presolve" if stats["mus"]["cut"] else "mus")

@@ -337,6 +337,49 @@ infeasible but not minimal (`presolve`), MANUAL, 7.2 s. The search-equivalence t
 is machine load: the unchanged symmetry-breaking test took 18.6 s in the first run and 15.2 s in the
 second.
 
+## S14k: the time limit covers the explanation
+
+2026-10-25 · Dhruv (with Claude Code) · branch `track/solver-explain-deadline`. In S15c one change's
+explanation ran over 20 minutes. That was change 9 of `bench/repair_vs_regen.py` (seed 0): Sudeep
+Mali unavailable Mon P6, Mon P7, Thu P5, which pre-solve proves infeasible. So the benchmark had
+to pass `mus_nodes=0`. A backend repair job, or an infeasible solve job from S14i, could run that
+far past its limit.
+
+- **`explain(..., time_limit_s=)`** stops the whole explanation when the deadline passes: no
+  further check, no further relaxation try. Before, only the searches stopped and every remaining
+  pre-solve check still ran. What comes back is the unfinished result S14b defines:
+  - the set so far as `presolve` (not proven minimal, MANUAL), if pre-solve proved it and it is
+    smaller than the whole instance;
+  - otherwise the input diagnosis unchanged (`None` when there was no input).
+
+  A set that was finished and proven minimal before the deadline stays `mus`. Relaxations not yet
+  tried are not attempted, so the suggestion is MANUAL. The verdict never changes, and a timeout
+  is never reported as infeasible (D33).
+- **`repair(..., time_limit_s=)`** now covers the whole call. The rings, the explanation (both the
+  drag pre-check and the explanation after the run with everything free) and the closing
+  `improve()` each get what is left of the limit.
+- **Without a limit, nothing changes.** Every existing test passes as it was.
+- **A result cut by the deadline can differ between machines**, like a timeout: how far the
+  explanation got depends on how fast the machine is. The verdict (infeasible, by the same proof)
+  does not. A run that finishes before its deadline is the same on every machine.
+- **`explain()` on its own.** A fresh `backtrack_solve(...).to_solution_v2_dict()` result, as a
+  solve job writes it, is explained without a repair, change or known timetable. The `presolve` and
+  `search_exhaustion` synthetic cases are proven minimal; the real change-9 solve under a 1 s
+  deadline comes back cut, with the same verdict.
+
+Change 9 on this machine (Intel64 Family 6 Model 183, Python 3.12.10), `repair(..., time_limit_s=L)`:
+
+| Limit | Wall clock | Result |
+|---|---|---|
+| 5 s | 5.13 s | `presolve`, 90 members, cut, MANUAL |
+| 15 s | 15.03 s | `presolve`, 64 members, cut, MANUAL |
+| 30 s | 30.53 s | `mus`, 30 members (set finished), relaxation tries cut, MANUAL |
+
+The rings take 0.13 s of that (each one refuted by pre-solve); the rest is the explanation. With `mus_nodes=0` (no limit) the
+same change takes 20.2 s here and gives `presolve`, 30 members. The slow test
+`test_the_twenty_minute_change_ends_within_its_limit` re-runs it with a 10 s limit and allows a
+3 s margin, for the check in flight when the deadline passes.
+
 ## Limits
 
 - **Not a proven minimum.** The rings, the old-place-first ordering and the greedy restore keep
@@ -382,9 +425,12 @@ second.
   `time_limit_s`, so the answer is the same on every machine. The cost is that `repair` can run
   past `time_limit_s` when it explains. A first version did share the clock: under the backend
   test's 60 s it cut the last verification short, and two runs differed in
-  `metadata.backtracks`.
+  `metadata.backtracks`. S14k: `time_limit_s` now covers the explanation, by decision. An
+  explanation that finishes within the limit is the same everywhere. One that is cut can differ
+  between machines, so two runs that are compared must both finish (the backend test's Kurhade
+  run takes about 20 s here, under its 60 s).
 - **Only repair explains.** A fresh solve (`backtrack_solve`, the backend's solve job) still
   returns the bare `presolve` / `search_exhaustion` diagnosis; `solver.mus.explain` can be called
-  on it.
+  on it (S14k: tested on its own, with a deadline; wiring it into solve jobs is S14i).
 - **Where the dragged room lives.** `edge_list_v1` has `fixed_slot` but no fixed room. `repair`
   keeps the dragged room internally, so `apply_change(payload, change)` alone does not record it.

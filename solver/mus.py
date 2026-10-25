@@ -31,7 +31,8 @@ it breaks no kept group, else repaired locally with only the sessions in the
 way free. Any timetable taken as proof passes
 :func:`solver.validate.validate_solution`. The outcome is proven infeasible,
 feasible, or unknown when the budget runs out - and unknown is never read as
-either (ROADMAP D33).
+either (ROADMAP D33). A wall-clock deadline (``time_limit_s``, S14k) stops the
+whole explanation where it is; what is left of it is unfinished (below).
 
 **Deletion-based extraction** (deletion filter, Chinneck and Dravnieks 1991;
 constraint satisfaction, Artificial Intelligence and Soft Computing CE303).
@@ -351,7 +352,8 @@ class _Problem:
             if best is None or len(culprits) < len(best[1]):
                 best = (model, culprits)
         result = self.solve(payload, forced, 0, deadline)
-        if result.outcome == "infeasible" or not node_limit:
+        late = deadline is not None and time.perf_counter() >= deadline
+        if result.outcome == "infeasible" or not node_limit or late:
             return result
         if best is not None:
             model, free = best
@@ -593,8 +595,12 @@ def explain(
     node_limit:
         Search nodes per check and per verification (:data:`MUS_NODES`).
     time_limit_s:
-        Wall-clock cap on the whole explanation, ``None`` for none; a check it
-        cuts short is unknown.
+        Wall-clock cap on the whole explanation, ``None`` for none. When it
+        passes, the explanation stops where it is, unfinished (S14k): not proven
+        minimal, so ``presolve`` with the set so far if pre-solve proved it and
+        it shrank, else *infeasible* unchanged (``None`` without one); no
+        relaxation is tried after it (MANUAL). A cut result can differ between
+        machines, like a timeout; the verdict never does (D33).
     stats:
         If given, filled with ``groups``, ``start`` (size of the start set),
         ``checks``, ``nodes``, ``unknown`` (members not proven necessary),
@@ -617,6 +623,10 @@ def explain(
     """
     started = time.perf_counter()
     deadline = None if time_limit_s is None else started + time_limit_s
+
+    def late() -> bool:
+        return deadline is not None and time.perf_counter() >= deadline
+
     kept = _protected(payload, protected)
     problem = _Problem(payload, change)
     if timetable is not None:
@@ -632,7 +642,7 @@ def explain(
     else:
         raise ValueError("explain needs a proof (infeasible) or an initial set")
     for start in starts:
-        if len(start) < len(everything):
+        if len(start) < len(everything) and not late():
             result = problem.check(start, node_limit, deadline)
             if result.outcome == "infeasible":
                 core, proof = start, "presolve" if result.certificate else "search"
@@ -647,9 +657,9 @@ def explain(
     for last in (False, True):
         todo = [g for g in core if (problem.groups[g].kind in LAST) == last]
         size = max(1, len(todo) // 2)
-        while True:
+        while not late():
             i = 0
-            while i < len(todo):
+            while i < len(todo) and not late():
                 chunk = set(todo[i:i + size])
                 trial = [g for g in core if g not in chunk]
                 # chunks: pre-solve only (0 nodes); keeping a chunk is always sound
@@ -667,14 +677,16 @@ def explain(
             if size == 1:
                 break
             size //= 2
-    proven = not unknown
+    cut = late()  # members never checked alone are not shown necessary
+    proven = not unknown and not cut
 
     if stats is not None:
         stats.update(groups=len(everything), start=started_with, unknown=sorted(unknown),
-                     proven_minimal=proven, set=list(core), relaxations=[],
+                     proven_minimal=proven, set=list(core), relaxations=[], cut=cut,
                      witnesses={g: w._placements(w.assignment, w.room_assignment)
                                 for g, w in witness.items() if g in core})
-    if not core or not (proven or proof == "presolve"):
+    # cut before anything was extracted: the input says more than every group of the instance
+    if not core or not (proven or proof == "presolve") or (cut and len(core) == len(everything)):
         if stats is not None:
             stats.update(checks=problem.checks, nodes=problem.nodes)
         return infeasible
@@ -691,6 +703,8 @@ def explain(
     chosen = None
     attempts = []
     for _, _, gid, action in sorted(tried.values(), key=lambda t: (t[:3], json.dumps(t[3]))):
+        if late():
+            break
         began = time.perf_counter()
         result = problem.search(apply_action(problem.full, action), problem.forced, everything,
                                 node_limit, deadline)

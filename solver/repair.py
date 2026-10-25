@@ -60,9 +60,11 @@ diagnosis (the pre-solve certificate or ``search_exhaustion``) is explained by
 :func:`solver.mus.explain`: a minimal conflicting set (``method = "mus"``) and
 the smallest relaxation verified to restore feasibility, or the original
 diagnosis when minimality cannot be proven. Every search of the explanation
-has a node budget and none uses ``time_limit_s``, so the explanation is the
-same on every machine (it can make ``repair`` run past ``time_limit_s``,
-never wait forever). If that run runs out of
+has a node budget, and ``time_limit_s`` covers the whole call, the explanation
+included (S14k): one cut short returns its unfinished result
+(:func:`solver.mus.explain`), which can differ between machines, like a
+timeout; without a limit the explanation is the same on every machine. If the
+run with everything free runs out of
 ``time_limit_s`` it raises :class:`TimeoutError`: running out of time proves
 nothing (ROADMAP D21, D33). Pins the caller marks *protected* (breaks, lunch)
 are never suggested as the relaxation (S14e).
@@ -274,9 +276,11 @@ def repair(
     ring_nodes:
         Search nodes each frozen ring may use before the free set grows.
     time_limit_s:
-        Wall-clock safety cap on each search, ``None`` for none. Hitting it on
-        a ring only grows the ring (and the result then depends on the machine).
-        The explanation of an infeasible change has node budgets instead.
+        Wall-clock cap on the whole call, ``None`` for none: each search, the
+        explanation of an infeasible change and the closing
+        :func:`solver.improve.improve` get what is left of it. Hitting it on a
+        ring only grows the ring; in the explanation or improve it keeps what
+        was found so far. Either way the result then depends on the machine.
     protected:
         Indices into *payload*'s ``pinned_occupancy`` (lunch, breaks) that an
         explanation never suggests relaxing (:func:`solver.mus.explain`).
@@ -325,7 +329,8 @@ def repair(
     if blocked:
         mus_stats: dict[str, Any] = {}
         out = explain(payload, None, change=change, initial=blocked, timetable=solution,
-                      protected=protected, node_limit=mus_nodes, stats=mus_stats)
+                      protected=protected, node_limit=mus_nodes, time_limit_s=left(),
+                      stats=mus_stats)
         if out is not None:
             out["metadata"].update(
                 algorithm=f"freeze-and-expand(pre-check) + {out['metadata']['algorithm']}",
@@ -395,7 +400,7 @@ def repair(
                                    backtracks=nodes)
             mus_stats = {}
             out = explain(payload, out, change=change, timetable=solution, protected=protected,
-                          node_limit=mus_nodes, stats=mus_stats) or out
+                          node_limit=mus_nodes, time_limit_s=left(), stats=mus_stats) or out
             out["metadata"]["runtime_ms"] = (time.perf_counter() - started) * 1000
             if stats is not None:
                 stats.update(hit=sorted(hit), rings=rings, room_changed=[], nodes=nodes,
@@ -466,7 +471,7 @@ def repair(
             if s["id"] not in moved:
                 s["fixed_slot"] = {"day": starts[s["id"]].day, "period": starts[s["id"]].period}
         repaired = improve(held, repaired, max_moves=max_moves, seed=seed,
-                           stats=improve_stats)
+                           time_limit_s=left(), stats=improve_stats)
         repaired["quality"] = score(changed, {
             i["session_id"]: SlotId(i["day"], i["period"]) for i in repaired["assignment"]
         })
