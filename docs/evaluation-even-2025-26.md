@@ -20,11 +20,17 @@ comes from those CSVs. Tests: `bench/tests/test_evaluate.py`.
 | `2026-10-21-eval-repair.csv` | 5 |
 | `2026-10-24-eval-size-sweep.csv` | 6 |
 | `2026-10-24-eval-repair-vs-regen.csv`, `2026-10-24-eval-repair-vs-regen-summary.csv` | 7 |
+| `2026-10-25-eval-lab-utilisation.csv`, `-lab-utilisation-generated.csv`, `-lab-utilisation-labs.csv` | 8 |
+| `2026-10-25-eval-edge-cases.csv`, `2026-10-25-eval-no-substitute.csv` | 9 |
 
 Sections 6 and 7 were added on 2026-10-24 (S15c). Reproduce them with
 `python -m bench.size_sweep` (about 7 minutes here) and `python -m bench.repair_vs_regen`
 (about 75 minutes here, mostly 300 s timeouts). These also write the charts in `docs/figures/`. Tests:
 `bench/tests/test_s15c.py`. The full runs are marked `slow`, so they are deselected by default.
+
+Sections 8–10 were added on 2026-10-25 (S15d). Reproduce them with
+`python -m bench.lab_utilisation` (about 2 s here) and `python -m bench.edge_cases` (about
+15 s here). Neither has a timed column. Tests: `bench/tests/test_s15d.py`; none is `slow`.
 
 - **Machine:** AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows.
   Every `ms` figure is wall clock, machine-dependent, and the **median of 3 runs**. Every other
@@ -365,6 +371,194 @@ CSV does not contain them:
 Unsolved changes have no point in the chart: repair at 15, 17, 19, 21, 27, 29 and 9;
 regeneration at 2, 5, 9, 15, 19, 20, 21, 26, 27.
 
+## 8. Lab utilisation, printed vs reproduced (S15d)
+
+Source: `bench/results/2026-10-25-eval-lab-utilisation.csv`, written by
+`python -m bench.lab_utilisation`.
+
+- **Printed figures.** In `data/real/Lab CE_Time_Table-Even_sem_25-26.docx`, each of the 15
+  lab tables comes after a line such as `Lab Utilization in %= 24/30= 80.00 %` (CONTEXT.md
+  §3.6). `ingestion.lab_tt.parse_lab_timetable` keeps the line and its three numbers
+  (`LabTable.printed`). Bench reads them from there and does not change ingestion. Every table
+  prints the denominator 30. The file does not say what 30 counts; each table has 45 teaching
+  cells (5 days × P0, P1, P3–P9).
+- **Ours.** We count the table's occupied (day, period) cells again from the parsed cells
+  (`LabEntry`). A cell counts if it is non-empty and not a break, P2 (coffee) never counts,
+  and a cell named twice counts once. The count is over the printed denominator. In all 15
+  tables our count equals ingestion's own `LabTable.occupied` (tested).
+- **Match** means the same number of occupied cells. In every table the printed percentage
+  agrees with its printed fraction, truncated to two decimals (20/30 is printed 66.66).
+- **Mismatches are reported, not adjusted.** They are exactly the four tables that
+  ingestion's anomaly report lists as `utilisation_mismatch` with "needs human" (tested).
+
+| Table | Printed room | Printed | Printed % | Ours | Our % | Result | Difference |
+|---|---|---|---|---|---|---|---|
+| t0 | 607-B (607B) | 24/30 | 80.00 | 24/30 | 80.00 | match | 0 |
+| t1 | 604 | 15/30 | 50.00 | 15/30 | 50.00 | match | 0 |
+| t2 | 606-4 (606) | 24/30 | 80.00 | 24/30 | 80.00 | match | 0 |
+| t3 | 606-5 (606) | 24/30 | 80.00 | 24/30 | 80.00 | match | 0 |
+| t4 | 608 | 20/30 | 66.66 | 20/30 | 66.67 | match | 0 |
+| t5 | 603-2 | 24/30 | 80.00 | 26/30 | 86.67 | **mismatch** | +2 |
+| t6 | 603-3 | 22/30 | 73.33 | 20/30 | 66.67 | **mismatch** | −2 |
+| t7 | 603-7 (603) | 12/30 | 40.00 | 14/30 | 46.67 | **mismatch** | +2 |
+| t8 | 702-A | 22/30 | 73.33 | 20/30 | 66.67 | **mismatch** | −2 |
+| t9 | 702-B | 20/30 | 66.66 | 20/30 | 66.67 | match | 0 |
+| t10 | 702-C | 12/30 | 40.00 | 12/30 | 40.00 | match | 0 |
+| t11 | 703-A | 19/30 | 63.33 | 19/30 | 63.33 | match | 0 |
+| t12 | 703-B | 18/30 | 60.00 | 18/30 | 60.00 | match | 0 |
+| t13 | 509 | 27/30 | 90.00 | 27/30 | 90.00 | match | 0 |
+| t14 | 505 (not used for generation, D28) | 20/30 | 66.66 | 20/30 | 66.67 | match | 0 |
+
+The room in brackets is the one the label normalises to (D27, D30). 11 of the 15 printed
+figures are reproduced exactly. Two of the matches are the tables whose labels go beyond 606's
+declared split (606-4, 606-5).
+
+### The four mismatches
+
+The CSV's `evidence` column lists, for every table, what the files show that could bear on a
+difference:
+
+- exam blocks in the grid;
+- periods with no row in the table;
+- class- or faculty-timetable cells that name the table's room at a period the table leaves
+  empty.
+
+Each cell in these tables is one 2-period block. Nothing below is a proven cause. The printed
+figure stays as printed.
+
+| Table | Ours − printed | What the files show |
+|---|---|---|
+| 603-2 | +2 | The grid holds the only exam block of the 15 tables (`DAA LAB EXAM ESE`, Wed P3–P4, D37). Without its 2 cells the grid holds 24, the printed figure. So the printed count fits a rule of leaving exams out. The file states no such rule, and no other table has an exam to test it on. |
+| 603-3 | −2 | Nothing: no exam block, a row for every period, and no other timetable names 603-3 at a period the table leaves empty. 603-3 and 603-7 differ by opposite amounts: printed 22 + 12 = 34, ours 20 + 14 = 34. |
+| 603-7 | +2 | Nothing explains it. The table holds 3 practical, 2 MDM and 2 BE (out-of-scope) cells. Leaving any one cell out would give 12, but no kind of cell singles one out: 604, 703-B and 509 have BE cells, and 703-A and 509 have MDM cells, and all of them match. The faculty timetable puts one more block in 603-7 that this grid lacks (Rupali Sawant, `MDM-I lab /A /603-7`, Mon P0–P1). That would widen the difference, not close it. |
+| 702-A | −2 | The table has no 17.15–18.15 row (P9); the other 14 have one. The faculty timetable also puts two blocks in 702-A that the lab grid places elsewhere: Yogita Patil `ML /D /SRD /702-A`, Fri P0–P1 (in 702-B in the lab grid), and Soni Bhambar `MDM-III Lab (CC) /A /702-A`, Tue P7–P8 (in 703-A). Either block would make 22, both would make 24. Such cells are not specific to mismatches, though: 702-C and 703-A have them too, and both match. |
+
+Over lab 603's three tables, the printed total is 58 and ours is 60 (`-lab-utilisation-labs.csv`).
+The difference is the exam's 2 cells.
+
+### The same measure for the generated timetable
+
+Source: `2026-10-25-eval-lab-utilisation-generated.csv` (per unit) and
+`2026-10-25-eval-lab-utilisation-labs.csv` (per lab), from the committed `solution.json`.
+
+- **Units.** Each D8 lab of the edge list is one unit, or one unit per sub-room if it has
+  sub-rooms. Some printed tables have no unit with the same label:
+  - 606-4 and 606-5 go beyond 606's split; the edge list has 606-1 and 606-2.
+  - 603-7 goes beyond 603's split; the edge list's third place is 603-1.
+  - 509 is printed as one table; the edge list has two sub-rooms (D27).
+  - 505 is not used (D28).
+  - 507 has no printed table.
+- **Held.** A teaching cell counts for a unit when a session or a pin holds that unit or the
+  whole lab. A placement with `sub_room_id` null locks every sub-room
+  (`solver.validate.validate_solution`). The pins are the frozen items (D24, D35, D37), the
+  same ones the printed grid shows. *Of which whole room* counts the cells held through the
+  whole lab.
+- **Percentages** are over 30 (the printed denominator, for comparison) and over 45 (the
+  teaching cells).
+
+| Lab | Unit | Printed table | Held | Of which pinned | Of which whole room | % of 30 | % of 45 |
+|---|---|---|---|---|---|---|---|
+| 507 | 507 | none | 27 | 1 | 0 | 90.00 | 60.00 |
+| 509 | 509-1 | none | 35 | 17 | 35 | 116.67 | 77.78 |
+| 509 | 509-2 | none | 35 | 17 | 35 | 116.67 | 77.78 |
+| 603 | 603-1 | none | 32 | 10 | 26 | 106.67 | 71.11 |
+| 603 | 603-2 | 603-2 | 32 | 16 | 26 | 106.67 | 71.11 |
+| 603 | 603-3 | 603-3 | 30 | 14 | 26 | 100.00 | 66.67 |
+| 604 | 604 | 604 | 23 | 3 | 0 | 76.67 | 51.11 |
+| 606 | 606-1 | none | 24 | 6 | 24 | 80.00 | 53.33 |
+| 606 | 606-2 | none | 24 | 6 | 24 | 80.00 | 53.33 |
+| 607B | 607B | 607-B | 30 | 10 | 0 | 100.00 | 66.67 |
+| 608 | 608 | 608 | 28 | 10 | 0 | 93.33 | 62.22 |
+| 702 | 702-A | 702-A | 20 | 6 | 10 | 66.67 | 44.44 |
+| 702 | 702-B | 702-B | 20 | 4 | 10 | 66.67 | 44.44 |
+| 702 | 702-C | 702-C | 20 | 0 | 10 | 66.67 | 44.44 |
+| 703 | 703-A | 703-A | 25 | 9 | 11 | 83.33 | 55.56 |
+| 703 | 703-B | 703-B | 22 | 10 | 11 | 73.33 | 48.89 |
+
+| Lab | Printed tables | Printed occupied | Ours from the print | Generated units | Generated held | Sessions in the whole lab | Sessions in a sub-room |
+|---|---|---|---|---|---|---|---|
+| 507 | none | 0 | 0 | 507 | 27 | | |
+| 509 | 509 | 27 | 27 | 509-1, 509-2 | 70 | 9 | 0 |
+| 603 | 603-2, 603-3, 603-7 | 58 | 60 | 603-1, 603-2, 603-3 | 94 | 8 | 3 |
+| 604 | 604 | 15 | 15 | 604 | 23 | | |
+| 606 | 606-4, 606-5 | 48 | 48 | 606-1, 606-2 | 48 | 9 | 0 |
+| 607B | 607-B | 24 | 24 | 607B | 30 | | |
+| 608 | 608 | 20 | 20 | 608 | 28 | | |
+| 702 | 702-A, 702-B, 702-C | 54 | 52 | 702-A, 702-B, 702-C | 60 | 5 | 10 |
+| 703 | 703-A, 703-B | 37 | 37 | 703-A, 703-B | 47 | 4 | 6 |
+| 505 | 505 (not used) | 20 | 20 | none | 0 | | |
+
+- **Over 30, four units exceed 100%:** 509-1, 509-2, 603-1 and 603-2. The generated week may
+  use any of the 45 teaching cells. Whatever 30 counts in the printed file, the generated
+  timetable is not bound by it. So *% of 30* can be compared with the printed figure as a
+  count, not as a share of a fixed capacity.
+- **Generated holds more lab cells than printed in every lab** with a printed table, except 606
+  (48 both). For 509 this sets two units against one printed table. It places no session in 505 (D28) and uses 507, which has no printed table.
+  Section 4 counts the same rooms whole: 252 of 405 lab periods generated, 194 printed.
+- **Split labs are often held whole.** 35 sessions sit in a split lab with `sub_room_id` null
+  rather than in a sub-room. In 509 and 606, every session does, so every held cell of their
+  sub-rooms is held through the whole lab. `validate_solution` accepts this. But each such
+  session locks the lab's other batch places, so the generated per-sub-room figures say "held",
+  not "taught in". It appears to follow from the search trying rooms in id order
+  (`solver/backtracking.py`, `_room_order`), where `room-603` sorts before `sub-603-1`. This
+  is reported for Track A and not changed here.
+
+## 9. Edge cases (S15d)
+
+Source: `bench/results/2026-10-25-eval-edge-cases.csv` and
+`2026-10-25-eval-no-substitute.csv`, written by `python -m bench.edge_cases`. Tests: one per
+case in `bench/tests/test_s15d.py`.
+
+- **Functions.** Every case goes through the public functions the backend calls:
+  - `solver.graph.build_conflict_graph`
+  - `solver.backtracking.backtrack_solve` and `BacktrackResult.to_solution_v2_dict`
+  - `solver.mus.explain`
+  - `solver.repair.substitute_candidates` and `solver.repair.repair`
+  - `solver.validate.validate_solution`, run on every solved result
+- **Instances.** The hand-built instances are test instances, not SPIT data. Their only real
+  part is the D6 slot grid, read from the committed `edge_list.json`: 45 teaching cells. They
+  have no pins, so neither year's lunch is blocked. `infeasible` and `small` are synthetic
+  presets (D19), seed 1.
+- **Infeasible results** are explained by `explain()`. The tests then apply the suggested
+  relaxation with `solver.mus.apply_action` and solve again, outside `explain()`, to confirm
+  it restores feasibility.
+
+| Case | Instance | Outcome | Diagnosis | After `explain()` |
+|---|---|---|---|---|
+| Empty | no sessions | solved: 0 placed, 0 violations | | |
+| Single session | one lecture | solved: 1 placed, 0 violations | | |
+| No free substitute | two lectures at one slot, two teachers; the other qualified teacher teaches the second lecture | `substitute_candidates` returns none; the `substitute_faculty` repair is solved, displaces the lecture, and 0 violations against the changed edge list | | |
+| Infeasible, found by pre-solve | synthetic `infeasible`, 46 sessions | infeasible, 0 search nodes | `presolve`: `presolve.cohort_load.d00`, MANUAL | `mus`: `cohort_clash.d00`, `cohort_clash.d00.d00-b0`, `pin.0`; RELAX_PINNED_BLOCK, verified `restored` |
+| Infeasible, found by search | three lectures, one room, two periods in which all three teachers are available | infeasible after 3 nodes; pre-solve has no check for this | `search_exhaustion`, 1 session unplaced | `mus`: the three teachers' unavailability (15 groups); RELAX_FACULTY_AVAILABILITY, verified `restored` |
+| A full division | one division, 45 one-period lectures, each by its own teacher | solved: 45 placed, 0 violations | | |
+| Over-subscribed division | the same with 46 lectures | infeasible, 0 search nodes | `presolve`: `presolve.cohort_load.div` ("must be taught 46 periods … only 45 periods are free"), MANUAL | `mus`: `cohort_clash.div`; MANUAL (no single change was verified) |
+| Timeout (D33) | synthetic `small`, 12 sessions, `node_limit=1` | `timeout`, not infeasible; `to_solution_v2_dict` raises ValueError ("no status for a search timeout (ROADMAP D33)"); without the limit, solved | | |
+
+**Real data: sessions with no free qualified substitute.** For each of the 156 sessions of the
+committed `solution.json`, `substitute_candidates` was run with the faculty that
+`qualifications.json` lists for its subject (D53). That is the list the backend's substitutes
+route reads. Every session has 3–5 other listed teachers, and **30 of 156 have none free at
+their slot**. For those 30, the documented next step (`substitute_candidates` docstring) is a
+`substitute_faculty` repair, which moves the session, as in the hand-built case above. The real
+repairs were not run here.
+
+## 10. Phase 5 items and where they are answered
+
+The Phase 5 checklist of `docs/CURRENT-PROGRESS.md`, item by item:
+
+| Phase 5 item | Answered by |
+|---|---|
+| Property test: no timetable ever contains a conflict | `solver/tests/test_property_solved_is_valid.py` (Track A; seeded random instances, not Hypothesis) |
+| Edge cases: empty, single session, no replacement, infeasible, over-subscribed division | Section 9; `2026-10-25-eval-edge-cases.csv`, `2026-10-25-eval-no-substitute.csv`; `bench/tests/test_s15d.py` |
+| Benchmark: runtime vs instance size (plot) | Sections 2 and 6; `2026-10-21-eval-algorithms.csv`, `2026-10-24-eval-size-sweep.csv`; `docs/figures/runtime-vs-sessions.svg`, `docs/figures/score-vs-sessions.svg` |
+| Benchmark: displaced sessions, repair vs regeneration (mean + CI) | Section 7; `2026-10-24-eval-repair-vs-regen.csv`, `2026-10-24-eval-repair-vs-regen-summary.csv`; `docs/figures/repair-vs-regen-moved.svg` |
+| Benchmark: greedy-only vs greedy + backtracking quality | Section 1; `2026-10-21-eval-algorithms.csv` |
+| Lab-utilisation percentages reproduced | Section 8; `2026-10-25-eval-lab-utilisation.csv`, `-lab-utilisation-generated.csv`, `-lab-utilisation-labs.csv`. 11 of 15 reproduced; 4 mismatches reported, not adjusted |
+| Generated timetable compared against the department's real one | Sections 3 and 4; `2026-10-21-eval-real-vs-printed.csv`, `2026-10-21-eval-rooms.csv`, `2026-10-21-eval-free-rooms.csv`; `docs/real-baseline-even-2025-26.md` |
+| API integration tests; frontend tests | `backend/tests/` (Track B: `test_api.py`, `test_auth.py`, `test_repair.py`, `test_substitution.py`, `test_fixes.py`); `frontend/src/**/*.test.ts(x)` (Vitest) |
+| *(S)* Constraint-coverage table vs FET | Not done; no file answers it |
+| *(C)* Weight sensitivity analysis | Not done; no file answers it |
+
 ## Findings
 
 1. **Hard constraints.**
@@ -424,6 +618,26 @@ regeneration at 2, 5, 9, 15, 19, 20, 21, 26, 27.
      infeasible by pre-solve, 4 timeouts.
    - Repair timed out on 2 changes that regeneration solved, and regeneration on 4 that repair
      solved.
+10. **Lab utilisation (S15d).**
+    - 11 of the 15 printed figures are reproduced exactly from the parsed lab timetable. Our
+      count equals ingestion's in all 15 tables.
+    - 603-2, 603-3, 603-7 and 702-A differ by one 2-period block each, and are reported, not
+      adjusted. 603-2 fits leaving out its exam block. 702-A has no P9 row and two blocks the
+      faculty timetable places there. 603-3 and 603-7 are not explained by the files, but their
+      differences cancel.
+    - In `solution.json`, four lab units hold more than 30 cells, so the printed denominator
+      does not bound the generated week.
+    - 35 batch sessions hold a whole split lab instead of a sub-room. That is valid, but it
+      locks the lab's other places (reported for Track A).
+11. **Edge cases (S15d).**
+    - Empty, single-session and 45-lecture-division instances solve with 0 violations.
+    - Every infeasible case (pre-solve, search, over-subscribed division) returns a
+      diagnosis, and `explain()` reduces each to a `mus`. Two relaxations were verified and
+      re-checked; the over-subscribed division gets MANUAL.
+    - A node budget gives `timeout`, which no contract can carry (D33).
+    - With no free qualified substitute, `substitute_candidates` is empty and the
+      `substitute_faculty` repair moves the session.
+    - On the real instance, 30 of 156 sessions have no free qualified substitute.
 
 ## Limits
 
@@ -447,3 +661,12 @@ regeneration at 2, 5, 9, 15, 19, 20, 21, 26, 27.
   - The printed timetable uses rooms outside the edge list (002, 508, 203, 505, 403-A). The
     generated one may not use them (D10, D28, D29).
 - **Plots** are hand-written SVG (`bench/charts.py`); no plotting library is installed.
+- **Lab utilisation (section 8).**
+  - The mismatch evidence is what the parsed files show. It is not a cause; only the
+    department can say how the printed figures were counted, or what 30 counts.
+  - The generated measure counts a cell as held when the whole lab is held, so for split labs
+    it is an upper bound on teaching in that sub-room.
+- **Edge cases (section 9).**
+  - Apart from the real substitute count, they are small hand-built or synthetic instances,
+    one per case.
+  - The real sessions without a free substitute were not repaired.

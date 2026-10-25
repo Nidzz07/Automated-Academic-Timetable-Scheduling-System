@@ -1,0 +1,16 @@
+table,printed_room,room,printed,printed_occupied,denominator,printed_percent,printed_arithmetic,ours_occupied,ours_percent,difference,result,ingestion_occupied,ingestion_result,practical cells,elective cells,mdm cells,out_of_scope cells,exam cells,unparsed cells,evidence
+0,607-B,607B,Utilization in %= 24/30= 80.00 %,24,30,80.0,consistent,24,80.0,0,match,24,match,11,1,0,0,0,0,
+1,604,604,Utilization in %= 15/30= 50.00 %,15,30,50.0,consistent,15,50.0,0,match,15,match,6,0,0,3,0,0,
+2,606-4,606,Utilization in %= 24/30= 80.00 %,24,30,80.0,consistent,24,80.0,0,match,24,match,9,3,0,0,0,0,
+3,606-5,606,Utilization in %= 24/30= 80.00 %,24,30,80.0,consistent,24,80.0,0,match,24,match,12,0,0,0,0,0,
+4,608,608,Utilization in %= 20/30= 66.66 %,20,30,66.66,consistent,20,66.67,0,match,20,match,8,2,0,0,0,0,
+5,603-2,603-2,Utilization in % = 24/30 = 80.00%,24,30,80.0,consistent,26,86.67,2,mismatch,26,mismatch,8,4,0,0,1,0,2 exam periods in the grid; without them it holds 24 (1 of 15 tables have an exam block)
+6,603-3,603-3,Utilization in % = 22/30 = 73.33 %,22,30,73.33,consistent,20,66.67,-2,mismatch,20,mismatch,6,4,0,0,0,0,
+7,603-7,603,Utilization in % = 12/30 = 40.00%,12,30,40.0,consistent,14,46.67,2,mismatch,14,mismatch,3,0,2,2,0,0,1 cell(s) elsewhere name this room at a period the table leaves empty: faculty timetable Rupali Sawant Mon P0-P1 'MDM-I lab /A /603-7'
+8,702-A,702-A,Utilization in % = 22/30 = 73.33 %,22,30,73.33,consistent,20,66.67,-2,mismatch,20,mismatch,7,2,1,0,0,0,no row for P9 | 2 cell(s) elsewhere name this room at a period the table leaves empty: faculty timetable Yogita Patil Fri P0-P1 'ML /D /SRD /702-A'; faculty timetable Soni Bhambar Tue P7-P8 'MDM-III Lab (CC) /A /702-A'
+9,702-B,702-B,Utilization in %= 20/30= 66.66 %,20,30,66.66,consistent,20,66.67,0,match,20,match,8,2,0,0,0,0,
+10,702-C,702-C,Utilization in % = 12/30 = 40 %,12,30,40.0,consistent,12,40.0,0,match,12,match,6,0,0,0,0,0,1 cell(s) elsewhere name this room at a period the table leaves empty: faculty timetable Aishwarya Nalawade Fri P5-P6 'SPCC / A / TE-B / 702-C'
+11,703-A,703-A,Utilization in % = 19/30 = 63.33 %,19,30,63.33,consistent,19,63.33,0,match,19,match,7,3,1,0,0,0,2 cell(s) elsewhere name this room at a period the table leaves empty: class timetable TE Comp - C Thu P7-P8 'ML / B / VR / 703-A'; faculty timetable Vaishnavee Rathod Thu P7-P8 'ML / B / TE-C / 703-A'
+12,703-B,703-B,Utilization in % = 18/30 = 60 %,18,30,60.0,consistent,18,60.0,0,match,18,match,5,3,0,3,0,0,
+13,509,509,Utilization in %= 27/30= 90.00%,27,30,90.0,consistent,27,90.0,0,match,27,match,5,4,1,4,0,0,
+14,505,not used for generation,Utilization in %= 20/30=66.66%,20,30,66.66,consistent,20,66.67,0,match,20,match,6,4,0,0,0,0,
