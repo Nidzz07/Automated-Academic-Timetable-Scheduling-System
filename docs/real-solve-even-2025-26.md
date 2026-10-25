@@ -280,6 +280,38 @@ for seed in range(10):
         print(seed, extended, result["quality"]["score"])
 ```
 
+## S12i: lower bounds on the periods a week needs
+
+2026-10-25 · Dhruv (with Claude Code) · branch `track/solver-bounds`. `solver/bounds.py`
+(`lower_bounds(edge_list)`) is hand-written and stdlib only. It reads the edge list and solves
+nothing, so no solve, improve or repair result changes.
+
+- **Clique bound** (DSGT: clique number ≤ chromatic number). Sessions joined by a conflict
+  edge need different periods, so the total length of a clique is a lower bound on the periods
+  the week needs; a 2-period practical counts 2. The maximum-weight clique comes from a branch
+  and bound (DAA) within 200,000 nodes. Past that budget it falls back to the best greedy
+  clique, and `method` says which one was used. Tests check it against networkx's
+  maximum-weight clique (in tests only) on 60 random graphs.
+- **Load bounds.** For one teacher: session periods plus the teaching slots that pins hold or
+  that they are unavailable at. For one cohort: session periods plus the teaching slots that
+  pins hold. These count against the grid's 45 teaching slots. The year's lunch is one of the
+  pins (the solver cannot tell lunch from another pin, D41), and ROADMAP §5's 40 periods per
+  year are those 45 minus lunch.
+
+Real instance (0.008 s):
+
+| Bound | Value | What it is | Against |
+|---|---|---|---|
+| Clique (exact) | **18 periods** | Amey Ganesh Nile's 9 practicals, 2 periods each | 40 teaching periods per year: 22 spare |
+| Heaviest teacher load | **25** | Swapnali Kurhade: 16 session periods + 9 unavailable slots (her Monday, D36) | 45 teaching slots: 20 spare |
+| Heaviest cohort load | **41** | SE-Comp C: 9 session periods + 32 pinned slots (5 of them its lunch) | 45 teaching slots: 4 spare; 36 of the year's 40 without lunch |
+
+So no single teacher, cohort or clique comes close to the week's limit on its own, except
+SE-Comp C (and SE-Comp D, also 41), whose week is mostly pins. These are necessary conditions
+only. The instance is tight because of how many cohorts and teachers overlap at once, which is
+what the search and pre-solve deal with (see "Why it is tight" below), not because any one of
+them is full.
+
 ## S12d: why the old search got stuck
 
 Re-run of the S12a search (commit 75a3f31) for 300 s on the same machine: timeout, 563,081
