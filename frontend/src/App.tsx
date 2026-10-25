@@ -42,7 +42,6 @@ import {
   facultyText,
   labelsFor,
   moveConflict,
-  withSubstitutions,
 } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline } from '@/adapters/realInstance';
 import {
@@ -64,7 +63,7 @@ import { ContractValidationError } from '@/api/contractError';
 import {
   timetableQueryKey,
   useAnomaliesQuery,
-  useChangesQuery,
+  useCurrentEdgeListQuery,
   useDisplayQuery,
   useEdgeListQuery,
   useInstanceSolutionQuery,
@@ -137,16 +136,18 @@ function TimetableApp({ client, session }: { client: MockChronosApiClient; sessi
   const instances = useInstancesQuery(client);
   const timetable = useTimetableQuery(client);
   const edgeList = useEdgeListQuery(instance, client);
+  const currentEdgeList = useCurrentEdgeListQuery(instance, client);
   const display = useDisplayQuery(instance, client);
   const published = useInstanceSolutionQuery(instance, client);
   const anomalies = useAnomaliesQuery(instance, client);
   const printed = usePrintedBaselineQuery(instance, client);
-  const queries = [instances, timetable, edgeList, display, published, anomalies, printed];
+  const queries = [instances, timetable, edgeList, currentEdgeList, display, published, anomalies, printed];
 
   if (
     instances.status !== 'success' ||
     timetable.status !== 'success' ||
     edgeList.status !== 'success' ||
+    currentEdgeList.status !== 'success' ||
     display.status !== 'success' ||
     published.status !== 'success' ||
     anomalies.status !== 'success' ||
@@ -176,7 +177,8 @@ function TimetableApp({ client, session }: { client: MockChronosApiClient; sessi
   return (
     <TimetableWorkspace
       solution={timetable.data}
-      edgeList={edgeList.data}
+      edgeList={currentEdgeList.data}
+      committedEdgeList={edgeList.data}
       display={display.data}
       publishedSolution={published.data}
       anomalies={anomalies.data}
@@ -225,7 +227,10 @@ function TimetableLoadError({ error, onRetry }: { error: Error; onRetry: () => v
 
 interface TimetableWorkspaceProps {
   solution: SolutionContract;
+  /** The edge list with every accepted change (http mode, D52): absences, room closures, substitutions */
   edgeList: EdgeList;
+  /** The committed edge list, as ingestion wrote it (the anomaly report's ids) */
+  committedEdgeList: EdgeList;
   /** D41 display sidecar; null for the contract examples */
   display: Display | null;
   /** The solution published beside a non-example instance's edge list; null when not solved yet */
@@ -250,7 +255,8 @@ interface TimetableWorkspaceProps {
 
 function TimetableWorkspace({
   solution,
-  edgeList: servedEdgeList,
+  edgeList: currentEdgeList,
+  committedEdgeList,
   display,
   publishedSolution,
   anomalies,
@@ -316,22 +322,17 @@ function TimetableWorkspace({
   const repair = useRepair(http, instance, repairJobId, onRepairStarted);
   const repairJob = repair.job.data;
   const repairBase = repair.base.data;
+  // The edge list the repair ran on (GET /jobs/{id}/edge-list): the accepted changes it was built with and its own
+  const repairEdgeList = repair.edgeList.data;
   const proposal = useMemo<RepairProposal | null>(() => {
     const result = repairJob?.solution;
-    if (repairJob?.status !== 'solved' || repairJob.accepted_at || !result || !repairBase) return null;
+    if (repairJob?.status !== 'solved' || repairJob.accepted_at || !result || !repairBase || !repairEdgeList) return null;
     if (!isSolvedSolution(result) || !isSolvedSolution(repairBase)) return null;
     return { base: repairBase, result, changes: repairChanges(repairBase, result) };
-  }, [repairJob, repairBase]);
-  // The edge list with the accepted substitutions (D52) and a proposed one: the grid shows who teaches now
-  const changes = useChangesQuery(http, instance, solvable);
-  const edgeList = useMemo(
-    () =>
-      withSubstitutions(servedEdgeList, [
-        ...(changes.data ?? []).map((c) => c.change),
-        ...(proposal && repairJob?.change ? [repairJob.change] : []),
-      ]),
-    [servedEdgeList, changes.data, proposal, repairJob]
-  );
+  }, [repairJob, repairBase, repairEdgeList]);
+  // A proposal is shown on the edge list it was made for; otherwise the grid, details, faculty view and
+  // drop pre-check use the current one, so accepted absences, closures and substitutions are in them
+  const edgeList = proposal && repairEdgeList ? repairEdgeList : currentEdgeList;
   const canRepair = caps.canSolve && solvable && http !== null;
   // one repair at a time: none while one runs or waits to be accepted or discarded
   const repairOpen =
@@ -666,7 +667,7 @@ function TimetableWorkspace({
             repair={repair}
             jobId={repairJobId}
             proposal={proposal}
-            edgeList={edgeList}
+            edgeList={repairEdgeList ?? edgeList}
             labels={labels}
             onDiscard={discardRepair}
           />
@@ -809,7 +810,7 @@ function TimetableWorkspace({
 
         {/* Ingestion anomaly report (whole-department roles); "no report" when the instance has none */}
         {caps.viewScope === 'all' && (
-          <AnomalyReportPanel report={anomalies} display={display} edgeList={servedEdgeList} />
+          <AnomalyReportPanel report={anomalies} display={display} edgeList={committedEdgeList} />
         )}
 
         {/* The audit log (administrator only; the backend refuses anyone else) */}

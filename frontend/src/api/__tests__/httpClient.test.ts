@@ -137,6 +137,28 @@ describe('HttpChronosApiClient (S13a endpoints)', () => {
     await expect(client.getJob('j3')).rejects.toThrow("unknown status 'paused'");
   });
 
+  it('GET /instances/{id}/edge-list/current and GET /jobs/{id}/edge-list are validated (S14i)', async () => {
+    const changed = { ...edgeList, pinned_occupancy: [...edgeList.pinned_occupancy, { day: 0, period: 1, faculty_ids: [], room_ids: ['room-603'], cohort_ids: [] }] };
+    const fetchMock = mockFetch({
+      [`${base}/edge-list/current`]: () => json(changed),
+      '/api/jobs/r1/edge-list': () => json(changed),
+      '/api/jobs/r2/edge-list': () => json({ ...edgeList, sessions: 'not a list' }),
+    });
+    expect(await client.getCurrentEdgeList(REAL_INSTANCE)).toEqual(changed);
+    expect(await client.getJobEdgeList('r1')).toEqual(changed);
+    await expect(client.getJobEdgeList('r2')).rejects.toBeInstanceOf(ContractValidationError);
+    await expect(client.getJobEdgeList('nope')).rejects.toBeInstanceOf(ApiError);
+    expect(fetchMock.mock.calls.map(([url]) => url)).not.toContain(`${base}/edge-list`);
+  });
+
+  it('the contract examples and the printed view are not backend instances: their own edge list, never /current', async () => {
+    const fetchMock = mockFetch({ [`${base}/edge-list`]: () => json(edgeList) });
+    expect(await client.getCurrentEdgeList('example')).toEqual(await client.getEdgeList('example'));
+    // the printed timetable is laid on the committed edge list
+    expect(await client.getCurrentEdgeList(PRINTED_INSTANCE)).toEqual(edgeList);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([`${base}/edge-list`]);
+  });
+
   it('GET /jobs/{id}/base-solution is validated; DELETE /changes and the substitutes path (S14f, S14g)', async () => {
     const fetchMock = mockFetch({
       '/api/jobs/r1/base-solution': () => json(solution),
@@ -149,5 +171,15 @@ describe('HttpChronosApiClient (S13a endpoints)', () => {
     expect(await client.clearChanges(REAL_INSTANCE)).toEqual([]);
     expect(fetchMock.mock.calls.at(-1)?.[1]?.method).toBe('DELETE');
     expect((await client.getSubstitutes(REAL_INSTANCE, 'obs/1')).session_id).toBe('obs/1');
+  });
+});
+
+describe('Static mode keeps the committed edge list (S14j)', () => {
+  it('getCurrentEdgeList is getEdgeList, read from the bundled files without a request', async () => {
+    const fetchMock = mockFetch({});
+    const files = new MockChronosApiClient();
+    expect(await files.getCurrentEdgeList(REAL_INSTANCE)).toEqual(edgeList);
+    expect(await files.getCurrentEdgeList('example')).toEqual(await files.getEdgeList('example'));
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

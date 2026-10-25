@@ -46,6 +46,21 @@ export function useEdgeListQuery(
   });
 }
 
+/** The edge list with every accepted change (D52); refetched after an Accept and a Clear. */
+export const currentEdgeListQueryKey = (instance: EdgeListInstance) => ['current-edge-list', instance] as const;
+
+export function useCurrentEdgeListQuery(
+  instance: EdgeListInstance,
+  client: ChronosApiClient = chronosApiClient
+) {
+  return useQuery({
+    queryKey: currentEdgeListQueryKey(instance),
+    queryFn: () => client.getCurrentEdgeList(instance),
+    staleTime: Infinity,
+    retry: retryable,
+  });
+}
+
 export function useDisplayQuery(
   instance: EdgeListInstance,
   client: ChronosApiClient = chronosApiClient
@@ -131,7 +146,8 @@ export function useJobQuery(client: HttpChronosApiClient, jobId: string | null, 
 
 /**
  * An instance's latest repair job (S14c): start one, poll it, read the solution it started
- * from (its base, D48) once solved, and accept it (D49). Null client: static mode, never used.
+ * from (its base, D48) once solved and the edge list it ran on once it has a solution, and
+ * accept it (D49). Null client: static mode, never used.
  */
 export function useRepair(
   client: HttpChronosApiClient | null,
@@ -154,15 +170,24 @@ export function useRepair(
     staleTime: Infinity,
     retry: retryable,
   });
+  const ran = job.data?.solution ? job.data : undefined;
+  const edgeList = useQuery({
+    queryKey: ['job-edge-list', ran?.id],
+    queryFn: () => client!.getJobEdgeList(ran!.id),
+    enabled: !!ran,
+    staleTime: Infinity,
+    retry: retryable,
+  });
   const accept = useMutation({
     mutationFn: (id: string) => client!.acceptRepair(id),
     onSuccess: (accepted) => {
       queryClient.setQueryData(['job', accepted.id], accepted);
       if (accepted.solution) queryClient.setQueryData(instanceSolutionQueryKey(instance), accepted.solution);
       queryClient.invalidateQueries({ queryKey: changesQueryKey(instance) });
+      queryClient.invalidateQueries({ queryKey: currentEdgeListQueryKey(instance) });
     },
   });
-  return { start, job, base, accept };
+  return { start, job, base, edgeList, accept };
 }
 
 export const changesQueryKey = (instance: EdgeListInstance) => ['changes', instance] as const;
@@ -177,11 +202,20 @@ export function useChangesQuery(client: HttpChronosApiClient | null, instance: E
   });
 }
 
+/**
+ * Clear the accepted changes, then read again the changes, the current edge list and the
+ * official solution: clearing may make another timetable official (D56).
+ */
 export function useClearChangesMutation(client: HttpChronosApiClient, instance: EdgeListInstance) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => client.clearChanges(instance),
-    onSuccess: () => queryClient.setQueryData(changesQueryKey(instance), []),
+    onSuccess: () =>
+      Promise.all(
+        [changesQueryKey(instance), currentEdgeListQueryKey(instance), instanceSolutionQueryKey(instance)].map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey })
+        )
+      ),
   });
 }
 

@@ -137,6 +137,12 @@ export interface ChronosApiClient {
   getEdgeList(instance?: EdgeListInstance): Promise<EdgeList>;
 
   /**
+   * The edge list the next solve or repair builds: a backend instance's committed edge list with
+   * every accepted change in force (http mode, D52); otherwise getEdgeList's.
+   */
+  getCurrentEdgeList(instance: EdgeListInstance): Promise<EdgeList>;
+
+  /**
    * The instance's display sidecar (D41: names, pin kinds and labels, clock times);
    * null for the contract examples, which have none.
    */
@@ -241,6 +247,11 @@ export class MockChronosApiClient implements ChronosApiClient {
     const edgeList = await this.readInstanceFile(baseOf(instance), 'edge_list');
     if (edgeList === null) throw new Error(`Unknown instance '${instance}'`);
     return validateContract('edge_list', edgeList);
+  }
+
+  /** Static mode has no accepted changes: the committed edge list. */
+  public async getCurrentEdgeList(instance: EdgeListInstance): Promise<EdgeList> {
+    return this.getEdgeList(instance);
   }
 
   public async getDisplay(instance: EdgeListInstance): Promise<Display | null> {
@@ -469,6 +480,13 @@ export interface SolveJob {
   change?: RepairChange;
   /** Repair: when it became the official timetable (D49) */
   accepted_at?: string;
+  /** The job ids of the accepted changes its edge list includes (D52) */
+  built_with?: string[];
+  /**
+   * Finished solve: built with other accepted changes than those in force when it ended, so it
+   * is kept but never official (D56, S14i)
+   */
+  stale?: boolean;
   /** Present when status is solved or infeasible */
   solution?: SolutionContract;
   error?: string;
@@ -679,6 +697,23 @@ export class HttpChronosApiClient extends MockChronosApiClient {
   /** GET /jobs/{id}/base-solution: the solution a repair started from (D48). */
   public async getBaseSolution(jobId: string): Promise<SolutionContract> {
     return (await validation()).parseSolution(await this.request(`/jobs/${encodeURIComponent(jobId)}/base-solution`));
+  }
+
+  /**
+   * GET /instances/{id}/edge-list/current (S14i): the committed edge list with every accepted,
+   * uncleared change applied (absences, room closures, substitutions; D52). The contract
+   * examples and the printed view are not backend instances: their bundled edge list.
+   */
+  public async getCurrentEdgeList(instance: EdgeListInstance): Promise<EdgeList> {
+    if (isExample(instance) || instance === PRINTED_INSTANCE) return this.getEdgeList(instance);
+    const edgeList = await this.request(`/instances/${encodeURIComponent(instance)}/edge-list/current`);
+    return (await validation()).validateContract('edge_list', edgeList);
+  }
+
+  /** GET /jobs/{id}/edge-list (S14i): the edge list the job ran on (its built_with changes and, for a repair, its own). */
+  public async getJobEdgeList(jobId: string): Promise<EdgeList> {
+    const edgeList = await this.request(`/jobs/${encodeURIComponent(jobId)}/edge-list`);
+    return (await validation()).validateContract('edge_list', edgeList);
   }
 
   /** GET /instances/{id}/changes: the accepted changes, in acceptance order (D52). */

@@ -28,8 +28,11 @@ beforeAll(async () => {
   if (!published || !isSolvedSolution(published)) throw new Error('Expected a solved solution.json');
   solution = published;
   baseline = (await files.getPrintedBaseline(REAL_INSTANCE))!;
+  const edgeList = await files.getEdgeList(REAL_INSTANCE);
   real = {
-    'edge-list': await files.getEdgeList(REAL_INSTANCE),
+    'edge-list': edgeList,
+    // no accepted changes: the current edge list is the committed one
+    'edge-list/current': edgeList,
     display: await files.getDisplay(REAL_INSTANCE),
     anomalies: await files.getAnomalies(REAL_INSTANCE),
     solution,
@@ -220,6 +223,48 @@ describe('Solving the real instance in the app (http mode)', () => {
     expect(status()).toHaveTextContent('No timetable found within 300 s. This does not prove it is impossible.');
     expect(screen.queryByTestId('infeasibility-panel')).not.toBeInTheDocument();
     expect(screen.getByTestId('status-badge-solved')).toBeInTheDocument();
+  });
+
+  // D56, S14i: GET /jobs/{id} `stale` is true when an accept or a clear happened while it ran
+  const STALE = 'Finished, but not official: the accepted changes changed while it ran. Run Solve again.';
+
+  it('a finished solve that is not official says so and does not replace the grid', async () => {
+    const backend = await openReal();
+    const score = screen.getByTestId('quality-score').textContent;
+    const moved = solution.assignment[0];
+    const fresh = {
+      ...solution,
+      assignment: solution.assignment.map((a) => (a === moved ? { ...a, day: (moved.day + 1) % 5 } : a)),
+      quality: { ...solution.quality, score: 42 },
+    };
+    backend.job = job({ status: 'solved', solution: fresh, stale: true, built_with: ['rep-7'] });
+    fireEvent.click(screen.getByTestId('solve-button'));
+    await waitFor(() => expect(status()).toHaveAttribute('data-stale', 'true'));
+    expect(status()).toHaveTextContent(STALE);
+    expect(status()).not.toHaveTextContent('Solved: the grid');
+    await wait(50);
+    expect(screen.getByTestId('quality-score').textContent).toBe(score);
+    expect(screen.getByTestId('quality-score')).not.toHaveTextContent('42');
+    expect(within(screen.getByTestId('compare-score')).queryByText('42.0')).not.toBeInTheDocument();
+    expect(screen.getByTestId('solve-button')).toBeEnabled();
+  });
+
+  it('a stale infeasible solve opens no diagnosis panel', async () => {
+    const backend = await openReal();
+    backend.job = job({ status: 'infeasible', solution: infeasibleFixture, stale: true });
+    fireEvent.click(screen.getByTestId('solve-button'));
+    await waitFor(() => expect(status()).toHaveTextContent(STALE));
+    await wait(50);
+    expect(screen.queryByTestId('infeasibility-panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('status-badge-solved')).toBeInTheDocument();
+  });
+
+  it('a solve that is not stale (stale: false) still replaces the grid', async () => {
+    const backend = await openReal();
+    backend.job = job({ status: 'solved', solution: { ...solution, quality: { ...solution.quality, score: 42 } }, stale: false });
+    fireEvent.click(screen.getByTestId('solve-button'));
+    await waitFor(() => expect(screen.getByTestId('quality-score')).toHaveTextContent('42'));
+    expect(status()).not.toHaveAttribute('data-stale');
   });
 });
 
