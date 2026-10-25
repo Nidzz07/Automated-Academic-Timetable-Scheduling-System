@@ -14,8 +14,11 @@ import {
 let real: Record<string, unknown>;
 beforeAll(async () => {
   const files = new MockChronosApiClient();
+  const edgeList = await files.getEdgeList(REAL_INSTANCE);
   real = {
-    'edge-list': await files.getEdgeList(REAL_INSTANCE),
+    'edge-list': edgeList,
+    // no accepted changes: the current edge list is the committed one
+    'edge-list/current': edgeList,
     display: await files.getDisplay(REAL_INSTANCE),
     anomalies: await files.getAnomalies(REAL_INSTANCE),
     solution: await files.getInstanceSolution(REAL_INSTANCE),

@@ -106,7 +106,10 @@ export interface Labels {
   room(room: { id: string; code: string }): string;
   /** Same cohort, or two cohorts that share students */
   overlap(a: string, b: string): boolean;
-  /** Kind and label of pinned_occupancy[index]; undefined when the instance has no display sidecar */
+  /**
+   * Kind and label of pinned_occupancy[index]; ACCEPTED_ROOM_PIN past the sidecar's pins;
+   * undefined when the instance has no display sidecar
+   */
   pin(index: number): Display['pins'][number] | undefined;
   /** "09:00–10:00", or null when the instance gives no clock times */
   clock(period: number): string | null;
@@ -121,6 +124,17 @@ export const EXAMPLE_LABELS: Labels = {
   overlap: cohortsOverlap,
   pin: () => undefined,
   clock: () => null,
+};
+
+/**
+ * A pin past display.json's list. The current edge list and a job's edge list are the committed
+ * one plus accepted changes; solver.repair.apply_change appends one pin per slot of a
+ * room_unavailable change (D52), so display.json, written for the committed list, has none.
+ */
+export const ACCEPTED_ROOM_PIN: Display['pins'][number] = {
+  kind: 'accepted change',
+  label: 'Room made unavailable by an accepted change',
+  decision: 'D52',
 };
 
 /** An instance's labels: from its display sidecar (D41), else the contract examples'. */
@@ -139,7 +153,7 @@ export function labelsFor(display: Display | null | undefined): Labels {
     room: (room) => display.rooms[room.id] ?? room.code,
     // a division and its batches share students; display.json gives elective groups no members
     overlap: (a, b) => a === b || !!display.batches[a]?.includes(b) || !!display.batches[b]?.includes(a),
-    pin: (i) => display.pins[i],
+    pin: (i) => display.pins[i] ?? ACCEPTED_ROOM_PIN,
     clock: (p) => clock.get(p) ?? null,
   };
 }
@@ -380,29 +394,18 @@ export function entityName(id: string, edgeList: EdgeList, labels: Labels = EXAM
 
 /**
  * A diagnosis's `pin.<i>` by display.json pins[i] (D51): "unique_label (pin.<i>)"; null for any other id.
- * Past the edge list's pins it is a room an accepted change made unavailable (D52, solver.repair.apply_change).
+ * Past display.json's pins it is a room an accepted change made unavailable (ACCEPTED_ROOM_PIN).
  */
 export function pinName(id: string, edgeList: EdgeList, labels: Labels): string | null {
   const i = id.match(/^pin\.(\d+)$/)?.[1];
   if (i === undefined) return null;
   const pin = edgeList.pinned_occupancy[Number(i)];
   const shown = labels.pin(Number(i));
-  const name = !pin
-    ? 'Room made unavailable by an accepted change'
-    : shown?.unique_label ?? shown?.label ?? `Pinned occupancy, ${DAY_NAMES[pin.day]} P${pin.period}`;
+  const name =
+    shown?.unique_label ??
+    shown?.label ??
+    (pin ? `Pinned occupancy, ${DAY_NAMES[pin.day]} P${pin.period}` : ACCEPTED_ROOM_PIN.label);
   return `${name} (${id})`;
-}
-
-/** The edge list with the given changes' substitutions written in (D52): the grid shows who teaches now. */
-export function withSubstitutions(
-  edgeList: EdgeList,
-  changes: Array<{ kind: string; session_id?: string; faculty_id?: string }>
-): EdgeList {
-  const teacher = new Map(
-    changes.flatMap((c) => (c.kind === 'substitute_faculty' ? [[c.session_id!, c.faculty_id!] as const] : []))
-  );
-  if (!teacher.size) return edgeList;
-  return { ...edgeList, sessions: edgeList.sessions.map((s) => ({ ...s, faculty_id: teacher.get(s.id) ?? s.faculty_id })) };
 }
 
 /**

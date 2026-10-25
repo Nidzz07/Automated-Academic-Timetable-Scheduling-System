@@ -27,10 +27,14 @@ interface SolvePanelProps {
   pollMs?: number;
 }
 
+// D56: the accepted changes were accepted or cleared while the solve ran (GET /jobs/{id} `stale`)
+const STALE_MESSAGE = 'Finished, but not official: the accepted changes changed while it ran. Run Solve again.';
+
 /**
  * Solve a backend instance: POST /instances/{id}/solve, then poll the job until it ends.
  * A solved or infeasible result replaces the instance's solution in the query cache, so the
- * grid, quality card and diagnosis panel show it. A timeout leaves it untouched (D33).
+ * grid, quality card and diagnosis panel show it. A timeout leaves it untouched (D33), and so
+ * does a stale result, which the backend keeps but never makes official (D56).
  */
 export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId, onJobStarted, pollMs = 1000 }) => {
   const [timeLimit, setTimeLimit] = useState(DEFAULT_TIME_LIMIT_S);
@@ -39,9 +43,10 @@ export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId,
   const queryClient = useQueryClient();
 
   const solution = job.data?.solution;
+  const stale = job.data?.stale === true;
   useEffect(() => {
-    if (solution) queryClient.setQueryData(instanceSolutionQueryKey(instance), solution);
-  }, [solution, instance, queryClient]);
+    if (solution && !stale) queryClient.setQueryData(instanceSolutionQueryKey(instance), solution);
+  }, [solution, stale, instance, queryClient]);
 
   const failure = solve.error ?? job.error;
   const status: JobStatus | null = failure ? 'error' : job.data?.status ?? solve.data?.status ?? null;
@@ -89,8 +94,8 @@ export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId,
           <span>{busy ? 'Solving…' : 'Solve'}</span>
         </Button>
         {status && (
-          <span role="status" data-testid="solve-status" data-status={status} data-phase={phase}>
-            {message[status]}
+          <span role="status" data-testid="solve-status" data-status={status} data-phase={phase} data-stale={stale || undefined}>
+            {stale && status !== 'error' ? STALE_MESSAGE : message[status]}
           </span>
         )}
       </CardContent>

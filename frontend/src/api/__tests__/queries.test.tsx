@@ -20,6 +20,7 @@ function stubClient(overrides: Partial<ChronosApiClient>): ChronosApiClient {
   return {
     getTimetable: vi.fn(),
     getEdgeList: vi.fn(),
+    getCurrentEdgeList: vi.fn(),
     getDisplay: vi.fn(),
     getInstanceSolution: vi.fn(),
     getAnomalies: vi.fn(),

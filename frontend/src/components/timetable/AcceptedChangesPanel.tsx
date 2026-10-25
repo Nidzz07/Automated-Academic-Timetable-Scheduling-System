@@ -84,7 +84,8 @@ export const AcceptedChangesPanel: React.FC<AcceptedChangesPanelProps> = ({ clie
             <div data-testid="confirm-clear" className="space-y-2 rounded-lg border border-destructive/40 p-3">
               <p>
                 Clear all {rows.length} accepted change{rows.length === 1 ? '' : 's'}? Later solves and repairs will no
-                longer include them. The official timetable stays as it is.
+                longer include them. The official timetable may change: it becomes the newest one that depends on
+                none of them, else the committed one.
               </p>
               <div className="flex gap-2">
                 <Button

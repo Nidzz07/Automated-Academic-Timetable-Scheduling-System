@@ -191,6 +191,7 @@ describe('The anomaly panel in the app (http mode, fetch mocked)', () => {
   async function openReal(role: UserRole, anomalies: AnomalyReport | undefined) {
     const served: Record<string, unknown> = {
       'edge-list': edgeList,
+      'edge-list/current': edgeList,
       display,
       solution: await files.getInstanceSolution(REAL_INSTANCE),
       ...(anomalies ? { anomalies } : {}),
