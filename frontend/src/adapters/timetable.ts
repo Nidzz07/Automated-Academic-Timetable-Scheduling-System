@@ -366,6 +366,70 @@ export function buildPins(edgeList: EdgeList, labels: Labels = EXAMPLE_LABELS): 
   });
 }
 
+/** A teacher's weekly hours as the department counts them (CONTEXT §3.4 "6T+ 8P =14", D11). */
+export interface FacultyLoad {
+  theory: number;
+  practical: number;
+  total: number;
+}
+
+/** The load of these placed sessions: a lab session's periods are practical hours, any other's theory hours. */
+export function facultyLoad(sessions: EnrichedSession[]): FacultyLoad {
+  let theory = 0;
+  let practical = 0;
+  for (const s of sessions) {
+    if (s.sessionType === 'lab') practical += s.durationPeriods;
+    else theory += s.durationPeriods;
+  }
+  return { theory, practical, total: theory + practical };
+}
+
+/** "6T + 8P = 14" */
+export const loadText = (load: FacultyLoad) => `${load.theory}T + ${load.practical}P = ${load.total}`;
+
+/** One faculty member at a slot: free, or engaged with what (sessions by name, pins by label, "unavailable"). */
+export interface FacultyAtSlot {
+  facultyId: string;
+  /** "Name (INITIALS)" */
+  name: string;
+  engagedWith: string[];
+}
+
+/**
+ * Who is free and who is engaged at (day, period): every faculty member the edge list names, engaged
+ * when a placed session occupies the period, a pinned_occupancy entry there holds them, or the
+ * edge list makes them unavailable then. Read-only; the substitute finder is where to act.
+ */
+export function facultyAtSlot(
+  edgeList: EdgeList,
+  labels: Labels,
+  sessions: EnrichedSession[],
+  day: number,
+  period: number
+): { free: FacultyAtSlot[]; engaged: FacultyAtSlot[] } {
+  const ids = new Set([
+    ...edgeList.faculty_availability.map((f) => f.faculty_id),
+    ...edgeList.sessions.map((s) => s.faculty_id),
+    ...edgeList.pinned_occupancy.flatMap((p) => p.faculty_ids),
+  ]);
+  const engagedWith = new Map<string, string[]>();
+  const add = (id: string, what: string) => engagedWith.set(id, [...(engagedWith.get(id) ?? []), what]);
+  for (const s of sessions) {
+    if (s.day === day && s.periods.includes(period)) add(s.facultyId, `${s.subjectCode} · ${s.cohortLabel} · ${s.roomCode}`);
+  }
+  edgeList.pinned_occupancy.forEach((p, i) => {
+    if (p.day !== day || p.period !== period) return;
+    for (const id of p.faculty_ids) add(id, labels.pin(i)?.label ?? 'Pinned occupancy');
+  });
+  for (const f of edgeList.faculty_availability) {
+    if (f.unavailable_slots.some((s) => s.day === day && s.period === period)) add(f.faculty_id, 'unavailable');
+  }
+  const all = [...ids]
+    .map((id) => ({ facultyId: id, name: facultyText(labels, id), engagedWith: engagedWith.get(id) ?? [] }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return { free: all.filter((f) => f.engagedWith.length === 0), engaged: all.filter((f) => f.engagedWith.length > 0) };
+}
+
 /** "Name (INITIALS)"; the name alone for faculty with no initials. */
 export function facultyText(labels: Labels, id: string): string {
   const f = labels.faculty(id);

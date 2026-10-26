@@ -9,6 +9,7 @@ import { FacultyWorkloadCard } from '@/components/timetable/FacultyWorkloadCard'
 import { InfeasibilityDiagnosisPanel } from '@/components/timetable/InfeasibilityDiagnosisPanel';
 import { RejectionAlert } from '@/components/timetable/RejectionAlert';
 import { FreeRoomsPanel, RoomTimetable } from '@/components/timetable/RoomViews';
+import { FacultyAtSlotPanel } from '@/components/timetable/FacultyAtSlotPanel';
 import { AnomalyReportPanel } from '@/components/timetable/AnomalyReport';
 import { PrintedViolationsPanel } from '@/components/timetable/PrintedViolations';
 import { SolvePanel } from '@/components/timetable/SolvePanel';
@@ -401,6 +402,18 @@ function TimetableWorkspace({
     [placed, edgeList, labels]
   );
 
+  // The official timetable on the current edge list (the accepted changes in force, D52, D56), never a
+  // proposal: the faculty workload view, the loads before a substitution and the free/engaged view read it
+  const officialSessions = useMemo(
+    () => (shown && isSolvedSolution(shown) ? buildEnrichedSessions(shown.assignment, currentEdgeList, labels) : []),
+    [shown, currentEdgeList, labels]
+  );
+  // A proposal's loads: before on the official timetable, after on the proposal and the job's edge list
+  const proposalWorkload = useMemo(
+    () => (proposal ? { before: officialSessions, after: allSessions } : undefined),
+    [proposal, officialSessions, allSessions]
+  );
+
   // Selected session lookup
   const selectedSession = useMemo<EnrichedSession | null>(() => {
     if (!selectedSessionId || !allSessions.length) return null;
@@ -440,6 +453,11 @@ function TimetableWorkspace({
     if (!allSessions.length) return [];
     return allSessions.filter((s) => s.facultyId === selectedFaculty);
   }, [allSessions, selectedFaculty]);
+  // The workload view counts the printed timetable on the printed view, else the official one
+  const workloadSessions = useMemo(
+    () => (printed ? facultySessions : officialSessions.filter((s) => s.facultyId === selectedFaculty)),
+    [printed, facultySessions, officialSessions, selectedFaculty]
+  );
 
   // Determine effective cohort filter based on role
   const effectiveCohortFilter = useMemo(() => {
@@ -669,6 +687,7 @@ function TimetableWorkspace({
             proposal={proposal}
             edgeList={repairEdgeList ?? edgeList}
             labels={labels}
+            workload={proposalWorkload}
             onDiscard={discardRepair}
           />
         )}
@@ -702,8 +721,12 @@ function TimetableWorkspace({
         {/* Faculty Workload View (Visible only to Faculty Role) */}
         {currentRole === 'faculty' && quality && (
           <FacultyWorkloadCard
-            facultyInitials={facultySessions[0]?.facultyInitials || facultySessions[0]?.facultyName || ''}
-            facultySessions={facultySessions}
+            facultyInitials={
+              workloadSessions[0]?.facultyInitials ||
+              workloadSessions[0]?.facultyName ||
+              (selectedFaculty ? labels.faculty(selectedFaculty).initials || labels.faculty(selectedFaculty).name : '')
+            }
+            facultySessions={workloadSessions}
             loadRule={quality.rules.find((r) => r.rule_id === 'S-LOAD16')}
           />
         )}
@@ -806,6 +829,17 @@ function TimetableWorkspace({
             <RoomTimetable edgeList={edgeList} sessions={allSessions} labels={labels} />
             <FreeRoomsPanel edgeList={edgeList} sessions={allSessions} labels={labels} />
           </section>
+        )}
+
+        {/* Free and engaged faculty at a slot (administrator and coordinator; the official timetable only) */}
+        {caps.viewScope === 'all' && !printed && (
+          <FacultyAtSlotPanel
+            key={`at-slot-${instance}`}
+            edgeList={currentEdgeList}
+            sessions={officialSessions}
+            labels={labels}
+            solved={!!shown && isSolvedSolution(shown)}
+          />
         )}
 
         {/* Ingestion anomaly report (whole-department roles); "no report" when the instance has none */}
