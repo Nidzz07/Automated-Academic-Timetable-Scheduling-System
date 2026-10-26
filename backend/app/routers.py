@@ -280,8 +280,9 @@ def start_solve(
 
 @instances.post(
     "/{instance_id}/repair", status_code=status.HTTP_202_ACCEPTED,
-    description="repair the official solution; 422 for an unknown id or slot or an "
-    "unqualified substitute, 409 when there is no solved official solution",
+    description="repair the official solution; 422 for an unknown id or slot, an "
+    "unqualified substitute or a change already in force, 409 when there is no solved "
+    "official solution",
 )
 def start_repair(
     instance_id: str, req: RepairRequest, service: Service, actor: Solver
@@ -350,7 +351,8 @@ def get_job_edge_list(job_id: str, service: Service) -> dict[str, Any]:
 
 @jobs.post(
     "/{job_id}/accept", response_model_exclude_none=True,
-    description="make a solved repair official; 409 unless its base is still official",
+    description="make a solved repair official; 409 unless its base is still official and "
+    "its change is not already in force",
 )
 def accept_repair(job_id: str, service: Service, actor: Solver) -> JobView:
     return JobView(**_found(service.accept(job_id, actor.username), "job"))

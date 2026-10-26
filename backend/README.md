@@ -120,7 +120,10 @@ returns its unfinished diagnosis, which can differ between machines like a timeo
 search over the sessions the repair moved. A faculty, room or session that is not in the
 instance, a slot off its grid, or a substitute who already teaches the session or is not
 qualified for it (see Substitutes) gets 422; no official solution, or an infeasible one,
-gets 409. While it runs, the job's phase is `"repair"`. It ends `solved` or `infeasible`
+gets 409. A `faculty_unavailable` or `room_unavailable` already in force (every slot is in
+an accepted, uncleared change of the same kind for the same faculty or room) gets 422
+`"This change is already in force"` and is not queued (S14n); one with any new slot is
+repaired as usual. While it runs, the job's phase is `"repair"`. It ends `solved` or `infeasible`
 (the repair's diagnosis) with its solution.v2, or `timeout` with none (D33). The job's
 `base` is the job id of the solution it started from, or `"committed"`, and `change` is the
 change. `displaced` lists the sessions whose slot changed (D48); room-only changes are found
@@ -135,7 +138,8 @@ without `display.json` protects none.
 `accepted_at` and `accepted_by`. It answers 409 if the job is not a solved repair, or if its
 base is no longer the official solution (another repair was accepted or a solve finished
 since), so a repair is accepted at most once, or if its `built_with` is not the accepted
-changes now in force (D56). Unknown job: 404.
+changes now in force (D56), or if its change is already in force (a job queued before the
+check above existed): so an accepted change is never listed twice. Unknown job: 404.
 
 `GET /jobs/{id}/base-solution` returns the exact solution.v2 a repair started from: the
 committed `solution.json` or its base job's solution. A solve or unknown job: 404.

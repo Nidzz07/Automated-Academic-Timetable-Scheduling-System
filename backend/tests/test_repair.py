@@ -19,10 +19,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session as OrmSession
 
+from backend.app import service as service_module
 from backend.app.store import INSTANCES_DIR
 from backend.tests.conftest import bearer
 from backend.tests.test_api import REAL, client_for, conforms, solve, without_runtime
-from db.models import AuditEntry
+from db.models import AuditEntry, SolveJob
 from solver.benchmarks.real_repair import SCENARIOS
 from solver.benchmarks.synthetic import PRESETS, generate
 from solver.repair import apply_change, repair
@@ -50,7 +51,7 @@ def client(tmp_path_factory: pytest.TempPathFactory, database_url: str) -> Itera
     """``changes`` and ``accepts``: the real instance with its committed solution;
     ``unsolved``: its edge list only; ``infeasible``: a synthetic preset (D19)."""
     root = tmp_path_factory.mktemp("repair")
-    for name in ("changes", "accepts", "accumulates", "unsolved"):
+    for name in ("changes", "accepts", "accumulates", "in-force", "in-force-accept", "unsolved"):
         (root / name).mkdir()
         files = ["edge_list.json"] if name == "unsolved" else ["edge_list.json", "solution.json"]
         for file in files:
@@ -339,3 +340,57 @@ def test_accepted_changes_accumulate(
                                       "official": "committed"}
     assert client.get("/instances/accumulates/solution").json() == committed
     assert run(client, "accumulates", ROOM_603_MONDAY)["built_with"] == []
+
+
+def test_change_already_in_force_is_refused(client: TestClient, database_url: str) -> None:
+    """S14n: an absence or room closure whose every slot is already accepted (and not
+    cleared) for that faculty or room is 422 and never queued; one with a new slot is
+    repaired and accepted as before."""
+    def changes() -> list[dict[str, Any]]:
+        return client.get("/instances/in-force/changes").json()
+
+    tuesday_p5_p6 = {**KURHADE_AFTERNOON, "slots": KURHADE_AFTERNOON["slots"][:2]}
+    for change in (tuesday_p5_p6, KURHADE_AFTERNOON, ROOM_603_MONDAY):  # P7-P9 are new
+        job = run(client, "in-force", change)
+        assert job["status"] == "solved"
+        assert accept(client, job["id"]).status_code == 200
+    assert [c["change"] for c in changes()] == [tuesday_p5_p6, KURHADE_AFTERNOON,
+                                                ROOM_603_MONDAY]
+
+    for change in (
+        KURHADE_AFTERNOON,
+        {**KURHADE_AFTERNOON, "slots": KURHADE_AFTERNOON["slots"][::-1]},
+        {**KURHADE_AFTERNOON, "slots": KURHADE_AFTERNOON["slots"][-1:]},
+        ROOM_603_MONDAY,
+    ):
+        response = client.post("/instances/in-force/repair", headers=bearer("coordinator", "dup"),
+                               json={"change": change})
+        assert response.status_code == 422, response.text
+        assert response.json() == {"detail": "This change is already in force"}
+    assert audit(database_url, "dup", "repair") == []
+    assert len(changes()) == 3
+
+    # another faculty, or the same room on another day, is a new change
+    held = [SolveJob(params={"change": c}) for c in (KURHADE_AFTERNOON, ROOM_603_MONDAY)]
+    for change in ({**KURHADE_AFTERNOON, "faculty_id": "fac-anant-nimkar"},
+                   {**ROOM_603_MONDAY, "slots": KURHADE_AFTERNOON["slots"]}):
+        assert not service_module._in_force(change, held)
+
+
+def test_accept_refuses_a_change_already_in_force(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """S14n: a repair queued without the check at start (as before it existed) is not
+    accepted a second time."""
+    first = run(client, "in-force-accept", KURHADE_AFTERNOON)
+    assert accept(client, first["id"]).status_code == 200
+    with monkeypatch.context() as patched:
+        patched.setattr(service_module, "_in_force", lambda *_: False)
+        again = run(client, "in-force-accept", KURHADE_AFTERNOON)
+    assert (again["status"], again["base"], again["built_with"]) == (
+        "solved", first["id"], [first["id"]])
+    response = accept(client, again["id"])
+    assert response.status_code == 409
+    assert response.json() == {"detail": "This change is already in force"}
+    assert [c["job_id"] for c in client.get("/instances/in-force-accept/changes").json()] == [
+        first["id"]]

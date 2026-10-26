@@ -36,6 +36,9 @@ the changes in force when it finished or was accepted (else it is ``stale``: kep
 official) and depends on no cleared change. A repair's time limit covers the whole job,
 explanation included (S14k); an infeasible solve is explained as a repair is. The edge
 lists jobs run on are served.
+
+S14n: a faculty or room unavailability already in force (every slot held by an accepted,
+uncleared change for the same faculty or room) is refused, never queued nor accepted again.
 """
 
 from __future__ import annotations
@@ -79,6 +82,8 @@ BREAK_PIN_KINDS = ("lunch", "coffee", "break")  # display.json pin kinds never r
 # why a qualified teacher cannot take a session where it is (solver.validate kinds)
 LEFT_OUT = {"FACULTY_CLASH": "busy", "PINNED_BLOCK": "busy",
             "FACULTY_UNAVAILABLE": "unavailable"}
+IN_FORCE = "This change is already in force"
+UNAVAILABLE_OF = {"faculty_unavailable": "faculty_id", "room_unavailable": "room_id"}
 
 
 class ContractError(ValueError):
@@ -104,6 +109,19 @@ def check_contract(contract: str, payload: Any) -> None:
     errors = [e.message for e in _validator(contract).iter_errors(payload)]
     if errors:
         raise ContractError(f"{contract}: {len(errors)} errors, first: {errors[0]}")
+
+
+def _in_force(change: dict[str, Any], accepted: list[SolveJob]) -> bool:
+    """*change* is a faculty or room unavailability every slot of which an *accepted* change
+    of the same kind for the same faculty or room already holds (S14n)."""
+    key = UNAVAILABLE_OF.get(change["kind"])
+    if key is None:
+        return False
+    held = {(s["day"], s["period"]) for job in accepted
+            if job.params["change"]["kind"] == change["kind"]
+            and job.params["change"][key] == change[key]
+            for s in job.params["change"]["slots"]}
+    return {(s["day"], s["period"]) for s in change["slots"]} <= held
 
 
 def solve_edge_list(
@@ -366,19 +384,22 @@ class ChronosService:
     ) -> str | None:
         """Queue a repair of the instance's official solution for *change*, on the edge
         list with every accepted change (D52): the job id, or None when the instance is
-        unknown. Raises :class:`BadChange` for an unknown id or slot or a substitute not
-        qualified (D53), :class:`Conflict` when the official solution is not a solved
-        one."""
+        unknown. Raises :class:`BadChange` for an unknown id or slot, a substitute not
+        qualified (D53) or a change already in force (S14n), :class:`Conflict` when the
+        official solution is not a solved one."""
         committed = self.edge_list(instance_id)
         if committed is None:
             return None
         with OrmSession(self._engine) as db:
             official = self._official(db, instance_id)
             edge_list, built_with = self._built(db, instance_id, committed)
+            accepted = self._accepted(db, instance_id)
         try:  # on the built edge list: a substitution may undo an accepted one
             changed = apply_change(edge_list, change)
         except ValueError as exc:
             raise BadChange(str(exc)) from exc
+        if _in_force(change, accepted):
+            raise BadChange(IN_FORCE)
         if change["kind"] == "substitute_faculty":
             session = next(s for s in changed["sessions"] if s["id"] == change["session_id"])
             if change["faculty_id"] not in self.qualified(instance_id, session):
@@ -515,8 +536,9 @@ class ChronosService:
     def accept(self, job_id: str, actor: str) -> dict[str, Any] | None:
         """Make a solved repair the official solution (D49): the job, or None if unknown.
         Raises :class:`Conflict` unless it is a solved repair whose base is still the
-        official solution (so a repair is accepted at most once) and that was built with
-        exactly the accepted changes in force (D56)."""
+        official solution (so a repair is accepted at most once), that was built with
+        exactly the accepted changes in force (D56) and whose change is not already in
+        force (S14n: a job queued before that guard at start)."""
         with self._official_lock, OrmSession(self._engine) as db:
             job = db.get(SolveJob, job_id)
             if job is None:
@@ -526,8 +548,11 @@ class ChronosService:
             official = self._official(db, job.instance_id)
             if official is None or official[0] != job.base:
                 raise Conflict("the timetable this repair started from is no longer official")
-            if (job.built_with or []) != [c.id for c in self._accepted(db, job.instance_id)]:
+            accepted = self._accepted(db, job.instance_id)
+            if (job.built_with or []) != [c.id for c in accepted]:
                 raise Conflict("the accepted changes changed since this repair started (D56)")
+            if _in_force(job.params["change"], accepted):
+                raise Conflict(IN_FORCE)
             job.accepted_at, job.accepted_by = func.now(), actor
             self._audit(db, actor, "accept",
                         {"instance_id": job.instance_id, "job_id": job_id, "base": job.base})
