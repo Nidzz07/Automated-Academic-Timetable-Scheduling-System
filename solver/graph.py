@@ -41,6 +41,9 @@ Lab blocks are kept on the graph (:attr:`ConflictGraph.lab_blocks`) because
 they are a constraint *between vertices* - all members take one colour - and
 every colouring of this graph, greedy or backtracking, has to honour them.
 
+Course: Discrete Structures and Graph Theory (an undirected conflict graph,
+vertices and edges, adjacency as a map of neighbour sets).
+
 Stdlib only — ``solver/`` must never import ``networkx`` or any non-stdlib
 package (CONTEXT.md rule 3).
 """

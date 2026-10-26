@@ -47,6 +47,9 @@ Returns ``(assignment, unplaced)`` where:
 * ``unplaced``:   ``list[str]``        — session ids that could not be placed
   (empty when the greedy succeeds on a feasible instance).
 
+Course: Discrete Structures and Graph Theory (greedy vertex colouring of the
+conflict graph, Welsh-Powell's largest-degree-first order).
+
 Stdlib only — ``solver/`` must never import ``networkx`` or anything
 outside the stdlib (CONTEXT.md rule 3).
 """
