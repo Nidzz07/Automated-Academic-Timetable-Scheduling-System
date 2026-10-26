@@ -145,14 +145,14 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 
 ### Phase 1 — Data model, graph, grid UI
 - B: [x] models (3NF), department scoping, cohort polymorphism · [x] (PR #28, #33) reference seed with T/P loads (S7, S9) · [x] (PR #10) faculty_initials table, human-verified for SE/TE (D38, D45) · [x] (PR #33) constraint derivation / export (S9)
-- A: [x] conflict graph, O(1) adjacency · [x] Welsh-Powell fixed (PR #18) · [x] graph tests with networkx cross-check · [ ] chromatic lower bound (optional, S12i)
+- A: [x] conflict graph, O(1) adjacency · [x] Welsh-Powell fixed (PR #18) · [x] graph tests with networkx cross-check · [x] (PR #74) chromatic lower bound (S12i)
 - C: [x] scaffold, grid, lab, combined and pinned cells · [x] TS types generated from schemas (PR #22)
 - Exit: [x] (PR #39, #43, #45) real solver output rendered in the browser (S12)
 
 ### Phase 2 — Real data and backtracking
 - B: [x] (PR #21) teaching scheme + class_tt parser (S6) · [x] (PR #28) lab_tt, faculty loads, anomaly report (S7) · [x] (PR #33) seeder + DB→edge-list export (S9)
 - A: [x] backtracking (forward checking, MRV, exact undo), lab blocks, sub-rooms, pinned blocks, capacity, validate.py · [x] (PR #23) pre-solve, lazy lab rooms, timeout (S4) · [x] (PR #27) per-year lunch (S8)
-- C: [x] drag and drop with revert, role views, mock API, Vitest · [~] anomaly report viewer (S11c; a read-only panel of anomalies.json exists since PR #43)
+- C: [x] drag and drop with revert, role views, mock API, Vitest · [x] (PR #43, #69) anomaly report viewer (S11c)
 - Exit: [x] (PR #45, #49) real EVEN SE+TE instance solved and validated (S12)
 
 ### Phase 3 — Quality and API
@@ -161,15 +161,15 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 - C: [x] (PR #22) TanStack Query (S5) · [x] (PR #30, #35) quality panel, workload view, room timetable, free rooms (S11) · [x] (PR #48) generate flow on the real API (S13)
 
 ### Phase 4 — Diagnosis and repair
-- A: [x] (PR #50, #59, #62) mus.py, relaxation, repair.py (S14)
-- B: [x] (PR #57, #61, #64) absences and substitution API (S14) · [ ] qualifications human-verified (S14i) · [ ] official timetable after clearing accepted changes (S14i, D56)
-- C: [x] (PR #58, #66) diagnosis panel and repair preview on real data (S14)
+- A: [x] (PR #50, #59, #62, #70) mus.py, relaxation, repair.py (S14, S14k)
+- B: [x] (PR #57, #61, #64) absences and substitution API (S14) · [x] (PR #71) qualifications human-verified (S14i) · [x] (PR #71) official timetable after clearing accepted changes (S14i, D56)
+- C: [x] (PR #58, #66, #72) diagnosis panel and repair preview on real data (S14, S14j)
 
 ### Phase 5 — Evaluation (S15)
-- [x] (PR #36, #65) Runtime vs size, with plots · [x] (PR #38, #56) compare with the real EVEN timetable · [x] (PR #56) greedy vs backtracking · [x] (PR #65) repair vs regeneration · [ ] lab utilisation reproduced (S15d) · [ ] edge cases (S15d) · [x] (PR #42, #47, #57, #64) API tests · [x] (PR #15, #18) property tests
+- [x] (PR #36, #65) Runtime vs size, with plots · [x] (PR #38, #56) compare with the real EVEN timetable · [x] (PR #56) greedy vs backtracking · [x] (PR #65) repair vs regeneration · [x] (PR #73) lab utilisation reproduced (S15d) · [x] (PR #73) edge cases (S15d) · [x] (PR #42, #47, #57, #64) API tests · [x] (PR #15, #18) property tests
 
 ### Phase 6 — Report and demo (S16)
-- [~] README (S16f) · [ ] algorithms write-up (S16a) · [ ] deployment and demo accounts (S16b, S16c) · [ ] demo script (S16d) · [ ] SRS and UML (S16e) · [ ] report (S16f) · [ ] slides (S16f)
+- [~] README (S16f) · [x] (PR #75) algorithms write-up (S16a) · [~] (PR #76) deployment and demo accounts (S16b done; S16c) · [ ] demo script (S16d) · [ ] SRS and UML (S16e) · [ ] report (S16f) · [ ] slides (S16f)
 
 ## 8. Sequence of work
 | Step | Owner | Branch | Depends on | Reviewer | Status |
@@ -188,7 +188,7 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | S10 | Dhruv | track/solver-scoring | S8 merged | Nidhi | Done (PR #29) |
 | S11 | Rohan | track/frontend-v2-rooms | S3, S5 merged | Nidhi | Done (PR #30) |
 | S11b | Rohan | track/frontend-v2-rooms | S11 | Nidhi | Done (PR #30, #35) |
-| S11c | Rohan | track/frontend-anomalies | S13a | Nidhi | Not started |
+| S11c | Rohan | track/frontend-anomalies | S13a | Nidhi | Done (PR #69) |
 | Row 9 | Nidhi | contracts/row9-presolve | row 9 signed | all three | Done (PR #31) |
 | S12 | All | integration/real-even | S9, S10, S11 | all three | Done |
 | S12a | Dhruv | track/solver-real-even | S9, S10 merged | Nidhi | Done (PR #34): timeout, follow-up S12d |
@@ -199,7 +199,7 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | S12f | Rohan | track/frontend-real-data | S12e | Nidhi | Done (merged 2026-10-19) |
 | S12g | Dhruv | track/solver-quality | S12d | Nidhi | Done (merged 2026-10-21): simulated annealing, score −162.5 → −15.0 (1,000,000 moves, seed 0) against printed 21.5, 0 hard violations |
 | S12h | Dhruv | track/solver-extended-moves | S14e | Nidhi | Done (PR #63, merged 2026-10-23) |
-| S12i | Dhruv | track/solver-bounds | S14k | Nidhi | Not started (optional) |
+| S12i | Dhruv | track/solver-bounds | S14k | Nidhi | Done (PR #74) |
 | S13 | Nidhi + Rohan | track/backend-api, track/frontend-api | S12 | cross | Done |
 | S13a | Nidhi | track/backend-api | S12e | Rohan | Done (merged 2026-10-19) |
 | S13b | Nidhi | track/backend-auth | S13a | Rohan | Done (merged 2026-10-20) |
@@ -215,17 +215,17 @@ Legend: [x] done and merged · [~] partial · [ ] not started. (Sn) = the step i
 | S14f | Nidhi | track/backend-changes | S14c | Rohan | Done (PR #61, merged 2026-10-22) |
 | S14g | Nidhi | track/backend-substitution | S14e, S14f | Rohan | Done (PR #64, merged 2026-10-22) |
 | S14h | Rohan | track/frontend-changes | S14g | Nidhi | Done (PR #66, merged 2026-10-23) |
-| S14k | Dhruv | track/solver-explain-deadline | S14e | Nidhi | Not started |
-| S14i | Nidhi | track/backend-fixes | S14k, D56 | Rohan | Not started |
-| S14j | Rohan | track/frontend-current-edge-list | S14i | Nidhi | Not started |
+| S14k | Dhruv | track/solver-explain-deadline | S14e | Nidhi | Done (PR #70) |
+| S14i | Nidhi | track/backend-fixes | S14k, D56 | Rohan | Done (PR #71) |
+| S14j | Rohan | track/frontend-current-edge-list | S14i | Nidhi | Done (PR #72) |
 | S15 | All | eval/* | S14 | cross | Done |
 | S15a | Rohan | track/bench-harness | — | Nidhi | Done (PR #36) |
 | S15b | Rohan | track/bench-evaluation | S12g | Nidhi | Done (PR #56, merged 2026-10-22) |
 | S15c | Rohan | track/bench-evaluation-2 | S15b | Nidhi | Done (PR #65, merged 2026-10-23) |
-| S15d | Rohan | track/bench-evaluation-3 | S15c | Nidhi | Not started |
-| S16 | All | docs/report | S15 | cross | Not started |
-| S16a | Dhruv | docs/algorithms | S12i | Nidhi | Not started |
-| S16b | Nidhi | track/backend-deploy | S14i, D55 | Rohan | Not started |
+| S15d | Rohan | track/bench-evaluation-3 | S15c | Nidhi | Done (PR #73) |
+| S16 | All | docs/report | S15 | cross | In progress |
+| S16a | Dhruv | docs/algorithms | S12i | Nidhi | Done (PR #75) |
+| S16b | Nidhi | track/backend-deploy | S14i, D55 | Rohan | Done (PR #76) |
 | S16c | Nidhi | — (deployment, no code) | S16b | all three | Not started |
 | S16d | Rohan | docs/demo-script | S16c | Nidhi | Not started |
 | S16e | Dhruv | docs/srs-uml | S16b | Nidhi | Not started |
@@ -326,3 +326,4 @@ Tags as in the old plan: [S] = should (cut only if behind schedule, note the cut
 - 2026-10-21: S12g (score −15.0), S13d, S13e, S14a merged. D46 not adopted, D47 rejected. A revert PR of S13d was opened by mistake and closed unmerged; S13d stays on main. D48–D50 recorded. Next: S14b diagnosis, S14c repair API, S15b evaluation, then S14d repair UI.
 - 2026-10-22: S14b (minimal conflicting sets, verified relaxations, drag pre-check), S14c (repair API, accept, linked accounts, migration 0008), S14d (repair UI), S15b (evaluation tables) merged. D51–D53 recorded. Next: S14e/S14f/S15c, then S14g, S14h.
 - 2026-10-24: S14e (protected pins, `substitute_faculty`, `substitute_candidates`), S14f (accepted changes accumulate, `qualifications.json`, migration 0009), S14g (substitutes API, lunch pins protected in every repair), S12h (Kempe-chain and gap moves, off by default; no measurable score gain), S15c (size sweep, repair vs regeneration: 4.53 vs 85.68 sessions moved over 19 changes, charts), S14h (accepted-changes panel, exact repair bases, pin names, substitute finder in the UI) merged (PRs #61–#66). Next: S14k, S11c, S14i, S14j, S12i, local browser check (D55, D56 recorded).
+- 2026-10-26: S11c (anomaly panel grouped by category, #69), S14k (the time limit covers the explanation, #70), S14i (D56 official timetable after clearing changes, current and job edge lists, qualifications.json checked by hand, #71), S14j (UI on the current and job edge lists, stale solves not official, #72), S15d (lab utilisation 11 of 15 printed tables reproduced, 4 reported; edge cases, #73), S12i (lower bounds: clique 18, teacher 25, cohort 41, #74), S16a (`docs/algorithms.md`, #75), S16b (production app, `backend/Dockerfile.prod`, demo accounts and reset, #76) merged. S16c waits on a team decision: the backend's local-host guard refuses a Supabase `DATABASE_URL` (D55). Local browser check: not yet run. Next: S16c deployment, deployed browser check, S16d, S16e.
