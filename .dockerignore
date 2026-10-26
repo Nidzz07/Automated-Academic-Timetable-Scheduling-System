@@ -21,5 +21,8 @@ htmlcov/
 frontend/node_modules/
 frontend/dist/
 
-.env
+# Every .env at any depth (".env" alone matches only the repo root; backend/.env holds
+# local secrets). .env.example is not needed in an image.
+**/.env
+**/.env.*
 *.md

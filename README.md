@@ -14,9 +14,9 @@ targets two things existing tools (FET, aSc TimeTables, UniTime) do not offer:
 
 The solver is fully deterministic. There is no machine learning anywhere in the decision path.
 
-> **Status:** work in progress. The core solver, the database schema and the frontend shell
-> exist. Real-data ingestion, the API, quality scoring and both novelty features are not built
-> yet. See [`docs/CURRENT-PROGRESS.md`](docs/CURRENT-PROGRESS.md) for the current state.
+> **Status:** work in progress. The solver, real-data ingestion, the API, quality scoring,
+> diagnosis and repair, the frontend and the evaluation are on `main`; deployment and the final
+> report are open. See [`docs/CURRENT-PROGRESS.md`](docs/CURRENT-PROGRESS.md) for the current state.
 
 ## Tracks
 
@@ -36,7 +36,7 @@ contracts/    frozen JSON Schemas + example payloads
 solver/       pure-Python solver core (stdlib only)
 db/           SQLAlchemy models          migrations/  Alembic revisions
 ingestion/    parsers and seeders for data/real/
-backend/      FastAPI app (scaffold)     frontend/    React + Vite + TypeScript
+backend/      FastAPI app                frontend/    React + Vite + TypeScript
 tests/        cross-cutting tests (contract validation)
 data/real/    the department's source timetables and spreadsheets (read-only)
 docs/         context, progress, proposals
@@ -155,11 +155,11 @@ Environment variables (set them in Render, never in the repo): `DATABASE_URL`, `
 
 - **Applying migrations to Supabase is a human-only step.** Nidhi runs `alembic upgrade head`
   by hand, with `CHRONOS_ALLOW_REMOTE_DB=1` for that one command (D55). Agents never do.
-- **Not deployable yet.** The backend refuses every database host outside `localhost`,
-  `127.0.0.1`, `::1`, `db` and `postgres` unless `CHRONOS_ALLOW_REMOTE_DB=1` is set
-  (`db/local_guard.py`, used by `backend.app.main` and `demo_seed`). A Supabase
-  `DATABASE_URL` therefore stops the service at startup. The team still has to decide how
-  production may use Supabase.
+- **Remote database access (D57).** The backend refuses every database host outside
+  `localhost`, `127.0.0.1`, `::1`, `db` and `postgres` unless `CHRONOS_ALLOW_REMOTE_DB=1` is set
+  (`db/local_guard.py`, used by `backend.app.main` and `demo_seed`). Only the Render service
+  sets `CHRONOS_ALLOW_REMOTE_DB=1`, by hand in Render's environment settings, so it can use
+  Supabase. It is never set in `.env` files, the repository, tests or an agent session.
 
 ## Running things
 
@@ -191,7 +191,7 @@ The configuration is in `pyproject.toml`.
 ### Migrations (Alembic)
 
 ```bash
-alembic upgrade head      # current head: 0004_faculty_initials
+alembic upgrade head      # current head: 0009_accepted_changes
 alembic current
 alembic revision --autogenerate -m "describe the change"
 ```
@@ -199,8 +199,8 @@ alembic revision --autogenerate -m "describe the change"
 `migrations/env.py` reads `DATABASE_URL` from the environment first, then from `backend/.env`.
 
 It **refuses to migrate a non-local database** unless `CHRONOS_ALLOW_REMOTE_DB=1` is set. The
-hosted Supabase instance is shared staging for the whole team. Only promote a reviewed migration
-there deliberately, after agreeing it with the team.
+hosted Supabase instance is the production database (D55). Only Nidhi promotes a reviewed
+migration there, by hand, after agreeing it with the team.
 
 ### Frontend
 
@@ -212,8 +212,12 @@ npm run build       # tsc type-check + vite production build
 npm run dev         # dev server
 ```
 
-The frontend currently runs against contract example fixtures and a mock API client. It is not
-connected to a backend yet. `package.json` has no `lint` script.
+By default (http mode) the frontend calls the backend at `VITE_API_BASE_URL`, default `/api`; the
+dev server proxies `/api` to port 8000. `VITE_API_MODE=static` serves the bundled
+`contracts/examples` and `data/instances` files instead, with no backend. Every payload is
+validated against the contracts. It has login, solve, repair and diagnosis, accepted changes,
+substitutes, room views, the anomaly panel and the audit log. `package.json` has no `lint`
+script.
 
 ### Backend
 
@@ -221,7 +225,14 @@ connected to a backend yet. `package.json` has no `lint` script.
 uvicorn backend.app.main:app --reload    # http://localhost:8000/docs
 ```
 
-This is a scaffold: there are no routes yet.
+The API needs a migrated database and `SECRET_KEY` (see
+[`backend/README.md`](backend/README.md)). Routes: `GET /health`, `POST /auth/login`; under
+`/instances`: the list, `/{id}/edge-list`, `/{id}/edge-list/current`, `/{id}/display`,
+`/{id}/anomalies`, `/{id}/solution`, `POST /{id}/solve`, `POST /{id}/repair`,
+`GET`/`DELETE /{id}/changes`, `GET /{id}/sessions/{session_id}/substitutes`; `GET /jobs/{id}`,
+`/jobs/{id}/base-solution`, `/jobs/{id}/edge-list`, `POST /jobs/{id}/accept`; `GET /audit`
+(administrator). `backend.app.prod:app` serves the same API under `/api` and the built frontend
+at `/` (Deploy, above).
 
 ## Documentation
 
@@ -231,6 +242,6 @@ This is a scaffold: there are no routes yet.
 - [`docs/CURRENT-PROGRESS.md`](docs/CURRENT-PROGRESS.md) tracks what is done, blockers, the
   decision log and the contract change log.
 - [`docs/contract-change-proposal-v2.md`](docs/contract-change-proposal-v2.md) is the v2
-  contract changes. All three members signed it off on 2026-10-06; the v2 schema files are not
-  written yet.
+  contract changes. All three members signed it off on 2026-10-06; the v2 schema files are in
+  `contracts/`.
 - [`CLAUDE.md`](CLAUDE.md) holds the rules for coding agents working in this repo.
