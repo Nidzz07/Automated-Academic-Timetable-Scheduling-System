@@ -8,7 +8,17 @@ import {
   isInfeasibleSolution,
   toQualityView,
 } from '@/adapters/solution';
-import { DAY_NAMES, EdgeList, Labels, buildWeekGrid, entityName, facultyText } from '@/adapters/timetable';
+import {
+  DAY_NAMES,
+  EdgeList,
+  EnrichedSession,
+  Labels,
+  buildWeekGrid,
+  entityName,
+  facultyLoad,
+  facultyText,
+  loadText,
+} from '@/adapters/timetable';
 import { InfeasibilityDiagnosisPanel } from './InfeasibilityDiagnosisPanel';
 import { changeText } from './AcceptedChangesPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +38,11 @@ interface RepairPanelProps {
   proposal: RepairProposal | null;
   edgeList: EdgeList;
   labels: Labels;
+  /**
+   * Weekly loads around a substitution: the official timetable on the current edge list (before)
+   * and the proposal on the job's edge list (after)
+   */
+  workload?: { before: EnrichedSession[]; after: EnrichedSession[] };
   /** Forget the job: the grid shows the official timetable again */
   onDiscard: () => void;
 }
@@ -41,7 +56,7 @@ const score = (s: SolvedSolution) => toQualityView(s).score;
  * every changed session and the score change, and becomes official only when accepted (D49).
  * A timeout is never shown as infeasible (D33).
  */
-export const RepairPanel: React.FC<RepairPanelProps> = ({ repair, jobId, proposal, edgeList, labels, onDiscard }) => {
+export const RepairPanel: React.FC<RepairPanelProps> = ({ repair, jobId, proposal, edgeList, labels, workload, onDiscard }) => {
   const [kind, setKind] = useState<'faculty' | 'room'>('faculty');
   const [target, setTarget] = useState('');
   const [slots, setSlots] = useState<string[]>([]);
@@ -78,6 +93,16 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({ repair, jobId, proposa
     const room = edgeList.rooms.find((r) => r.id === (a.sub_room_id ?? a.room_id));
     return `${DAY_NAMES[a.day]} P${a.period}, ${room ? labels.room(room) : a.room_id}`;
   };
+  // A substitution changes two teachers' loads: who teaches the session now, and the substitute
+  const substitution = data?.change?.kind === 'substitute_faculty' ? data.change : null;
+  const loads = useMemo(() => {
+    if (!substitution || !workload) return [];
+    const from = workload.before.find((s) => s.sessionId === substitution.session_id)?.facultyId;
+    const load = (sessions: EnrichedSession[], id: string) => facultyLoad(sessions.filter((s) => s.facultyId === id));
+    return [...new Set([from ?? '', substitution.faculty_id])]
+      .filter((id) => id !== '')
+      .map((id) => ({ id, before: load(workload.before, id), after: load(workload.after, id) }));
+  }, [substitution, workload]);
   const before = proposal ? score(proposal.base) : null;
   const after = proposal ? score(proposal.result) : null;
 
@@ -194,6 +219,18 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({ repair, jobId, proposa
                     ? 'not evaluated'
                     : `${before.toFixed(1)} → ${after.toFixed(1)} (${after - before >= 0 ? '+' : ''}${(after - before).toFixed(1)})`}
                 </p>
+                {loads.length > 0 && (
+                  <div data-testid="substitution-loads">
+                    <p className="font-semibold">Weekly load</p>
+                    <ul className="space-y-1">
+                      {loads.map((l) => (
+                        <li key={l.id} data-testid={`substitution-load-${l.id}`}>
+                          {facultyText(labels, l.id)}: {loadText(l.before)} → {loadText(l.after)} hrs/wk
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <p className="font-semibold">
                   {proposal.changes.length} session{proposal.changes.length === 1 ? '' : 's'} changed
                 </p>

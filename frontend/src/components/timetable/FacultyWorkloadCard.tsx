@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { EnrichedSession } from '@/adapters/timetable';
+import { EnrichedSession, facultyLoad } from '@/adapters/timetable';
 import { QualityRule } from '@/adapters/solution';
 import { School, BookOpen, Clock, Activity, CheckCircle } from 'lucide-react';
 
@@ -18,23 +18,8 @@ export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
   loadRule,
 }) => {
   // Compute Theory (T) and Practical (P) hours
-  let theoryHours = 0;
-  let practicalHours = 0;
-  let facultyName = '';
-
-  facultySessions.forEach((s) => {
-    if (s.facultyName && !facultyName) {
-      facultyName = s.facultyName;
-    }
-    const hours = s.durationPeriods;
-    if (s.sessionType === 'lab') {
-      practicalHours += hours;
-    } else {
-      theoryHours += hours;
-    }
-  });
-
-  const totalWeightedWorkload = theoryHours + practicalHours;
+  const { theory: theoryHours, practical: practicalHours, total: totalWeightedWorkload } = facultyLoad(facultySessions);
+  const facultyName = facultySessions.find((s) => s.facultyName)?.facultyName ?? '';
 
   return (
     <Card
