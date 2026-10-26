@@ -9,7 +9,7 @@ before making changes.
 2. `ROADMAP.md` (repo root) — the phased plan, the [M]/[S]/[C] tags, and the parallel-work protocol.
 3. `docs/CURRENT-PROGRESS.md` — what is actually done, blockers, decision log, contract change log.
 
-`ROADMAP.md` §1 (ownership) and §3 (decisions D1–D56) are binding; they override anything here that disagrees.
+`ROADMAP.md` §1 (ownership) and §3 (decisions D1–D58) are binding; they override anything here that disagrees.
 
 `docs/CURRENT-STATUS.md` is a **historical snapshot from 2026-09-24** (before any application
 code existed). Do not treat it as the current inventory — check the code and
@@ -101,8 +101,11 @@ Do not "fix" a failing test in another track's directory — report it instead.
 - `migrations/env.py` reads `DATABASE_URL` from the environment, then from `backend/.env`. It
   **refuses to migrate any non-local host** (`localhost`, `127.0.0.1`, `::1`, `db`, `postgres`
   only) unless `CHRONOS_ALLOW_REMOTE_DB=1`.
-- **Agents never set `CHRONOS_ALLOW_REMOTE_DB=1`.** Supabase is shared staging; promoting a
-  migration there is a deliberate human decision coordinated with the team.    
+- **Agents never set `CHRONOS_ALLOW_REMOTE_DB=1`.** Supabase is the production database (D55);
+  promoting a migration there is a deliberate human decision coordinated with the team (Nidhi
+  runs alembic by hand). D57: only the Render service has `CHRONOS_ALLOW_REMOTE_DB=1`, set by
+  hand in Render's environment settings; never in `.env` files, the repository, tests or an
+  agent session.    
 - Never kill processes by name (`taskkill /IM`, `pkill`, `killall`). Stop only processes you started, by their PID.
 - Every schema change goes through a new Alembic revision. Never edit the schema out of band.
 
