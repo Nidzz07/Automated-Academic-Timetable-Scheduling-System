@@ -312,6 +312,83 @@ only. The instance is tight because of how many cohorts and teachers overlap at 
 what the search and pre-solve deal with (see "Why it is tight" below), not because any one of
 them is full.
 
+## D58: what preferring sub-rooms would change (measured, not adopted)
+
+2026-10-26 · Dhruv (with Claude Code) · branch `track/solver-repair-timeout`.
+
+**What was measured.** The committed `solution.json` puts batch practicals in a whole split lab:
+all 9 of 509's and all 9 of 606's sessions, 35 in all (S15d). The cause is the room order. The
+backtracker's `_room_order` and `improve()`'s `_room_choices` try rooms in id order, and
+`room-603` sorts before `sub-603-1`.
+
+A scratch copy, not committed, patched both to try sub-rooms before a whole split lab, all else
+equal. It ran the committed pipeline both ways in one run on this machine: backtracking, then
+`improve()` with 1,000,000 moves, seed 0. The default run reproduced `solution.json` exactly.
+Both results pass `validate_solution`.
+
+Lab places are D8's 16 batch places: a split lab counts its sub-rooms (509: 2, 603: 3, 606: 2,
+702: 3, 703: 2) and every other lab counts 1. Over the 45 teaching periods that is 720
+place-periods. A session or pin in a sub-room holds that place; in the whole lab it holds all
+of the lab's places.
+
+| | Default (= `solution.json`) | Sub-rooms first |
+|---|---|---|
+| Score | −15.0 | **11.0** |
+| S-GAP raw (penalty) | 13 (26.0) | **3 (6.0)** |
+| S-B2B | 30 (30.0) | 26 (26.0) |
+| S-LOAD16 | 6 (6.0) | 6 (6.0) |
+| FAC_LOAD_IMBALANCE | 106 (53.0) | 102 (51.0) |
+| Sessions in a whole split lab / in a sub-room: 509 | 9 / 0 | 0 / 10 |
+| 603 | 8 / 3 | 0 / 15 |
+| 606 | 9 / 0 | 0 / 14 |
+| 702 | 5 / 10 | 0 / 23 |
+| 703 | 4 / 6 | 0 / 11 |
+| Rooms and sub-rooms used | 19 | 20 |
+| Free lab place-periods (of 720) | 293 | **389** |
+| Fewest free lab places in one period | 0 | 3 |
+| Periods with no free lab place | 5 | 0 |
+| Backtracking: nodes, score, time | 92, −162.5, 562.1 ms | 92, −107.0, 559.7 ms |
+| `improve()` time (1,000,000 moves) | 163.9 s | 156.8 s |
+
+The times come from this one run, with the machine loaded: S12h measured 64.0–84.2 s for the
+same budget.
+
+**Across seeds** (200,000 moves, seeds 0–4, the same starting point for each setting):
+
+| Seed | 0 | 1 | 2 | 3 | 4 | Mean |
+|---|---|---|---|---|---|---|
+| Default | −18.5 | −17.5 | −5.5 | −17.5 | −22.0 | −16.2 |
+| Sub-rooms first | 21.5 | 8.0 | 6.5 | 17.0 | **22.0** | 15.0 |
+| S-GAP raw, default / sub-rooms first | 15 / 1 | 13 / 3 | 10 / 6 | 16 / 3 | 17 / 1 | |
+
+The default row reproduces the S12g figures above.
+
+**What this says.**
+
+- **The score gain is consistent.** Sub-rooms first is better on all five seeds, by 12 to 44
+  points, and at 1,000,000 moves seed 0.
+- **Most of the S-GAP left comes from the room choice.** It falls to 1–6 raw. A whole-lab
+  placement blocks the lab's other batch places, so another batch's practical cannot sit
+  beside it and leaves a gap elsewhere.
+- **The earlier analysis needs revising.** The S12g and S12h sections credit the remaining
+  gaps to D24 frozen items; this shows the room choice holds most of them.
+- **It can reach the printed timetable.** One run (seed 4, 22.0) beats the printed 21.5, and
+  seed 0 equals it, so "neither beats 21.5" holds for the default only.
+- **Lab capacity frees up.** No period is left without a free lab place.
+
+**Caveats.**
+
+- One instance and five seeds; 1,000,000 moves on seed 0 scored lower (11.0) than 200,000
+  moves did (21.5), so the annealing is noisy.
+- Repair changes too. Rebuilt with sub-rooms first, the S14l sequence's first repair (Swapnali
+  Kurhade, Tue P5–P9) times out at 60 s, where today it solves in 2.61 s
+  (`docs/repair-even-2025-26.md`, S14l). So the order changes which repairs are hard; it does
+  not only help.
+- **The default is unchanged** (D58). Adopting it is an all-track decision:
+  - regenerate `solution.json`;
+  - re-run the S15b, S15c and S15d evaluation numbers and the repair scenarios;
+  - re-record the digests that pin today's results.
+
 ## S12d: why the old search got stuck
 
 Re-run of the S12a search (commit 75a3f31) for 300 s on the same machine: timeout, 563,081

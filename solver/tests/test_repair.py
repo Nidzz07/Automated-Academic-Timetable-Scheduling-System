@@ -20,6 +20,7 @@ import time
 
 import pytest
 
+import solver.backtracking
 from solver.backtracking import backtrack_solve
 from solver.benchmarks.real_repair import CE207, INSTANCE, SCENARIOS, TEACHING
 from solver.graph import build_conflict_graph
@@ -558,3 +559,40 @@ def test_the_twenty_minute_change_ends_within_its_limit(real: tuple[dict, dict])
     assert result["status"] == "infeasible" and stats["rings"][-1] == ["all", 156, "infeasible"]
     method = result["diagnosis"]["method"]
     assert method == ("presolve" if stats["mus"]["cut"] else "mus")
+
+
+# --- S14l: the repair timeout S14i found ------------------------------------------------------
+
+KURHADE_AFTERNOON = CHANGES["Swapnali Kurhade unavailable Tuesday afternoon (P5-P9)"]
+WED_P0_601 = {"kind": "move_session", "session_id": CE207, "day": 2, "period": 0,
+              "room_id": "room-601", "sub_room_id": None}
+
+
+@pytest.mark.slow
+def test_the_accumulated_drag_times_out_though_feasible(
+        real: tuple[dict, dict], monkeypatch: pytest.MonkeyPatch) -> None:
+    """S14i's sequence, accepted changes accumulating (D52): Kurhade unavailable Tuesday
+    afternoon; Prasenjit Bhavathankar takes the SE-Comp A CE207 lecture; that lecture is
+    dragged to Wed P0 in 601. The last repair's every-session-free search does not settle
+    within its limit, so it is a timeout, never infeasible (D33). The drag is feasible: with
+    sub-rooms tried before a whole split lab (D58) a fresh solve finds a valid timetable
+    (docs/repair-even-2025-26.md, S14l)."""
+    edge_list, solution = real
+    first = _check(edge_list, solution, KURHADE_AFTERNOON)
+    edge_list = apply_change(edge_list, KURHADE_AFTERNOON)
+    substitute = _sub(CE207, "fac-prasenjit-bhavathankar")
+    second = _check(edge_list, first, substitute)
+    assert second["displaced"] == []
+    edge_list = apply_change(edge_list, substitute)
+    began = time.perf_counter()
+    with pytest.raises(TimeoutError):
+        repair(edge_list, second, WED_P0_601, time_limit_s=10.0)
+    assert time.perf_counter() - began < 10.0 + MARGIN_S
+
+    monkeypatch.setattr(solver.backtracking, "_room_order", lambda state, sid, rooms: sorted(
+        rooms, key=lambda r: (r not in state.parent_of, r)))
+    changed = apply_change(edge_list, WED_P0_601)
+    found = backtrack_solve(build_conflict_graph(changed), changed,
+                            seed_rooms={CE207: "room-601"}, time_limit_s=60.0)
+    assert found.solved
+    assert validate_solution(changed, found.to_solution_v2_dict()) == []
