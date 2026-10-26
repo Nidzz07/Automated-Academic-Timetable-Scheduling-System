@@ -244,7 +244,7 @@ def test_accept_rules(
 
     # only a solved repair
     infeasible = run(client, "accepts", PIN_DRAG)
-    timed_out = run(client, "accepts", ROOM_603_MONDAY, time_limit_s=1e-9)
+    timed_out = run(client, "accepts", KURHADE_AFTERNOON, time_limit_s=1e-9)  # not in force
     assert (infeasible["status"], timed_out["status"]) == ("infeasible", "timeout")
     assert infeasible["base"] == second["id"]
     for job in (infeasible, timed_out):
