@@ -41,6 +41,15 @@ def instance_ids(edge_list: dict[str, Any]) -> tuple[set[str], set[str]]:
     return faculty, cohorts
 
 
+def new_user(
+    username: str, role: UserRole, password: str, faculty: str | None = None,
+    cohort: str | None = None,
+) -> User:
+    """The account row, password scrypt-hashed; the caller adds and commits it."""
+    return User(username=username, password_hash=hash_password(password), role=role,
+                faculty_ref=faculty, cohort_ref=cohort)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Create a Chronos API user.")
     parser.add_argument("username")
@@ -72,15 +81,8 @@ def main(argv: list[str] | None = None) -> int:
     engine = create_engine(local_database_url())
     try:
         with OrmSession(engine) as db:
-            db.add(
-                User(
-                    username=args.username,
-                    password_hash=hash_password(password),
-                    role=UserRole(args.role),
-                    faculty_ref=args.faculty,
-                    cohort_ref=args.cohort,
-                )
-            )
+            db.add(new_user(args.username, UserRole(args.role), password, args.faculty,
+                            args.cohort))
             db.commit()
     except IntegrityError:
         print(f"user {args.username!r} already exists", file=sys.stderr)

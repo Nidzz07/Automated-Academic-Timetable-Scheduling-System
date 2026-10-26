@@ -13,6 +13,8 @@ Read from the environment, else from `backend/.env` (never committed):
 | `DATABASE_URL` | Postgres for users, the audit log and solve jobs. Local hosts only (`db/local_guard.py`). |
 | `SECRET_KEY` | HS256 signing key for access tokens, at least 32 characters. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime, default 30. |
+| `CHRONOS_DEMO_PASSWORD` | Password of the demo accounts, `python -m backend.app.demo_seed` only (README.md). |
+| `CHRONOS_FRONTEND_DIST` | Built frontend that `backend.app.prod:app` serves at `/` (API under `/api`); default `frontend/dist`. |
 
 The database must be at Alembic head (`0009_accepted_changes` or later):
 

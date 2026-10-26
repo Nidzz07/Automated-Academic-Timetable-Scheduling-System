@@ -97,6 +97,70 @@ alembic upgrade head
 
 `backend/.env` is gitignored. Never commit real credentials.
 
+## Run locally on Windows (PowerShell)
+
+From the repo root. First terminal:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+# Local Postgres. Use "5432" if no native PostgreSQL owns that port.
+$env:CHRONOS_DB_PORT = "55432"
+docker compose up db -d
+
+# This shell only; or put both in backend\.env (see .env.example).
+$env:DATABASE_URL = "postgresql+psycopg2://chronos:chronos@localhost:$env:CHRONOS_DB_PORT/chronos"
+$env:SECRET_KEY = python -c "import secrets; print(secrets.token_hex(32))"
+alembic upgrade head
+
+# Demo accounts demo-admin, demo-coordinator, demo-faculty, demo-student (typed, not echoed).
+$env:CHRONOS_DEMO_PASSWORD = [Net.NetworkCredential]::new('', (Read-Host -AsSecureString 'Demo password')).Password
+python -m backend.app.demo_seed
+
+uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```
+
+Second terminal (the dev server proxies `/api` to port 8000):
+
+```powershell
+cd frontend; npm ci; npm run dev
+```
+
+Open http://localhost:5173 and log in as one of the demo accounts.
+
+`python -m backend.app.demo_seed` creates the four accounts only if they are missing, so a second
+run changes nothing. The password must be at least 8 characters. With `--reset` it also clears
+the accepted changes of `even-2025-26`, exactly as `DELETE /instances/{id}/changes` does
+(audited as `demo_seed`), then runs one solve with the default budget (about 30 s). That solve
+becomes the official timetable (D56). Run `--reset` while the API is not solving: like an API
+start, it marks jobs left queued or running as `error`.
+
+## Deploy (D55)
+
+One Render web service serves the API under `/api` and the built frontend at `/`
+(`backend/app/prod.py`). Supabase Postgres is the database.
+
+| Render setting | Value |
+|---|---|
+| Language / runtime | Docker |
+| Dockerfile path | `backend/Dockerfile.prod` |
+| Docker build context | `.` (repo root) |
+| Health check path | `/api/health` |
+| Instances | 1 (one API process per database, `backend/README.md`) |
+
+Environment variables (set them in Render, never in the repo): `DATABASE_URL`, `SECRET_KEY`,
+`ACCESS_TOKEN_EXPIRE_MINUTES` (optional). Render sets `PORT`.
+
+- **Applying migrations to Supabase is a human-only step.** Nidhi runs `alembic upgrade head`
+  by hand, with `CHRONOS_ALLOW_REMOTE_DB=1` for that one command (D55). Agents never do.
+- **Not deployable yet.** The backend refuses every database host outside `localhost`,
+  `127.0.0.1`, `::1`, `db` and `postgres` unless `CHRONOS_ALLOW_REMOTE_DB=1` is set
+  (`db/local_guard.py`, used by `backend.app.main` and `demo_seed`). A Supabase
+  `DATABASE_URL` therefore stops the service at startup. The team still has to decide how
+  production may use Supabase.
+
 ## Running things
 
 Run everything from the repo root with the venv active.

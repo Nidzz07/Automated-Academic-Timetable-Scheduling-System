@@ -47,15 +47,14 @@ def _with_database(url: str, name: str) -> str:
     return re.sub(r"/[^/?]+(\?|$)", f"/{name}\\1", url)
 
 
-def _drop(conn) -> None:
+def _drop(conn, name: str) -> None:
     conn.execute(text("SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                      "WHERE datname = :n AND pid <> pg_backend_pid()"), {"n": DB_NAME})
-    conn.execute(text(f'DROP DATABASE IF EXISTS "{DB_NAME}"'))
+                      "WHERE datname = :n AND pid <> pg_backend_pid()"), {"n": name})
+    conn.execute(text(f'DROP DATABASE IF EXISTS "{name}"'))
 
 
-@pytest.fixture(scope="session")
-def database_url() -> Iterator[str]:
-    """A fresh database with every table, dropped after the session."""
+def scratch_database(name: str) -> Iterator[str]:
+    """A fresh database *name* with every table, dropped when the generator closes."""
     base = _base_url()
     host = host_of(base)
     if host not in LOCAL_HOSTS:
@@ -63,16 +62,22 @@ def database_url() -> Iterator[str]:
     admin = create_engine(_with_database(base, "postgres"), isolation_level="AUTOCOMMIT")
     try:
         with admin.connect() as conn:
-            _drop(conn)
-            conn.execute(text(f'CREATE DATABASE "{DB_NAME}"'))
+            _drop(conn, name)
+            conn.execute(text(f'CREATE DATABASE "{name}"'))
     except OperationalError as exc:  # pragma: no cover - environment dependent
         pytest.skip(f"local Postgres not reachable ({exc.__class__.__name__}); "
                     "start it with `docker compose up db -d`")
-    url = _with_database(base, DB_NAME)
+    url = _with_database(base, name)
     engine = create_engine(url)
     Base.metadata.create_all(engine)
     engine.dispose()
     yield url
     with admin.connect() as conn:
-        _drop(conn)
+        _drop(conn, name)
     admin.dispose()
+
+
+@pytest.fixture(scope="session")
+def database_url() -> Iterator[str]:
+    """A fresh database with every table, dropped after the session."""
+    yield from scratch_database(DB_NAME)
