@@ -380,6 +380,86 @@ same change takes 20.2 s here and gives `presolve`, 30 members. The slow test
 `test_the_twenty_minute_change_ends_within_its_limit` re-runs it with a 10 s limit and allows a
 3 s margin, for the check in flight when the deadline passes.
 
+## S14l: the repair timeout S14i found (cause found, not fixed)
+
+2026-10-26 · Dhruv (with Claude Code) · branch `track/solver-repair-timeout`. Machine: Intel64
+Family 6 Model 183, Python 3.12.10. Every run here had a time limit.
+
+**The sequence.** It starts from the committed timetable, and each accepted change carries into
+the next repair (D52):
+
+1. **A:** Swapnali Kurhade unavailable Tue P5–P9 (scenario 5). Solved in 2.61 s; 6 sessions
+   moved, as above.
+2. **B:** `substitute_faculty` gives the SE-Comp A CE207 lecture (`obs-t0-r1-c3-l0`) to
+   Prasenjit Bhavathankar. Solved in 0.19 s; nothing moved.
+3. **C:** that lecture is dragged to Wed P0 in 601, on the edge list with A and B applied. At
+   20 s this raises `TimeoutError`, as S14i saw at 20 s and 60 s.
+
+**Where the time goes in C** (20 s limit):
+
+| Search | Free sessions | Nodes | Outcome | Time |
+|---|---|---|---|---|
+| ring 0 | 4 | 57 | infeasible | 0.08 s |
+| ring 1 | 66 | 5,001 | node budget out | 3.14 s |
+| every session free | 156 | 5,790 | still searching at the limit | 16.77 s |
+
+The time goes into the last ring, a full backtracking search with no node cap, and into no
+explanation. A 50,000- or 200,000-node ring budget does not help: still `TimeoutError` at
+120 s.
+
+**Why.** It is not a repair problem; the changed instance itself is hard for the search. Fresh
+solves (`backtrack_solve` on the changed edge list):
+
+| Edge list | Outcome | Nodes | Time |
+|---|---|---|---|
+| committed + C | solved | 92 | 0.31 s |
+| committed + A + C | solved | 92 | 0.31 s |
+| committed + B + C | solved | 74,367 | 20.37 s |
+| committed + A + B + C | **timeout** | 1,093,273 | 300 s |
+| committed + A + B + C, room 601 held | timeout | 110,389 | 30 s |
+| the same, old placements preferred | timeout | 8,837 | 30 s |
+
+- **The substitution makes Prasenjit Bhavathankar's week tight.** He gets one more lecture:
+  15 periods to teach in 22 free slots. His four lab blocks have only 7, 4, 3 and 5 possible
+  starts.
+- **The absence leaves Swapnali Kurhade almost no slack:** 16 periods in 17 free slots (18
+  before A).
+- **The drag adds the last constraint.** It fixes the lecture at Wed P0, where Prasenjit
+  Bhavathankar had SE-Comp C batch C's lab (its block has 4 starts).
+- **Nothing refutes it early.** Pre-solve passes, so the search must settle it on its own, and
+  it neither finds a timetable nor proves there is none.
+
+**It is feasible.** With sub-rooms tried before a whole split lab (D58, below), a fresh solve of
+committed + A + B + C finds a valid timetable in 14,569 nodes, 6.45 s. So the timeout is the
+search's room order, not an impossible change. In id order the search puts batch practicals in
+a whole split lab (`room-603` sorts before `sub-603-1`, as S15d noted), uses up the lab places
+these tight lab blocks need, and thrashes deep in the tree. The slow test
+`test_the_accumulated_drag_times_out_though_feasible` re-runs A, B and C (C with a 10 s limit:
+`TimeoutError`, never infeasible, D33) and then shows the drag is feasible this way.
+
+**Why it is not fixed here.** Every change tried alters committed results:
+
+| Variant (step C, 60 s limit unless stated) | Result | Changes committed results? |
+|---|---|---|
+| Sub-rooms first in the search and in `improve()` | `TimeoutError` at 60 s: the repair prefers the old rooms, which are whole labs | Yes: `solution.json` (D58, `docs/real-solve-even-2025-26.md`) |
+| Sub-rooms first, and no old-placement preference in the every-session-free ring | solved, 13.9 s; 50 sessions moved, 50 re-roomed only, score −38.5; valid | Yes: the room order, and any repair that ends in that ring |
+| The whole history sub-rooms first (`solution.json` rebuilt: 11.0, then A, B, C) | step A itself `TimeoutError` at 60 s (2.61 s today) | Yes, and it breaks a repair that works today |
+| Larger ring budget (50,000 / 200,000 nodes) | `TimeoutError` at 120 s | Can: S14a scenario 5's ring 1 runs out of today's 5,000 nodes, so a larger budget can change where it ends (not run) |
+
+**Proposed fix, for the team.** Make the every-session-free ring a short portfolio within
+`time_limit_s` rather than one search:
+
+1. today's search (old placements preferred, id-order rooms) with a node budget;
+2. if that runs out, the same search with sub-rooms first and no old-placement preference;
+3. only then `TimeoutError`.
+
+Step C would then be repaired, about 13.9 s here, but with 50 moves instead of a handful. It
+changes only repairs that today time out, or that solve in that ring after more nodes than the
+first budget. But some S15c rows could change (6 repairs timed out there), so it needs a
+re-run of the S15c benchmark and the repair tests, and it is best decided together with D58.
+Until then the backend reports this case as a timeout, which is correct (D33): "no repair found
+within N s" does not claim the drag is impossible.
+
 ## Limits
 
 - **Not a proven minimum.** The rings, the old-place-first ordering and the greedy restore keep

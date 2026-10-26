@@ -66,6 +66,9 @@ on a break, a malformed slot grid or a slot off it - raises
 :class:`ValueError` instead. The teaching grid is not a constraint kind
 (proposal section 5.1): nothing can relax it.
 
+Course: Software Engineering (an independent test oracle: verification that
+shares no code with what it verifies).
+
 Pure stdlib, plain data in and out.
 """
 
