@@ -1,0 +1,29 @@
+# For backend/Dockerfile.prod only (BuildKit reads it instead of the root .dockerignore).
+# The root file's rules, plus every .env at any depth: the root one's ".env" matches only
+# the repo root, so backend/.env (local secrets) would land in the image.
+**/.env
+**/.env.*
+!.env.example
+
+.venv/
+venv/
+env/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+.git/
+.gitignore
+.vscode/
+.idea/
+
+frontend/node_modules/
+frontend/dist/
+
+*.md
