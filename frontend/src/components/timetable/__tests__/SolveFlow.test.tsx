@@ -127,7 +127,7 @@ describe('SolvePanel: the job lifecycle', () => {
     backend.job = job({ status: 'timeout', time_limit_s: 5 });
     fireEvent.click(screen.getByTestId('solve-button'));
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'timeout'));
-    expect(status()).toHaveTextContent('No timetable found within 5 s. This does not prove it is impossible.');
+    expect(status()).toHaveTextContent('No timetable found within 5.0 s. This does not prove it is impossible.');
     expect(queryClient.getQueryData(instanceSolutionQueryKey(REAL_INSTANCE))).toBeUndefined();
   });
 
@@ -220,7 +220,7 @@ describe('Solving the real instance in the app (http mode)', () => {
     backend.job = job({ status: 'timeout', time_limit_s: 300 });
     fireEvent.click(screen.getByTestId('solve-button'));
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'timeout'));
-    expect(status()).toHaveTextContent('No timetable found within 300 s. This does not prove it is impossible.');
+    expect(status()).toHaveTextContent('No timetable found within 300.0 s. This does not prove it is impossible.');
     expect(screen.queryByTestId('infeasibility-panel')).not.toBeInTheDocument();
     expect(screen.getByTestId('status-badge-solved')).toBeInTheDocument();
   });

@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useState, useMemo, useSyncExternalStore } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { TimetableGrid } from '@/components/timetable/TimetableGrid';
 import { TimetableHeader } from '@/components/timetable/TimetableHeader';
@@ -34,6 +34,7 @@ import {
 } from '@/adapters/solution';
 import {
   buildEnrichedSessions,
+  checkMove,
   cohortOptions,
   Display,
   EdgeList,
@@ -42,7 +43,6 @@ import {
   entityName,
   facultyText,
   labelsFor,
-  moveConflict,
 } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline } from '@/adapters/realInstance';
 import {
@@ -69,6 +69,7 @@ import {
   useEdgeListQuery,
   useInstanceSolutionQuery,
   useInstancesQuery,
+  useJobQuery,
   useMoveSessionMutation,
   usePrintedBaselineQuery,
   useRepair,
@@ -120,15 +121,17 @@ function TimetableApp({ client, session }: { client: MockChronosApiClient; sessi
   );
   // The latest solve and repair job per instance, kept here so switching instance and back keeps tracking them
   const [solveJobs, setSolveJobs] = useState<Record<EdgeListInstance, string>>({});
-  const onSolveStarted = useCallback(
-    (solved: EdgeListInstance, jobId: string) => setSolveJobs((jobs) => ({ ...jobs, [solved]: jobId })),
-    []
-  );
+  // The order this UI started its jobs in: a queued repair waits only for a job started before it
+  const startOrder = useRef(new Map<string, number>());
+  const onSolveStarted = useCallback((solved: EdgeListInstance, jobId: string) => {
+    startOrder.current.set(jobId, startOrder.current.size);
+    setSolveJobs((jobs) => ({ ...jobs, [solved]: jobId }));
+  }, []);
   const [repairJobs, setRepairJobs] = useState<Record<EdgeListInstance, string>>({});
-  const onRepairStarted = useCallback(
-    (repaired: EdgeListInstance, jobId: string) => setRepairJobs((jobs) => ({ ...jobs, [repaired]: jobId })),
-    []
-  );
+  const onRepairStarted = useCallback((repaired: EdgeListInstance, jobId: string) => {
+    startOrder.current.set(jobId, startOrder.current.size);
+    setRepairJobs((jobs) => ({ ...jobs, [repaired]: jobId }));
+  }, []);
   const onRepairDiscarded = useCallback(
     (repaired: EdgeListInstance) =>
       setRepairJobs(({ [repaired]: _discarded, ...jobs }) => jobs),
@@ -190,6 +193,7 @@ function TimetableApp({ client, session }: { client: MockChronosApiClient; sessi
       client={client}
       session={session}
       solveJobs={solveJobs}
+      startOrder={startOrder.current}
       onSolveStarted={onSolveStarted}
       repairJobId={repairJobs[instance] ?? null}
       onRepairStarted={onRepairStarted}
@@ -247,6 +251,8 @@ interface TimetableWorkspaceProps {
   /** Who is logged in (http mode): role and D50 link; null in static mode, where the RoleSelector picks the role */
   session: AuthSession | null;
   solveJobs: Record<EdgeListInstance, string>;
+  /** The order this UI started its solve and repair jobs in, by job id */
+  startOrder: ReadonlyMap<string, number>;
   onSolveStarted: (instance: EdgeListInstance, jobId: string) => void;
   /** The instance's latest repair job, until accepted-and-shown or discarded */
   repairJobId: string | null;
@@ -268,6 +274,7 @@ function TimetableWorkspace({
   client,
   session,
   solveJobs,
+  startOrder,
   onSolveStarted,
   repairJobId,
   onRepairStarted,
@@ -299,6 +306,8 @@ function TimetableWorkspace({
   // Surface readable rejection message from mock backend
   const [rejectionAlert, setRejectionAlert] = useState<{
     reason: string;
+    /** Every clash at the target of a drag on a backend instance */
+    clashes?: string[];
     sessionId?: string;
     originalSlotLabel?: string;
     onRepair?: () => void;
@@ -322,6 +331,12 @@ function TimetableWorkspace({
   const http = client instanceof HttpChronosApiClient ? client : null;
   const repair = useRepair(http, instance, repairJobId, onRepairStarted);
   const repairJob = repair.job.data;
+  // The instance's solve, started before the repair and still queued or running, is what a queued repair waits for
+  const solveJobId = http ? solveJobs[instance] ?? null : null;
+  const solveJob = useJobQuery(http!, solveJobId, 1000).data;
+  const solveFirst =
+    solveJobId !== null && repairJobId !== null && (startOrder.get(solveJobId) ?? 0) < (startOrder.get(repairJobId) ?? 0);
+  const waitingFor = solveFirst && solveJob && !isFinished(solveJob.status) ? 'the solve of this instance' : null;
   const repairBase = repair.base.data;
   // The edge list the repair ran on (GET /jobs/{id}/edge-list): the accepted changes it was built with and its own
   const repairEdgeList = repair.edgeList.data;
@@ -502,12 +517,13 @@ function TimetableWorkspace({
         room_id: from.roomId,
         ...(from.subRoomId ? { sub_room_id: from.subRoomId } : {}),
       };
-      const reason = moveConflict(edgeList, labels, allSessions, sessionId, targetDay, targetPeriod);
-      if (reason === null) {
+      const check = checkMove(edgeList, labels, allSessions, sessionId, targetDay, targetPeriod);
+      if (check === null) {
         startRepair(change);
       } else {
         setRejectionAlert({
-          reason,
+          reason: check.heading,
+          clashes: check.clashes.map((c) => c.text),
           sessionId: entityName(sessionId, edgeList, labels),
           originalSlotLabel: `${DAY_NAMES[from.day]} P${from.wallClockPeriod}`,
           onRepair: () => startRepair(change),
@@ -660,6 +676,7 @@ function TimetableWorkspace({
         {rejectionAlert && (
           <RejectionAlert
             reason={rejectionAlert.reason}
+            clashes={rejectionAlert.clashes}
             sessionId={rejectionAlert.sessionId}
             originalSlotLabel={rejectionAlert.originalSlotLabel}
             onDismiss={() => setRejectionAlert(null)}
@@ -688,6 +705,7 @@ function TimetableWorkspace({
             edgeList={repairEdgeList ?? edgeList}
             labels={labels}
             workload={proposalWorkload}
+            waitingFor={waitingFor}
             onDiscard={discardRepair}
           />
         )}

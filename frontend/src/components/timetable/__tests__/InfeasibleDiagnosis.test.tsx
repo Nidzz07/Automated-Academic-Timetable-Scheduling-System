@@ -35,7 +35,7 @@ describe('Infeasibility Diagnosis Panel', () => {
 
     // Assert solver diagnostic metadata
     expect(screen.getByText(/backtracking\(forward-checking, mrv\) \+ mus-extraction\(deletion-based\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/1284.5 ms/i)).toBeInTheDocument();
+    expect(screen.getByText('1.3 s')).toBeInTheDocument();
     expect(screen.getByText(/5 \/ 8 sessions placed/i)).toBeInTheDocument();
     expect(screen.getByText(/9,417 backtracks/i)).toBeInTheDocument();
   });
@@ -112,7 +112,7 @@ describe('Infeasibility Diagnosis Panel (solution.v2)', () => {
     );
     expect(screen.queryByTestId('constraint-slots-labblk-0001.contiguity')).not.toBeInTheDocument();
     expect(screen.getByTestId('relaxation-action')).toHaveTextContent(
-      'Action: RECLASSIFY_ROOM · verification: restored (212.4 ms)'
+      'Action: RECLASSIFY_ROOM · verification: restored (212 ms)'
     );
 
     const partial = screen.getByTestId('partial-placement');

@@ -4,6 +4,7 @@
  * client are interchangeable.
  */
 
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChronosApiClient,
@@ -116,25 +117,40 @@ export function usePrintedBaselineQuery(
   });
 }
 
+/**
+ * Every audit query, whatever its limit. The backend writes a row when a solve or repair is
+ * queued (completed with its status when it ends), when a repair is accepted and when the
+ * accepted changes are cleared: each of those invalidates it, so new rows appear at once.
+ */
+export const auditQueryKey = ['audit'] as const;
+
 /** onStarted is a hook-level callback, so it still fires when the panel unmounts mid-POST. */
 export function useSolveMutation(
   client: HttpChronosApiClient,
   onStarted: (instance: EdgeListInstance, jobId: string) => void
 ) {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ instance, timeLimitS }: { instance: EdgeListInstance; timeLimitS: number }) =>
       client.startSolve(instance, timeLimitS),
-    onSuccess: ({ job_id }, { instance }) => onStarted(instance, job_id),
+    onSuccess: ({ job_id }, { instance }) => {
+      onStarted(instance, job_id);
+      queryClient.invalidateQueries({ queryKey: auditQueryKey });
+    },
   });
 }
 
 export function useAuditQuery(client: HttpChronosApiClient, limit: number) {
-  return useQuery({ queryKey: ['audit', limit], queryFn: () => client.getAudit(limit), retry: retryable });
+  return useQuery({ queryKey: [...auditQueryKey, limit], queryFn: () => client.getAudit(limit), retry: retryable });
 }
 
-/** Polls GET /jobs/{id} every pollMs until the job ends or fails; stops when unmounted. */
+/**
+ * Polls GET /jobs/{id} every pollMs until the job ends or fails; stops when unmounted. A job seen
+ * ending refreshes the audit log, whose row for it now carries its final status.
+ */
 export function useJobQuery(client: HttpChronosApiClient, jobId: string | null, pollMs: number) {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const job = useQuery({
     queryKey: ['job', jobId],
     queryFn: () => client.getJob(jobId!),
     enabled: jobId !== null,
@@ -142,6 +158,11 @@ export function useJobQuery(client: HttpChronosApiClient, jobId: string | null, 
     refetchInterval: (query) =>
       query.state.status === 'error' || isFinished(query.state.data?.status) ? false : pollMs,
   });
+  const ended = isFinished(job.data?.status);
+  useEffect(() => {
+    if (ended) queryClient.invalidateQueries({ queryKey: auditQueryKey });
+  }, [ended, jobId, queryClient]);
+  return job;
 }
 
 /**
@@ -159,7 +180,10 @@ export function useRepair(
   const queryClient = useQueryClient();
   const start = useMutation({
     mutationFn: (change: RepairChange) => client!.startRepair(instance, change),
-    onSuccess: ({ job_id }) => onStarted(instance, job_id),
+    onSuccess: ({ job_id }) => {
+      onStarted(instance, job_id);
+      queryClient.invalidateQueries({ queryKey: auditQueryKey });
+    },
   });
   const job = useJobQuery(client!, client ? jobId : null, pollMs);
   const solved = job.data?.status === 'solved' ? job.data : undefined;
@@ -185,6 +209,7 @@ export function useRepair(
       if (accepted.solution) queryClient.setQueryData(instanceSolutionQueryKey(instance), accepted.solution);
       queryClient.invalidateQueries({ queryKey: changesQueryKey(instance) });
       queryClient.invalidateQueries({ queryKey: currentEdgeListQueryKey(instance) });
+      queryClient.invalidateQueries({ queryKey: auditQueryKey });
     },
   });
   return { start, job, base, edgeList, accept };
@@ -212,8 +237,8 @@ export function useClearChangesMutation(client: HttpChronosApiClient, instance: 
     mutationFn: () => client.clearChanges(instance),
     onSuccess: () =>
       Promise.all(
-        [changesQueryKey(instance), currentEdgeListQueryKey(instance), instanceSolutionQueryKey(instance)].map((queryKey) =>
-          queryClient.invalidateQueries({ queryKey })
+        [changesQueryKey(instance), currentEdgeListQueryKey(instance), instanceSolutionQueryKey(instance), auditQueryKey].map(
+          (queryKey) => queryClient.invalidateQueries({ queryKey })
         )
       ),
   });

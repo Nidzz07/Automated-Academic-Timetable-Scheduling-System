@@ -472,12 +472,101 @@ export function pinName(id: string, edgeList: EdgeList, labels: Labels): string 
   return `${name} (${id})`;
 }
 
+/** What a dragged session would clash with at its target: in order room, teacher, cohort, fixed item, unavailability. */
+export type ClashKind = 'room' | 'teacher' | 'cohort' | 'fixed' | 'unavailable';
+
+export interface Clash {
+  kind: ClashKind;
+  /** "Room 605 is taken at Wednesday P0 by PCS / A / DN / 605." */
+  text: string;
+}
+
+export interface MoveCheck {
+  /** "Clashes for CE207 (SE-Comp A) at Wednesday P0:", or why the session cannot go there at all */
+  heading: string;
+  /** Every clash at the target; empty when the heading already says why */
+  clashes: Clash[];
+}
+
+const CLASH_ORDER: ClashKind[] = ['room', 'teacher', 'cohort', 'fixed', 'unavailable'];
+
 /**
- * Why moving a placed session to (day, period) in its own room breaks a hard rule, in words;
- * null when it breaks none of these: fixed slot, teaching periods, faculty unavailability,
- * pinned occupancy, and clashes with placed sessions (teacher, shared students, room). Only
- * decides whether to offer a repair: the backend's repair is the judge.
+ * Why moving a placed session to (day, period) in its own room breaks a hard rule, in words; null
+ * when it breaks none of these: fixed slot, teaching periods, and at the target every clash with
+ * placed sessions (room, teacher, shared students), pinned occupancy (a fixed item, named by its
+ * display label; one holding the room is a room clash) and faculty unavailability. Only decides
+ * whether to offer a repair: the backend's repair is the judge.
  */
+export function checkMove(
+  edgeList: EdgeList,
+  labels: Labels,
+  sessions: EnrichedSession[],
+  sessionId: string,
+  day: number,
+  period: number
+): MoveCheck | null {
+  const session = edgeList.sessions.find((s) => s.id === sessionId);
+  const placed = sessions.find((s) => s.sessionId === sessionId);
+  const refuse = (heading: string): MoveCheck => ({ heading, clashes: [] });
+  if (!session || !placed) return refuse(`Session '${sessionId}' is not in this timetable.`);
+  const name = `${placed.subjectCode} (${placed.cohortLabel})`;
+  if (session.fixed_slot) return refuse(`${name} is fixed to its slot.`);
+  const grid = buildWeekGrid(edgeList);
+  const periods = occupiedPeriods(grid, period, session.duration_periods);
+  if (!grid.teachingPeriods.includes(period) || periods.length < session.duration_periods) {
+    return refuse(`${name} does not fit at ${DAY_NAMES[day]} P${period}.`);
+  }
+  const at = (d: number, p: number) => d === day && periods.includes(p);
+  const where = (p: number) => `${DAY_NAMES[day]} P${p}`;
+  const teacher = facultyText(labels, session.faculty_id);
+  const roomTaken = (p: number, by: string) => `Room ${placed.roomCode} is taken at ${where(p)} by ${by}.`;
+
+  const found: Clash[] = [];
+  const add = (kind: ClashKind, text: string) => {
+    if (!found.some((c) => c.kind === kind && c.text === text)) found.push({ kind, text });
+  };
+
+  // a room in use locks its sub-rooms and a sub-room in use locks the room (ROOM_OCCUPANCY)
+  const parentOf = new Map(edgeList.rooms.map((r) => [r.id, r.parent_room_id]));
+  const holdsRoom = (id: string) =>
+    id === placed.roomId || id === placed.subRoomId || (parentOf.get(id) === placed.roomId && !placed.subRoomId);
+  for (const other of sessions) {
+    if (other.sessionId === sessionId || other.day !== day) continue;
+    const shared = other.periods.find((p) => periods.includes(p));
+    if (shared === undefined) continue;
+    const what = `${other.subjectCode} · ${other.cohortLabel}`;
+    if (other.roomId === placed.roomId && (!other.subRoomId || !placed.subRoomId || other.subRoomId === placed.subRoomId)) {
+      add('room', roomTaken(shared, what));
+    }
+    if (other.facultyId === session.faculty_id) add('teacher', `${teacher} teaches ${what} then.`);
+    if (labels.overlap(other.cohortId, session.cohort_id)) add('cohort', `${placed.cohortLabel} has ${what} then.`);
+  }
+
+  edgeList.pinned_occupancy.forEach((p, i) => {
+    if (!at(p.day, p.period)) return;
+    const label = labels.pin(i)?.label ?? 'pinned occupancy';
+    if (p.room_ids.some(holdsRoom)) add('room', roomTaken(p.period, label));
+    const holds = [
+      ...(p.faculty_ids.includes(session.faculty_id) ? [teacher] : []),
+      ...(p.cohort_ids.some((c) => labels.overlap(c, session.cohort_id)) ? [placed.cohortLabel] : []),
+    ];
+    if (holds.length) add('fixed', `${label} holds ${holds.join(' and ')} then.`);
+  });
+
+  const blackout = edgeList.faculty_availability
+    .find((f) => f.faculty_id === session.faculty_id)
+    ?.unavailable_slots.some((s) => at(s.day, s.period));
+  if (blackout) add('unavailable', `${teacher} is unavailable then.`);
+
+  if (found.length === 0) return null;
+  const span = periods.length > 1 ? `${where(periods[0])}–P${periods[periods.length - 1]}` : where(period);
+  return {
+    heading: `Clashes for ${name} at ${span}:`,
+    clashes: [...found].sort((a, b) => CLASH_ORDER.indexOf(a.kind) - CLASH_ORDER.indexOf(b.kind)),
+  };
+}
+
+/** checkMove as one line: the heading and every clash; null when there is none. */
 export function moveConflict(
   edgeList: EdgeList,
   labels: Labels,
@@ -486,54 +575,6 @@ export function moveConflict(
   day: number,
   period: number
 ): string | null {
-  const session = edgeList.sessions.find((s) => s.id === sessionId);
-  const placed = sessions.find((s) => s.sessionId === sessionId);
-  if (!session || !placed) return `Session '${sessionId}' is not in this timetable.`;
-  const name = `${placed.subjectCode} (${placed.cohortLabel})`;
-  if (session.fixed_slot) return `${name} is fixed to its slot.`;
-  const grid = buildWeekGrid(edgeList);
-  const periods = occupiedPeriods(grid, period, session.duration_periods);
-  if (!grid.teachingPeriods.includes(period) || periods.length < session.duration_periods) {
-    return `${name} does not fit at ${DAY_NAMES[day]} P${period}.`;
-  }
-  const at = (d: number, p: number) => d === day && periods.includes(p);
-  const where = (p: number) => `${DAY_NAMES[day]} P${p}`;
-
-  const blackout = edgeList.faculty_availability
-    .find((f) => f.faculty_id === session.faculty_id)
-    ?.unavailable_slots.find((s) => at(s.day, s.period));
-  if (blackout) return `${facultyText(labels, session.faculty_id)} is unavailable on ${where(blackout.period)}.`;
-
-  const parentOf = new Map(edgeList.rooms.map((r) => [r.id, r.parent_room_id]));
-  // a room in use locks its sub-rooms and a sub-room in use locks the room (ROOM_OCCUPANCY)
-  const holdsRoom = (id: string) =>
-    id === placed.roomId || id === placed.subRoomId || (parentOf.get(id) === placed.roomId && !placed.subRoomId);
-  const pin = edgeList.pinned_occupancy.findIndex(
-    (p) =>
-      at(p.day, p.period) &&
-      (p.faculty_ids.includes(session.faculty_id) ||
-        p.cohort_ids.some((c) => labels.overlap(c, session.cohort_id)) ||
-        p.room_ids.some(holdsRoom))
-  );
-  if (pin >= 0) {
-    const held = labels.pin(pin)?.unique_label ?? labels.pin(pin)?.label ?? 'pinned occupancy';
-    return `Slot conflict: ${where(edgeList.pinned_occupancy[pin].period)} is held by ${held}.`;
-  }
-
-  for (const other of sessions) {
-    if (other.sessionId === sessionId || other.day !== day) continue;
-    const shared = other.periods.find((p) => periods.includes(p));
-    if (shared === undefined) continue;
-    const what = `${other.subjectCode} (${other.cohortLabel})`;
-    if (other.facultyId === session.faculty_id) {
-      return `Faculty clash: ${facultyText(labels, session.faculty_id)} already teaches ${what} on ${where(shared)}.`;
-    }
-    if (labels.overlap(other.cohortId, session.cohort_id)) {
-      return `Cohort clash: ${placed.cohortLabel} already has ${what} on ${where(shared)}.`;
-    }
-    if (other.roomId === placed.roomId && (!other.subRoomId || !placed.subRoomId || other.subRoomId === placed.subRoomId)) {
-      return `Room clash: ${placed.roomCode} already holds ${what} on ${where(shared)}.`;
-    }
-  }
-  return null;
+  const check = checkMove(edgeList, labels, sessions, sessionId, day, period);
+  return check && [check.heading, ...check.clashes.map((c) => c.text)].join(' ');
 }

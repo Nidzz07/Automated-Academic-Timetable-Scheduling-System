@@ -4,6 +4,7 @@ import { DAY_NAMES, EdgeList, Labels, entityName, EXAMPLE_LABELS, pinName } from
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatDuration } from '@/lib/format';
 import {
   AlertTriangle,
   Lightbulb,
@@ -109,7 +110,7 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
           <Timer className="h-4 w-4 text-amber-500 shrink-0" />
           <div>
             <div className="text-[10px] text-muted-foreground">Diagnosis Runtime</div>
-            <div className="font-semibold text-[11px]">{metadata.runtime_ms} ms</div>
+            <div className="font-semibold text-[11px]">{formatDuration(metadata.runtime_ms)}</div>
           </div>
         </div>
 
@@ -253,7 +254,7 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                 Action: {suggested_relaxation.action_type} · verification:{' '}
                 {suggested_relaxation.verification.status}
                 {suggested_relaxation.verification.runtime_ms !== null &&
-                  ` (${suggested_relaxation.verification.runtime_ms} ms)`}
+                  ` (${formatDuration(suggested_relaxation.verification.runtime_ms)})`}
               </p>
             )}
             {edgeList && suggested_relaxation.action_params && (

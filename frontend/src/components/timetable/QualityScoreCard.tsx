@@ -2,6 +2,7 @@ import React from 'react';
 import { QualityView, SolutionMetadata } from '@/adapters/solution';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatDuration } from '@/lib/format';
 import { CheckCircle2, Cpu, Timer, ShieldCheck, Activity } from 'lucide-react';
 
 /**
@@ -79,7 +80,7 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
             <Timer className="h-4 w-4 text-emerald-500 shrink-0" />
             <div>
               <div className="text-[10px] text-muted-foreground">Solve Time</div>
-              <div className="font-semibold">{metadata.runtime_ms} ms</div>
+              <div className="font-semibold">{formatDuration(metadata.runtime_ms)}</div>
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  CollisionDetection,
   DndContext,
   DragEndEvent,
   DragStartEvent,
@@ -10,6 +11,8 @@ import {
   useSensors,
   useDraggable,
   useDroppable,
+  pointerWithin,
+  rectIntersection,
 } from '@dnd-kit/core';
 import { SolvedSolution, DayIndex } from '@/adapters/solution';
 import {
@@ -32,6 +35,16 @@ import { SessionCell } from './SessionCell';
 import { Calendar, Clock, Coffee, Utensils } from 'lucide-react';
 
 type MoveHandler = (sessionId: string, targetDay: DayIndex, targetPeriod: number) => void;
+
+/**
+ * A drop lands in the cell under the pointer, not the one under the dragged card's centre (near the
+ * top of the grid the card hangs below the pointer). Where the pointer is outside every cell, the
+ * cell the card overlaps most, as dnd-kit's default (rectIntersection) picks.
+ */
+export const pointerCellFirst: CollisionDetection = (args) => {
+  const underPointer = pointerWithin(args);
+  return underPointer.length > 0 ? underPointer : rectIntersection(args);
+};
 
 export interface TimetableGridProps {
   /**
@@ -291,6 +304,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={pointerCellFirst}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
