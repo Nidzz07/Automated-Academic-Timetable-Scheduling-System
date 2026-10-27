@@ -4,6 +4,7 @@ import { HttpChronosApiClient, EdgeListInstance, JobStatus } from '@/api/chronos
 import { instanceSolutionQueryKey, useJobQuery, useSolveMutation } from '@/api/queries';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { formatSeconds } from '@/lib/format';
 import { Play } from 'lucide-react';
 
 // The backend's SolveRequest bounds (backend/app/service.py DEFAULT_TIME_LIMIT_S, MAX_TIME_LIMIT_S)
@@ -60,7 +61,7 @@ export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId,
     running: phase ? PHASE_MESSAGE[phase] : 'Running: searching for a timetable.',
     solved: 'Solved: the grid and quality score show the new timetable.',
     infeasible: 'Infeasible: the diagnosis panel shows the conflicting constraints.',
-    timeout: `No timetable found within ${job.data?.time_limit_s} s. This does not prove it is impossible.`,
+    timeout: `No timetable found within ${formatSeconds(job.data?.time_limit_s)}. This does not prove it is impossible.`,
     error: `Solve failed: ${failure?.message ?? job.data?.error ?? 'unknown error'}`,
   };
 

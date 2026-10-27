@@ -23,6 +23,7 @@ import { InfeasibilityDiagnosisPanel } from './InfeasibilityDiagnosisPanel';
 import { changeText } from './AcceptedChangesPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { formatSeconds } from '@/lib/format';
 import { Check, Wrench, X } from 'lucide-react';
 
 /** A solved repair not yet accepted, against the solution it started from (D48). */
@@ -43,6 +44,11 @@ interface RepairPanelProps {
    * and the proposal on the job's edge list (after)
    */
   workload?: { before: EnrichedSession[]; after: EnrichedSession[] };
+  /**
+   * An earlier job of this UI still queued or running ("the solve of this instance"): a queued
+   * repair waits for it. The backend does not say what else holds its workers.
+   */
+  waitingFor?: string | null;
   /** Forget the job: the grid shows the official timetable again */
   onDiscard: () => void;
 }
@@ -56,7 +62,16 @@ const score = (s: SolvedSolution) => toQualityView(s).score;
  * every changed session and the score change, and becomes official only when accepted (D49).
  * A timeout is never shown as infeasible (D33).
  */
-export const RepairPanel: React.FC<RepairPanelProps> = ({ repair, jobId, proposal, edgeList, labels, workload, onDiscard }) => {
+export const RepairPanel: React.FC<RepairPanelProps> = ({
+  repair,
+  jobId,
+  proposal,
+  edgeList,
+  labels,
+  workload,
+  waitingFor,
+  onDiscard,
+}) => {
   const [kind, setKind] = useState<'faculty' | 'room'>('faculty');
   const [target, setTarget] = useState('');
   const [slots, setSlots] = useState<string[]>([]);
@@ -107,13 +122,15 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({ repair, jobId, proposa
   const after = proposal ? score(proposal.result) : null;
 
   const message: Record<JobStatus, string> = {
-    queued: 'Queued: waiting for a solver worker.',
+    queued: waitingFor
+      ? `Waiting for the previous job to finish: ${waitingFor} is still running.`
+      : 'Queued: waiting for a solver worker.',
     running: 'Running: repairing the timetable.',
     solved: data?.accepted_at
       ? 'Accepted: the repaired timetable is now the official one.'
       : 'Proposed: the grid shows the repaired timetable with every changed session outlined. It is not official until accepted.',
     infeasible: 'Infeasible: no timetable satisfies this change. The diagnosis below shows why.',
-    timeout: `No repair found within ${data?.time_limit_s} s. This does not prove it is impossible.`,
+    timeout: `No repair found within ${formatSeconds(data?.time_limit_s)}. This does not prove it is impossible.`,
     error: `Repair failed: ${failure?.message ?? data?.error ?? 'unknown error'}`,
   };
 

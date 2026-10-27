@@ -13,8 +13,8 @@ import {
   buildEnrichedSessions,
   entityName,
   facultyText,
+  checkMove,
   labelsFor,
-  moveConflict,
 } from '@/adapters/timetable';
 import { parseSolution } from '@/api/contractValidation';
 
@@ -73,7 +73,8 @@ const repairJob = (fields: Record<string, unknown>) => ({
 /**
  * The S14c-S14i backend: the real instance, one repair job, its base solution, its edge list and
  * its accept, the accepted changes, the current edge list, the official solution and a
- * session's substitutes, whose answers the test sets.
+ * session's substitutes, whose answers the test sets. A solve starts job solve-1 (state.jobs);
+ * the audit log gets a row per solve, repair, accept and clear, a job's row showing its status now.
  */
 function mockBackend() {
   const state = {
@@ -94,12 +95,32 @@ function mockBackend() {
     official: null as unknown,
     /** What DELETE .../changes leaves official (D56); unchanged when unset */
     officialAfterClear: null as unknown,
+    /** GET /audit, oldest first; served newest first */
+    audit: [] as Array<{ action: string; job?: string; detail?: Record<string, unknown> }>,
   };
+  const audit = (action: string, job?: string) => state.audit.push({ action, job });
+  const jobStatus = (id: string) =>
+    (id === 'rep-1' ? state.job : (state.jobs[id] as Record<string, unknown> | undefined))?.status;
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url === '/api/instances') return json([{ id: REAL_INSTANCE }]);
     if (url === `/api/instances/${REAL_INSTANCE}/repair`) {
       state.posted.push(JSON.parse(init?.body as string));
+      audit('repair', 'rep-1');
       return json({ job_id: 'rep-1', status: 'queued' }, 202);
+    }
+    if (url === `/api/instances/${REAL_INSTANCE}/solve`) {
+      audit('solve', 'solve-1');
+      return json({ job_id: 'solve-1', status: 'queued' }, 202);
+    }
+    if (url.startsWith('/api/audit?limit=')) {
+      const rows = state.audit.map((r, i) => ({
+        id: i + 1,
+        actor: 'test-administrator',
+        action: r.action,
+        timestamp: '2026-10-28T10:00:00Z',
+        detail: r.job ? { job_id: r.job, status: jobStatus(r.job) } : null,
+      }));
+      return json(rows.reverse().slice(0, Number(url.split('=')[1])));
     }
     if (url === `/api/instances/${REAL_INSTANCE}/changes`) {
       if (init?.method !== 'DELETE') return json(state.changes);
@@ -108,12 +129,16 @@ function mockBackend() {
       state.current = null;
       state.official = state.officialAfterClear ?? state.official;
       state.cleared += 1;
+      audit('clear_changes');
       return json(cleared);
     }
     if (url === `/api/instances/${REAL_INSTANCE}/edge-list/current`) return json(state.current ?? edgeList);
     if (url === `/api/instances/${REAL_INSTANCE}/solution`) return json(state.official ?? solution);
     if (url.startsWith(`/api/instances/${REAL_INSTANCE}/sessions/`)) return json(state.substitutes);
-    if (url === '/api/jobs/rep-1/accept') return state.accept();
+    if (url === '/api/jobs/rep-1/accept') {
+      audit('accept', 'rep-1');
+      return state.accept();
+    }
     if (url === '/api/jobs/rep-1/base-solution') return json(state.base ?? solution);
     if (url === '/api/jobs/rep-1/edge-list') return json(state.jobEdgeList ?? state.current ?? edgeList);
     if (url === '/api/jobs/rep-1') return json(state.job);
@@ -144,16 +169,16 @@ const openReal = async (role: UserRole = 'coordinator', setUp?: (backend: Return
 const SLOTS = [0, 1, 2, 3, 4].flatMap((day) => [0, 1, 3, 4, 5, 6, 7, 8, 9].map((period) => ({ day, period })));
 const theory = (s: EnrichedSession) => !s.labBlockId && s.durationPeriods === 1;
 const conflict = (s: EnrichedSession, day: number, period: number) =>
-  moveConflict(edgeList, labelsFor(display), sessions, s.sessionId, day, period);
+  checkMove(edgeList, labelsFor(display), sessions, s.sessionId, day, period);
 
-/** A theory session and a slot whose grid cell is on screen (not under a lab block), clean or clashing. */
+/** A theory session and a slot whose grid cell is on screen (not under a lab block), clean or with a cohort clash. */
 function pickMove(clean: boolean) {
   for (const s of sessions.filter(theory)) {
     for (const { day, period } of SLOTS) {
       if (day === s.day && period === s.wallClockPeriod) continue;
-      const reason = conflict(s, day, period);
-      const wanted = clean ? reason === null : reason?.startsWith('Cohort clash');
-      if (wanted && screen.queryByTestId(`grid-cell-${day}-${period}`)) return { s, day, period, reason };
+      const check = conflict(s, day, period);
+      const wanted = clean ? check === null : check?.clashes.some((c) => c.kind === 'cohort');
+      if (wanted && screen.queryByTestId(`grid-cell-${day}-${period}`)) return { s, day, period, check };
     }
   }
   throw new Error('no such move in the real timetable');
@@ -230,11 +255,14 @@ describe('Repair in the app (http mode, S14d)', () => {
     expect(screen.getByTestId('mark-unavailable-button')).toBeDisabled();
   });
 
-  it('a clashing drag names the clash and offers "Repair around this", which posts the move', async () => {
+  it('a clashing drag names every clash and offers "Repair around this", which posts the move', async () => {
     const backend = await openReal();
-    const { s, day, period, reason } = pickMove(false);
+    const { s, day, period, check } = pickMove(false);
     drop(s.sessionId, day, period);
-    expect(await screen.findByTestId('rejection-reason')).toHaveTextContent(reason!);
+    expect(await screen.findByTestId('rejection-reason')).toHaveTextContent(
+      `Clashes for ${s.subjectCode} (${s.cohortLabel}) at ${DAY_NAMES[day]} P${period}:`
+    );
+    expect(screen.getAllByTestId('rejection-clash').map((li) => li.textContent)).toEqual(check!.clashes.map((c) => c.text));
     expect(backend.posted).toEqual([]);
 
     backend.job = repairJob({ status: 'running', phase: 'repair' });
@@ -310,7 +338,7 @@ describe('Repair in the app (http mode, S14d)', () => {
       change: { kind: 'faculty_unavailable', faculty_id: 'fac-swapnali-kurhade', slots: [{ day: 1, period: 6 }, { day: 1, period: 7 }] },
     });
     // D33: a timeout is no repair found, never infeasible
-    expect(status()).toHaveTextContent('No repair found within 300 s. This does not prove it is impossible.');
+    expect(status()).toHaveTextContent('No repair found within 300.0 s. This does not prove it is impossible.');
     expect(screen.queryByTestId('infeasibility-panel')).not.toBeInTheDocument();
 
     fireEvent.change(within(panel).getByLabelText('Unavailable kind'), { target: { value: 'room' } });
@@ -426,8 +454,11 @@ describe('The current edge list (S14j: GET /instances/{id}/edge-list/current)', 
     });
     drop(s.sessionId, day, period);
     expect(await screen.findByTestId('rejection-reason')).toHaveTextContent(
-      `${facultyText(labelsFor(display), s.facultyId)} is unavailable on ${DAY_NAMES[day]} P${period}.`
+      `Clashes for ${s.subjectCode} (${s.cohortLabel}) at ${DAY_NAMES[day]} P${period}:`
     );
+    expect(screen.getAllByTestId('rejection-clash').map((li) => li.textContent)).toEqual([
+      `${facultyText(labelsFor(display), s.facultyId)} is unavailable then.`,
+    ]);
     expect(backend.posted).toEqual([]);
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(`/api/instances/${REAL_INSTANCE}/edge-list/current`, expect.anything());
   });
@@ -679,5 +710,83 @@ describe('Accounts linked to a faculty member or cohort (D50)', () => {
     await logInWith('faculty', { faculty_id: null, cohort_id: null });
     expect(screen.getByLabelText('Select faculty persona')).toBeEnabled();
     expect(screen.getByLabelText('Select instance')).toHaveValue('example');
+  });
+});
+
+describe('A queued repair and the audit log (S14o)', () => {
+  const solveJob = (status: string) => ({ id: 'solve-1', instance_id: REAL_INSTANCE, kind: 'solve', time_limit_s: 300, status });
+  const markKurhadeUnavailable = () => {
+    const panel = screen.getByTestId('repair-panel');
+    fireEvent.change(within(panel).getByLabelText('Unavailable faculty member'), { target: { value: 'fac-swapnali-kurhade' } });
+    fireEvent.click(within(panel).getByLabelText('Tuesday P6'));
+    fireEvent.click(screen.getByTestId('mark-unavailable-button'));
+  };
+  const solveStatus = () => screen.getByTestId('solve-status');
+
+  it('a repair queued while this instance’s solve runs waits for it; once the solve ends it is only queued', async () => {
+    const backend = await openReal('administrator');
+    backend.jobs['solve-1'] = solveJob('running');
+    fireEvent.click(screen.getByTestId('solve-button'));
+    await waitFor(() => expect(solveStatus()).toHaveAttribute('data-status', 'running'));
+
+    markKurhadeUnavailable();
+    await waitFor(() =>
+      expect(status()).toHaveTextContent('Waiting for the previous job to finish: the solve of this instance is still running.')
+    );
+    expect(status()).toHaveAttribute('data-status', 'queued');
+
+    backend.jobs['solve-1'] = solveJob('timeout');
+    await waitFor(() => expect(solveStatus()).toHaveAttribute('data-status', 'timeout'), { timeout: 3000 });
+    await waitFor(() => expect(status()).toHaveTextContent('Queued: waiting for a solver worker.'));
+  });
+
+  it('a solve started after the repair is not what the repair waits for', async () => {
+    const backend = await openReal('administrator');
+    markKurhadeUnavailable();
+    await waitFor(() => expect(status()).toHaveTextContent('Queued: waiting for a solver worker.'));
+    backend.jobs['solve-1'] = solveJob('running');
+    fireEvent.click(screen.getByTestId('solve-button'));
+    await waitFor(() => expect(solveStatus()).toHaveAttribute('data-status', 'running'));
+    expect(status()).toHaveTextContent('Queued: waiting for a solver worker.');
+  });
+
+  it('the audit log shows new rows after a solve, a repair, its end, an accept and a clear, at the same "Show entries"', async () => {
+    const backend = await openReal('administrator');
+    const log = await screen.findByTestId('audit-log');
+    const rows = () => within(log).queryAllByTestId('audit-row').map((r) => r.textContent ?? '');
+    await waitFor(() => expect(within(log).queryByRole('alert')).not.toBeInTheDocument());
+    expect(rows()).toEqual([]);
+
+    // a solve: its row appears when it is queued, and shows its final status once it ends
+    backend.jobs['solve-1'] = solveJob('timeout');
+    fireEvent.click(screen.getByTestId('solve-button'));
+    await waitFor(() => expect(solveStatus()).toHaveAttribute('data-status', 'timeout'));
+    await waitFor(() => expect(rows()).toEqual([expect.stringContaining('"status":"timeout"')]));
+    expect(rows()[0]).toContain('solve');
+
+    // a repair: queued, then solved
+    const { s, day, period } = pickMove(true);
+    const other = sessions.find((o) => theory(o) && o.sessionId !== s.sessionId)!;
+    drop(s.sessionId, day, period);
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    expect(rows()[0]).toContain('"status":"queued"');
+    backend.job = repairJob({ status: 'solved', change: moveChange(s, day, period), solution: repaired(s.sessionId, day, period, other.sessionId) });
+    await screen.findByTestId('repair-proposal', {}, { timeout: 3000 });
+    await waitFor(() => expect(rows()[0]).toContain('"status":"solved"'));
+
+    // an accept, then a clear of the accepted changes
+    backend.changes = [{ job_id: 'rep-1', change: moveChange(s, day, period), requested_by: 'test-administrator', accepted_by: 'test-administrator', accepted_at: '2026-10-28T10:01:00Z' }];
+    fireEvent.click(await screen.findByTestId('accept-repair'));
+    await waitFor(() => expect(rows().map((r) => r.includes('accept'))).toEqual([true, false, false]));
+    const panel = screen.getByTestId('accepted-changes');
+    fireEvent.click(await within(panel).findByTestId('clear-changes'));
+    fireEvent.click(within(panel).getByTestId('confirm-clear-button'));
+    await waitFor(() => expect(rows()).toHaveLength(4));
+    expect(rows()[0]).toContain('clear_changes');
+
+    // never by changing "Show entries": every read asked for the default 100
+    const reads = vi.mocked(fetch).mock.calls.map(([url]) => String(url)).filter((u) => u.startsWith('/api/audit'));
+    expect(new Set(reads)).toEqual(new Set(['/api/audit?limit=100']));
+    expect(within(log).getByLabelText('Audit entries to show')).toHaveValue('100');
   });
 });

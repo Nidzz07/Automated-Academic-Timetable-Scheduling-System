@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 
 export interface RejectionAlertProps {
   reason: string;
+  /** Every clash at the target, one per line, under the reason */
+  clashes?: string[];
   sessionId?: string;
   originalSlotLabel?: string;
   onDismiss: () => void;
@@ -13,6 +15,7 @@ export interface RejectionAlertProps {
 
 export const RejectionAlert: React.FC<RejectionAlertProps> = ({
   reason,
+  clashes,
   sessionId,
   originalSlotLabel,
   onDismiss,
@@ -44,6 +47,15 @@ export const RejectionAlert: React.FC<RejectionAlertProps> = ({
           >
             {reason}
           </p>
+          {clashes && clashes.length > 0 && (
+            <ul data-testid="rejection-clashes" className="list-disc pl-4 text-xs text-foreground/95">
+              {clashes.map((c) => (
+                <li key={c} data-testid="rejection-clash">
+                  {c}
+                </li>
+              ))}
+            </ul>
+          )}
           {(sessionId || originalSlotLabel) && (
             <p className="text-[11px] text-muted-foreground">
               {sessionId && <span>Session <strong>{sessionId}</strong> </span>}

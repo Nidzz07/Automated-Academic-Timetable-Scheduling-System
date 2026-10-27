@@ -6,8 +6,11 @@ import {
   EdgeList,
   EnrichedSession,
   Labels,
+  DAY_NAMES,
   buildEnrichedSessions,
+  checkMove,
   entityName,
+  facultyText,
   labelsFor,
   moveConflict,
   pinName,
@@ -80,10 +83,13 @@ describe('entityName and pinName on the real instance (display.json)', () => {
   });
 });
 
-describe('moveConflict on the real instance', () => {
+describe('checkMove on the real instance: every clash at the target and its kind', () => {
+  const NIMKAR_SE_A = 'obs-t0-r1-c3-l0'; // CE207 · SE-Comp A, Anant Nimkar (AVN), room 605
+  const check = (s: EnrichedSession, day: number, period: number) =>
+    checkMove(edgeList, labels, sessions, s.sessionId, day, period);
   const free = (s: EnrichedSession) =>
     [0, 1, 2, 3, 4].flatMap((day) => [0, 1, 3, 4, 5, 6, 7, 8, 9].map((period) => ({ day, period }))).find(
-      ({ day, period }) => moveConflict(edgeList, labels, sessions, s.sessionId, day, period) === null
+      ({ day, period }) => check(s, day, period) === null
     );
 
   it('finds no conflict for a move into a free slot of the committed timetable', () => {
@@ -91,33 +97,59 @@ describe('moveConflict on the real instance', () => {
     expect(free(s)).toBeDefined();
   });
 
-  it('names a cohort clash with the session already there', () => {
+  it('a slot with two clashes names both: a fixed item in the room and the teacher elsewhere', () => {
+    const s = sessions.find((x) => x.sessionId === NIMKAR_SE_A)!;
+    expect(check(s, 2, 1)).toEqual({
+      heading: 'Clashes for CE207 (SE-Comp A) at Wednesday P1:',
+      clashes: [
+        { kind: 'room', text: 'Room 605 is taken at Wednesday P1 by PCS / A / DN / 605.' },
+        { kind: 'teacher', text: 'Anant Nimkar (AVN) teaches CE207 · SE-Comp B then.' },
+      ],
+    });
+    expect(moveConflict(edgeList, labels, sessions, s.sessionId, 2, 1)).toBe(
+      'Clashes for CE207 (SE-Comp A) at Wednesday P1: Room 605 is taken at Wednesday P1 by PCS / A / DN / 605. ' +
+        'Anant Nimkar (AVN) teaches CE207 · SE-Comp B then.'
+    );
+  });
+
+  it('room: a placed session in the room', () => {
+    const s = sessions.find((x) => x.sessionId === NIMKAR_SE_A)!;
+    const other = sessions.find((o) => o.sessionId !== s.sessionId && o.roomId === s.roomId && o.cohortId !== s.cohortId && theory(o))!;
+    expect(check(s, other.day, other.wallClockPeriod)?.clashes).toContainEqual({
+      kind: 'room',
+      text: `Room 605 is taken at ${DAY_NAMES[other.day]} P${other.wallClockPeriod} by ${other.subjectCode} · ${other.cohortLabel}.`,
+    });
+  });
+
+  it('cohort: the session already there for the same students', () => {
     const s = sessions.find(theory)!;
     const other = sessions.find(
       (o) => o.sessionId !== s.sessionId && o.cohortId === s.cohortId && o.facultyId !== s.facultyId && o.roomId !== s.roomId
     )!;
-    expect(moveConflict(edgeList, labels, sessions, s.sessionId, other.day, other.wallClockPeriod)).toMatch(
-      new RegExp(`^Cohort clash: ${s.cohortLabel} already has ${other.subjectCode}`)
-    );
+    expect(check(s, other.day, other.wallClockPeriod)?.clashes).toContainEqual({
+      kind: 'cohort',
+      text: `${s.cohortLabel} has ${other.subjectCode} · ${other.cohortLabel} then.`,
+    });
   });
 
-  it('names a faculty clash, a lunch pin by unique_label, a break and faculty unavailability', () => {
+  it('fixed item: a lunch pin by its label, beside the room clash at the same slot', () => {
     const s = sessions.find((x) => theory(x) && x.cohortId === 'coh-se-a')!;
-    const lunch = moveConflict(edgeList, labels, sessions, s.sessionId, 0, 5);
-    expect(lunch).toBe('Slot conflict: Monday P5 is held by SE lunch, Mon P5.');
-    expect(moveConflict(edgeList, labels, sessions, s.sessionId, 0, 2)).toMatch(/does not fit at Monday P2/);
-
-    const kurhade = sessions.find((x) => theory(x) && x.facultyId === KURHADE)!;
-    expect(moveConflict(edgeList, labels, sessions, kurhade.sessionId, 0, 0)).toBe(
-      'Swapnali Kurhade (SK) is unavailable on Monday P0.'
-    );
-
-    const busy = sessions.find((o) => o.sessionId !== s.sessionId && o.facultyId === s.facultyId)!;
-    expect(moveConflict(edgeList, labels, sessions, s.sessionId, busy.day, busy.wallClockPeriod)).toMatch(/^Faculty clash: /);
+    const inRoom = sessions.find((o) => o.day === 0 && o.periods.includes(5) && o.roomId === s.roomId)!;
+    expect(check(s, 0, 5)).toEqual({
+      heading: `Clashes for ${s.subjectCode} (SE-Comp A) at Monday P5:`,
+      clashes: [
+        { kind: 'room', text: `Room ${s.roomCode} is taken at Monday P5 by ${inRoom.subjectCode} · ${inRoom.cohortLabel}.` },
+        { kind: 'fixed', text: 'SE lunch holds SE-Comp A then.' },
+      ],
+    });
   });
 
-  it('refuses a fixed session', () => {
+  it('unavailability, and a break or a fixed session refused outright', () => {
+    const kurhade = sessions.find((x) => theory(x) && x.facultyId === KURHADE)!;
+    expect(check(kurhade, 0, 0)?.clashes).toContainEqual({ kind: 'unavailable', text: 'Swapnali Kurhade (SK) is unavailable then.' });
+
     const s = sessions.find(theory)!;
+    expect(check(s, 0, 2)).toEqual({ heading: `${s.subjectCode} (${s.cohortLabel}) does not fit at Monday P2.`, clashes: [] });
     const fixed: EdgeList = {
       ...edgeList,
       sessions: edgeList.sessions.map((x) =>
@@ -125,5 +157,23 @@ describe('moveConflict on the real instance', () => {
       ),
     };
     expect(moveConflict(fixed, labels, sessions, s.sessionId, 4, 9)).toMatch(/is fixed to its slot/);
+  });
+
+  it('teacher: another session of the same teacher; clashes come in the order room, teacher, cohort, fixed item, unavailability', () => {
+    const order = ['room', 'teacher', 'cohort', 'fixed', 'unavailable'];
+    for (const s of sessions.filter(theory).slice(0, 20)) {
+      for (const day of [0, 1, 2, 3, 4]) {
+        for (const period of [0, 1, 3, 4, 5, 6, 7, 8, 9]) {
+          const kinds = check(s, day, period)?.clashes.map((c) => order.indexOf(c.kind)) ?? [];
+          expect(kinds).toEqual([...kinds].sort((a, b) => a - b));
+        }
+      }
+    }
+    const s = sessions.find((x) => theory(x) && x.cohortId === 'coh-se-a')!;
+    const busy = sessions.find((o) => o.sessionId !== s.sessionId && o.facultyId === s.facultyId)!;
+    expect(check(s, busy.day, busy.wallClockPeriod)?.clashes).toContainEqual({
+      kind: 'teacher',
+      text: `${facultyText(labels, s.facultyId)} teaches ${busy.subjectCode} · ${busy.cohortLabel} then.`,
+    });
   });
 });

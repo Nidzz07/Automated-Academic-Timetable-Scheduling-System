@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { TimetableGrid } from '../TimetableGrid';
+import type { ClientRect, CollisionDetection, DroppableContainer } from '@dnd-kit/core';
+import { TimetableGrid, pointerCellFirst } from '../TimetableGrid';
 import { EdgeList, Labels, getSolvedSolutionFixture, labelsFor } from '@/adapters/timetable';
 import { SolvedSolution, SolutionContract } from '@/adapters/solution';
 import { validateContract } from '@/api/contractValidation';
@@ -207,5 +208,32 @@ describe('TimetableGrid on the real EVEN 2025-26 instance (display.json labels, 
     expect(frozen).toHaveTextContent('frozen · D24');
     expect(screen.getByTestId('period-clock-0')).toHaveTextContent('09:00–10:00');
     expect(screen.getByTestId('period-clock-9')).toHaveTextContent('17:15–18:15');
+  });
+});
+
+describe('pointerCellFirst: a drop lands in the cell under the pointer', () => {
+  // Two cells of one day column, P0 above P1, 100 px tall each
+  const rect = (top: number, height: number): ClientRect => ({ top, left: 0, width: 200, height, right: 200, bottom: top + height });
+  const cells: Record<string, ClientRect> = { 'slot-0-0': rect(0, 100), 'slot-0-1': rect(100, 100) };
+  const collide = (pointer: { x: number; y: number } | null, card: ClientRect) =>
+    pointerCellFirst({
+      active: { id: 'sess-1', data: { current: {} }, rect: { current: { initial: card, translated: card } } },
+      collisionRect: card,
+      droppableRects: new Map(Object.entries(cells)),
+      droppableContainers: Object.keys(cells).map((id) => ({ id, key: id, data: { current: {} }, disabled: false })) as unknown as DroppableContainer[],
+      pointerCoordinates: pointer,
+    } as Parameters<CollisionDetection>[0]).map((c) => c.id);
+
+  // The dragged card hangs below the pointer: its centre (y 130) is in P1, the pointer (y 70) in P0
+  const card = rect(70, 120);
+
+  it('targets the cell under the pointer, not the one under the card centre', () => {
+    expect(collide({ x: 50, y: 70 }, card)[0]).toBe('slot-0-0');
+    expect(collide({ x: 50, y: 150 }, card)[0]).toBe('slot-0-1');
+  });
+
+  it('outside every cell, falls back to the cell the card overlaps most', () => {
+    expect(collide({ x: 50, y: 250 }, card)[0]).toBe('slot-0-1');
+    expect(collide(null, card)[0]).toBe('slot-0-1');
   });
 });
