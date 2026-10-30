@@ -1,157 +1,122 @@
 import React from 'react';
 import { QualityView, SolutionMetadata } from '@/adapters/solution';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { formatDuration } from '@/lib/format';
-import { CheckCircle2, Cpu, Timer, ShieldCheck, Activity } from 'lucide-react';
+import { readableSolverText, ruleResult, ruleWording } from '@/lib/wording';
 
 /**
- * The solver's quality flags (S-GAP, S-B2B, S-LOAD16, FAC_LOAD_IMBALANCE; ROADMAP D34).
- * Displayed exactly as the solver reported them; nothing is computed here.
+ * The solver's quality flags (S-GAP, S-B2B, S-LOAD16, FAC_LOAD_IMBALANCE; ROADMAP D34), each in
+ * plain words with what was found and what it cost. Every number is the solver's; nothing is
+ * computed here.
  */
 interface QualityScoreCardProps {
   quality: QualityView;
   /** Solver run statistics; absent for a timetable the solver did not make (the printed one) */
   metadata?: SolutionMetadata;
   title?: string;
+  /** A faculty or cohort id the solver's explanation names, by name; null keeps the id */
+  nameOf?: (id: string) => string | null;
 }
 
 export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
   quality,
   metadata,
-  title = 'Solver Quality Evaluation',
+  title = 'Timetable quality',
+  nameOf,
 }) => {
   return (
-    <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-sm">
+    <Card>
       <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck className="h-5 w-5" />
-            </span>
-            <div>
-              <CardTitle className="text-base font-bold">{title}</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Itemised breakdown per quality_rules.yaml
-                {quality.rulesVersion !== null && ` · rules version ${quality.rulesVersion}`}
-              </p>
-            </div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>
+              A timetable starts at 100 points; each preference it misses takes points off. Computed by the
+              solver{quality.rulesVersion !== null && ` (rules version ${quality.rulesVersion})`}.
+            </CardDescription>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="text-right">
             {quality.score === null ? (
-              <Badge variant="outline" data-testid="quality-score-unavailable" className="text-[11px]">
+              <p data-testid="quality-score-unavailable" className="font-semibold">
                 Score not available until rules are evaluated
-              </Badge>
+              </p>
             ) : (
-              <div className="flex items-baseline gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
-                <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                  Score:
-                </span>
-                <span data-testid="quality-score" className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+              <p>
+                Score{' '}
+                <span data-testid="quality-score" className="font-serif text-2xl font-bold">
                   {quality.score}
                 </span>
-              </div>
+              </p>
             )}
             {quality.score !== null && quality.notEvaluatedRuleIds.length > 0 && (
-              <Badge variant="warning" data-testid="quality-partial" className="text-[10px]">
+              <p data-testid="quality-partial" className="text-xs font-semibold text-amber-900 dark:text-amber-200">
                 Partial: {quality.notEvaluatedRuleIds.join(', ')} not evaluated
-              </Badge>
+              </p>
             )}
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3 pt-0">
-        {/* Run statistics metrics */}
+      <CardContent className="space-y-4 pt-0">
+        {/* Run statistics */}
         {metadata && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-          <div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/40 p-2">
-            <Cpu className="h-4 w-4 text-primary shrink-0" />
-            <div className="overflow-hidden">
-              <div className="text-[10px] text-muted-foreground">Algorithm</div>
-              <div className="font-semibold truncate" title={metadata.algorithm}>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
+            <div>
+              <dt className="font-semibold">Method</dt>
+              <dd className="truncate" title={metadata.algorithm}>
                 {metadata.algorithm}
-              </div>
+              </dd>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/40 p-2">
-            <Timer className="h-4 w-4 text-emerald-500 shrink-0" />
             <div>
-              <div className="text-[10px] text-muted-foreground">Solve Time</div>
-              <div className="font-semibold">{formatDuration(metadata.runtime_ms)}</div>
+              <dt className="font-semibold">Time to solve</dt>
+              <dd>{formatDuration(metadata.runtime_ms)}</dd>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/40 p-2">
-            <CheckCircle2 className="h-4 w-4 text-blue-500 shrink-0" />
             <div>
-              <div className="text-[10px] text-muted-foreground">Placement</div>
-              <div className="font-semibold">
+              <dt className="font-semibold">Sessions placed</dt>
+              <dd>
                 {metadata.sessions_assigned} / {metadata.sessions_total}
-              </div>
+              </dd>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/40 p-2">
-            <Activity className="h-4 w-4 text-purple-500 shrink-0" />
             <div>
-              <div className="text-[10px] text-muted-foreground">Chromatic & Backtracks</div>
-              <div className="font-semibold">
-                {metadata.slots_used ?? 'N/A'} slots · {metadata.backtracks ?? 0} backtracks
-              </div>
+              <dt className="font-semibold">Time slots used, search backtracks</dt>
+              <dd>
+                {metadata.slots_used ?? 'N/A'} slots, {metadata.backtracks ?? 0} backtracks
+              </dd>
             </div>
-          </div>
-        </div>
+          </dl>
         )}
 
-        {/* Penalty Breakdown */}
-        <div className="rounded-lg border border-border/60 bg-background/50 p-2.5">
-          <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
-            Penalty Rule Contributions
-          </div>
-          <div className="space-y-2">
-            {quality.rules.map((item) => (
-              <div
-                key={item.rule_id}
-                data-testid={`quality-rule-${item.rule_id}`}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 rounded-md border border-border/40 bg-card p-2 text-xs"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold text-foreground">
-                      {item.rule_id}
-                    </span>
-                    {item.status === 'evaluated' ? (
-                      <>
-                        <Badge variant="outline" className="text-[10px] py-0">
-                          weight: {item.weight}
-                        </Badge>
-                        <Badge variant="destructive" data-testid="rule-penalty" className="text-[10px] py-0">
-                          -{item.penalty.toFixed(1)} pts
-                        </Badge>
-                      </>
-                    ) : (
-                      <Badge variant="outline" data-testid="rule-not-evaluated" className="text-[10px] py-0">
-                        not evaluated
-                      </Badge>
-                    )}
+        <section>
+          <h4 className="mb-1 text-lg font-semibold">Where points were lost</h4>
+          <ul className="divide-y divide-border border-y border-border">
+            {quality.rules.map((item) => {
+              const words = ruleWording(item.rule_id);
+              return (
+                <li key={item.rule_id} data-testid={`quality-rule-${item.rule_id}`} className="space-y-1 py-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-base font-semibold">{words.title}</span>
+                    <span className="font-mono text-xs">{item.rule_id}</span>
                   </div>
-                  {/* The solver names the affected faculty, division and slots here */}
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {item.status === 'evaluated' ? item.explanation : item.reason}
+                  <p>{words.meaning}</p>
+                  <p
+                    data-testid={item.status === 'evaluated' ? 'rule-penalty' : 'rule-not-evaluated'}
+                    className="font-semibold"
+                  >
+                    {ruleResult(item)}
                   </p>
-                </div>
-                {item.status === 'evaluated' && (
-                  <div className="font-mono text-[11px] text-muted-foreground shrink-0 sm:text-right">
-                    raw: {item.raw}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+                  {/* The solver names the affected faculty, divisions and slots here */}
+                  {item.status === 'evaluated' && (
+                    <details className="text-xs">
+                      <summary className="cursor-pointer font-semibold text-primary">Show where</summary>
+                      <p className="mt-1">{readableSolverText(item.explanation, nameOf)}</p>
+                    </details>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       </CardContent>
     </Card>
   );

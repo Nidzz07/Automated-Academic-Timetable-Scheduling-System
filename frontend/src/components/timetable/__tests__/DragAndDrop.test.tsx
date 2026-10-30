@@ -78,7 +78,7 @@ describe('Drag-and-Drop Interaction and Revert-on-Reject Flow', () => {
 
     // Assert the readable reason surfaced comes from the mock backend response
     const reasonEl = screen.getByTestId('rejection-reason');
-    expect(reasonEl).toHaveTextContent(/Wednesday P7 is held by pinned occupancy/i);
+    expect(reasonEl).toHaveTextContent(/Wednesday T7 is held by pinned occupancy/i);
 
     // 6. EXACT PRIOR STATE RESTORED:
     // a. sess-0006 must be back in its original slot (Wednesday P3)

@@ -1,8 +1,8 @@
 import React from 'react';
 import { EnrichedSession } from '@/adapters/timetable';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { X, BookOpen, User, DoorOpen, Users, Clock, Pin, FileCode } from 'lucide-react';
+import { periodLabel } from '@/lib/format';
+import { X, Pin } from 'lucide-react';
 
 interface SessionDetailModalProps {
   session: EnrichedSession | null;
@@ -22,117 +22,82 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+      aria-labelledby="session-detail-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
     >
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
+      <div className="relative w-full max-w-lg rounded-lg border border-border bg-card p-6">
+        <button onClick={onClose} aria-label="Close details" className="absolute top-4 right-4 rounded-md p-1.5 hover:bg-muted">
           <X className="h-5 w-5" />
         </button>
 
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-4">
-          <Badge variant={session.isPinned ? "pinned" : session.isCombinedDivision ? "warning" : "info"}>
-            {session.isPinned
-              ? "Pinned / Immovable"
-              : session.isCombinedDivision
-              ? "Combined Division"
-              : session.sessionType.toUpperCase()}
-          </Badge>
-          <span className="font-mono text-xs text-muted-foreground">
-            {session.sessionId}
-          </span>
-        </div>
+        <p className="mb-1 pr-8 font-semibold">
+          {session.isPinned
+            ? 'Pinned, immovable'
+            : session.isCombinedDivision
+              ? 'Combined division lecture'
+              : session.sessionType === 'lab'
+                ? 'Lab (practical)'
+                : 'Lecture (theory)'}{' '}
+          <span className="font-mono text-xs font-normal">{session.sessionId}</span>
+        </p>
 
-        <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-primary" />
-          <span>{session.subjectCode} — {session.subjectName}</span>
+        <h3 id="session-detail-title" className="text-xl font-semibold">
+          {session.subjectCode} — {session.subjectName}
         </h3>
 
-        {/* Details Grid */}
-        <div className="grid grid-cols-2 gap-3 my-4 text-xs">
-          <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-              <User className="h-3.5 w-3.5 text-primary" />
-              <span>Faculty</span>
-            </div>
-            <div className="font-bold text-foreground">{session.facultyName}</div>
-            <div className="text-[11px] font-mono text-muted-foreground">
-              Initials: {session.facultyInitials}
-            </div>
+        <dl className="my-4 grid grid-cols-2 gap-x-6 gap-y-3">
+          <div>
+            <dt className="text-xs font-semibold">Teacher</dt>
+            <dd className="font-semibold">{session.facultyName}</dd>
+            <dd className="text-xs">Initials: {session.facultyInitials}</dd>
           </div>
-
-          <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-              <DoorOpen className="h-3.5 w-3.5 text-primary" />
-              <span>Room Allocation</span>
-            </div>
-            <div className="font-bold text-foreground">
-              Room {session.subRoomCode ?? session.roomCode}
-            </div>
-            <div className="text-[11px] text-muted-foreground">
-              {session.subRoomCode ? `Sub-room partition of Room ${session.roomCode}` : 'Full room'}
-            </div>
+          <div>
+            <dt className="text-xs font-semibold">Room</dt>
+            <dd className="font-semibold">Room {session.subRoomCode ?? session.roomCode}</dd>
+            <dd className="text-xs">
+              {session.subRoomCode ? `Part of room ${session.roomCode}` : 'Full room'}
+            </dd>
           </div>
-
-          <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-              <Users className="h-3.5 w-3.5 text-primary" />
-              <span>Cohort</span>
-            </div>
-            <div className="font-bold text-foreground">{session.cohortLabel}</div>
-            <div className="text-[11px] text-muted-foreground">
-              {session.cohortSize} students enrolled
-            </div>
+          <div>
+            <dt className="text-xs font-semibold">Class</dt>
+            <dd className="font-semibold">{session.cohortLabel}</dd>
+            <dd className="text-xs">{session.cohortSize} students enrolled</dd>
           </div>
-
-          <div className="rounded-lg border border-border/60 bg-muted/30 p-2.5">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-              <Clock className="h-3.5 w-3.5 text-primary" />
-              <span>Duration</span>
-            </div>
-            <div className="font-bold text-foreground">
+          <div>
+            <dt className="text-xs font-semibold">Length</dt>
+            <dd className="font-semibold">
               {session.durationPeriods} teaching period{session.durationPeriods > 1 ? 's' : ''}
-            </div>
-            <div className="text-[11px] text-muted-foreground font-mono">
-              Starts at P{session.wallClockPeriod}
-            </div>
+            </dd>
+            <dd className="text-xs">Starts at {periodLabel(session.wallClockPeriod)}</dd>
           </div>
-        </div>
+        </dl>
 
-        {/* Pinned Note */}
         {session.isPinned && (
-          <div className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-100 p-2.5 text-xs text-slate-800 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 mb-4">
-            <Pin className="h-4 w-4 text-rose-500 fill-rose-500" />
-            <div>
-              <strong>Immovable Solver Constraint:</strong> {session.pinnedReason}
-            </div>
-          </div>
+          <p className="mb-4 flex items-center gap-2 rounded-md border border-slate-400 bg-slate-100 p-2.5 text-xs dark:bg-slate-900">
+            <Pin aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <span>
+              <strong>Cannot be moved:</strong> {session.pinnedReason}
+            </span>
+          </p>
         )}
 
-        {/* Contract raw JSON snippet */}
-        <div className="rounded-lg border border-border/60 bg-muted/40 p-2.5 text-xs">
-          <div className="flex items-center gap-1 text-[11px] font-mono font-semibold text-muted-foreground mb-1">
-            <FileCode className="h-3 w-3" />
-            <span>Frozen Contract 3 Placement Payload:</span>
-          </div>
-          <pre className="font-mono text-[10px] text-muted-foreground overflow-x-auto p-1.5 bg-background/80 rounded border">
-{JSON.stringify(
-  {
-    session_id: session.sessionId,
-    day: session.day,
-    period: session.wallClockPeriod,
-    room_id: session.roomCode,
-    sub_room_id: session.subRoomCode,
-  },
-  null,
-  2
-)}
+        {/* The placement as the solution contract stores it */}
+        <details className="text-xs">
+          <summary className="cursor-pointer font-semibold">Placement record (as stored)</summary>
+          <pre className="mt-1 overflow-x-auto rounded border border-border bg-muted p-2 font-mono">
+            {JSON.stringify(
+              {
+                session_id: session.sessionId,
+                day: session.day,
+                period: session.wallClockPeriod,
+                room_id: session.roomCode,
+                sub_room_id: session.subRoomCode,
+              },
+              null,
+              2
+            )}
           </pre>
-        </div>
+        </details>
 
         <div className="mt-4 flex justify-end gap-2">
           {onFindSubstitute && (

@@ -1,23 +1,10 @@
 import React from 'react';
 import { InfeasibleSolution, toDiagnosisView } from '@/adapters/solution';
-import { DAY_NAMES, EdgeList, Labels, entityName, EXAMPLE_LABELS, pinName } from '@/adapters/timetable';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { EdgeList, Labels, entityName, EXAMPLE_LABELS, pinName, slotText, slotsText } from '@/adapters/timetable';
 import { Button } from '@/components/ui/button';
 import { formatDuration } from '@/lib/format';
-import {
-  AlertTriangle,
-  Lightbulb,
-  Cpu,
-  Timer,
-  GitBranch,
-  Layers,
-  ArrowRight,
-  Info,
-} from 'lucide-react';
-
-const slotText = (slots: Array<{ day: number; period: number }>) =>
-  slots.map((s) => `${DAY_NAMES[s.day]} P${s.period}`).join(', ');
+import { constraintKindLabel, readableSolverText, relaxationActionLabel, verificationLabel } from '@/lib/wording';
+import { AlertTriangle, Lightbulb, ArrowRight } from 'lucide-react';
 
 type Slot = { day: number; period: number };
 
@@ -27,7 +14,7 @@ function relaxationTargets(params: Record<string, unknown>, name: (id: string) =
     typeof params[k] === 'string' ? [name(params[k] as string)] : []
   );
   const slots = [...((params.slots as Slot[] | undefined) ?? []), ...(params.slot ? [params.slot as Slot] : [])];
-  return [...ids, ...(pin ? [`pin ${pin}`] : []), ...(slots.length ? [slotText(slots)] : [])];
+  return [...ids, ...(pin ? [`pin ${pin}`] : []), ...(slots.length ? [slotsText(slots)] : [])];
 }
 
 interface InfeasibilityDiagnosisPanelProps {
@@ -39,6 +26,11 @@ interface InfeasibilityDiagnosisPanelProps {
   onSwitchToSolved?: () => void;
 }
 
+/**
+ * Why no timetable exists: the solver's diagnosis in plain words, each constraint's kind by its
+ * meaning with the contract's code beside it. The solver's own sentences are shown as written,
+ * with period labels and times put in the UI's form (displayText).
+ */
 export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelProps> = ({
   infeasibleSolution,
   edgeList,
@@ -47,6 +39,8 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
   onSwitchToSolved,
 }) => {
   const name = (id: string) => (edgeList ? entityName(id, edgeList, labels) : id);
+  // the solver's sentences name cohorts and faculty by id: shown by name where the edge list knows them
+  const text = (t: string) => readableSolverText(t, edgeList ? (id) => (name(id) === id ? null : name(id)) : undefined);
   // a `pin.<i>` constraint id is pinned_occupancy[i], named by display.json pins[i] (D51)
   const pin = (constraintId: string) => (edgeList ? pinName(constraintId, edgeList, labels) : null);
   const { metadata } = infeasibleSolution;
@@ -55,251 +49,164 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
   const method = diagnosis.methodLabel;
 
   return (
-    <div
-      data-testid="infeasibility-panel"
-      className="space-y-4 rounded-2xl border-2 border-rose-500/30 bg-rose-500/5 p-4 sm:p-6 backdrop-blur-md"
-    >
-      {/* Top Banner Alert */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-rose-500/20 pb-4">
+    <section data-testid="infeasibility-panel" className="space-y-4 rounded-lg border-2 border-destructive/60 bg-card p-4 sm:p-6">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500 text-white shadow-md shadow-rose-500/20">
-            <AlertTriangle className="h-5 w-5" />
-          </div>
+          <AlertTriangle aria-hidden="true" className="mt-1 h-6 w-6 shrink-0 text-destructive" />
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black tracking-tight text-foreground">
-                Infeasible Timetable Instance
-              </h2>
-              <Badge variant="destructive" className="font-mono text-[10px] uppercase">
-                Status: INFEASIBLE
-              </Badge>
-              <Badge variant="outline" data-testid="diagnosis-method" className="font-mono text-[10px]">
-                {method.badge}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">{method.text}</p>
+            <h2 className="text-xl font-semibold">No timetable is possible</h2>
+            <p>{method.text}</p>
+            <p className="text-xs">
+              Found by: <span data-testid="diagnosis-method">{method.badge}</span>
+            </p>
           </div>
         </div>
 
         {onSwitchToSolved && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onSwitchToSolved}
-            className="text-xs gap-1 border-rose-300 dark:border-rose-800"
-          >
+          <Button variant="outline" size="sm" onClick={onSwitchToSolved} className="gap-1">
             <span>View Solved Baseline</span>
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowRight className="h-4 w-4" />
           </Button>
         )}
       </div>
 
-      {/* Solver Diagnostics Metadata Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/60 p-2.5">
-          <Cpu className="h-4 w-4 text-rose-500 shrink-0" />
-          <div className="overflow-hidden">
-            <div className="text-[10px] text-muted-foreground">Diagnostic Algorithm</div>
-            <div className="font-semibold truncate text-[11px]" title={metadata.algorithm}>
-              {metadata.algorithm}
-            </div>
-          </div>
+      {/* Solver run statistics */}
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
+        <div>
+          <dt className="font-semibold">Method</dt>
+          <dd className="truncate" title={metadata.algorithm}>
+            {metadata.algorithm}
+          </dd>
         </div>
-
-        <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/60 p-2.5">
-          <Timer className="h-4 w-4 text-amber-500 shrink-0" />
-          <div>
-            <div className="text-[10px] text-muted-foreground">Diagnosis Runtime</div>
-            <div className="font-semibold text-[11px]">{formatDuration(metadata.runtime_ms)}</div>
-          </div>
+        <div>
+          <dt className="font-semibold">Time taken</dt>
+          <dd>{formatDuration(metadata.runtime_ms)}</dd>
         </div>
-
-        <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/60 p-2.5">
-          <Layers className="h-4 w-4 text-primary shrink-0" />
-          <div>
-            <div className="text-[10px] text-muted-foreground">Placements Tested</div>
-            <div className="font-semibold text-[11px]">
-              {metadata.sessions_assigned} / {metadata.sessions_total} sessions placed
-            </div>
-          </div>
+        <div>
+          <dt className="font-semibold">Sessions placed before it stopped</dt>
+          <dd>
+            {metadata.sessions_assigned} / {metadata.sessions_total} sessions placed
+          </dd>
         </div>
-
-        <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-background/60 p-2.5">
-          <GitBranch className="h-4 w-4 text-purple-500 shrink-0" />
-          <div>
-            <div className="text-[10px] text-muted-foreground">Backtracking Steps</div>
-            <div className="font-semibold text-[11px]">{metadata.backtracks?.toLocaleString()} backtracks</div>
-          </div>
+        <div>
+          <dt className="font-semibold">Search backtracks</dt>
+          <dd>{metadata.backtracks?.toLocaleString()} backtracks</dd>
         </div>
-      </div>
+      </dl>
 
-      {/* Minimal Conflicting Subset (MUS); empty when the method is search exhaustion */}
+      {/* Minimal conflicting subset (MUS); empty when the method is search exhaustion */}
       {minimal_conflicting_set.length > 0 && (
-      <Card className="border-rose-500/30 bg-card/80">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-400">
-                <AlertTriangle className="h-3.5 w-3.5" />
-              </span>
-              <CardTitle className="text-sm font-bold">
-                Minimal Conflicting Subset ({minimal_conflicting_set.length} Constraints)
-              </CardTitle>
-            </div>
-            <span className="text-[11px] text-muted-foreground">
-              Removing any single constraint restores satisfiability
-            </span>
+        <section className="space-y-2">
+          <div>
+            <h3 className="text-lg font-semibold">
+              Why: these {minimal_conflicting_set.length} rules cannot all hold
+            </h3>
+            <p className="text-xs">Drop any one of them and a timetable exists.</p>
           </div>
-        </CardHeader>
-
-        <CardContent className="space-y-2.5 pt-0">
-          <div
-            data-testid="minimal-conflicting-set"
-            className="space-y-2"
-          >
+          <ul data-testid="minimal-conflicting-set" className="space-y-2">
             {minimal_conflicting_set.map((constraint) => (
-              <div
+              <li
                 key={constraint.constraint_id}
                 data-testid={`conflicting-constraint-${constraint.constraint_id}`}
-                className="rounded-xl border border-rose-200 dark:border-rose-950/60 bg-rose-50/50 dark:bg-rose-950/20 p-3 space-y-1.5"
+                className="space-y-1 rounded-md border border-border p-3"
               >
-                <div className="flex flex-wrap items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="destructive"
-                      data-testid={`constraint-kind-${constraint.kind}`}
-                      className="text-[10px] py-0 uppercase font-mono"
-                    >
-                      {constraint.kind}
-                    </Badge>
-                    <span className="font-mono text-xs font-semibold text-foreground">
-                      {constraint.constraint_id}
-                    </span>
-                  </div>
-                  <div className="text-[10px] font-mono text-muted-foreground">
-                    Involves {constraint.entity_ids.length} entities
-                  </div>
-                </div>
-
-                {/* Institutional Terms Description */}
-                <p className="text-xs text-foreground/90 font-medium leading-relaxed">
-                  {constraint.description}
+                <p data-testid={`constraint-kind-${constraint.kind}`} className="font-semibold">
+                  {constraintKindLabel(constraint.kind)}{' '}
+                  <span className="font-mono text-xs font-normal">
+                    {constraint.kind} · {constraint.constraint_id}
+                  </span>
                 </p>
+                <p>{text(constraint.description)}</p>
 
                 {pin(constraint.constraint_id) && (
-                  <p data-testid={`constraint-pins-${constraint.constraint_id}`} className="text-[11px] text-muted-foreground">
+                  <p data-testid={`constraint-pins-${constraint.constraint_id}`} className="text-xs">
                     Pinned: {pin(constraint.constraint_id)}
                   </p>
                 )}
 
                 {constraint.slots.length > 0 && (
-                  <p
-                    data-testid={`constraint-slots-${constraint.constraint_id}`}
-                    className="text-[11px] font-mono text-muted-foreground"
-                  >
-                    Cells: {slotText(constraint.slots)}
+                  <p data-testid={`constraint-slots-${constraint.constraint_id}`} className="text-xs">
+                    When: {slotsText(constraint.slots)}
                   </p>
                 )}
 
-                {/* Entity IDs tag pills */}
-                <div className="flex flex-wrap items-center gap-1 pt-1">
-                  <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-0.5">
-                    <Info className="h-2.5 w-2.5" /> Entities:
-                  </span>
-                  {constraint.entity_ids.map((id) => (
-                    <span
-                      key={id}
-                      title={id}
-                      className="inline-flex items-center rounded bg-background/80 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground border border-border/50"
-                    >
-                      {name(id)}
-                    </span>
+                <p className="text-xs">
+                  Involves:{' '}
+                  {constraint.entity_ids.map((id, i) => (
+                    <React.Fragment key={id}>
+                      {i > 0 && ', '}
+                      <span title={id}>{name(id)}</span>
+                    </React.Fragment>
                   ))}
-                </div>
-              </div>
+                </p>
+              </li>
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </ul>
+        </section>
       )}
 
-      {/* Suggested Relaxation (absent when the method is search exhaustion) */}
+      {/* Suggested relaxation (absent when the method is search exhaustion) */}
       {suggested_relaxation && (
-      <div
-        data-testid="suggested-relaxation"
-        className="rounded-xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent p-4 shadow-sm"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <section
+          data-testid="suggested-relaxation"
+          className="flex flex-col justify-between gap-3 rounded-md border-2 border-emerald-700/50 bg-emerald-50 p-4 dark:bg-emerald-950/40 sm:flex-row sm:items-center"
+        >
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500 text-white">
-                <Lightbulb className="h-3.5 w-3.5" />
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-300">
-                Smallest Feasible Relaxation
-              </span>
-              <Badge
-                variant="outline"
-                data-testid="relaxation-constraint-id"
-                className="font-mono text-[10px] border-emerald-400 text-emerald-800 dark:text-emerald-300"
-              >
-                Target: {suggested_relaxation.constraint_id}
-              </Badge>
-            </div>
-            <p className="text-xs text-foreground font-medium pt-1">
-              {suggested_relaxation.description}
-            </p>
+            <h3 className="flex items-center gap-2 text-lg font-semibold">
+              <Lightbulb aria-hidden="true" className="h-5 w-5 text-emerald-800 dark:text-emerald-300" />
+              Smallest change that would allow it
+            </h3>
+            <p className="font-semibold">{text(suggested_relaxation.description)}</p>
             {suggested_relaxation.action_type && suggested_relaxation.verification && (
-              <p data-testid="relaxation-action" className="text-[11px] font-mono text-muted-foreground">
-                Action: {suggested_relaxation.action_type} · verification:{' '}
-                {suggested_relaxation.verification.status}
+              <p data-testid="relaxation-action" className="text-xs">
+                {relaxationActionLabel(suggested_relaxation.action_type)};{' '}
+                {verificationLabel(suggested_relaxation.verification.status)}
                 {suggested_relaxation.verification.runtime_ms !== null &&
-                  ` (${formatDuration(suggested_relaxation.verification.runtime_ms)})`}
+                  ` (${formatDuration(suggested_relaxation.verification.runtime_ms)})`}{' '}
+                <span className="font-mono">
+                  {suggested_relaxation.action_type}, {suggested_relaxation.verification.status}
+                </span>
               </p>
             )}
             {edgeList && suggested_relaxation.action_params && (
-              <p data-testid="relaxation-applies-to" className="text-[11px] text-muted-foreground">
+              <p data-testid="relaxation-applies-to" className="text-xs">
                 Applies to: {relaxationTargets(suggested_relaxation.action_params, name, pin(suggested_relaxation.constraint_id)).join('; ') || 'nothing named'}
               </p>
             )}
+            <p data-testid="relaxation-constraint-id" className="font-mono text-xs">
+              Constraint {suggested_relaxation.constraint_id}
+            </p>
           </div>
 
           {onApplyRelaxation && (
             <Button
               size="sm"
-              variant="default"
               onClick={() => onApplyRelaxation(suggested_relaxation.constraint_id)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs shrink-0 gap-1.5"
+              className="shrink-0 gap-1.5 bg-emerald-800 text-white hover:bg-emerald-900"
             >
-              <Lightbulb className="h-3.5 w-3.5" />
+              <Lightbulb className="h-4 w-4" />
               <span>Simulate Relaxation</span>
             </Button>
           )}
-        </div>
-      </div>
+        </section>
       )}
 
       {/* Deepest partial placement: diagnostic only, never a timetable */}
       {partial_placement && unplaced_session_ids && (
-        <div
-          data-testid="partial-placement"
-          className="rounded-xl border border-border/60 bg-background/60 p-3 text-xs space-y-1"
-        >
-          <div className="font-bold text-foreground">
-            Partial placement (diagnostic only — not a timetable): {partial_placement.length} placed,{' '}
+        <details data-testid="partial-placement" className="text-xs">
+          <summary className="cursor-pointer font-semibold">
+            How far the search got (diagnostic only — not a timetable): {partial_placement.length} placed,{' '}
             {unplaced_session_ids.length} unplaced
-          </div>
-          <p className="font-mono text-[11px] text-muted-foreground">
+          </summary>
+          <p className="mt-1 font-mono">
             Placed:{' '}
-            {partial_placement
-              .map((p) => `${p.session_id} (${DAY_NAMES[p.day]} P${p.period})`)
-              .join(', ') || 'none'}
+            {partial_placement.map((p) => `${p.session_id} (${slotText(p.day, p.period)})`).join(', ') || 'none'}
           </p>
-          <p data-testid="unplaced-sessions" className="font-mono text-[11px] text-muted-foreground">
+          <p data-testid="unplaced-sessions" className="font-mono">
             Unplaced: {unplaced_session_ids.join(', ')}
           </p>
-        </div>
+        </details>
       )}
-    </div>
+    </section>
   );
 };

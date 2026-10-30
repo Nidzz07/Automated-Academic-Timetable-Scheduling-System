@@ -18,12 +18,15 @@ import {
   facultyLoad,
   facultyText,
   loadText,
+  slotText,
 } from '@/adapters/timetable';
 import { InfeasibilityDiagnosisPanel } from './InfeasibilityDiagnosisPanel';
 import { changeText } from './AcceptedChangesPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { formatSeconds } from '@/lib/format';
+import { formatSeconds, periodLabel } from '@/lib/format';
+import { loadLimitHours } from '@/lib/wording';
+import { OverLimitWarning } from './OverLimitWarning';
 import { Check, Wrench, X } from 'lucide-react';
 
 /** A solved repair not yet accepted, against the solution it started from (D48). */
@@ -106,7 +109,7 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
 
   const where = (a: SessionAssignment) => {
     const room = edgeList.rooms.find((r) => r.id === (a.sub_room_id ?? a.room_id));
-    return `${DAY_NAMES[a.day]} P${a.period}, ${room ? labels.room(room) : a.room_id}`;
+    return `${slotText(a.day, a.period)}, ${room ? labels.room(room) : a.room_id}`;
   };
   // A substitution changes two teachers' loads: who teaches the session now, and the substitute
   const substitution = data?.change?.kind === 'substitute_faculty' ? data.change : null;
@@ -118,6 +121,11 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
       .filter((id) => id !== '')
       .map((id) => ({ id, before: load(workload.before, id), after: load(workload.after, id) }));
   }, [substitution, workload]);
+  // the weekly limit as the solver states it in the proposal's S-LOAD16 (else the base's)
+  const limit = proposal
+    ? loadLimitHours(toQualityView(proposal.result).rules.find((r) => r.rule_id === 'S-LOAD16')) ??
+      loadLimitHours(toQualityView(proposal.base).rules.find((r) => r.rule_id === 'S-LOAD16'))
+    : null;
   const before = proposal ? score(proposal.base) : null;
   const after = proposal ? score(proposal.result) : null;
 
@@ -137,15 +145,15 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
   return (
     <Card data-testid="repair-panel">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Repair the timetable</CardTitle>
+        <CardTitle>Repair the timetable</CardTitle>
         <CardDescription>
           Changes the official timetable as little as possible. Drag a session on the grid to move it, mark a
           faculty member or a room unavailable, or find a substitute from a session's details.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0 text-xs">
+      <CardContent className="space-y-3 pt-0">
         <fieldset disabled={busy || pending} className="space-y-2" data-testid="mark-unavailable">
-          <legend className="font-semibold text-foreground">Mark unavailable</legend>
+          <legend className="text-lg font-semibold">Mark unavailable</legend>
           <div className="flex flex-wrap items-center gap-2">
             <select
               aria-label="Unavailable kind"
@@ -173,13 +181,13 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
               ))}
             </select>
           </div>
-          <table className="border-collapse text-[11px]">
+          <table className="border-collapse text-xs">
             <thead>
               <tr>
                 <th />
                 {grid.teachingPeriods.map((p) => (
-                  <th key={p} className="px-1 font-mono font-normal text-muted-foreground">
-                    P{p}
+                  <th key={p} className="px-1.5 font-semibold">
+                    {periodLabel(p)}
                   </th>
                 ))}
               </tr>
@@ -191,10 +199,10 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
                   {grid.teachingPeriods.map((p) => {
                     const key = `${day}-${p}`;
                     return (
-                      <td key={p} className="px-1 text-center">
+                      <td key={p} className="px-1.5 py-0.5 text-center">
                         <input
                           type="checkbox"
-                          aria-label={`${DAY_NAMES[day]} P${p}`}
+                          aria-label={slotText(day, p)}
                           checked={slots.includes(key)}
                           onChange={(e) =>
                             setSlots((s) => (e.target.checked ? [...s, key] : s.filter((k) => k !== key)))
@@ -209,7 +217,7 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
           </table>
           <Button
             size="sm"
-            className="gap-1.5 text-xs"
+            className="gap-1.5"
             disabled={!target || slots.length === 0}
             onClick={markUnavailable}
             data-testid="mark-unavailable-button"
@@ -238,11 +246,17 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
                 </p>
                 {loads.length > 0 && (
                   <div data-testid="substitution-loads">
-                    <p className="font-semibold">Weekly load</p>
+                    <p className="font-semibold">Weekly load, before → after</p>
                     <ul className="space-y-1">
                       {loads.map((l) => (
-                        <li key={l.id} data-testid={`substitution-load-${l.id}`}>
-                          {facultyText(labels, l.id)}: {loadText(l.before)} → {loadText(l.after)} hrs/wk
+                        <li key={l.id} data-testid={`substitution-load-${l.id}`} className="space-x-2">
+                          <span>
+                            {facultyText(labels, l.id)}: {loadText(l.before)} → {loadText(l.after)} hrs/wk
+                          </span>
+                          <OverLimitWarning hours={l.before.total} limit={limit} className="text-xs" />
+                          {l.after.total !== l.before.total && (
+                            <OverLimitWarning hours={l.after.total} limit={limit} className="text-xs" />
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -277,7 +291,7 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
             <div className="flex gap-2">
               <Button
                 size="sm"
-                className="gap-1 text-xs"
+                className="gap-1"
                 disabled={!proposal || accept.isPending || !!accept.error}
                 onClick={() => accept.mutate(data.id)}
                 data-testid="accept-repair"
@@ -285,7 +299,7 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
                 <Check className="h-3.5 w-3.5" />
                 Accept
               </Button>
-              <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={onDiscard} data-testid="discard-repair">
+              <Button variant="outline" size="sm" className="gap-1" onClick={onDiscard} data-testid="discard-repair">
                 <X className="h-3.5 w-3.5" />
                 Discard
               </Button>

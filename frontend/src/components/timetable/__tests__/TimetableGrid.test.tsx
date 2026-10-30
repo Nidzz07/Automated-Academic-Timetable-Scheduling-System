@@ -25,7 +25,7 @@ describe('TimetableGrid Component', () => {
 
     // edge_list_v1.example.json: teaching_periods [0, 1, 3, 4, 6, 7, 8, 9] of 10
     for (const p of [0, 1, 3, 4, 6, 7, 8, 9]) {
-      expect(screen.getByTestId(`period-row-${p}`)).toHaveTextContent(`P${p}`);
+      expect(screen.getByTestId(`period-row-${p}`)).toHaveTextContent(`T${p}`);
     }
     expect(screen.getByTestId('break-row-2')).toBeInTheDocument();
     expect(screen.getByTestId('break-row-5')).toBeInTheDocument();
@@ -48,9 +48,9 @@ describe('TimetableGrid Component', () => {
     expect(cell).toContainElement(labBlock);
 
     // The banner states its periods and the break it straddles, from the edge list
-    expect(within(labBlock).getByText(/2 periods \(P1–P3\)/i)).toBeInTheDocument();
+    expect(within(labBlock).getByText(/2 periods \(T1–T3\)/i)).toBeInTheDocument();
     expect(within(labBlock).getByText(/4 batches in parallel/i)).toBeInTheDocument();
-    expect(within(labBlock).getByText(/Spans break P2/i)).toBeInTheDocument();
+    expect(within(labBlock).getByText(/Runs across the break T2/i)).toBeInTheDocument();
   });
 
   it('renders Case 2: Four parallel batch sessions occupying the same lab slot in different sub-rooms', () => {
@@ -206,8 +206,8 @@ describe('TimetableGrid on the real EVEN 2025-26 instance (display.json labels, 
       .getAllByTestId('pinned-block')
       .find((b) => b.textContent?.includes('MDM-III Lab (CC) /A /SB'));
     expect(frozen).toHaveTextContent('frozen · D24');
-    expect(screen.getByTestId('period-clock-0')).toHaveTextContent('09:00–10:00');
-    expect(screen.getByTestId('period-clock-9')).toHaveTextContent('17:15–18:15');
+    expect(screen.getByTestId('period-clock-0')).toHaveTextContent('9:00 AM – 10:00 AM');
+    expect(screen.getByTestId('period-clock-9')).toHaveTextContent('5:15 PM – 6:15 PM');
   });
 });
 

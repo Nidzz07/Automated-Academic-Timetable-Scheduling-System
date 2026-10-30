@@ -2,6 +2,7 @@ import React from 'react';
 import { QualityView } from '@/adapters/solution';
 import { PrintedBaseline } from '@/adapters/realInstance';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ruleWording } from '@/lib/wording';
 
 interface GeneratedVsPrintedCardProps {
   generated: QualityView;
@@ -24,17 +25,17 @@ export const GeneratedVsPrintedCard: React.FC<GeneratedVsPrintedCardProps> = ({ 
     ['score', 'Total score', score(generated.score), score(printed.quality.score)],
     ...ruleIds.map((id): [string, string, string, string] => [
       id,
-      `${id} penalty`,
+      `${ruleWording(id).title} (${id}), points lost`,
       penalty(generated, id),
       penalty(printed.quality, id),
     ]),
     // the backend serves only solutions that pass solver.validate.validate_solution
-    ['hard', 'Hard violations', '0', String(printed.violations.length)],
+    ['hard', 'Clashes (rules that must hold)', '0', String(printed.violations.length)],
   ];
   return (
     <Card data-testid="generated-vs-printed">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Generated vs printed timetable</CardTitle>
+        <CardTitle>Generated and printed timetables compared</CardTitle>
         <CardDescription>
           Generated: the solver's validated solution. Printed: the SPIT timetable as issued.
         </CardDescription>
@@ -42,7 +43,7 @@ export const GeneratedVsPrintedCard: React.FC<GeneratedVsPrintedCardProps> = ({ 
       <CardContent className="pt-0">
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-left text-muted-foreground">
+            <tr className="border-b border-border text-left">
               <th className="py-1 font-semibold">Measure</th>
               <th className="py-1 text-right font-semibold">Generated</th>
               <th className="py-1 text-right font-semibold">Printed</th>
@@ -52,8 +53,8 @@ export const GeneratedVsPrintedCard: React.FC<GeneratedVsPrintedCardProps> = ({ 
             {rows.map(([key, label, gen, prt]) => (
               <tr key={key} data-testid={`compare-${key}`} className="border-t border-border/50">
                 <td className="py-1">{label}</td>
-                <td className="py-1 text-right font-mono">{gen}</td>
-                <td className="py-1 text-right font-mono">{prt}</td>
+                <td className="py-1 text-right tabular-nums">{gen}</td>
+                <td className="py-1 text-right tabular-nums">{prt}</td>
               </tr>
             ))}
           </tbody>

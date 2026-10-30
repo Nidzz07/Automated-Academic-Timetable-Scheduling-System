@@ -54,8 +54,20 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      // Self-hosted through @fontsource (src/main.tsx): serif headings, sans body, mono only for ids and codes
       fontFamily: {
-        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        sans: ['"Source Sans 3"', "Segoe UI", "Roboto", "sans-serif"],
+        serif: ['"Source Serif 4"', "Georgia", "serif"],
+        mono: ['"Source Code Pro"', "Consolas", "monospace"],
+      },
+      // One type scale: 15 px is the floor (tables, secondary text), 16 px body, then headings
+      fontSize: {
+        xs: ["0.9375rem", { lineHeight: "1.4rem" }],
+        sm: ["1rem", { lineHeight: "1.5rem" }],
+        base: ["1.0625rem", { lineHeight: "1.65rem" }],
+        lg: ["1.1875rem", { lineHeight: "1.65rem" }],
+        xl: ["1.375rem", { lineHeight: "1.85rem" }],
+        "2xl": ["1.75rem", { lineHeight: "2.2rem" }],
       },
     },
   },

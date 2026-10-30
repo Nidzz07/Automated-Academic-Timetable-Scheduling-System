@@ -27,12 +27,14 @@ import {
   EnrichedSession,
   EXAMPLE_LABELS,
   Labels,
+  slotText,
 } from '@/adapters/timetable';
+import { periodLabel } from '@/lib/format';
 import { ParallelLabBlock } from './ParallelLabBlock';
 import { CombinedLectureBlock } from './CombinedLectureBlock';
 import { PinnedBlock } from './PinnedBlock';
 import { SessionCell } from './SessionCell';
-import { Calendar, Clock, Coffee, Utensils } from 'lucide-react';
+import { Coffee, Utensils } from 'lucide-react';
 
 type MoveHandler = (sessionId: string, targetDay: DayIndex, targetPeriod: number) => void;
 
@@ -131,7 +133,7 @@ const DroppableGridCell: React.FC<DroppableGridCellProps> = ({
       onDragOver={(e) => {
         if (canDragAndDrop) e.preventDefault();
       }}
-      className={`p-2 align-top border-r last:border-r-0 border-border/60 min-h-[90px] transition-colors relative ${
+      className={`p-2 align-top border-r last:border-r-0 border-border min-h-[90px] relative ${
         isOver && canDragAndDrop ? 'bg-primary/15 ring-2 ring-primary ring-inset' : ''
       } ${className}`}
     >
@@ -139,7 +141,7 @@ const DroppableGridCell: React.FC<DroppableGridCellProps> = ({
         <button
           type="button"
           data-testid={`drop-slot-${day}-${period}`}
-          aria-label={`Drop into ${DAY_NAMES[day]} P${period}`}
+          aria-label={`Drop into ${slotText(day, period)}`}
           className="sr-only"
           onClick={(e) => {
             const sid = e.currentTarget.getAttribute('data-session-id') || activeDragSessionId;
@@ -310,54 +312,47 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     >
       <div
         data-testid="timetable-grid"
-        className="w-full overflow-x-auto rounded-2xl border border-border/80 bg-card/70 shadow-lg backdrop-blur-md"
+        className="w-full overflow-x-auto rounded-lg border border-border bg-card"
       >
-        <table className="w-full border-collapse text-left min-w-[900px]">
+        <table className="w-full border-collapse text-left text-xs min-w-[1100px]">
           {/* Table Header: Days of the week */}
           <thead>
-            <tr className="border-b border-border bg-muted/60">
-              <th className="w-36 p-3.5 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground border-r border-border/60">
-                <div className="flex items-center justify-center gap-1.5">
-                  <Clock className="h-4 w-4 text-primary" />
-                  <span>Period</span>
-                </div>
-              </th>
+            <tr className="border-b-2 border-border bg-muted">
+              <th className="w-44 p-3 text-center font-sans text-sm font-semibold border-r border-border">Period</th>
               {grid.days.map((day) => (
                 <th
                   key={day}
                   data-testid={`day-header-${day}`}
-                  className="p-3.5 text-center text-xs font-bold uppercase tracking-wider text-foreground border-r last:border-r-0 border-border/60"
+                  className="p-3 text-center font-serif text-lg font-semibold border-r last:border-r-0 border-border"
                 >
-                  <div className="flex items-center justify-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{DAY_NAMES[day]}</span>
-                  </div>
+                  {DAY_NAMES[day]}
                 </th>
               ))}
             </tr>
           </thead>
 
           {/* Table Body: every wall-clock period of the edge list's slot_grid */}
-          <tbody className="divide-y divide-border/60">
+          <tbody className="divide-y divide-border">
             {grid.periods.map(({ period, teaching }) =>
               !teaching ? (
                 // Not a teaching period for anyone: a break row (lab blocks may straddle it)
                 <tr
                   key={period}
                   data-testid={`break-row-${period}`}
-                  className="bg-muted/30 border-y border-dashed border-border/70"
+                  className="bg-muted border-y border-dashed border-border"
                 >
-                  <td className="p-2 text-center text-[11px] font-mono font-semibold text-muted-foreground border-r border-border/60 bg-muted/40">
+                  <td className="p-2 text-center font-semibold border-r border-border">
                     <span className="inline-flex items-center gap-1">
-                      <Coffee className="h-3 w-3 text-amber-500" />P{period}
+                      <Coffee aria-hidden="true" className="h-4 w-4" />
+                      {periodLabel(period)}
                     </span>
-                    {labels.clock(period) && <div className="font-normal">{labels.clock(period)}</div>}
+                    {labels.clock(period) && <div className="whitespace-nowrap font-normal">{labels.clock(period)}</div>}
                   </td>
                   {grid.days.map((day) =>
                     coveredSlots.has(`${day}-${period}`) ? null : (
                       <td
                         key={day}
-                        className="p-1.5 text-center text-xs font-medium tracking-wide text-muted-foreground bg-muted/20"
+                        className="p-1.5 text-center font-semibold"
                       >
                         Break
                       </td>
@@ -368,13 +363,13 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                 <tr
                   key={period}
                   data-testid={`period-row-${period}`}
-                  className="hover:bg-muted/10 transition-colors"
+                  className=""
                 >
                   {/* Period Column */}
-                  <td className="p-3 text-center border-r border-border/60 bg-muted/20 align-top">
-                    <div className="font-bold text-xs text-foreground">P{period}</div>
+                  <td className="p-3 text-center border-r border-border bg-muted align-top">
+                    <div className="font-serif text-lg font-semibold">{periodLabel(period)}</div>
                     {labels.clock(period) && (
-                      <div data-testid={`period-clock-${period}`} className="text-[10px] font-mono text-muted-foreground">
+                      <div data-testid={`period-clock-${period}`} className="whitespace-nowrap text-xs">
                         {labels.clock(period)}
                       </div>
                     )}
@@ -413,7 +408,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                         canDragAndDrop={canDragAndDrop}
                         activeDragSessionId={activeDragSessionId}
                         onMoveSession={onMoveSession}
-                        className={labBlock ? 'bg-emerald-500/5' : ''}
+                        className=""
                       >
                         {/* 1. Multi-period Parallel Lab Block Case */}
                         {labBlock && (
@@ -451,9 +446,9 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                             <div
                               key={pin.key}
                               data-testid={`lunch-cell-${day}-${period}`}
-                              className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-orange-400/50 bg-orange-500/10 p-2 text-xs font-semibold text-orange-800 dark:text-orange-300"
+                              className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-orange-700/50 bg-orange-50 p-2 font-semibold text-orange-950 dark:bg-orange-950/40 dark:text-orange-200"
                             >
-                              <Utensils className="h-3 w-3" />
+                              <Utensils aria-hidden="true" className="h-4 w-4" />
                               <span>{pin.label}</span>
                             </div>
                           ) : (
@@ -478,8 +473,8 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                         {/* Empty / Unscheduled Slot */}
                         {!labBlock && cellSessions.length === 0 && cellPins.length === 0 && (
-                          <div className="flex h-16 w-full items-center justify-center rounded-lg border border-dashed border-border/40 text-[10px] text-muted-foreground/40 font-mono select-none">
-                            {canDragAndDrop ? 'Drop session here' : 'Free Slot'}
+                          <div className="flex h-16 w-full items-center justify-center rounded-md border border-dashed border-border select-none">
+                            {canDragAndDrop ? 'Free: drop a session here' : 'Free'}
                           </div>
                         )}
                       </DroppableGridCell>
@@ -495,7 +490,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
       {/* Drag Overlay preview */}
       <DragOverlay>
         {activeDragSession ? (
-          <div className="w-64 opacity-90 shadow-2xl scale-105 pointer-events-none">
+          <div className="w-64 opacity-90 scale-105 pointer-events-none">
             {activeDragSession.isCombinedDivision ? (
               <CombinedLectureBlock session={activeDragSession} isDraggable />
             ) : (

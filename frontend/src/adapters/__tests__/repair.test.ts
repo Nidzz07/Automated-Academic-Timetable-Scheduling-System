@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { MockChronosApiClient, REAL_INSTANCE } from '@/api/chronosApi';
 import { SolvedSolution, isSolvedSolution, repairChanges } from '@/adapters/solution';
+import { displayText } from '@/lib/format';
 import {
   Display,
   EdgeList,
@@ -72,9 +73,10 @@ describe('entityName and pinName on the real instance (display.json)', () => {
 
   it('names pin.<i> by display.json pins[i] (D51); past the edge list a pin is an accepted room unavailability', () => {
     expect(display.pins[0].unique_label).toBe('TE lunch, Mon P4');
-    expect(pinName('pin.0', edgeList, labels)).toBe('TE lunch, Mon P4 (pin.0)');
+    // display.json keeps its P-label; the UI shows T4 (displayText)
+    expect(pinName('pin.0', edgeList, labels)).toBe('TE lunch, Mon T4 (pin.0)');
     const last = edgeList.pinned_occupancy.length - 1;
-    expect(pinName(`pin.${last}`, edgeList, labels)).toBe(`${display.pins[last].unique_label} (pin.${last})`);
+    expect(pinName(`pin.${last}`, edgeList, labels)).toBe(`${displayText(display.pins[last].unique_label!)} (pin.${last})`);
     expect(pinName(`pin.${last + 1}`, edgeList, labels)).toBe(`Room made unavailable by an accepted change (pin.${last + 1})`);
     // the current edge list carries the accepted closure's pin; display.json still stops at `last`
     const current = { ...edgeList, pinned_occupancy: [...edgeList.pinned_occupancy, { day: 0, period: 1, faculty_ids: [], room_ids: ['room-603'], cohort_ids: [] }] };
@@ -100,14 +102,14 @@ describe('checkMove on the real instance: every clash at the target and its kind
   it('a slot with two clashes names both: a fixed item in the room and the teacher elsewhere', () => {
     const s = sessions.find((x) => x.sessionId === NIMKAR_SE_A)!;
     expect(check(s, 2, 1)).toEqual({
-      heading: 'Clashes for CE207 (SE-Comp A) at Wednesday P1:',
+      heading: 'Clashes for CE207 (SE-Comp A) at Wednesday T1:',
       clashes: [
-        { kind: 'room', text: 'Room 605 is taken at Wednesday P1 by PCS / A / DN / 605.' },
+        { kind: 'room', text: 'Room 605 is taken at Wednesday T1 by PCS / A / DN / 605.' },
         { kind: 'teacher', text: 'Anant Nimkar (AVN) teaches CE207 · SE-Comp B then.' },
       ],
     });
     expect(moveConflict(edgeList, labels, sessions, s.sessionId, 2, 1)).toBe(
-      'Clashes for CE207 (SE-Comp A) at Wednesday P1: Room 605 is taken at Wednesday P1 by PCS / A / DN / 605. ' +
+      'Clashes for CE207 (SE-Comp A) at Wednesday T1: Room 605 is taken at Wednesday T1 by PCS / A / DN / 605. ' +
         'Anant Nimkar (AVN) teaches CE207 · SE-Comp B then.'
     );
   });
@@ -117,7 +119,7 @@ describe('checkMove on the real instance: every clash at the target and its kind
     const other = sessions.find((o) => o.sessionId !== s.sessionId && o.roomId === s.roomId && o.cohortId !== s.cohortId && theory(o))!;
     expect(check(s, other.day, other.wallClockPeriod)?.clashes).toContainEqual({
       kind: 'room',
-      text: `Room 605 is taken at ${DAY_NAMES[other.day]} P${other.wallClockPeriod} by ${other.subjectCode} · ${other.cohortLabel}.`,
+      text: `Room 605 is taken at ${DAY_NAMES[other.day]} T${other.wallClockPeriod} by ${other.subjectCode} · ${other.cohortLabel}.`,
     });
   });
 
@@ -136,9 +138,9 @@ describe('checkMove on the real instance: every clash at the target and its kind
     const s = sessions.find((x) => theory(x) && x.cohortId === 'coh-se-a')!;
     const inRoom = sessions.find((o) => o.day === 0 && o.periods.includes(5) && o.roomId === s.roomId)!;
     expect(check(s, 0, 5)).toEqual({
-      heading: `Clashes for ${s.subjectCode} (SE-Comp A) at Monday P5:`,
+      heading: `Clashes for ${s.subjectCode} (SE-Comp A) at Monday T5:`,
       clashes: [
-        { kind: 'room', text: `Room ${s.roomCode} is taken at Monday P5 by ${inRoom.subjectCode} · ${inRoom.cohortLabel}.` },
+        { kind: 'room', text: `Room ${s.roomCode} is taken at Monday T5 by ${inRoom.subjectCode} · ${inRoom.cohortLabel}.` },
         { kind: 'fixed', text: 'SE lunch holds SE-Comp A then.' },
       ],
     });
@@ -149,7 +151,7 @@ describe('checkMove on the real instance: every clash at the target and its kind
     expect(check(kurhade, 0, 0)?.clashes).toContainEqual({ kind: 'unavailable', text: 'Swapnali Kurhade (SK) is unavailable then.' });
 
     const s = sessions.find(theory)!;
-    expect(check(s, 0, 2)).toEqual({ heading: `${s.subjectCode} (${s.cohortLabel}) does not fit at Monday P2.`, clashes: [] });
+    expect(check(s, 0, 2)).toEqual({ heading: `${s.subjectCode} (${s.cohortLabel}) does not fit at Monday T2.`, clashes: [] });
     const fixed: EdgeList = {
       ...edgeList,
       sessions: edgeList.sessions.map((x) =>

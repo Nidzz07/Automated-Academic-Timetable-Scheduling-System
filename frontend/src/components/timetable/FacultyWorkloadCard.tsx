@@ -1,105 +1,74 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { EnrichedSession, facultyLoad } from '@/adapters/timetable';
 import { QualityRule } from '@/adapters/solution';
-import { School, BookOpen, Clock, Activity, CheckCircle } from 'lucide-react';
+import { loadLimitHours, readableSolverText } from '@/lib/wording';
+import { OverLimitWarning } from './OverLimitWarning';
 
 interface FacultyWorkloadCardProps {
   facultyInitials: string;
   facultySessions: EnrichedSession[];
-  /** The solver's S-LOAD16 entry (D11, D34); the only source of a load status */
+  /** The solver's S-LOAD16 entry (D11, D34); the only source of a load status and of the limit */
   loadRule?: QualityRule;
+  /** A faculty id the solver's explanation names, by name; null keeps the id */
+  nameOf?: (id: string) => string | null;
 }
 
 export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
   facultyInitials,
   facultySessions,
   loadRule,
+  nameOf,
 }) => {
-  // Compute Theory (T) and Practical (P) hours
+  // Theory (T) and practical (P) hours
   const { theory: theoryHours, practical: practicalHours, total: totalWeightedWorkload } = facultyLoad(facultySessions);
   const facultyName = facultySessions.find((s) => s.facultyName)?.facultyName ?? '';
 
   return (
-    <Card
-      data-testid="faculty-workload-card"
-      className="border-primary/30 bg-primary/5 backdrop-blur-md shadow-sm"
-    >
-      <CardHeader className="pb-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <School className="h-4 w-4" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-bold">
-                  Faculty Individual View: {facultyInitials}
-                </CardTitle>
-                <Badge variant="outline" className="font-mono text-[10px]">
-                  {facultyName || 'Department Faculty'}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Theory / practical hours placed in this timetable
-              </p>
-            </div>
+    <Card data-testid="faculty-workload-card">
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>
+              Weekly teaching load: {facultyName ? `${facultyName} (${facultyInitials})` : facultyInitials}
+            </CardTitle>
+            <CardDescription>Theory and practical hours placed in this timetable.</CardDescription>
           </div>
-
-          {/* Institutional T/P Notation */}
-          <div
-            data-testid="workload-formula-badge"
-            className="flex items-center gap-1.5 rounded-lg border border-primary/40 bg-background/80 px-3 py-1 font-mono text-xs font-bold text-primary shadow-xs"
-          >
-            <Activity className="h-3.5 w-3.5" />
-            <span>
-              {theoryHours}T + {practicalHours}P = {totalWeightedWorkload} hrs/wk
-            </span>
-          </div>
+          {/* The department's own notation, e.g. 6T + 8P = 14 */}
+          <p data-testid="workload-formula-badge" className="font-serif text-xl font-semibold">
+            {theoryHours}T + {practicalHours}P = {totalWeightedWorkload} hrs/wk
+          </p>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-2">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-          <div className="rounded-lg border border-border/60 bg-background/60 p-2">
-            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <BookOpen className="h-3 w-3 text-indigo-500" />
-              Theory (T) Load
-            </div>
-            <div className="font-bold text-foreground mt-0.5">{theoryHours} hours / week</div>
+      <CardContent className="space-y-3 pt-0">
+        <OverLimitWarning hours={totalWeightedWorkload} limit={loadLimitHours(loadRule)} />
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+          <div>
+            <dt className="text-xs font-semibold">Theory (T)</dt>
+            <dd className="text-base">{theoryHours} hours a week</dd>
           </div>
-
-          <div className="rounded-lg border border-border/60 bg-background/60 p-2">
-            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <Clock className="h-3 w-3 text-emerald-500" />
-              Practical (P) Load
-            </div>
-            <div className="font-bold text-foreground mt-0.5">{practicalHours} hours / week</div>
+          <div>
+            <dt className="text-xs font-semibold">Practical (P)</dt>
+            <dd className="text-base">{practicalHours} hours a week</dd>
           </div>
-
-          <div className="rounded-lg border border-border/60 bg-background/60 p-2">
-            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <Activity className="h-3 w-3 text-primary" />
-              Total Teaching
-            </div>
-            <div className="font-bold text-foreground mt-0.5">{totalWeightedWorkload} hours / week</div>
+          <div>
+            <dt className="text-xs font-semibold">Total teaching</dt>
+            <dd className="text-base font-semibold">{totalWeightedWorkload} hours a week</dd>
           </div>
-
-          <div className="rounded-lg border border-border/60 bg-background/60 p-2">
-            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <CheckCircle className="h-3 w-3 text-emerald-500" />
-              S-LOAD16 (solver)
-            </div>
-            <div data-testid="load-status" className="font-semibold text-foreground mt-0.5">
+          <div className="col-span-2 sm:col-span-1">
+            <dt className="text-xs font-semibold">
+              Solver's weekly-limit check <span className="font-mono">S-LOAD16</span>
+            </dt>
+            <dd data-testid="load-status" className="text-xs">
               {!loadRule
                 ? 'not reported by the solver'
                 : loadRule.status === 'not_evaluated'
                   ? 'not evaluated'
-                  : loadRule.explanation}
-            </div>
+                  : readableSolverText(loadRule.explanation, nameOf)}
+            </dd>
           </div>
-        </div>
+        </dl>
       </CardContent>
     </Card>
   );

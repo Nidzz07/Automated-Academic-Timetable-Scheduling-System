@@ -50,17 +50,19 @@ describe('Quality flags panel (D34: solver output, displayed as given)', () => {
     expect(screen.getByTestId('quality-rule-FAC_LOAD_IMBALANCE')).toHaveTextContent(
       'AGN teaches 2 h on Monday (the SE-Comp B OS lab)'
     );
-    expect(screen.getByTestId('quality-rule-FAC_LOAD_IMBALANCE')).toHaveTextContent('-1.0 pts');
+    expect(screen.getByTestId('quality-rule-FAC_LOAD_IMBALANCE')).toHaveTextContent('Found 2 hours → −1 point (0.5 points each)');
+    // plain title and meaning first, the rule id only as secondary text
+    expect(screen.getByTestId('quality-rule-FAC_LOAD_IMBALANCE')).toHaveTextContent('Uneven teaching days');
   });
 
   it('shows a not_evaluated rule as "not evaluated" with its reason, never a number', () => {
     renderCard(solvedV2Fixture);
 
     const row = screen.getByTestId('quality-rule-S-LOAD16');
-    expect(within(row).getByTestId('rule-not-evaluated')).toHaveTextContent('not evaluated');
+    expect(within(row).getByTestId('rule-not-evaluated')).toHaveTextContent('Not checked');
     expect(row).toHaveTextContent(/not a full department week/);
     expect(within(row).queryByTestId('rule-penalty')).not.toBeInTheDocument();
-    expect(row).not.toHaveTextContent(/pts|raw:|weight:/);
+    expect(row).not.toHaveTextContent(/point|Found/);
 
     expect(screen.getByTestId('quality-partial')).toHaveTextContent('Partial: S-LOAD16 not evaluated');
     expect(screen.getByText(/rules version 1/)).toBeInTheDocument();
@@ -79,7 +81,7 @@ describe('Quality flags panel (D34: solver output, displayed as given)', () => {
     );
     expect(screen.queryByTestId('quality-score')).not.toBeInTheDocument();
     expect(screen.queryByTestId('quality-partial')).not.toBeInTheDocument();
-    expect(screen.queryByText(/100/)).not.toBeInTheDocument();
+    expect(screen.queryByText('100')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('rule-not-evaluated')).toHaveLength(4);
   });
 

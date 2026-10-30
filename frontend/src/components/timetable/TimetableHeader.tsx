@@ -1,18 +1,8 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserRole, ROLE_CAPABILITIES } from '@/types/roles';
 import type { EdgeListInstance, InstanceOption } from '@/api/chronosApi';
-import {
-  CalendarDays,
-  Filter,
-  Moon,
-  Sun,
-  ShieldCheck,
-  AlertTriangle,
-  RotateCcw,
-  Sparkles,
-} from 'lucide-react';
+import { Moon, Sun, AlertTriangle, RotateCcw } from 'lucide-react';
 
 interface TimetableHeaderProps {
   cohortFilter: string;
@@ -35,6 +25,25 @@ interface TimetableHeaderProps {
   onToggleRejectMode?: () => void;
 }
 
+const STATUS: Record<'solved' | 'infeasible' | 'printed' | 'unsolved', { text: string; className: string }> = {
+  solved: { text: 'Solved, no clashes', className: 'border-emerald-700 text-emerald-900 dark:text-emerald-200' },
+  infeasible: { text: 'No timetable possible', className: 'border-destructive text-destructive dark:text-red-300' },
+  printed: { text: 'Printed timetable (SPIT)', className: 'border-border' },
+  unsolved: { text: 'Not solved yet', className: 'border-border' },
+};
+
+const fieldClass = 'flex items-center gap-1.5 rounded-md border border-input bg-card px-2.5 py-1.5';
+
+/** A swatch beside its meaning, for the grid's four kinds of item */
+const Key: React.FC<{ swatch: string; name: string; note: string }> = ({ swatch, name, note }) => (
+  <span className="flex items-center gap-1.5">
+    <span aria-hidden="true" className={`h-3.5 w-3.5 rounded-sm border border-l-4 ${swatch}`} />
+    <span>
+      <strong>{name}</strong> ({note})
+    </span>
+  </span>
+);
+
 export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
   cohortFilter,
   onCohortFilterChange,
@@ -53,78 +62,53 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
   onToggleRejectMode,
 }) => {
   const caps = ROLE_CAPABILITIES[currentRole];
+  const status = STATUS[solutionStatus ?? 'unsolved'];
 
   return (
     <header className="space-y-4">
-      {/* Top row: Brand, Status & Action Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-indigo-600 text-white shadow-md shadow-primary/20">
-            <CalendarDays className="h-5 w-5" />
+      <div className="flex flex-col justify-between gap-4 border-b border-border pb-4 lg:flex-row lg:items-end">
+        <div>
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h1 className="text-2xl font-bold">Chronos</h1>
+            <span
+              data-testid={`status-badge-${solutionStatus ?? 'unsolved'}`}
+              className={`rounded border px-2 py-0.5 text-xs font-semibold ${status.className}`}
+            >
+              {status.text}
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black tracking-tight text-foreground">
-                Chronos
-              </h1>
-              <Badge variant="outline" className="font-mono text-[10px] uppercase">
-                Phase 2 Track C
-              </Badge>
-              {solutionStatus === 'solved' ? (
-                <Badge variant="success" data-testid="status-badge-solved" className="text-[10px]">
-                  Solved · Conflict-Free
-                </Badge>
-              ) : solutionStatus === 'infeasible' ? (
-                <Badge variant="destructive" data-testid="status-badge-infeasible" className="text-[10px]">
-                  Infeasible Instance
-                </Badge>
-              ) : solutionStatus === 'printed' ? (
-                <Badge variant="outline" data-testid="status-badge-printed" className="text-[10px]">
-                  Printed timetable (SPIT)
-                </Badge>
-              ) : (
-                <Badge variant="outline" data-testid="status-badge-unsolved" className="text-[10px]">
-                  Not solved yet
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Academic Timetable Scheduling System · SPIT Computer Engineering (EVEN 2025–26)
-            </p>
-          </div>
+          <p>Academic timetable scheduling, SPIT Computer Engineering, even semester 2025–26</p>
         </div>
 
-        {/* Action and Theme Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Cohort Filter for Admin & Coordinator */}
+          {/* Division filter for administrator and coordinator */}
           {(currentRole === 'administrator' || currentRole === 'coordinator') && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 text-xs shadow-xs">
-              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="font-semibold text-muted-foreground">Division:</span>
+            <label className={fieldClass}>
+              <span className="font-semibold">Division:</span>
               <select
                 aria-label="Filter timetable by division"
                 value={cohortFilter}
                 onChange={(e) => onCohortFilterChange(e.target.value)}
-                className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
+                className="cursor-pointer bg-transparent font-medium outline-none"
               >
-                <option value="all">All Divisions & Cohorts</option>
+                <option value="all">All divisions and cohorts</option>
                 {cohortOptions.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.label}
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
           )}
 
           {/* Instance picker: every role (a logged-in faculty member or student picks it too) */}
-          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 text-xs shadow-xs">
-            <span className="font-semibold text-muted-foreground">Instance:</span>
+          <label className={fieldClass}>
+            <span className="font-semibold">Instance:</span>
             <select
               aria-label="Select instance"
               value={instance}
               onChange={(e) => onInstanceChange(e.target.value)}
-              className="bg-transparent font-medium text-foreground outline-hidden cursor-pointer"
+              className="cursor-pointer bg-transparent font-medium outline-none"
             >
               {instanceOptions.map((i) => (
                 <option key={i.id} value={i.id}>
@@ -132,23 +116,21 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 </option>
               ))}
             </select>
-          </div>
+          </label>
 
-          {/* Toggle Quality Breakdown (if role has permission) */}
           {caps.showQualityScore && solutionStatus === 'solved' && (
             <Button
               variant={showQualityCard ? 'default' : 'outline'}
               size="sm"
               onClick={onToggleQualityCard}
               data-testid="toggle-quality-card-button"
-              className="text-xs gap-1.5"
+              aria-pressed={showQualityCard}
             >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Score & Metrics</span>
+              {showQualityCard ? 'Hide quality score' : 'Show quality score'}
             </Button>
           )}
 
-          {/* Admin Simulation Toggles */}
+          {/* Demo controls (the bundled example only) */}
           {caps.showSimulationControls && onToggleOutcome && (
             <Button
               variant="outline"
@@ -156,12 +138,10 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
               onClick={onToggleOutcome}
               data-testid="toggle-outcome-button"
               title="Toggle between Solved Timetable and Infeasible Diagnosis fixtures"
-              className="text-xs gap-1.5 border-dashed"
+              className="gap-1.5 border-dashed"
             >
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-              <span>
-                {solutionStatus === 'solved' ? 'Simulate Infeasible' : 'Show Solved'}
-              </span>
+              <AlertTriangle className="h-4 w-4" />
+              <span>{solutionStatus === 'solved' ? 'Simulate Infeasible' : 'Show Solved'}</span>
             </Button>
           )}
 
@@ -172,66 +152,36 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
               onClick={onToggleRejectMode}
               data-testid="toggle-reject-mode-button"
               title="When enabled, mock backend will reject any dragged move to test optimistic revert"
-              className="text-xs gap-1.5"
+              className="gap-1.5"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className="h-4 w-4" />
               <span>{rejectMoveMode ? 'Reject Moves: ON' : 'Test Revert on Move'}</span>
             </Button>
           )}
 
-          {/* Dark Mode Toggle */}
           <Button
             variant="outline"
             size="icon"
             onClick={onToggleDarkMode}
             title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="h-8 w-8"
+            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {darkMode ? (
-              <Sun className="h-4 w-4 text-amber-400" />
-            ) : (
-              <Moon className="h-4 w-4 text-slate-700" />
-            )}
+            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
         </div>
       </div>
 
-      {/* Legend Row highlighting cases and role capability */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs bg-muted/40 rounded-xl p-3 border border-border/50">
-        <div className="flex items-center gap-1.5 font-bold text-foreground">
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          <span>Interactive Primitives:</span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-xs border border-emerald-500 bg-emerald-500/20" />
-            <span className="text-muted-foreground">
-              <strong className="text-foreground">Lab Block</strong> (Parallel Batches)
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-xs border border-amber-500 bg-amber-500/20" />
-            <span className="text-muted-foreground">
-              <strong className="text-foreground">Combined Lecture</strong> (Union Cohort)
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-xs border border-slate-400 bg-slate-300 dark:bg-slate-700 bg-pinned-pattern" />
-            <span className="text-muted-foreground">
-              <strong className="text-foreground">Pinned Block</strong> (Immovable)
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-xs border border-indigo-400 bg-indigo-500/20" />
-            <span className="text-muted-foreground">
-              <strong className="text-foreground">Theory Lecture</strong> ({caps.canDragAndDrop ? 'Draggable' : 'Read-Only'})
-            </span>
-          </div>
-        </div>
+      {/* Key to the grid */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+        <span className="font-semibold">Key:</span>
+        <Key swatch="border-emerald-300 border-l-emerald-800 bg-emerald-50" name="Lab block" note="batches in parallel" />
+        <Key swatch="border-amber-300 border-l-amber-700 bg-amber-50" name="Combined lecture" note="two or more divisions together" />
+        <Key swatch="border-slate-400 border-l-slate-700 bg-slate-100" name="Pinned block" note="cannot be moved" />
+        <Key
+          swatch="border-blue-200 border-l-blue-800 bg-blue-50"
+          name="Lecture"
+          note={caps.canDragAndDrop ? 'can be dragged' : 'read only'}
+        />
       </div>
     </header>
   );

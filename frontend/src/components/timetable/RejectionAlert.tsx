@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, X, RotateCcw, Wrench } from 'lucide-react';
+import { AlertCircle, X, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export interface RejectionAlertProps {
@@ -25,30 +25,17 @@ export const RejectionAlert: React.FC<RejectionAlertProps> = ({
     <div
       data-testid="rejection-alert"
       role="alert"
-      className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border-2 border-rose-500/40 bg-rose-500/10 p-3.5 shadow-md backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200"
+      className="flex flex-col justify-between gap-3 rounded-lg border-2 border-destructive/70 bg-red-50 p-4 dark:bg-red-950/40 sm:flex-row sm:items-start"
     >
-      <div className="flex items-start gap-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-500 text-white shadow-xs">
-          <AlertCircle className="h-4 w-4" />
-        </div>
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
-              Schedule Move Rejected
-            </span>
-            <span className="inline-flex items-center gap-1 rounded bg-rose-200/60 dark:bg-rose-900/60 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-rose-900 dark:text-rose-200">
-              <RotateCcw className="h-2.5 w-2.5" />
-              State Cleanly Reverted
-            </span>
-          </div>
-          <p
-            data-testid="rejection-reason"
-            className="text-xs font-semibold text-foreground/95"
-          >
+      <div className="flex items-start gap-3">
+        <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold">This move is not allowed</h2>
+          <p data-testid="rejection-reason" className="font-semibold">
             {reason}
           </p>
           {clashes && clashes.length > 0 && (
-            <ul data-testid="rejection-clashes" className="list-disc pl-4 text-xs text-foreground/95">
+            <ul data-testid="rejection-clashes" className="list-disc pl-5">
               {clashes.map((c) => (
                 <li key={c} data-testid="rejection-clash">
                   {c}
@@ -57,28 +44,23 @@ export const RejectionAlert: React.FC<RejectionAlertProps> = ({
             </ul>
           )}
           {(sessionId || originalSlotLabel) && (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs">
               {sessionId && <span>Session <strong>{sessionId}</strong> </span>}
-              {originalSlotLabel && <span>restored to original slot: <strong>{originalSlotLabel}</strong>. Selection preserved.</span>}
+              {originalSlotLabel && <span>stays at its original slot: <strong>{originalSlotLabel}</strong>.</span>}
             </p>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+      <div className="flex shrink-0 items-center gap-2 self-end sm:self-start">
         {onRepair && (
-          <Button size="sm" onClick={onRepair} className="text-xs h-7 px-2.5 gap-1" data-testid="repair-around-this">
-            <Wrench className="h-3.5 w-3.5" />
+          <Button size="sm" onClick={onRepair} className="gap-1" data-testid="repair-around-this">
+            <Wrench className="h-4 w-4" />
             Repair around this
           </Button>
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onDismiss}
-          className="text-xs h-7 px-2.5 border-rose-300 dark:border-rose-800 hover:bg-rose-500/10"
-        >
-          <X className="h-3.5 w-3.5 mr-1" />
+        <Button variant="outline" size="sm" onClick={onDismiss} className="gap-1">
+          <X className="h-4 w-4" />
           Dismiss
         </Button>
       </div>

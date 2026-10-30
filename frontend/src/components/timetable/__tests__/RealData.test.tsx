@@ -96,7 +96,7 @@ describe('the EVEN 2025-26 printed (real) instance in the app', () => {
     expect(screen.getByTestId('printed-violations')).toHaveTextContent('36 violations');
     expect(screen.getByText('Printed timetable quality')).toBeInTheDocument();
     expect(screen.getByTestId('quality-score')).toHaveTextContent('21.5');
-    expect(screen.getByTestId('quality-rule-S-B2B')).toHaveTextContent('-23.0 pts');
+    expect(screen.getByTestId('quality-rule-S-B2B')).toHaveTextContent('Found 23 pairs of periods → −23 points (1 point each)');
     expect(screen.queryByTestId('no-solution-note')).not.toBeInTheDocument();
     expect(flaggedIds().length).toBeGreaterThan(2);
 
@@ -111,6 +111,6 @@ describe('the EVEN 2025-26 printed (real) instance in the app', () => {
     fireEvent.click(screen.getByTestId('role-button-faculty'));
     const persona = screen.getByLabelText('Select faculty persona') as HTMLSelectElement;
     expect([...persona.options].map((o) => o.text)).toContain('Kailas Devadkar (KKD)');
-    expect(within(screen.getByTestId('faculty-workload-card')).getByText(/Faculty Individual View/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('faculty-workload-card')).getByText(/Weekly teaching load/)).toBeInTheDocument();
   });
 });

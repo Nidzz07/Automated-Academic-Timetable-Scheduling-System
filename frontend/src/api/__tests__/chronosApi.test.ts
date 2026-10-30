@@ -92,7 +92,7 @@ describe('MockChronosApiClient', () => {
 
     expect(res.success).toBe(false);
     expect(res.rejectionReason).toBe(
-      'Slot conflict: Wednesday P7 is held by pinned occupancy (SE-Comp C, room 002).'
+      'Slot conflict: Wednesday T7 is held by pinned occupancy (SE-Comp C, room 002).'
     );
     expect(res.violatedConstraint?.kind).toBe('PINNED_BLOCK');
   });
