@@ -9,7 +9,7 @@ before making changes.
 2. `ROADMAP.md` (repo root) — the phased plan, the [M]/[S]/[C] tags, and the parallel-work protocol.
 3. `docs/CURRENT-PROGRESS.md` — what is actually done, blockers, decision log, contract change log.
 
-`ROADMAP.md` §1 (ownership) and §3 (decisions D1–D58) are binding; they override anything here that disagrees.
+`ROADMAP.md` §1 (ownership) and §3 (decisions D1–D61) are binding; they override anything here that disagrees.
 
 `docs/CURRENT-STATUS.md` is a **historical snapshot from 2026-09-24** (before any application
 code existed). Do not treat it as the current inventory — check the code and
@@ -132,12 +132,14 @@ cd frontend; npm run dev                       # Vite dev server
 
 ## What exists today (verify before relying on it)
 
-Checked against `main` on 2026-10-24.
+Checked against `main` on 2026-10-31.
 
 - `solver/`: `slots.py`, `graph.py`, `colouring.py` (Welsh-Powell), `backtracking.py` (forward
   checking + MRV, lab blocks, sub-rooms), `presolve.py`, `scoring.py`, `improve.py` (local
   search; Kempe-chain and gap moves off by default, D54), `mus.py` (diagnosis), `repair.py`
-  (repair, `substitute_candidates`), `validate.py`, `rules/quality_rules.yaml`,
+  (repair, `substitute_candidates`), `validate.py`, `bounds.py` (lower bounds, S12i),
+  `rules/quality_rules.yaml` (read by `scoring.py` with PyYAML, `solver/`'s one non-stdlib
+  import, D61),
   `benchmarks/` (synthetic generator, real solve/repair scripts). The v1 output
   (`to_solution_dict`) still carries the placeholder diagnosis and a hardcoded score;
   `solution.v2` does not.
@@ -146,15 +148,24 @@ Checked against `main` on 2026-10-24.
   `qualifications.py`. `data/instances/even-2025-26/` holds the committed edge list, display,
   anomalies, qualifications, solution and printed baseline.
 - `db/models.py`, `db/export_edge_list.py`; migrations 0001–0009, head `0009_accepted_changes`.
-- `backend/app/` (`create_app`): `GET /health`, `POST /auth/login`; under `/instances`: list,
-  `/{id}/edge-list`, `/display`, `/anomalies`, `/solution`, `POST /{id}/solve`,
-  `POST /{id}/repair`, `GET`/`DELETE /{id}/changes`,
-  `GET /{id}/sessions/{session_id}/substitutes`; `GET /jobs/{id}`, `/jobs/{id}/base-solution`,
-  `POST /jobs/{id}/accept`; `GET /audit` (administrator). No deployment yet (D55, S16b).
+- `backend/app/` (`create_app` in `main.py`, routes in `routers.py`): `GET /health`,
+  `POST /auth/login`; under `/instances`: `GET` list, `GET /{id}/edge-list`,
+  `GET /{id}/edge-list/current`, `GET /{id}/display`, `GET /{id}/anomalies`,
+  `GET /{id}/solution`, `POST /{id}/solve`, `POST /{id}/repair`, `GET`/`DELETE /{id}/changes`,
+  `GET /{id}/sessions/{session_id}/substitutes`; under `/jobs`: `GET /{id}`,
+  `GET /{id}/base-solution`, `GET /{id}/edge-list`, `POST /{id}/accept`; `GET /audit`
+  (administrator). `prod.py` (`uvicorn backend.app.prod:app`) mounts that API at `/api` and
+  the built frontend at `/`; `backend/Dockerfile.prod` builds both into one image (D55);
+  `python -m backend.app.demo_seed [--reset]` creates the demo accounts and resets the demo
+  (D59). No deployment yet (S16c).
 - `frontend/`: http mode (default, `VITE_API_BASE_URL`, default `/api`) or static mode
   (`VITE_API_MODE=static`); login, solve, repair and diagnosis, accepted changes, substitutes,
-  room views, anomaly panel, audit log.
-- `bench/`: `run_bench.py`, `evaluate.py`, `size_sweep.py`, `repair_vs_regen.py`, `charts.py`;
+  room views, anomaly panel, audit log, faculty workloads after a change, free/engaged faculty
+  at a slot. Periods show as T0–T9 and times in 12-hour form (`frontend/src/lib/format.ts`);
+  user-facing wording for rules, constraint kinds, relaxations, anomalies and audit actions is in
+  `frontend/src/lib/wording.ts` (D60).
+- `bench/`: `run_bench.py`, `evaluate.py`, `size_sweep.py`, `repair_vs_regen.py`, `charts.py`,
+  `lab_utilisation.py`, `edge_cases.py`;
   results in `bench/results/`, figures in `docs/figures/`. It reuses `solver.benchmarks`.
 - No `tests/e2e/` yet.
 
@@ -168,6 +179,9 @@ Checked against `main` on 2026-10-24.
 - Every solved timetable must pass `solver.validate.validate_solution`; the seeded property test
   (`solver/tests/test_property_solved_is_valid.py`) must stay green. Never loosen the validator to
   make a test pass.
+- The interface never shows P-labels, raw ids or internal codes as main text; user-facing wording
+  goes through `frontend/src/lib/wording.ts`, period labels and times through
+  `frontend/src/lib/format.ts` (D60).
 - End every session by updating `docs/CURRENT-PROGRESS.md` — tick only what is merged to `main`
   with a test.
 
