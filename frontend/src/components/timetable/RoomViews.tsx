@@ -2,8 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { DAY_NAMES, EXAMPLE_LABELS, EdgeList, EnrichedSession, Labels, buildWeekGrid } from '@/adapters/timetable';
 import { freeRoomsAt, roomOccupancies } from '@/adapters/rooms';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { DoorOpen, Search } from 'lucide-react';
+import { periodLabel } from '@/lib/format';
 
 interface RoomViewsProps {
   /** Rooms, sub-rooms, grid and pinned occupancy */
@@ -14,7 +13,7 @@ interface RoomViewsProps {
   labels?: Labels;
 }
 
-const selectClass = 'rounded-md border border-border bg-card px-2 py-1 text-xs font-medium';
+const selectClass = 'rounded-md border border-input bg-card px-2 py-1 font-medium';
 
 /**
  * Weekly timetable of one room (ROADMAP D15). Sub-room use is shown with the sub-room code.
@@ -28,12 +27,10 @@ export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions, la
   const inRoom = occupancies.filter((o) => o.roomId === roomId);
 
   return (
-    <Card data-testid="room-timetable" className="border-border/60 bg-card/60">
+    <Card data-testid="room-timetable">
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="flex items-center gap-2 text-base font-bold">
-            <DoorOpen className="h-4 w-4 text-primary" /> Room Timetable
-          </CardTitle>
+          <CardTitle>Room timetable</CardTitle>
           <select
             aria-label="Select room"
             value={roomId}
@@ -51,7 +48,7 @@ export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions, la
       <CardContent className="overflow-x-auto pt-0">
         <table className="w-full min-w-[640px] border-collapse text-xs">
           <thead>
-            <tr className="border-b border-border bg-muted/60">
+            <tr className="border-b border-border bg-muted">
               <th className="p-2 text-left">Period</th>
               {grid.days.map((d) => (
                 <th key={d} className="p-2 text-left">
@@ -60,12 +57,12 @@ export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions, la
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/60">
+          <tbody className="divide-y divide-border">
             {grid.periods.map(({ period, teaching }) => (
-              <tr key={period} className={teaching ? '' : 'bg-muted/30 text-muted-foreground'}>
-                <td className="p-2 font-mono font-semibold">
-                  P{period}
-                  {labels.clock(period) && <div className="font-normal text-muted-foreground">{labels.clock(period)}</div>}
+              <tr key={period} className={teaching ? '' : 'bg-muted'}>
+                <td className="p-2 font-semibold">
+                  {periodLabel(period)}
+                  {labels.clock(period) && <div className="whitespace-nowrap font-normal">{labels.clock(period)}</div>}
                 </td>
                 {grid.days.map((day) => {
                   const here = inRoom.filter((o) => o.day === day && o.period === period);
@@ -77,7 +74,7 @@ export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions, la
                             <div key={i}>
                               {o.label}
                               {o.subRoomId && (
-                                <span className="font-mono text-muted-foreground"> ({code.get(o.subRoomId)})</span>
+                                <span> ({code.get(o.subRoomId)})</span>
                               )}
                             </div>
                           ))}
@@ -104,12 +101,10 @@ export const FreeRoomsPanel: React.FC<RoomViewsProps> = ({ edgeList, sessions, l
   const free = freeRoomsAt(edgeList, occupancies, day, period, labels);
 
   return (
-    <Card data-testid="free-rooms" className="border-border/60 bg-card/60">
+    <Card data-testid="free-rooms">
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="flex items-center gap-2 text-base font-bold">
-            <Search className="h-4 w-4 text-primary" /> Free Rooms
-          </CardTitle>
+          <CardTitle>Free rooms</CardTitle>
           <div className="flex items-center gap-2">
             <select aria-label="Free rooms day" value={day} onChange={(e) => setDay(Number(e.target.value))} className={selectClass}>
               {grid.days.map((d) => (
@@ -126,7 +121,7 @@ export const FreeRoomsPanel: React.FC<RoomViewsProps> = ({ edgeList, sessions, l
             >
               {grid.teachingPeriods.map((p) => (
                 <option key={p} value={p}>
-                  P{p}
+                  {periodLabel(p)}
                   {labels.clock(p) && ` (${labels.clock(p)})`}
                 </option>
               ))}
@@ -136,21 +131,21 @@ export const FreeRoomsPanel: React.FC<RoomViewsProps> = ({ edgeList, sessions, l
       </CardHeader>
       <CardContent className="pt-0">
         {free.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No room is free at this time.</p>
+          <p>No room is free at this time.</p>
         ) : (
-          <ul className="space-y-1.5 text-xs">
+          <ul className="space-y-1.5">
             {free.map((r) => (
               <li
                 key={r.roomId}
                 data-testid={`free-room-${r.code}`}
-                className="flex flex-wrap items-center gap-2 rounded-md border border-border/50 bg-background/60 p-2"
+                className="flex flex-wrap items-center gap-2 border-b border-border py-1.5"
               >
-                <span className="font-mono font-bold">{r.code}</span>
-                <Badge variant={r.isLab ? 'success' : 'outline'} className="text-[10px] py-0">
+                <span className="font-semibold">{r.code}</span>
+                <span>
                   {r.isLab ? 'Lab' : 'Classroom'} · capacity {r.capacity}
-                </Badge>
+                </span>
                 {r.subRoomCount > 0 && (
-                  <span data-testid={`batch-places-${r.code}`} className="text-muted-foreground">
+                  <span data-testid={`batch-places-${r.code}`}>
                     {r.freeSubRoomCodes.length} of {r.subRoomCount} batch places free (
                     {r.freeSubRoomCodes.join(', ')})
                   </span>

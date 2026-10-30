@@ -4,26 +4,28 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    /* paper page, white cards, near-black ink (#161A22), one institutional navy (#1F3A68) */
+    --background: 220 20% 97%;
+    --foreground: 222 21% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 222 21% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
+    --popover-foreground: 222 21% 11%;
+    --primary: 217 54% 26%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 47% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 20% 95%;
+    /* secondary text stays near-black: hierarchy comes from size and weight, not grey */
+    --muted-foreground: 222 15% 18%;
     --accent: 210 40% 96.1%;
     --accent-foreground: 222 47% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221 83% 53%;
-    --radius: 0.75rem;
+    --destructive: 4 76% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 80%;
+    --input: 220 13% 70%;
+    --ring: 217 54% 36%;
+    --radius: 0.5rem;
   }
 
   .dark {
@@ -38,7 +40,7 @@
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 213 25% 85%;
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
@@ -54,8 +56,16 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans text-sm;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Source Serif 4 defaults to old-style figures: T0 would read as "To" */
+    font-variant-numeric: lining-nums;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-serif;
   }
 }
 

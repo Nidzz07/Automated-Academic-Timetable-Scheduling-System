@@ -43,7 +43,7 @@ export const ROLE_CAPABILITIES: Record<UserRole, RoleCapabilities> = {
     showSimulationControls: true,
     canSolve: true,
     title: 'Administrator',
-    description: 'Full scheduling privileges across all divisions. Drag-and-drop enabled, quality scores and solver simulation active.',
+    description: 'Sees the whole department. Can move sessions, run the solver, repair the timetable and read the audit log.',
   },
   coordinator: {
     canDragAndDrop: true,
@@ -53,7 +53,7 @@ export const ROLE_CAPABILITIES: Record<UserRole, RoleCapabilities> = {
     showSimulationControls: true,
     canSolve: true,
     title: 'Timetable Coordinator',
-    description: 'Department-wide timetable management and conflict resolution. Drag-and-drop enabled with validation.',
+    description: 'Manages the department timetable. Can move sessions, run the solver and repair the timetable.',
   },
   faculty: {
     canDragAndDrop: false,
@@ -63,7 +63,7 @@ export const ROLE_CAPABILITIES: Record<UserRole, RoleCapabilities> = {
     showSimulationControls: false,
     canSolve: false,
     title: 'Faculty Member',
-    description: 'Personal teaching timetable with theory/practical workload metrics. Read-only view.',
+    description: 'Your own teaching timetable and weekly load, in theory and practical hours. Read only.',
   },
   student: {
     canDragAndDrop: false,
@@ -73,6 +73,6 @@ export const ROLE_CAPABILITIES: Record<UserRole, RoleCapabilities> = {
     showSimulationControls: false,
     canSolve: false,
     title: 'Student',
-    description: 'Division and batch schedule. Clean read-only view with no internal solver metrics.',
+    description: "Your division's and batch's timetable. Read only.",
   },
 };

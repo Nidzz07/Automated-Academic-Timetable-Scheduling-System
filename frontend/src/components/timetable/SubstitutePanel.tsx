@@ -46,7 +46,7 @@ export const SubstitutePanel: React.FC<SubstitutePanelProps> = ({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <CardTitle className="text-base">Find a substitute</CardTitle>
+            <CardTitle>Find a substitute</CardTitle>
             <CardDescription>
               {entityName(sessionId, edgeList, labels)}. Qualified teachers from SPIT's faculty–subject sheets who are
               free at this slot. Picking one proposes a repair to accept or discard.
@@ -57,7 +57,7 @@ export const SubstitutePanel: React.FC<SubstitutePanelProps> = ({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0 text-xs">
+      <CardContent className="space-y-3 pt-0">
         {subs.isPending && <p role="status">Finding substitutes…</p>}
         {subs.error && (
           <p role="alert">
@@ -77,22 +77,22 @@ export const SubstitutePanel: React.FC<SubstitutePanelProps> = ({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="gap-1.5 text-xs"
+                      className="gap-1.5"
                       disabled={disabled}
                       onClick={() => onPick(c.faculty_id)}
                       data-testid={`substitute-${c.faculty_id}`}
                     >
-                      <UserRoundCog className="h-3.5 w-3.5" />
+                      <UserRoundCog className="h-4 w-4" />
                       {facultyText(labels, c.faculty_id)}
                     </Button>
-                    <span data-testid={`substitute-score-${c.faculty_id}`}>score {signed(c.score_change)}</span>
+                    <span data-testid={`substitute-score-${c.faculty_id}`}>quality score {signed(c.score_change)} if picked</span>
                   </li>
                 ))}
               </ul>
             )}
             {data.left_out.length > 0 && (
               <div className="space-y-1">
-                <p className="font-semibold">Left out</p>
+                <p className="font-semibold">Not suggested</p>
                 <ul className="space-y-1">
                   {data.left_out.map((o) => {
                     const clashes = others(o.violations.flatMap((v) => (v.kind === 'FACULTY_CLASH' ? v.session_ids : [])));

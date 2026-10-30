@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { DAY_NAMES, EdgeList, EnrichedSession, Labels, buildWeekGrid, facultyAtSlot } from '@/adapters/timetable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users } from 'lucide-react';
+import { periodLabel } from '@/lib/format';
 
 interface FacultyAtSlotPanelProps {
   /** The current edge list (every accepted change, D52): faculty, unavailability, pinned occupancy */
@@ -13,7 +13,7 @@ interface FacultyAtSlotPanelProps {
   solved: boolean;
 }
 
-const selectClass = 'rounded-md border border-border bg-card px-2 py-1 text-xs font-medium';
+const selectClass = 'rounded-md border border-input bg-card px-2 py-1 font-medium';
 
 /**
  * The coordinator's dual view (CONTEXT §1): at a chosen day and teaching period, the faculty free
@@ -30,13 +30,11 @@ export const FacultyAtSlotPanel: React.FC<FacultyAtSlotPanelProps> = ({ edgeList
   );
 
   return (
-    <Card data-testid="faculty-at-slot" className="border-border/60 bg-card/60">
+    <Card data-testid="faculty-at-slot">
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <CardTitle className="flex items-center gap-2 text-base font-bold">
-              <Users className="h-4 w-4 text-primary" /> Free and Engaged Faculty
-            </CardTitle>
+            <CardTitle>Free and engaged teachers</CardTitle>
             <CardDescription>
               From the official timetable and the accepted changes. To substitute, open a session and use Find
               substitute.
@@ -58,7 +56,7 @@ export const FacultyAtSlotPanel: React.FC<FacultyAtSlotPanelProps> = ({ edgeList
             >
               {grid.teachingPeriods.map((p) => (
                 <option key={p} value={p}>
-                  P{p}
+                  {periodLabel(p)}
                   {labels.clock(p) && ` (${labels.clock(p)})`}
                 </option>
               ))}
@@ -66,17 +64,17 @@ export const FacultyAtSlotPanel: React.FC<FacultyAtSlotPanelProps> = ({ edgeList
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0 text-xs">
+      <CardContent className="space-y-3 pt-0">
         {!solved && (
-          <p data-testid="faculty-at-slot-unsolved" className="text-muted-foreground">
+          <p data-testid="faculty-at-slot-unsolved">
             No official timetable yet: only pinned occupancy and unavailability are counted.
           </p>
         )}
         <div className="grid gap-4 sm:grid-cols-2">
           <section data-testid="free-faculty">
-            <h3 className="mb-1.5 font-semibold">Free ({free.length})</h3>
+            <h3 className="mb-1.5 text-lg font-semibold">Free ({free.length})</h3>
             {free.length === 0 ? (
-              <p className="text-muted-foreground">Nobody is free at this time.</p>
+              <p>Nobody is free at this time.</p>
             ) : (
               <ul className="space-y-1">
                 {free.map((f) => (
@@ -88,14 +86,14 @@ export const FacultyAtSlotPanel: React.FC<FacultyAtSlotPanelProps> = ({ edgeList
             )}
           </section>
           <section data-testid="engaged-faculty">
-            <h3 className="mb-1.5 font-semibold">Engaged ({engaged.length})</h3>
+            <h3 className="mb-1.5 text-lg font-semibold">Engaged ({engaged.length})</h3>
             {engaged.length === 0 ? (
-              <p className="text-muted-foreground">Nobody is engaged at this time.</p>
+              <p>Nobody is engaged at this time.</p>
             ) : (
               <ul className="space-y-1">
                 {engaged.map((f) => (
                   <li key={f.facultyId} data-testid={`engaged-${f.facultyId}`}>
-                    <span className="font-medium">{f.name}</span>: {f.engagedWith.join('; ')}
+                    <span className="font-semibold">{f.name}</span>: {f.engagedWith.join('; ')}
                   </li>
                 ))}
               </ul>

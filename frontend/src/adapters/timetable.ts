@@ -3,7 +3,7 @@
  *
  * The week (days, periods, breaks, lunch), rooms and pinned blocks come from the edge list
  * the solution was solved for; no period, time, break or label of the SPIT grid is
- * restated here. Periods are on the contract's wall-clock axis and shown as P0, P1, ...
+ * restated here. Periods are on the contract's wall-clock axis and shown as T0, T1, ... (periodLabel)
  */
 
 import {
@@ -17,6 +17,7 @@ import type { ChronosIngestionContractV1 } from '@/types/generated/ingestion_v1.
 import solvedExample from '@contracts/examples/solution_v2.solved.example.json';
 import edgeListExample from '@contracts/examples/edge_list_v1.example.json';
 import ingestionExample from '@contracts/examples/ingestion_v1.example.json';
+import { displayText, formatClockRange, periodLabel, periodSpan } from '@/lib/format';
 
 export type EdgeList = ChronosEdgeListContractV1;
 export type EdgeListSession = EdgeList['sessions'][number];
@@ -31,6 +32,28 @@ const cohorts = new Map(ingestion.cohorts.map((c) => [c.id, c]));
 
 /** Day names in contract day-index order (schema: Monday=0 .. Friday=4). */
 export const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+/** "Wednesday T1" */
+export const slotText = (day: number, period: number) => `${DAY_NAMES[day]} ${periodLabel(period)}`;
+
+/** Cells in words, a day's consecutive periods as one run: "Tuesday T5–T9, Friday T0". */
+export function slotsText(slots: Array<{ day: number; period: number }>): string {
+  const byDay = new Map<number, number[]>();
+  slots.forEach((s) => byDay.set(s.day, [...(byDay.get(s.day) ?? []), s.period]));
+  return [...byDay]
+    .flatMap(([day, periods]) => {
+      const runs: Array<[number, number]> = [];
+      [...new Set(periods)]
+        .sort((a, b) => a - b)
+        .forEach((p) => {
+          const last = runs[runs.length - 1];
+          if (last && p === last[1] + 1) last[1] = p;
+          else runs.push([p, p]);
+        });
+      return runs.map(([a, b]) => `${DAY_NAMES[day]} ${periodSpan(a, b)}`);
+    })
+    .join(', ');
+}
 
 export interface WeekGrid {
   days: DayIndex[];
@@ -111,7 +134,7 @@ export interface Labels {
    * undefined when the instance has no display sidecar
    */
   pin(index: number): Display['pins'][number] | undefined;
-  /** "09:00–10:00", or null when the instance gives no clock times */
+  /** "9:00 AM – 10:00 AM", or null when the instance gives no clock times */
   clock(period: number): string | null;
 }
 
@@ -140,7 +163,7 @@ export const ACCEPTED_ROOM_PIN: Display['pins'][number] = {
 /** An instance's labels: from its display sidecar (D41), else the contract examples'. */
 export function labelsFor(display: Display | null | undefined): Labels {
   if (!display) return EXAMPLE_LABELS;
-  const clock = new Map(display.periods.map((p) => [p.period, `${p.start}–${p.end}`]));
+  const clock = new Map(display.periods.map((p) => [p.period, formatClockRange(p.start, p.end)]));
   return {
     faculty: (id) => {
       // every initial the faculty is known by, across years; none is never guessed. Faculty who
@@ -468,8 +491,9 @@ export function pinName(id: string, edgeList: EdgeList, labels: Labels): string 
   const name =
     shown?.unique_label ??
     shown?.label ??
-    (pin ? `Pinned occupancy, ${DAY_NAMES[pin.day]} P${pin.period}` : ACCEPTED_ROOM_PIN.label);
-  return `${name} (${id})`;
+    (pin ? `Pinned occupancy, ${slotText(pin.day, pin.period)}` : ACCEPTED_ROOM_PIN.label);
+  // display.json's unique_label names its periods "Mon P0–P1"
+  return `${displayText(name)} (${id})`;
 }
 
 /** What a dragged session would clash with at its target: in order room, teacher, cohort, fixed item, unavailability. */
@@ -477,12 +501,12 @@ export type ClashKind = 'room' | 'teacher' | 'cohort' | 'fixed' | 'unavailable';
 
 export interface Clash {
   kind: ClashKind;
-  /** "Room 605 is taken at Wednesday P0 by PCS / A / DN / 605." */
+  /** "Room 605 is taken at Wednesday T0 by PCS / A / DN / 605." */
   text: string;
 }
 
 export interface MoveCheck {
-  /** "Clashes for CE207 (SE-Comp A) at Wednesday P0:", or why the session cannot go there at all */
+  /** "Clashes for CE207 (SE-Comp A) at Wednesday T0:", or why the session cannot go there at all */
   heading: string;
   /** Every clash at the target; empty when the heading already says why */
   clashes: Clash[];
@@ -514,10 +538,10 @@ export function checkMove(
   const grid = buildWeekGrid(edgeList);
   const periods = occupiedPeriods(grid, period, session.duration_periods);
   if (!grid.teachingPeriods.includes(period) || periods.length < session.duration_periods) {
-    return refuse(`${name} does not fit at ${DAY_NAMES[day]} P${period}.`);
+    return refuse(`${name} does not fit at ${slotText(day, period)}.`);
   }
   const at = (d: number, p: number) => d === day && periods.includes(p);
-  const where = (p: number) => `${DAY_NAMES[day]} P${p}`;
+  const where = (p: number) => slotText(day, p);
   const teacher = facultyText(labels, session.faculty_id);
   const roomTaken = (p: number, by: string) => `Room ${placed.roomCode} is taken at ${where(p)} by ${by}.`;
 
@@ -559,7 +583,7 @@ export function checkMove(
   if (blackout) add('unavailable', `${teacher} is unavailable then.`);
 
   if (found.length === 0) return null;
-  const span = periods.length > 1 ? `${where(periods[0])}–P${periods[periods.length - 1]}` : where(period);
+  const span = `${DAY_NAMES[day]} ${periodSpan(periods[0], periods[periods.length - 1])}`;
   return {
     heading: `Clashes for ${name} at ${span}:`,
     clashes: [...found].sort((a, b) => CLASH_ORDER.indexOf(a.kind) - CLASH_ORDER.indexOf(b.kind)),

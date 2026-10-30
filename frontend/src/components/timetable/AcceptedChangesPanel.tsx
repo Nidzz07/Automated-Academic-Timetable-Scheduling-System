@@ -1,23 +1,21 @@
 import React, { useState } from 'react';
 import { HttpChronosApiClient, RepairChange } from '@/api/chronosApi';
 import { useChangesQuery, useClearChangesMutation } from '@/api/queries';
-import { DAY_NAMES, EdgeList, Labels, entityName, facultyText } from '@/adapters/timetable';
+import { EdgeList, Labels, entityName, facultyText, slotsText } from '@/adapters/timetable';
+import { formatTimestamp } from '@/lib/format';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-
-const slotText = (slots: Array<{ day: number; period: number }>) =>
-  slots.map((s) => `${DAY_NAMES[s.day]} P${s.period}`).join(', ');
 
 /** A change in words, by name. A substitution names the session without its teacher, which it changes. */
 export function changeText(change: RepairChange, edgeList: EdgeList, labels: Labels): string {
   const room = (id: string) => entityName(id, edgeList, labels);
   switch (change.kind) {
     case 'faculty_unavailable':
-      return `${facultyText(labels, change.faculty_id)} unavailable: ${slotText(change.slots)}`;
+      return `${facultyText(labels, change.faculty_id)} unavailable: ${slotsText(change.slots)}`;
     case 'room_unavailable':
-      return `${room(change.room_id)} unavailable: ${slotText(change.slots)}`;
+      return `${room(change.room_id)} unavailable: ${slotsText(change.slots)}`;
     case 'move_session':
-      return `${entityName(change.session_id, edgeList, labels)} moved to ${slotText([change])}, ${room(change.sub_room_id ?? change.room_id)}`;
+      return `${entityName(change.session_id, edgeList, labels)} moved to ${slotsText([change])}, ${room(change.sub_room_id ?? change.room_id)}`;
     case 'substitute_faculty': {
       const s = edgeList.sessions.find((x) => x.id === change.session_id);
       const what = s ? `${labels.subject(s.subject_id)?.code ?? s.subject_id} · ${labels.cohort(s.cohort_id)}` : change.session_id;
@@ -48,17 +46,17 @@ export const AcceptedChangesPanel: React.FC<AcceptedChangesPanelProps> = ({ clie
   return (
     <Card data-testid="accepted-changes">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Accepted changes</CardTitle>
+        <CardTitle>Accepted changes</CardTitle>
         <CardDescription>
           Unavailability and substitutions accepted so far. Every later solve and repair includes them.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3 pt-0 text-xs">
+      <CardContent className="space-y-3 pt-0">
         {changes.error && <p role="alert">Could not load the accepted changes: {changes.error.message}</p>}
         {changes.data && rows.length === 0 && <p data-testid="no-accepted-changes">No accepted changes.</p>}
         {rows.length > 0 && (
-          <table className="w-full text-left">
-            <thead className="text-muted-foreground">
+          <table className="w-full text-left text-xs">
+            <thead>
               <tr>
                 <th className="py-1 pr-3">Accepted</th>
                 <th className="py-1 pr-3">Change</th>
@@ -69,7 +67,7 @@ export const AcceptedChangesPanel: React.FC<AcceptedChangesPanelProps> = ({ clie
             <tbody>
               {rows.map((c) => (
                 <tr key={c.job_id} data-testid={`accepted-change-${c.job_id}`} className="border-t border-border/60 align-top">
-                  <td className="py-1 pr-3 font-mono">{new Date(c.accepted_at).toLocaleString()}</td>
+                  <td className="py-1 pr-3 whitespace-nowrap">{formatTimestamp(c.accepted_at)}</td>
                   <td className="py-1 pr-3">{changeText(c.change, edgeList, labels)}</td>
                   <td className="py-1 pr-3">{c.requested_by}</td>
                   <td className="py-1">{c.accepted_by ?? 'not recorded'}</td>
@@ -91,20 +89,19 @@ export const AcceptedChangesPanel: React.FC<AcceptedChangesPanelProps> = ({ clie
                 <Button
                   variant="destructive"
                   size="sm"
-                  className="text-xs"
                   disabled={clear.isPending}
                   onClick={() => clear.mutate(undefined, { onSettled: () => setConfirming(false) })}
                   data-testid="confirm-clear-button"
                 >
                   Clear all
                 </Button>
-                <Button variant="outline" size="sm" className="text-xs" onClick={() => setConfirming(false)}>
+                <Button variant="outline" size="sm" onClick={() => setConfirming(false)}>
                   Cancel
                 </Button>
               </div>
             </div>
           ) : (
-            <Button variant="outline" size="sm" className="text-xs" onClick={() => setConfirming(true)} data-testid="clear-changes">
+            <Button variant="outline" size="sm" onClick={() => setConfirming(true)} data-testid="clear-changes">
               Clear accepted changes…
             </Button>
           ))}

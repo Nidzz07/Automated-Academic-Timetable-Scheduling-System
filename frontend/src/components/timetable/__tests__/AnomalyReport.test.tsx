@@ -4,6 +4,7 @@ import App from '@/App';
 import { AnomalyReportPanel } from '../AnomalyReport';
 import { Display, EdgeList, entityName, labelsFor } from '@/adapters/timetable';
 import { AnomalyReport, NEEDS_HUMAN } from '@/adapters/realInstance';
+import { displayText } from '@/lib/format';
 import { HttpChronosApiClient, MockChronosApiClient, REAL_INSTANCE, setSession } from '@/api/chronosApi';
 import type { UserRole } from '@/types/roles';
 
@@ -45,7 +46,7 @@ describe('AnomalyReportPanel on the real report', () => {
     expect(screen.queryByTestId('anomaly-count-mismatch')).not.toBeInTheDocument();
   });
 
-  it('shows each row’s source file, location, message and resolution as the report gives them', () => {
+  it('shows each row’s source file, location, message and resolution as the report gives them (periods as T, display only)', () => {
     render(<AnomalyReportPanel report={report} display={display} edgeList={edgeList} />);
     const rows = screen.getAllByTestId('anomaly-row');
     // groups list rows in report order, so the n-th row of a group is that category's n-th anomaly
@@ -54,8 +55,8 @@ describe('AnomalyReportPanel on the real report', () => {
       rowsIn(group).forEach((row, i) => {
         const cells = row.querySelectorAll('td');
         expect(cells[1].textContent).toBe(expected[i].source_file);
-        expect(cells[2].textContent).toBe(expected[i].location);
-        expect(cells[3].firstChild?.textContent).toBe(expected[i].message);
+        expect(cells[2].textContent).toBe(displayText(expected[i].location));
+        expect(cells[3].firstChild?.textContent).toBe(displayText(expected[i].message));
         expect(cells[4].textContent).toBe(expected[i].resolution);
       });
     }

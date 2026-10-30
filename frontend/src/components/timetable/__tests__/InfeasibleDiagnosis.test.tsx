@@ -30,8 +30,7 @@ describe('Infeasibility Diagnosis Panel', () => {
 
     // Assert main panel and heading
     expect(screen.getByTestId('infeasibility-panel')).toBeInTheDocument();
-    expect(screen.getByText(/Infeasible Timetable Instance/i)).toBeInTheDocument();
-    expect(screen.getByText(/Status: INFEASIBLE/i)).toBeInTheDocument();
+    expect(screen.getByText(/No timetable is possible/i)).toBeInTheDocument();
 
     // Assert solver diagnostic metadata
     expect(screen.getByText(/backtracking\(forward-checking, mrv\) \+ mus-extraction\(deletion-based\)/i)).toBeInTheDocument();
@@ -79,7 +78,7 @@ describe('Infeasibility Diagnosis Panel', () => {
 
     // Must name the target constraint_id
     const targetBadge = within(relaxationBox).getByTestId('relaxation-constraint-id');
-    expect(targetBadge).toHaveTextContent('Target: lab-rooms.monday-10.00');
+    expect(targetBadge).toHaveTextContent('Constraint lab-rooms.monday-10.00');
 
     // Must display readable institutional description (e.g. room 606 unsure)
     expect(
@@ -108,16 +107,16 @@ describe('Infeasibility Diagnosis Panel (solution.v2)', () => {
     expect(screen.getByTestId('diagnosis-method')).toHaveTextContent('MUS Extraction');
     expect(screen.getByTestId('constraint-kind-ROOM_OCCUPANCY')).toBeInTheDocument();
     expect(screen.getByTestId('constraint-slots-lab-rooms.monday-10.00')).toHaveTextContent(
-      'Cells: Monday P1, Monday P3'
+      'When: Monday T1, Monday T3'
     );
     expect(screen.queryByTestId('constraint-slots-labblk-0001.contiguity')).not.toBeInTheDocument();
     expect(screen.getByTestId('relaxation-action')).toHaveTextContent(
-      'Action: RECLASSIFY_ROOM · verification: restored (212 ms)'
+      'Allow the room to be used as the other kind (lab or classroom); checked: with this change a timetable exists (212 ms) RECLASSIFY_ROOM, restored'
     );
 
     const partial = screen.getByTestId('partial-placement');
     expect(partial).toHaveTextContent(/diagnostic only — not a timetable\): 4 placed, 4 unplaced/i);
-    expect(partial).toHaveTextContent('sess-0005 (Tuesday P0)');
+    expect(partial).toHaveTextContent('sess-0005 (Tuesday T0)');
     expect(screen.getByTestId('unplaced-sessions')).toHaveTextContent(
       'Unplaced: sess-0001, sess-0002, sess-0003, sess-0004'
     );

@@ -271,8 +271,8 @@ describe('the real EVEN 2025-26 instance through its display sidecar (D41)', () 
     expect(labels.cohort('coh-se-a')).toBe('SE-Comp A');
     expect(labels.subject('subj-ce206')).toEqual({ code: 'CE206', name: 'Operating Systems' });
     expect(labels.room({ id: 'room-607b', code: 'x' })).toBe('607B');
-    expect(labels.clock(0)).toBe('09:00–10:00');
-    expect(labels.clock(2)).toBe('11:00–11:15');
+    expect(labels.clock(0)).toBe('9:00 AM – 10:00 AM');
+    expect(labels.clock(2)).toBe('11:00 AM – 11:15 AM');
   });
 
   it('labels batches by their display label, and tells apart cohorts named alike', () => {

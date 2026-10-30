@@ -17,6 +17,7 @@ import {
   labelsFor,
 } from '@/adapters/timetable';
 import { parseSolution } from '@/api/contractValidation';
+import { displayText, formatTimestamp } from '@/lib/format';
 
 // The real instance's files, as the backend serves them
 let real: Record<string, unknown>;
@@ -260,7 +261,7 @@ describe('Repair in the app (http mode, S14d)', () => {
     const { s, day, period, check } = pickMove(false);
     drop(s.sessionId, day, period);
     expect(await screen.findByTestId('rejection-reason')).toHaveTextContent(
-      `Clashes for ${s.subjectCode} (${s.cohortLabel}) at ${DAY_NAMES[day]} P${period}:`
+      `Clashes for ${s.subjectCode} (${s.cohortLabel}) at ${DAY_NAMES[day]} T${period}:`
     );
     expect(screen.getAllByTestId('rejection-clash').map((li) => li.textContent)).toEqual(check!.clashes.map((c) => c.text));
     expect(backend.posted).toEqual([]);
@@ -330,8 +331,8 @@ describe('Repair in the app (http mode, S14d)', () => {
     expect(within(facultySelect).getByRole('option', { name: 'Swapnali Kurhade (SK)' })).toBeInTheDocument();
     fireEvent.change(facultySelect, { target: { value: 'fac-swapnali-kurhade' } });
     expect(screen.getByTestId('mark-unavailable-button')).toBeDisabled();
-    fireEvent.click(within(panel).getByLabelText('Tuesday P6'));
-    fireEvent.click(within(panel).getByLabelText('Tuesday P7'));
+    fireEvent.click(within(panel).getByLabelText('Tuesday T6'));
+    fireEvent.click(within(panel).getByLabelText('Tuesday T7'));
     fireEvent.click(screen.getByTestId('mark-unavailable-button'));
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'timeout'));
     expect(backend.posted[0]).toEqual({
@@ -387,7 +388,7 @@ describe('Repair in the app (http mode, S14d)', () => {
     });
     backend.job = repairJob({ status: 'infeasible', solution: infeasible });
     fireEvent.change(screen.getByLabelText('Unavailable faculty member'), { target: { value: 'fac-swapnali-kurhade' } });
-    fireEvent.click(screen.getByLabelText('Tuesday P0'));
+    fireEvent.click(screen.getByLabelText('Tuesday T0'));
     fireEvent.click(screen.getByTestId('mark-unavailable-button'));
 
     const panel = await screen.findByTestId('infeasibility-panel');
@@ -398,9 +399,9 @@ describe('Repair in the app (http mode, S14d)', () => {
     }
     expect(within(first).queryByText('fac-swapnali-kurhade')).not.toBeInTheDocument();
     // D51: pin.0 is pinned_occupancy[0], named by display.json pins[0]
-    expect(within(panel).getByTestId('constraint-pins-pin.0')).toHaveTextContent('Pinned: TE lunch, Mon P4 (pin.0)');
-    expect(within(panel).getByTestId('relaxation-action')).toHaveTextContent('verification: restored (12 ms)');
-    expect(within(panel).getByTestId('relaxation-applies-to')).toHaveTextContent('Swapnali Kurhade (SK); Tuesday P0');
+    expect(within(panel).getByTestId('constraint-pins-pin.0')).toHaveTextContent('Pinned: TE lunch, Mon T4 (pin.0)');
+    expect(within(panel).getByTestId('relaxation-action')).toHaveTextContent('checked: with this change a timetable exists (12 ms)');
+    expect(within(panel).getByTestId('relaxation-applies-to')).toHaveTextContent('Swapnali Kurhade (SK); Tuesday T0');
     expect(status()).toHaveAttribute('data-status', 'infeasible');
   });
 });
@@ -434,9 +435,9 @@ describe('Diagnosis pins by pin.<i> (S14h, D51)', () => {
     });
     if (!isInfeasibleSolution(infeasible)) throw new Error('expected an infeasible payload');
     render(<InfeasibilityDiagnosisPanel infeasibleSolution={infeasible} edgeList={edgeList} labels={labelsFor(display)} />);
-    const pin = `${display.pins[1].unique_label} (pin.1)`;
+    const pin = `${displayText(display.pins[1].unique_label!)} (pin.1)`;
     expect(screen.getByTestId('constraint-pins-pin.1')).toHaveTextContent(`Pinned: ${pin}`);
-    expect(screen.getByTestId('relaxation-applies-to')).toHaveTextContent(`SE-Comp A; pin ${pin}; Monday P5`);
+    expect(screen.getByTestId('relaxation-applies-to')).toHaveTextContent(`SE-Comp A; pin ${pin}; Monday T5`);
   });
 });
 
@@ -454,7 +455,7 @@ describe('The current edge list (S14j: GET /instances/{id}/edge-list/current)', 
     });
     drop(s.sessionId, day, period);
     expect(await screen.findByTestId('rejection-reason')).toHaveTextContent(
-      `Clashes for ${s.subjectCode} (${s.cohortLabel}) at ${DAY_NAMES[day]} P${period}:`
+      `Clashes for ${s.subjectCode} (${s.cohortLabel}) at ${DAY_NAMES[day]} T${period}:`
     );
     expect(screen.getAllByTestId('rejection-clash').map((li) => li.textContent)).toEqual([
       `${facultyText(labelsFor(display), s.facultyId)} is unavailable then.`,
@@ -524,11 +525,11 @@ describe('Accepted changes (S14h, D52)', () => {
     });
     const panel = await screen.findByTestId('accepted-changes');
     const row = (id: string) => within(panel).getByTestId(`accepted-change-${id}`);
-    await waitFor(() => expect(row('rep-7')).toHaveTextContent('Swapnali Kurhade (SK) unavailable: Tuesday P6, Tuesday P7'));
+    await waitFor(() => expect(row('rep-7')).toHaveTextContent('Swapnali Kurhade (SK) unavailable: Tuesday T6–T7'));
     expect(row('rep-7')).toHaveTextContent('coord-1');
     expect(row('rep-7')).toHaveTextContent('admin-1');
-    expect(row('rep-7')).toHaveTextContent(new Date('2026-10-22T09:30:00Z').toLocaleString());
-    expect(row('rep-8')).toHaveTextContent('Room 603 unavailable: Monday P1');
+    expect(row('rep-7')).toHaveTextContent(formatTimestamp('2026-10-22T09:30:00Z'));
+    expect(row('rep-8')).toHaveTextContent('Room 603 unavailable: Monday T1');
     expect(row('rep-8')).toHaveTextContent('not recorded');
     expect(row('rep-9')).toHaveTextContent('CE207 · SE-Comp A: taught by Prasenjit Bhavathankar (PBB)');
 
@@ -718,7 +719,7 @@ describe('A queued repair and the audit log (S14o)', () => {
   const markKurhadeUnavailable = () => {
     const panel = screen.getByTestId('repair-panel');
     fireEvent.change(within(panel).getByLabelText('Unavailable faculty member'), { target: { value: 'fac-swapnali-kurhade' } });
-    fireEvent.click(within(panel).getByLabelText('Tuesday P6'));
+    fireEvent.click(within(panel).getByLabelText('Tuesday T6'));
     fireEvent.click(screen.getByTestId('mark-unavailable-button'));
   };
   const solveStatus = () => screen.getByTestId('solve-status');

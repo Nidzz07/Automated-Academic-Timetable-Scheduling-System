@@ -39,10 +39,10 @@ import {
   Display,
   EdgeList,
   EnrichedSession,
-  DAY_NAMES,
   entityName,
   facultyText,
   labelsFor,
+  slotText,
 } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline } from '@/adapters/realInstance';
 import {
@@ -99,7 +99,7 @@ function SessionApp({ client, session }: { client: MockChronosApiClient; session
     <QueryClientProvider client={queryClient}>
       {session && (
         <div className="bg-background text-foreground">
-          <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-4 pt-4 text-xs sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-4 pt-4 sm:px-6 lg:px-8">
             <span data-testid="signed-in-as">
               Signed in as <span className="font-semibold">{session.username}</span> ({ROLE_CAPABILITIES[session.role].title})
             </span>
@@ -326,6 +326,14 @@ function TimetableWorkspace({
   const printed = instance === PRINTED_INSTANCE ? baseline : null;
   const solvable = instances.find((i) => i.id === instance)?.solvable ?? false;
   const labels = useMemo(() => labelsFor(display), [display]);
+  // the solver's quality explanations name faculty and cohorts by id; display.json names them
+  const nameOf = useMemo(
+    () =>
+      display
+        ? (id: string) => (display.faculty[id] ? labels.faculty(id).name : display.cohorts[id] ? labels.cohort(id) : null)
+        : undefined,
+    [display, labels]
+  );
 
   // Repairs of a backend instance's official timetable (S14c; administrator and coordinator)
   const http = client instanceof HttpChronosApiClient ? client : null;
@@ -525,7 +533,7 @@ function TimetableWorkspace({
           reason: check.heading,
           clashes: check.clashes.map((c) => c.text),
           sessionId: entityName(sessionId, edgeList, labels),
-          originalSlotLabel: `${DAY_NAMES[from.day]} P${from.wallClockPeriod}`,
+          originalSlotLabel: slotText(from.day, from.wallClockPeriod),
           onRepair: () => startRepair(change),
         });
       }
@@ -550,7 +558,7 @@ function TimetableWorkspace({
     // 1. CAPTURE EXACT PRIOR STATE
     const priorSolution: SolvedSolution = JSON.parse(JSON.stringify(solution));
     const priorSelectedSessionId = selectedSessionId;
-    const originalSlotLabel = `${DAY_NAMES[originalDay]} P${originalPeriod}`;
+    const originalSlotLabel = slotText(originalDay, originalPeriod);
     const targetWallClockPeriod = targetPeriod;
 
     // 2. APPLY PROVISIONALLY (OPTIMISTIC)
@@ -746,6 +754,7 @@ function TimetableWorkspace({
             }
             facultySessions={workloadSessions}
             loadRule={quality.rules.find((r) => r.rule_id === 'S-LOAD16')}
+            nameOf={nameOf}
           />
         )}
 
@@ -762,10 +771,7 @@ function TimetableWorkspace({
 
         {/* Quality Score & Rules Breakdown (Admin / Coordinator only) */}
         {shown && caps.showQualityScore && isSolvedSolution(shown) && showQualityCard && (
-          <QualityScoreCard
-            quality={toQualityView(shown)}
-            metadata={shown.metadata}
-          />
+          <QualityScoreCard quality={toQualityView(shown)} metadata={shown.metadata} nameOf={nameOf} />
         )}
 
         {/* The real instance's generated timetable beside the printed one */}
@@ -781,7 +787,7 @@ function TimetableWorkspace({
               selected={selectedViolation}
               onSelect={setSelectedViolation}
             />
-            <QualityScoreCard quality={printed.quality} title="Printed timetable quality" />
+            <QualityScoreCard quality={printed.quality} title="Printed timetable quality" nameOf={nameOf} />
           </section>
         )}
 
@@ -798,24 +804,23 @@ function TimetableWorkspace({
         {/* Main Weekly Grid (the edge list's periods and days; rendered when solved) */}
         {(!shown || (isSolvedSolution(shown) && shown.assignment.length > 0 && roleFilteredSolution)) && (
           <main className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-              <span className="font-semibold text-foreground">
-                Weekly Timetable Schedule ({edgeList.slot_grid.teaching_periods.length} Teaching Periods ·{' '}
-                {edgeList.slot_grid.days} Days) — {caps.title} View
-              </span>
-              <span className="font-mono text-[11px]">
-                {canDrag ? 'Interactive: Drag Sessions to Reschedule' : 'Read-Only Schedule'}
-              </span>
+            <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
+              <h2 className="text-xl font-semibold">Weekly timetable</h2>
+              <p className="text-xs">
+                {edgeList.slot_grid.teaching_periods.length} teaching periods, {edgeList.slot_grid.days} days,{' '}
+                {caps.title.toLowerCase()} view.{' '}
+                {canDrag ? 'Drag a session to move it.' : 'Read only.'}
+              </p>
             </div>
 
             {proposal && (
-              <p data-testid="proposal-note" className="px-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+              <p data-testid="proposal-note" className="px-1 font-semibold text-amber-900 dark:text-amber-200">
                 Proposed repair: the sessions it changes are outlined in amber. Not official until accepted.
               </p>
             )}
 
             {!shown && !printed && (
-              <p data-testid="no-solution-note" className="px-1 text-xs text-muted-foreground">
+              <p data-testid="no-solution-note" className="px-1">
                 Not solved yet. No solution is published for this instance; the grid shows its
                 periods, breaks and pinned occupancy only.
               </p>
@@ -866,7 +871,9 @@ function TimetableWorkspace({
         )}
 
         {/* The audit log (administrator only; the backend refuses anyone else) */}
-        {currentRole === 'administrator' && client instanceof HttpChronosApiClient && <AuditLog client={client} />}
+        {currentRole === 'administrator' && client instanceof HttpChronosApiClient && (
+          <AuditLog client={client} edgeList={currentEdgeList} labels={labels} session={session} />
+        )}
 
         {/* Session Details Modal */}
         <SessionDetailModal
@@ -883,16 +890,9 @@ function TimetableWorkspace({
         />
 
         {/* Institutional Traceability Footer */}
-        <footer className="border-t border-border/60 pt-6 text-center text-xs text-muted-foreground space-y-1.5">
-          <p className="font-semibold text-foreground">
-            Chronos Timetable Scheduling System · Sardar Patel Institute of Technology
-          </p>
-          <p>
-            Track C (Frontend & Validation) — Phase 2: Role-Differentiated Views, Mock API & dnd-kit Drag-and-Drop.
-          </p>
-          <p className="text-[11px] font-mono text-muted-foreground/80">
-            Validated against Frozen Contract 3 (solution_v1 / solution_v2 schemas) · Hand-written deterministic solver integration
-          </p>
+        <footer className="border-t border-border pt-6 text-xs">
+          <p className="font-semibold">Chronos timetable scheduling, Sardar Patel Institute of Technology</p>
+          <p>Every timetable shown is checked against the project's data contracts and made by its own solver.</p>
         </footer>
       </div>
     </div>

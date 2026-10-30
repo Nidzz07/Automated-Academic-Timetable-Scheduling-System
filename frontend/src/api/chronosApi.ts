@@ -24,7 +24,7 @@ import infeasibleFixture from '@contracts/examples/solution_v2.infeasible.exampl
 import edgeListExample from '@contracts/examples/edge_list_v1.example.json';
 import d6GridEdgeList from '@contracts/examples/edge_list_v1.d6_grid.example.json';
 import {
-  DAY_NAMES,
+  slotText,
   Display,
   EdgeList,
   cohortsOverlap,
@@ -348,7 +348,7 @@ export class MockChronosApiClient implements ChronosApiClient {
     // The solution examples were solved for the example instance
     const edgeList = await this.getEdgeList('example');
     const edgeSession = edgeList.sessions.find((s) => s.id === req.sessionId);
-    const slotLabel = `${DAY_NAMES[req.targetDay]} P${req.targetWallClockPeriod}`;
+    const slotLabel = slotText(req.targetDay, req.targetWallClockPeriod);
 
     // 3. Reject if the session itself is fixed / pinned
     if (edgeSession?.fixed_slot !== null && edgeSession?.fixed_slot !== undefined) {

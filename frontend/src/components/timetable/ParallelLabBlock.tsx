@@ -1,7 +1,6 @@
 import React from 'react';
 import { EnrichedLabBlock } from '@/adapters/timetable';
-import { Badge } from '@/components/ui/badge';
-import { Layers, Clock, DoorOpen, User, BookOpen } from 'lucide-react';
+import { periodLabel, periodSpan } from '@/lib/format';
 
 interface ParallelLabBlockProps {
   labBlock: EnrichedLabBlock;
@@ -18,40 +17,25 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
   flaggedSessionIds,
   flagClass = 'ring-2 ring-destructive',
 }) => {
+  const first = labBlock.periods[0];
+  const last = labBlock.periods[labBlock.periods.length - 1];
   return (
     <div
       data-testid="parallel-lab-block"
       data-block-id={labBlock.blockId}
       data-duration-periods={labBlock.periods.length}
-      className="relative flex flex-col h-full w-full rounded-xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent p-2.5 shadow-sm transition-all hover:border-emerald-500/70 hover:shadow-md dark:from-emerald-950/30 dark:via-teal-950/20 dark:border-emerald-500/30"
+      className="relative flex h-full w-full flex-col rounded-md border border-l-4 border-emerald-300 border-l-emerald-800 bg-emerald-50 p-2 dark:border-emerald-900 dark:bg-emerald-950/40"
     >
-      {/* Block Header */}
-      <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5 mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500 text-white shadow-xs">
-            <Layers className="h-3 w-3" />
-          </span>
-          <span className="font-semibold text-xs tracking-tight text-emerald-900 dark:text-emerald-200">
-            Parallel Lab Block
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Badge variant="success" className="text-[10px] px-1.5 py-0 h-4 font-mono font-medium">
-            <Clock className="w-2.5 h-2.5 mr-1 inline" />
-            {labBlock.periods.length} periods (P{labBlock.periods[0]}–P
-            {labBlock.periods[labBlock.periods.length - 1]})
-          </Badge>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-emerald-400 text-emerald-800 dark:text-emerald-300">
-            {labBlock.sessions.length} batches in parallel
-          </Badge>
-        </div>
+      {/* Block header */}
+      <div className="mb-2 border-b border-emerald-300 pb-1.5 dark:border-emerald-800">
+        <span className="font-semibold">Lab block</span>, {labBlock.periods.length} periods ({periodSpan(first, last)}),{' '}
+        <span>
+          {labBlock.sessions.length} batch{labBlock.sessions.length === 1 ? '' : 'es'} in parallel
+        </span>
       </div>
 
-      {/* 4 Parallel Batch Sub-rooms Grid */}
-      <div
-        data-testid="parallel-batches-grid"
-        className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 flex-1"
-      >
+      {/* The batches, side by side in time */}
+      <div data-testid="parallel-batches-grid" className="grid flex-1 grid-cols-1 gap-1.5">
         {labBlock.sessions.map((sess) => (
           <div
             key={sess.sessionId}
@@ -60,55 +44,32 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
             data-subroom={sess.subRoomCode ?? sess.roomCode}
             data-flagged={flaggedSessionIds?.has(sess.sessionId) || undefined}
             onClick={() => onSelectSession?.(sess.sessionId)}
-            className={`group/batch relative flex flex-col justify-between rounded-lg border border-emerald-500/25 bg-background/80 p-2 shadow-xs backdrop-blur-xs transition-all hover:bg-emerald-500/10 hover:border-emerald-500/50 cursor-pointer ${
+            className={`cursor-pointer rounded border border-emerald-300 bg-card p-1.5 hover:border-emerald-700 dark:border-emerald-800 ${
               flaggedSessionIds?.has(sess.sessionId) ? flagClass : ''
             }`}
           >
-            {/* Top row: Batch Pill + Room */}
-            <div className="flex items-center justify-between gap-1 mb-1">
-              <span className="inline-flex items-center rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
-                {sess.batchLabel ?? "Batch"}
-              </span>
-              <span
-                data-testid={`subroom-badge-${sess.sessionId}`}
-                className="inline-flex items-center gap-0.5 rounded border border-emerald-300/40 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:border-emerald-700/50 dark:text-emerald-300"
-              >
-                <DoorOpen className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
-                {sess.subRoomCode ?? sess.roomCode}
+            <div className="flex items-baseline justify-between gap-1">
+              <span className="font-semibold">{sess.batchLabel ?? 'Batch'}</span>
+              <span data-testid={`subroom-badge-${sess.sessionId}`} className="font-semibold">
+                Room {sess.subRoomCode ?? sess.roomCode}
               </span>
             </div>
-
-            {/* Subject Code & Full Name */}
-            <div className="flex items-baseline gap-1 my-0.5">
-              <BookOpen className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0 self-center" />
-              <span className="text-xs font-bold text-foreground">
-                {sess.subjectCode} Lab
-              </span>
-              <span className="text-[10px] text-muted-foreground truncate hidden lg:inline">
-                ({sess.subjectName})
-              </span>
+            <div className="font-serif font-semibold" title={sess.subjectName}>
+              {sess.subjectCode} Lab
             </div>
-
-            {/* Faculty Initials & Full Name */}
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground mt-1 pt-1 border-t border-dashed border-emerald-500/15">
-              <span className="flex items-center gap-1 font-medium">
-                <User className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
-                <span className="font-semibold text-foreground">{sess.facultyInitials}</span>
-                <span className="text-[10px] text-muted-foreground truncate max-w-[90px]">
-                  {sess.facultyName}
-                </span>
+            <div className="flex items-baseline justify-between gap-1">
+              <span className="truncate" title={sess.facultyName}>
+                <span className="font-semibold">{sess.facultyInitials}</span> {sess.facultyName}
               </span>
-              <span className="text-[9px] text-muted-foreground font-mono">
-                {sess.cohortSize} studs
-              </span>
+              <span className="shrink-0">{sess.cohortSize} students</span>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-1 text-[10px] text-emerald-800/80 dark:text-emerald-300/80 text-center font-medium">
+      <div className="mt-1 text-center">
         {labBlock.spannedBreaks.length
-          ? `Spans break ${labBlock.spannedBreaks.map((p) => `P${p}`).join(', ')} · periods contiguous in teaching order`
+          ? `Runs across the break ${labBlock.spannedBreaks.map(periodLabel).join(', ')}; the periods follow on in teaching order`
           : 'Periods contiguous'}
       </div>
     </div>

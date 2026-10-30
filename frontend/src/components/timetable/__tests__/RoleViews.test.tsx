@@ -19,7 +19,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     expect(screen.getByTestId('toggle-reject-mode-button')).toBeInTheDocument();
 
     // Assert quality score card is visible
-    expect(screen.getByText(/Solver Quality Evaluation/i)).toBeInTheDocument();
+    expect(screen.getByText('Timetable quality')).toBeInTheDocument();
 
     // Assert sessions are draggable
     const sessionCards = screen.getAllByTestId(/^session-cell-/);
@@ -39,7 +39,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
 
     // Assert Coordinator role badge and capabilities
     expect(screen.getByTestId('capability-badge-drag')).toHaveTextContent(/Drag-and-Drop Enabled/i);
-    expect(screen.getByText(/Department-wide timetable management and conflict resolution/i)).toBeInTheDocument();
+    expect(screen.getByText(/Manages the department timetable/i)).toBeInTheDocument();
 
     // Dragging remains enabled
     const sess6 = screen.getByTestId('session-cell-sess-0006');
@@ -91,7 +91,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     // 3. MUST HIDE ADMIN TELEMETRY & CONTROLS
     expect(screen.queryByTestId('toggle-outcome-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('toggle-reject-mode-button')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Solver Quality Evaluation/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Timetable quality')).not.toBeInTheDocument();
   });
 
   it('differentiates student role: STRICTLY READ-ONLY, division-specific schedule, hides quality penalties', async () => {
@@ -122,7 +122,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     expect(screen.queryByText(/SE-Comp Division B/i)).not.toBeInTheDocument();
 
     // 3. MUST HIDE ADMIN QUALITY SCORE & TELEMETRY
-    expect(screen.queryByText(/Solver Quality Evaluation/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Timetable quality')).not.toBeInTheDocument();
     expect(screen.queryByTestId('toggle-outcome-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('toggle-reject-mode-button')).not.toBeInTheDocument();
   });

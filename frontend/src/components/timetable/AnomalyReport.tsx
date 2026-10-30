@@ -3,6 +3,8 @@ import { AnomalyReport, NEEDS_HUMAN } from '@/adapters/realInstance';
 import { Display, EdgeList, Labels, entityName, facultyText, labelsFor } from '@/adapters/timetable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { displayText } from '@/lib/format';
+import { anomalyCategoryLabel } from '@/lib/wording';
 
 type Anomaly = AnomalyReport['anomalies'][number];
 
@@ -52,7 +54,9 @@ const Mismatch: React.FC<{ children: React.ReactNode }> = ({ children }) => (
  * The ingestion anomaly report (anomalies.json; ROADMAP Phase 2, Track C; S11c): every anomaly as
  * reported, never fixed here, grouped by category with the report's own counts, and the decision
  * that resolves it or "needs human", as the report spells it (CONTEXT §3.5). Ids the report names
- * are shown with their display.json names beside them; the report's text is never rewritten.
+ * are shown with their display.json names beside them. Each category is shown in plain words with its
+ * code beside it; location and message are shown as reported, period labels and times put in the
+ * UI's form for display only (displayText). The report itself is never changed.
  */
 export const AnomalyReportPanel: React.FC<{
   /** null when the instance has no report (a 404, or the contract examples) */
@@ -73,7 +77,7 @@ export const AnomalyReportPanel: React.FC<{
 
   const header = (description: React.ReactNode) => (
     <CardHeader className="pb-3">
-      <CardTitle className="text-base">Ingestion anomaly report</CardTitle>
+      <CardTitle>Problems found in the source files</CardTitle>
       <CardDescription data-testid="anomaly-report-status">{description}</CardDescription>
     </CardHeader>
   );
@@ -127,23 +131,23 @@ export const AnomalyReportPanel: React.FC<{
   return (
     <Card data-testid="anomaly-report">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Ingestion anomaly report</CardTitle>
+        <CardTitle>Problems found in the source files</CardTitle>
         <CardDescription>
           {report.counts.total} anomalies in {groups.length} categories, {report.counts.needs_human} need
           a human decision. Reported as found in the source files; none is fixed silently.
           {totalsDiffer}
         </CardDescription>
-        <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
+        <div className="flex flex-wrap items-center gap-3 pt-2">
           <select
             aria-label="Anomaly category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="rounded-md border border-border bg-background px-2 py-1"
+            className="rounded-md border border-input bg-background px-2 py-1"
           >
             <option value="all">All categories</option>
             {categories.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {anomalyCategoryLabel(c)} ({c})
               </option>
             ))}
           </select>
@@ -155,7 +159,7 @@ export const AnomalyReportPanel: React.FC<{
             />
             Needs human only
           </label>
-          <span data-testid="anomaly-count" className="text-muted-foreground">
+          <span data-testid="anomaly-count">
             {shownCount} of {report.counts.total} shown
           </span>
         </div>
@@ -164,10 +168,10 @@ export const AnomalyReportPanel: React.FC<{
         <table className="w-full text-left text-xs">
           <thead className="sticky top-0 bg-card">
             <tr className="border-b border-border">
-              <th className="p-2">Category</th>
+              <th className="p-2">Kind of problem</th>
               <th className="p-2">Source</th>
               <th className="p-2">Location</th>
-              <th className="p-2">Message</th>
+              <th className="p-2">What was found</th>
               <th className="p-2">Resolved by</th>
             </tr>
           </thead>
@@ -175,15 +179,14 @@ export const AnomalyReportPanel: React.FC<{
             const rows = shownIn(g);
             return (
               <tbody key={g.category} data-testid="anomaly-group" data-category={g.category}>
-                <tr className="border-b border-border bg-muted/40">
+                <tr className="border-b border-border bg-muted">
                   <th colSpan={5} className="p-2 font-normal">
-                    <span className="font-mono font-semibold">{g.category}</span>{' '}
-                    <Badge variant="secondary" data-testid="anomaly-group-count">
+                    <span className="font-semibold">{anomalyCategoryLabel(g.category)}</span>{' '}
+                    <span className="font-mono">{g.category}</span>,{' '}
+                    <span data-testid="anomaly-group-count" className="font-semibold">
                       {g.reported ?? g.rows.length}
-                    </Badge>
-                    {rows.length !== g.rows.length && (
-                      <span className="text-muted-foreground"> · {rows.length} shown</span>
-                    )}
+                    </span>
+                    {rows.length !== g.rows.length && <span> · {rows.length} shown</span>}
                     {g.reported === undefined ? (
                       <Mismatch>
                         {' '}
@@ -202,13 +205,16 @@ export const AnomalyReportPanel: React.FC<{
                 </tr>
                 {rows.map((a, i) => (
                   <tr key={i} data-testid="anomaly-row" className="border-b border-border/40 align-top">
-                    <td className="p-2 font-mono">{a.category}</td>
-                    <td className="p-2">{a.source_file}</td>
-                    <td className="p-2">{a.location}</td>
                     <td className="p-2">
-                      {a.message}
+                      {anomalyCategoryLabel(a.category)}
+                      <div className="font-mono">{a.category}</div>
+                    </td>
+                    <td className="p-2 break-words">{a.source_file}</td>
+                    <td className="p-2">{displayText(a.location)}</td>
+                    <td className="p-2">
+                      {displayText(a.message)}
                       {names(a).map((n) => (
-                        <div key={n} data-testid="anomaly-name" className="text-muted-foreground">
+                        <div key={n} data-testid="anomaly-name">
                           {n}
                         </div>
                       ))}
@@ -216,7 +222,6 @@ export const AnomalyReportPanel: React.FC<{
                     <td className="p-2">
                       <Badge
                         variant={a.resolution === NEEDS_HUMAN ? 'warning' : 'outline'}
-                        className="font-mono"
                       >
                         {a.resolution}
                       </Badge>

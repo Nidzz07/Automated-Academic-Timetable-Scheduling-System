@@ -9,7 +9,7 @@ interface LoginScreenProps {
   expired: boolean;
 }
 
-const inputClass = 'w-full rounded-md border border-border bg-transparent px-2 py-1.5 text-sm text-foreground';
+const inputClass = 'w-full rounded-md border border-input bg-card px-3 py-2';
 
 /** http mode: POST /auth/login, then the session (token and role) is kept by setSession. */
 export const LoginScreen: React.FC<LoginScreenProps> = ({ client, expired }) => {
@@ -32,14 +32,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ client, expired }) => 
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-sm px-4 py-16">
+      <div className="mx-auto max-w-md px-4 py-16">
         <Card data-testid="login-screen">
           <CardHeader>
-            <CardTitle>Chronos: log in</CardTitle>
-            <CardDescription>Sign in with your Chronos account.</CardDescription>
+            <CardTitle className="text-2xl">Chronos</CardTitle>
+            <CardDescription>Log in with your Chronos account to see and manage the department timetable.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={submit} className="space-y-3 text-sm">
+            <form onSubmit={submit} className="space-y-4">
               {expired && !error && (
                 <p role="alert" data-testid="session-expired" className="text-destructive">
                   Session expired, please log in again
@@ -50,7 +50,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ client, expired }) => 
                   {error}
                 </p>
               )}
-              <label className="block space-y-1 font-semibold text-muted-foreground">
+              <label className="block space-y-1 font-semibold">
                 <span>Username</span>
                 <input
                   value={username}
@@ -61,7 +61,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ client, expired }) => 
                   className={inputClass}
                 />
               </label>
-              <label className="block space-y-1 font-semibold text-muted-foreground">
+              <label className="block space-y-1 font-semibold">
                 <span>Password</span>
                 <input
                   type="password"

@@ -68,11 +68,11 @@ export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId,
   return (
     <Card data-testid="solve-panel">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Generate a timetable</CardTitle>
+        <CardTitle>Generate a timetable</CardTitle>
         <CardDescription>Runs the solver on the backend for this instance.</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-wrap items-center gap-3 pt-0 text-xs">
-        <label className="flex items-center gap-1.5 font-semibold text-muted-foreground">
+      <CardContent className="flex flex-wrap items-center gap-3 pt-0">
+        <label className="flex items-center gap-1.5 font-semibold">
           Time limit (s)
           <input
             type="number"
@@ -81,17 +81,17 @@ export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId,
             value={timeLimit}
             onChange={(e) => setTimeLimit(e.target.valueAsNumber)}
             data-testid="solve-time-limit"
-            className="w-20 rounded-md border border-border bg-transparent px-2 py-1 font-medium text-foreground"
+            className="w-24 rounded-md border border-input bg-transparent px-2 py-1 font-medium"
           />
         </label>
         <Button
           size="sm"
-          className="gap-1.5 text-xs"
+          className="gap-1.5"
           disabled={busy || !validLimit}
           onClick={() => solve.mutate({ instance, timeLimitS: timeLimit })}
           data-testid="solve-button"
         >
-          <Play className="h-3.5 w-3.5" />
+          <Play className="h-4 w-4" />
           <span>{busy ? 'Solving…' : 'Solve'}</span>
         </Button>
         {status && (
