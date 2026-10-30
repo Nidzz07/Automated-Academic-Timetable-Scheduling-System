@@ -30,7 +30,7 @@ TimeTables, UniTime) do not:
 | Member | Owns | Directories |
 |---|---|---|
 | Dhruv Hemant Gangurde | Solver core and algorithms | `solver/` |
-| Nidhi Rajkamal Dhyani | Backend, data layer, ingestion | `backend/`, `ingestion/`, `db/` |
+| Nidhi Rajkamal Dhyani | Backend, data layer, ingestion | `backend/`, `ingestion/`, `db/`, `migrations/`, `data/` |
 | Rohan Shashikant Dhumal | Frontend and validation | `frontend/`, `tests/e2e/`, `bench/` |
 
 Supervisor: Mr. Devang Parab.
@@ -90,12 +90,12 @@ Source files live in `data/real/` (committed, read-only):
 
 | Dimension | Value |
 |---|---|
-| Teaching slots | 8 per day × 5 days = **40 per week** |
+| Teaching slots | 10 periods a day (P0–P9); P2 (coffee) closed for everyone, so the grid has 9 × 5 = **45 per week**; each year also loses its own lunch (P5 SE, P4 TE, D6), leaving **8 per day, 40 per week per year** (`solver/slots.py`, `data/instances/even-2025-26/edge_list.json` `slot_grid`, `display.json` `periods`) |
 | Division-groups | SE A–D, TE A–D, BE A&B, M.Tech = **10** (EVEN), 9 (ODD) |
 | Batches | 4 per division (A/B/C/D) → **~40** |
 | Faculty | **41**, workloads 5–18 hours — see note below |
 | Rooms | **20 physical**, ~35 usable once sub-rooms are counted |
-| Sessions | roughly 180–250 per week per semester |
+| Sessions | roughly 180–250 per week per semester; the v1 SE+TE instance (`data/instances/even-2025-26/edge_list.json`) has **156** |
 
 **Faculty count.** 41 is the seeded total from the class-timetable initials legends *plus*
 `Faculty___Subjects.xlsx`, not from the spreadsheet alone. The spreadsheet lists 32. Dr. Deepak
@@ -112,12 +112,17 @@ qualifications. The earlier figure of 32 was the spreadsheet count.
 11.00–11.15   SHORT BREAK      (not schedulable)
 11.15–12.15   teaching
 12.15–13.15   teaching
-13.15–14.15   BREAK            (not schedulable)
+13.15–14.15   teaching
 14.15–15.15   teaching
 15.15–16.15   teaching
 16.15–17.15   teaching
 17.15–18.15   teaching
 ```
+
+Lunch is per year, not global (ROADMAP D6): 12.15–13.15 (P4) for TE and 13.15–14.15 (P5) for
+SE. The grid closes only the short break (P2) for everyone; each year's lunch is pinned
+occupancy. The code numbers periods P0–P9 on this wall-clock axis; the interface shows them as
+T0–T9 with 12-hour times (D60).
 
 Note: some lab blocks span the short break (`ET Lab /DDA /509 (10.00 -12.00)`). Slot adjacency
 must be computed on the **teaching sequence**, not on wall-clock contiguity.
@@ -226,7 +231,7 @@ AuditEntry   → actor, action, timestamp, affected sessions
 ## 5. The three frozen contracts
 
 These are the only coupling points between the three tracks. **Changing one requires agreement
-from all three members** and a note in `CURRENT-PROGRESS.md` under Decision Log.
+from all three members** and a note in `CURRENT-PROGRESS.md` under Contract change log.
 
 1. **Ingestion → DB** — the canonical intermediate JSON that parsers emit and the seeder consumes.
 2. **DB → Solver (edge-list contract)** — session records plus conflict edges with a reason on
@@ -236,7 +241,9 @@ from all three members** and a note in `CURRENT-PROGRESS.md` under Decision Log.
    suggested relaxation.
 
 Schemas live in `contracts/` as JSON Schema files with example payloads. Both sides validate
-against them in tests.
+against them in tests. The v1 files are frozen; the v2 files (`ingestion_v2`, `solution_v2`,
+`relaxation_actions_v2.json`) are on `main` too. There is no `edge_list_v2`: the solver reads
+`edge_list_v1` and writes `solution.v2`.
 
 ---
 
@@ -244,14 +251,14 @@ against them in tests.
 
 | Layer | Technology |
 |---|---|
-| Solver | Python 3.12, stdlib only (`heapq`, `dataclasses`); `networkx` in tests only |
-| Ingestion | `python-docx`, `openpyxl`, Pydantic validation |
+| Solver | Python 3.12, stdlib plus PyYAML, which only `scoring.py` uses to read `rules/quality_rules.yaml` (ROADMAP D61); `networkx` and `jsonschema` in tests only |
+| Ingestion | `python-docx`, `openpyxl`, PyYAML; payloads validated with `jsonschema` against `contracts/` |
 | Backend | FastAPI, Pydantic, Uvicorn, SQLAlchemy 2.0, Alembic |
 | Auth | `python-jose` (JWT), `hashlib.scrypt` (standard library) |
-| Database | PostgreSQL 16 — local via Docker Compose for development and migrations; Supabase for shared staging |
-| Frontend | React 18, Vite, TypeScript, TailwindCSS, shadcn/ui, dnd-kit, TanStack Query, Recharts |
-| Testing | pytest, pytest-cov, Hypothesis, httpx, Vitest, React Testing Library |
-| Ops | Docker, Git, GitHub Actions, Render or Railway |
+| Database | PostgreSQL 16 — local via Docker Compose for development and tests; Supabase Postgres is the production database (ROADMAP D55, D57) |
+| Frontend | React 18, Vite, TypeScript, TailwindCSS, shadcn/ui, dnd-kit, TanStack Query, Ajv (contract validation), lucide-react, self-hosted Source fonts (`@fontsource`). No charting library: the evaluation figures are hand-written SVG (`bench/charts.py`) |
+| Testing | pytest, pytest-cov, httpx, a seeded-random property test (`solver/tests/test_property_solved_is_valid.py`; Hypothesis is installed but unused), Vitest, React Testing Library |
+| Ops | Docker, Git, GitHub Actions, Render (one web service from `backend/Dockerfile.prod`, ROADMAP D55) |
 
 ---
 
@@ -262,21 +269,28 @@ chronos/
 ├── README.md                   setup and how to run things
 ├── ROADMAP.md                  the phased plan
 ├── CLAUDE.md                   agent rules (mirrors section 2); auto-loaded by Claude Code
-├── contracts/                  the three frozen JSON Schemas + examples
+├── contracts/                  v1 (frozen) and v2 JSON Schemas + examples
 ├── data/real/                  source .docx and .xlsx, read-only
+├── data/instances/             committed edge list, display, solution per instance
 ├── ingestion/                  parsers, anomaly reporter, seeder      [Nidhi]
-├── db/                         schema, Alembic migrations             [Nidhi]
+├── db/                         SQLAlchemy models, edge-list export    [Nidhi]
+├── migrations/                 Alembic migrations                     [Nidhi]
 ├── backend/                    FastAPI app, routers, auth, services   [Nidhi]
 ├── solver/                     pure Python solver core                [Dhruv]
+│   ├── slots.py                slot and grid vocabulary
 │   ├── graph.py                conflict graph construction
 │   ├── colouring.py            Welsh-Powell greedy
+│   ├── presolve.py             counting and matching checks
 │   ├── backtracking.py         forward checking + MRV
+│   ├── improve.py              local search on a solved timetable
 │   ├── mus.py                  minimal unsatisfiable subset
 │   ├── repair.py               freeze-and-expand
+│   ├── validate.py             independent hard-constraint checker
+│   ├── bounds.py               lower bounds
 │   ├── scoring.py              YAML rule evaluation
 │   └── rules/quality_rules.yaml
 ├── frontend/                   React app                              [Rohan]
-├── tests/                      unit, property, integration, e2e
+├── tests/                      contract tests (unit tests sit in each package's tests/; no e2e yet)
 ├── bench/                      benchmark harness and plots            [Rohan]
 └── docs/
     ├── CONTEXT.md              this file
@@ -300,3 +314,9 @@ chronos/
 | `KKD`, `AGN`, `PBB` | Faculty initials used in class timetables |
 | `MDM`, `HSS`, `LLC` | Multidisciplinary Minor, Humanities, Liberal Learning — pinned blocks |
 | `ESE` | End Semester Examination |
+| `P0`–`P9` / `T0`–`T9` | Period numbers: P in code, contracts, data and docs; T in the interface (D60) |
+
+**Words used in the code.** An *instance* is one edge list with its display data and committed
+solution (`/instances/{id}`); a *timetable* is a solution for it. The *official* timetable is the
+one in force (ROADMAP D49, D56). SPIT's own timetable is the *printed* timetable. These docs use
+those words; older text that says "published" means *printed*.
