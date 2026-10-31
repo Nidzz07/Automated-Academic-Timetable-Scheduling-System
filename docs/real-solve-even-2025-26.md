@@ -389,6 +389,42 @@ The default row reproduces the S12g figures above.
   - re-run the S15b, S15c and S15d evaluation numbers and the repair scenarios;
   - re-record the digests that pin today's results.
 
+### S14s: `prefer_sub_rooms`, now an option (off by default)
+
+2026-10-31 · Dhruv (with Claude Code) · branch `track/solver-subrooms-option`. Machine: Intel64
+Family 6 Model 183, Python 3.12.10.
+
+`backtrack_solve(..., prefer_sub_rooms=)`, `improve(..., prefer_sub_rooms=)` and
+`repair(..., prefer_sub_rooms=)` (`solver/backtracking.py`, `_room_rank`) try a split lab's
+sub-rooms just before that whole lab; every other room keeps its id order. This differs from the
+S14l scratch copy above, which put every sub-room before every whole room, so the numbers
+differ. Off is the default, and then every result is today's: `solution.json` is reproduced
+exactly (test `solver/tests/test_d58_options.py`).
+
+Fresh solve of the committed edge list (backtracking, then `improve()`), same starting point per
+setting, seeds fixed before the runs. Penalties are the four rules' contributions, mean over the
+seeds at 200,000 moves.
+
+| | 1,000,000 moves, seed 0 (committed parameters): off | on | 200,000 moves, seeds 0–4: off | on |
+|---|---|---|---|---|
+| Score | −15.0 (= `solution.json`) | **26.5** | −18.5, −17.5, −5.5, −17.5, −22.0 (mean −16.2) | 9.0, 11.5, 18.5, 13.0, 12.5 (mean 12.9) |
+| S-GAP penalty | 26.0 | 2.0 | 28.4 | 6.4 |
+| S-B2B penalty | 30.0 | 20.0 | 29.6 | 25.2 |
+| S-LOAD16 penalty | 6.0 | 6.0 | 6.0 | 6.0 |
+| FAC_LOAD_IMBALANCE penalty | 53.0 | 45.5 | 52.2 | 49.5 |
+| Hard violations | 0 | 0 | 0 on every seed | 0 on every seed |
+| Batch practicals in a whole split lab | 35 | 0 | 36, 33, 34, 36, 39 | 0 on every seed |
+| Free lab place-periods (of 720) | 293 | 389 | 283, 301, 295, 289, 277 | 389 on every seed |
+| Periods with no free lab place | 5 | 3 | 4, 7, 8, 3, 5 | 0, 1, 5, 2, 1 |
+| Backtracking | 92 nodes, −162.5, 251.0 ms | 92 nodes, −107.0, 246.4 ms | 92 nodes, −162.5 | 92 nodes, −107.0 |
+| `improve()` run time | 68.2 s | 68.5 s | 13.6–14.0 s | 13.6–14.1 s |
+
+At the committed parameters the option scores 26.5, above the printed timetable's 21.5, with 0
+hard violations. It is better on all five seeds at 200,000 moves, at the same run time. How it
+changes repair, including from a timetable regenerated this way, is in
+`docs/repair-even-2025-26.md` § S14s, with the recommendation. The default stays off (D58)
+until the team decides.
+
 ## S12d: why the old search got stuck
 
 Re-run of the S12a search (commit 75a3f31) for 300 s on the same machine: timeout, 563,081
