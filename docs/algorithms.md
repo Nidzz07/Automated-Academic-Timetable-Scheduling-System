@@ -135,6 +135,14 @@ presets it colours every session of `small`, `medium` and `large` ([evaluation �
   trail and undone exactly when the search backtracks.
 - **Symmetry breaking.** Interchangeable rooms on an unused day are tried only once. The
   docstring states that this never changes the first solution found.
+- **Two attempts when sub-rooms come first.** Each room order has feasible instances it
+  thrashes on. So with `prefer_sub_rooms` and no caller `node_limit`, the first attempt gets
+  `SUB_ROOM_NODES = 5,000` nodes (repair's `RING_NODES`, fixed before any measurement). If they
+  run out with no verdict, a second attempt with rooms by id runs in the time left. A verdict of
+  the first attempt stands, infeasible included. `stats["attempts"]` records each attempt, and
+  `metadata.algorithm` names the fallback. Repair passes `sub_room_nodes=None` (its rings have
+  their own budgets), and `explain()` uses rooms by id. Course: Design and Analysis of
+  Algorithms (a portfolio of two orders with a fixed budget).
 
 **Where.** `solver/backtracking.py`:
 
@@ -543,9 +551,10 @@ S12i](real-solve-even-2025-26.md#s12i-lower-bounds-on-the-periods-a-week-needs))
     S12h runs is 7 raw ([real solve § S12h](real-solve-even-2025-26.md#s12h-kempe-chains-and-gap-aimed-moves-off-by-default)).
     S12g put the remaining gaps down to frozen items (D24); D58 showed the room order held most
     of them ([real solve § D58](real-solve-even-2025-26.md#d58-what-preferring-sub-rooms-would-change-measured-not-adopted)).
-  - Each room order has instances it thrashes on: sub-rooms first cannot finish a fresh solve
-    after one feasible substitution that the id order solves in 92 nodes ([real solve §
-    S14u](real-solve-even-2025-26.md#s14u-both-d58-options-are-the-default-committed-result)).
+  - Each room order has instances it thrashes on. Sub-rooms first alone could not finish a fresh
+    solve after one feasible substitution that the id order solves in 92 nodes. A fresh solve
+    therefore tries rooms by id after 5,000 nodes: 1.79 s for that case ([real solve §
+    S14u](real-solve-even-2025-26.md#fixed-a-fresh-solve-tries-rooms-by-id-when-sub-rooms-first-runs-out-of-nodes)).
 - **Repair minimises moves heuristically.** No search proves that fewer moves are impossible.
   Its last ring can run until `time_limit_s`, and 6 of 30 changes did so in S15c ([evaluation §
   7](evaluation-even-2025-26.md#7-repair-vs-regeneration-on-the-real-instance-s15c)).
