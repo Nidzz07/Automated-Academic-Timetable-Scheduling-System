@@ -104,7 +104,7 @@ def test_busy_drag_moves_what_is_in_the_way_and_keeps_the_rest(
     edge_list, solution = real
     stats: dict = {}
     result = _check(edge_list, solution, BUSY_DRAG, stats)
-    assert {CE207, "obs-t0-r4-c5-l0", "obs-t2-r5-c5-l0", "obs-t6-r5-c1-l0"} <= set(stats["hit"])
+    assert {CE207, "obs-t0-r5-c4-l0", "obs-t6-r1-c5-l0"} <= set(stats["hit"])
     assert _by_id(result)[CE207]["day"] == 0 and _by_id(result)[CE207]["period"] == 9
     old, new = _by_id(solution), _by_id(result)
     kept = [sid for sid in old if new[sid] == old[sid]]
@@ -490,19 +490,19 @@ def _ce207_teachers(edge_list: dict) -> list[str]:
 
 def test_substitute_candidates_on_the_real_timetable(real: tuple[dict, dict]) -> None:
     """Who of CE207's instance teachers could take Anant Nimkar's SE-Comp A lecture
-    (Thu P4, 605): not he himself, not Sudhir Dhage, who teaches elsewhere then."""
+    (Thu P1, 701): not he himself, not Nataasha Raul, who teaches elsewhere then."""
     edge_list, solution = real
     qualified = _ce207_teachers(edge_list)
     assert qualified == ["fac-anant-nimkar", "fac-nataasha-raul", "fac-prasenjit-bhavathankar",
                          "fac-sudhir-dhage"]
     found = substitute_candidates(edge_list, solution, CE207, qualified)
-    assert [c["faculty_id"] for c in found] == ["fac-prasenjit-bhavathankar", "fac-nataasha-raul"]
+    assert [c["faculty_id"] for c in found] == ["fac-sudhir-dhage"]
     now = score(edge_list, _starts(solution))["score"]
     for c in found:
         assert _fits(edge_list, solution, CE207, c["faculty_id"])
         changed = apply_change(edge_list, _sub(CE207, c["faculty_id"]))
         assert c["score_change"] == score(changed, _starts(solution))["score"] - now
-    busy = validate_solution(apply_change(edge_list, _sub(CE207, "fac-sudhir-dhage")), solution)
+    busy = validate_solution(apply_change(edge_list, _sub(CE207, "fac-nataasha-raul")), solution)
     assert {v.kind for v in busy} == {"FACULTY_CLASH"}
 
 
@@ -510,7 +510,7 @@ def test_substitution_repair_on_the_real_timetable(real: tuple[dict, dict]) -> N
     """A free substitute keeps every placement and is scored with the new teacher; a busy
     one moves only the lecture."""
     edge_list, solution = real
-    free = _sub(CE207, "fac-prasenjit-bhavathankar")
+    free = _sub(CE207, "fac-sudhir-dhage")
     stats: dict = {}
     kept = _check(edge_list, solution, free, stats)
     assert stats["hit"] == [] and kept["displaced"] == []
@@ -518,7 +518,7 @@ def test_substitution_repair_on_the_real_timetable(real: tuple[dict, dict]) -> N
     assert kept["quality"] == score(apply_change(edge_list, free), _starts(solution))
 
     stats = {}
-    moved = _check(edge_list, solution, _sub(CE207, "fac-sudhir-dhage"), stats)
+    moved = _check(edge_list, solution, _sub(CE207, "fac-nataasha-raul"), stats)
     assert stats["hit"] == [CE207] and moved["displaced"] == [CE207]
     old, new = _by_id(solution), _by_id(moved)
     assert all(new[sid] == old[sid] for sid in old if sid != CE207)
@@ -582,7 +582,7 @@ def test_the_accumulated_drag_times_out_though_feasible(
     edge_list = apply_change(edge_list, KURHADE_AFTERNOON)
     substitute = _sub(CE207, "fac-prasenjit-bhavathankar")
     second = _check(edge_list, first, substitute)
-    assert second["displaced"] == []
+    assert second["displaced"] == ["obs-t6-r5-c1-l0"]  # his own SE-Comp D lecture (S14u)
     edge_list = apply_change(edge_list, substitute)
     began = time.perf_counter()
     with pytest.raises(TimeoutError):

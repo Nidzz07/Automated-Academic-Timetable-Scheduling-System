@@ -44,8 +44,9 @@ OFF_DIGESTS = {
 REAL_RUNS = ((0, 5_000), (1, 5_000), (2, 5_000), (0, 20_000))  # (seed, moves)
 
 
-def _solved(edge_list: dict) -> dict | None:
-    result = backtrack_solve(build_conflict_graph(edge_list), edge_list)
+def _solved(edge_list: dict, prefer_sub_rooms: bool = True) -> dict | None:
+    result = backtrack_solve(build_conflict_graph(edge_list), edge_list,
+                             prefer_sub_rooms=prefer_sub_rooms)
     return result.to_solution_v2_dict() if result.solved else None
 
 
@@ -147,22 +148,24 @@ def test_extended_moves_are_off_by_default() -> None:
 def test_option_off_reproduces_the_pre_s12h_results(real: tuple[dict, dict]) -> None:
     """Off, every result and every move count is the one recorded before S12h, on the real
     instance and on the property instances; solution.json itself is re-derived by the slow
-    test in test_real_solve.py."""
-    edge_list, solution = real
+    test in test_real_solve.py. Rooms in id order, as before S12h (prefer_sub_rooms off, S14u)."""
+    edge_list, _ = real
+    solution = _solved(edge_list, prefer_sub_rooms=False)
     runs = []
     for seed, moves in REAL_RUNS:
         stats: dict = {}
         result = improve(edge_list, solution, max_moves=moves, seed=seed, extended_moves=False,
-                         stats=stats)
+                         prefer_sub_rooms=False, stats=stats)
         runs.append(_fingerprint(result, stats))
     instances = []
     for i in range(60):
         instance = generate_instance(random.Random(SEED + i))
-        start = _solved(instance)
+        start = _solved(instance, prefer_sub_rooms=False)
         if start is None:
             continue
         stats = {}
-        result = improve(instance, start, max_moves=300, seed=7, extended_moves=False, stats=stats)
+        result = improve(instance, start, max_moves=300, seed=7, extended_moves=False,
+                         prefer_sub_rooms=False, stats=stats)
         instances.append(_fingerprint(result, stats))
     assert len(instances) == 31
     assert {"real": _digest(runs), "property": _digest(instances)} == OFF_DIGESTS

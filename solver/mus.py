@@ -314,7 +314,7 @@ class _Problem:
         result = backtrack_solve(build_conflict_graph(payload), payload, seed_assignment=starts,
                                  seed_rooms=held or None,
                                  prefer=self.prefer or None, node_limit=node_limit,
-                                 time_limit_s=left)
+                                 time_limit_s=left, prefer_sub_rooms=False)  # id order, as in S14s
         self.checks += 1
         self.nodes += result.nodes_explored
         if result.solved:

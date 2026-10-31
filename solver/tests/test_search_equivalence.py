@@ -120,9 +120,10 @@ def test_lazy_candidates_find_the_same_solutions_as_eager(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     instances = _property_instances() + _presets("small", "medium")
-    lazy = [_outcome(e, break_symmetry=False) for e in instances]
+    # the eager reference tries rooms by id: compare it with the same order (D58 off, S14u)
+    lazy = [_outcome(e, break_symmetry=False, prefer_sub_rooms=False) for e in instances]
     monkeypatch.setattr(bt, "_lab_block_candidates", _eager_lab_block_candidates)
-    eager = [_outcome(e, break_symmetry=False) for e in instances]
+    eager = [_outcome(e, break_symmetry=False, prefer_sub_rooms=False) for e in instances]
     assert [i for i, (a, b) in enumerate(zip(lazy, eager, strict=True)) if a != b] == []
     assert sum(o[0] == "solved" for o in lazy) >= N_INSTANCES // 5
 
@@ -197,12 +198,14 @@ def test_generous_budget_changes_nothing() -> None:
 #: which changes assignments and node counts on purpose: every group but
 #: "infeasible" changed; its pre-solve certificates, like every group's
 #: Welsh-Powell colouring, did not.  The same under any PYTHONHASHSEED.
+#: Re-recorded on 2026-10-31 for S14u (D58: sub-rooms first by default): every
+#: group but "infeasible" changed; every verdict did not.
 _DIGESTS = {
-    "property": "1d65215188448a1e26f878c3c59c4c06ff0c5401c81e122759c9afd618a66343",
-    "property_subclass": "51be4eded54c7ab0a64faacd626557a5d2dde9b16656f9cc21b9161ebe202343",
-    "small": "abacc3ca6cfe7d7b28070fe546dc4cf7d79cd4190ec4e072ec350aaf30a2f7d4",
-    "medium": "1056012f0f46f1add181c504f72dd35d3ce6fe098cb0a3a56695c9120be86829",
-    "large": "2516537caf2da2d123a021cf8fc9549266449195ed7a1dd22d76bb11357bcc97",
+    "property": "c731f3c74992b6ec42e649438e89a1ed99bfc44afdd670ddb59472894fd8d7a0",
+    "property_subclass": "d6eade0823f764d6bd15e4ce9862866e8fb7294a767cc4a0d600b558459fc319",
+    "small": "062cb389161b7601b063a41259d303d63f33aa9aa28ec4913683669e89f311c9",
+    "medium": "b684b223370cf1a42056d6873e1e7a8fba6b52d8283c8b78a2730c6490ddf6ac",
+    "large": "86880b2e856c1368f234b0a3551e262f422f8d4166b4295ff771017f080d3553",
     "infeasible": "5f5a5fa6541f0dc4cd5e63fd644c73b70e82cc3d99f0865dfe1568bb3f0c2b6a",
 }
 

@@ -152,7 +152,7 @@ describe('checkMove refuses what the solver refuses at a fixed item (solver/grap
 });
 
 describe('checkMove on the real instance: every clash at the target and its kind', () => {
-  const NIMKAR_SE_A = 'obs-t0-r1-c3-l0'; // CE207 · SE-Comp A, Anant Nimkar (AVN), room 605
+  const NIMKAR_SE_A = 'obs-t0-r1-c3-l0'; // CE207 · SE-Comp A, Anant Nimkar (AVN), room 701
   const check = (s: EnrichedSession, day: number, period: number) =>
     checkMove(edgeList, labels, sessions, s.sessionId, day, period);
   const free = (s: EnrichedSession) =>
@@ -165,13 +165,13 @@ describe('checkMove on the real instance: every clash at the target and its kind
     expect(free(s)).toBeDefined();
   });
 
-  it('a slot with two clashes names both: a fixed item in the room and the teacher elsewhere', () => {
+  it('a slot with two clashes names both: a fixed item for the class and the teacher elsewhere', () => {
     const s = sessions.find((x) => x.sessionId === NIMKAR_SE_A)!;
-    expect(check(s, 2, 1)).toEqual({
-      heading: 'Clashes for CE207 (SE-Comp A) at Wednesday T1:',
+    expect(check(s, 1, 3)).toEqual({
+      heading: 'Clashes for CE207 (SE-Comp A) at Tuesday T3:',
       clashes: [
-        { kind: 'room', text: 'Room 605 is taken at Wednesday T1 by PCS / A / DN / 605, Deepak Nair (DN).' },
-        { kind: 'teacher', text: 'Anant Nimkar (AVN) teaches CE207 · SE-Comp B then.' },
+        { kind: 'teacher', text: 'Anant Nimkar (AVN) teaches CE207 · SE-Comp B batch C then.' },
+        { kind: 'fixed', text: 'PCS / A / DN / 605, Deepak Nair (DN) holds SE-Comp A then.' },
       ],
     });
   });
@@ -181,14 +181,14 @@ describe('checkMove on the real instance: every clash at the target and its kind
     const other = sessions.find((o) => o.sessionId !== s.sessionId && o.roomId === s.roomId && o.cohortId !== s.cohortId && theory(o))!;
     expect(check(s, other.day, other.wallClockPeriod)?.clashes).toContainEqual({
       kind: 'room',
-      text: `Room 605 is taken at ${DAY_NAMES[other.day]} T${other.wallClockPeriod} by ${other.subjectCode} · ${other.cohortLabel}.`,
+      text: `Room 701 is taken at ${DAY_NAMES[other.day]} T${other.wallClockPeriod} by ${other.subjectCode} · ${other.cohortLabel}.`,
     });
   });
 
   it('cohort: the session already there for the same students', () => {
     const s = sessions.find(theory)!;
     const other = sessions.find(
-      (o) => o.sessionId !== s.sessionId && o.cohortId === s.cohortId && o.facultyId !== s.facultyId && o.roomId !== s.roomId
+      (o) => o.sessionId !== s.sessionId && o.cohortId === s.cohortId && o.facultyId !== s.facultyId
     )!;
     expect(check(s, other.day, other.wallClockPeriod)?.clashes).toContainEqual({
       kind: 'cohort',
@@ -198,11 +198,11 @@ describe('checkMove on the real instance: every clash at the target and its kind
 
   it('fixed item: a lunch pin by its label, beside the room clash at the same slot', () => {
     const s = sessions.find((x) => theory(x) && x.cohortId === 'coh-se-a')!;
-    const inRoom = sessions.find((o) => o.day === 0 && o.periods.includes(5) && o.roomId === s.roomId)!;
-    expect(check(s, 0, 5)).toEqual({
-      heading: `Clashes for ${s.subjectCode} (SE-Comp A) at Monday T5:`,
+    const inRoom = sessions.find((o) => o.day === 2 && o.periods.includes(5) && o.roomId === s.roomId)!;
+    expect(check(s, 2, 5)).toEqual({
+      heading: `Clashes for ${s.subjectCode} (SE-Comp A) at Wednesday T5:`,
       clashes: [
-        { kind: 'room', text: `Room ${s.roomCode} is taken at Monday T5 by ${inRoom.subjectCode} · ${inRoom.cohortLabel}.` },
+        { kind: 'room', text: `Room ${s.roomCode} is taken at Wednesday T5 by ${inRoom.subjectCode} · ${inRoom.cohortLabel}.` },
         { kind: 'fixed', text: 'SE lunch holds SE-Comp A then.' },
       ],
     });

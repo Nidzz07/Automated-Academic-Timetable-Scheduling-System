@@ -2,6 +2,10 @@
 
 2026-10-21 · Dhruv (with Claude Code) · branch `track/solver-repair`
 
+**Since S14u (2026-10-31) both D58 options are the default and `solution.json` scores 26.5.
+The current repair numbers and the demo flows are in § S14u. The sections before it are kept as
+history: they were measured on the earlier `solution.json` (−15.0).**
+
 `solver/repair.py` repairs a solved timetable after one change and tries to move as few sessions
 as possible. These are its results on the committed real timetable
 (`data/instances/even-2025-26/solution.json`, score −15.0, 156 sessions). Reproduce with:
@@ -556,6 +560,109 @@ against the three criteria:
   numbers, these repair tables and the digests that pin today's results all change.
 - **The backend picks up a new default automatically:** it passes neither option today.
 - **The explanation keeps the old order:** `explain()` does not use `prefer_sub_rooms`.
+
+## S14u: the D58 options are the default
+
+2026-10-31 · Dhruv (with Claude Code) · branch `track/solver-d58-default`. Machine: Intel64
+Family 6 Model 183, Python 3.12.10.
+
+The team adopted both options as the default (D58). `solution.json` was regenerated with them
+(26.5; `docs/real-solve-even-2025-26.md` § S14u). `explain()` keeps the id order. Every repair
+below starts from the new `solution.json` and uses the defaults (both options on), seed 0, the
+default budgets and `time_limit_s=60`. As in `solver.benchmarks.real_repair`, no pin is
+protected. Each cell gives the outcome, time, sessions moved (re-roomed only), hard violations
+against the changed edge list, and the score after.
+
+"Before" is the "Options off (today)" column of § S14s: the earlier `solution.json` (−15.0)
+with both options off.
+
+| Change | Before (−15.0, options off) | **After (26.5, defaults)** | Rings after |
+|---|---|---|---|
+| Swapnali Kurhade unavailable all Tuesday | infeasible (presolve), 15.88 s | infeasible (presolve), 48.74 s | 0: 5, 1: 59, all: 156, each infeasible |
+| Lab 603 unavailable all Monday | repaired, 0.81 s, 5 (2), 0, −41.0 | repaired, 0.22 s, 0 (2), 0, 26.5 | 0: 3 solved |
+| CE207 lecture to a free slot (Wed P0, 601) | repaired, 0.22 s, 1 (0), 0, −36.5 | repaired, 0.28 s, 1 (0), 0, 16.0 | 0: 1 solved |
+| CE207 lecture onto SE-Comp A's MDM-I lab (Mon P0, 605) | infeasible (mus), 0.63 s | infeasible (mus), 0.84 s | none (pre-check) |
+| Swapnali Kurhade unavailable Tue P5–P9 | repaired, 2.11 s, 6 (1), 0, −17.5 | repaired, 0.41 s, 1 (0), 0, 15.5 | 0: 1 solved |
+| CE207 lecture onto an occupied slot (Mon P9, 605) | repaired, 0.78 s, 4 (1), 0, −27.0 | repaired, 0.45 s, 2 (1), 0, 24.5 | 0: 3 solved |
+| S14i A: Kurhade unavailable Tue P5–P9 | repaired, 2.12 s, 6 (1), 0, −17.5 | repaired, 0.43 s, 1 (0), 0, 15.5 | 0: 1 solved |
+| S14i B: the lecture to Prasenjit Bhavathankar | repaired, 0.14 s, 0 (0), 0, −17.5 | repaired, 0.63 s, 1 (0), 0, 14.0 | 0: 1 infeasible; 1: 37 solved |
+| S14i C: the lecture dragged to Wed P0, 601 | **timeout**, 60.05 s | **repaired**, 25.28 s, 49 (31), 0, 4.0 | 0: 4 infeasible; 1: 58, 2: 147, all: 156 node budget out; fallback: 156 solved |
+
+Every "after" cell equals § S14s's "Both, from the regenerated timetable" column, apart from
+run time. The S14i sequence is chained: each step starts from the previous result, with its
+change accepted (D52).
+
+- **Every change that finished before still finishes, with the same verdict and method,** and
+  the one timeout (S14i C) is now repaired, by the fallback. That repair moves 49 sessions: an
+  answer where there was none, but not a minimal-change one.
+- **Smaller repairs.** Lab 603 Monday now only re-rooms 2 practicals (5 moved before), the
+  Tuesday-afternoon absence moves 1 session (6 before), the busy drag 2 (4 before).
+- **S14i B moves one session now.** In the new timetable Prasenjit Bhavathankar teaches at the
+  lecture's slot (Thu P1), so his own SE-Comp D CE207 lecture (`obs-t6-r5-c1-l0`) moves.
+- **The all-Tuesday explanation takes 48.7 s** (15.9 s before), within the 60 s limit. A
+  shorter limit cuts it to the unfinished result, still infeasible (S14k).
+- **0 hard violations** in every repaired row.
+
+### Demo flows
+
+From the new `solution.json`, with the defaults. Names come from `display.json`; T-labels are
+the interface's (D60), P the internal period numbers. Times are wall clock, one run each.
+
+**(a) A two-period absence of Swapnali Kurhade at periods she teaches.** The target: repaired in
+under 15 s, moving at most 6 sessions. She teaches at Tue P1, P3, P4, P9; Wed P0, P1, P3, P4,
+P8, P9; Thu P1, P3; Fri P0, P3, P4, P6 (16 periods; Monday is her PhD day, D36). The order was
+fixed before any run, and each try had `time_limit_s=15`, since a longer one cannot qualify:
+
+1. First, the 25 same-day pairs, by day, then first period, then second. **None qualified:**
+   12 are infeasible (pre-solve, `faculty_load`), 9 time out at 15 s, and 4 are repaired only
+   by the fallback, moving 53–60 sessions (closest: Wed P0 + P1, 12.84 s, 53 moved).
+2. Then all 120 pairs of her taught periods, in the same lexicographic (day, period) order.
+   The same-day restriction was mine, not the task's. 64 pairs are refuted by pre-solve
+   (`faculty_load`) in a one-node check, so they cannot qualify. In order, the others before
+   the first qualifying pair are Tue P1 + Tue P9 (15.05 s, 60 moved) and Tue P1 + Wed P0, P3,
+   P4, P8, P9 (each a timeout at 15 s).
+
+**First qualifying pair: Tuesday T1 and Thursday T1** (P1 and P1, 10:00 AM – 11:00 AM).
+Repaired in 2.33 s, **5 sessions moved**, 0 re-roomed only, 0 hard violations, score
+26.5 → 18.5 (rings: 0: 4 node budget out; 1: 49 solved).
+
+| Session | Subject | Cohort | Teacher | Before | After |
+|---|---|---|---|---|---|
+| `obs-t4-r4-c4-l0` | CE206 practical | SE-Comp C batch C | Swapnali Kurhade | Thu T1 (P1) 507 | Thu T3 (P3) 507 |
+| `obs-t4-r4-c4-l1` | CE207 practical | SE-Comp C batch D | Nataasha Raul | Thu T1 (P1) 702-A | Thu T3 (P3) 702-A |
+| `obs-t4-r4-c4-l2` | CE208 practical | SE-Comp C batch A | Abhijeet Salunke | Thu T1 (P1) 702-C | Thu T3 (P3) 702-C |
+| `obs-t4-r5-c1-l0` | CE207 | SE-Comp C | Prasenjit Bhavathankar | Tue T0 (P0) 601 | Tue T1 (P1) 601 |
+| `obs-t4-r7-c5-l0` | CE206 | SE-Comp C | Swapnali Kurhade | Tue T1 (P1) 601 | Tue T0 (P0) 601 |
+
+The SE-Comp C lab block moves one start later, keeping its rooms. Her Tuesday lecture swaps
+with Prasenjit Bhavathankar's.
+
+**(b) A lecture dragged onto SE-Comp A's MDM-I lab block: still impossible.** The CE207 lecture
+`obs-t0-r1-c3-l0` (Anant Nimkar, SE-Comp A) to Monday T0 (P0, 9:00 AM) in 605. Infeasible,
+answered by the pre-check before any search, in 0.76 s. Diagnosis `mus`, proven minimal:
+{`pin.238` = "MDM - I LABs, Mon P0–P1", the drag}. Suggested relaxation RELAX_PINNED_BLOCK:
+free SE-Comp A from that pin at Mon P0, **verified `restored`** (160 ms).
+
+**(c) A substitute for one of her lectures.** Her lectures by id; the first one with a
+qualified free candidate is the first one: CE206 for SE-Comp C (`obs-t4-r1-c2-l0`), Friday T0
+(P0, 9:00 AM) in 601. `qualifications.json` lists 4 teachers for CE206 lectures: Kurhade
+herself, Aishwarya Nalawade, Amey Ganesh Nile and Kailas Devadkar. The list was filtered to the
+instance's faculty, as the backend does. **Two fit: Amey Ganesh Nile (score change −1.5) and
+Aishwarya Nalawade (−2.0)**; Kailas Devadkar does not. With Amey Ganesh Nile, the first listed, the repair takes
+0.18 s: nothing moves, 0 hard violations, 26.5 → 25.0. He already teaches 18 h, above the
+16 h limit (S-LOAD16), so the interface shows the over-limit warning; the coordinator decides
+(D53).
+
+**(d) A drag of one lecture to a free slot.** The CE207 lecture `obs-t0-r1-c3-l0` (Anant
+Nimkar, SE-Comp A), now Thursday T1 (P1) in 701, to Wednesday T0 (P0, 9:00 AM) in 601. Nothing
+was there: no SE-Comp A session, no Anant Nimkar session, nothing in 601, and no pin for them.
+Repaired in 0.24 s, **1 session moved** (the lecture), 0 hard violations, 26.5 → 16.0 (ring 0
+solved).
+
+**Found while doing (a): Kurhade's week is nearly full.** 64 of the 120 two-period absences at
+her taught periods are infeasible: she teaches 16 periods and has few free slots left after
+D36 and the pins. Most of the others need the fallback or time out within 15 s. A demo absence
+should use the pair above, not an arbitrary one.
 
 ## Limits
 

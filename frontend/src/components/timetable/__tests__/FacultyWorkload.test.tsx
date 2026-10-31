@@ -24,12 +24,13 @@ beforeAll(async () => {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
-const LECTURE = 'obs-t0-r1-c3-l0'; // CE207 lecture of SE-Comp A, Anant Nimkar, Thursday P4 in 605
+const LECTURE = 'obs-t0-r1-c3-l0'; // CE207 lecture of SE-Comp A, Anant Nimkar, Thursday P1 in 701
 const NIMKAR = 'fac-anant-nimkar';
 const BHAVATHANKAR = 'fac-prasenjit-bhavathankar';
+const DHAGE = 'fac-sudhir-dhage'; // the qualified CE207 teacher free at Thursday P1
 const KURHADE = 'fac-swapnali-kurhade';
-const KURHADE_LECTURE = 'obs-t6-r1-c2-l0'; // CE206 lecture of SE-Comp D, Swapnali Kurhade, Tuesday P9 in 609
-const substitution = { kind: 'substitute_faculty', session_id: LECTURE, faculty_id: BHAVATHANKAR };
+const KURHADE_LECTURE = 'obs-t6-r7-c5-l0'; // CE206 lecture of SE-Comp D, Swapnali Kurhade, Tuesday P9 in 609
+const substitution = { kind: 'substitute_faculty', session_id: LECTURE, faculty_id: DHAGE };
 const absence = { kind: 'faculty_unavailable', faculty_id: KURHADE, slots: [{ day: 1, period: 9 }] };
 
 /** The committed edge list with the changes applied, as solver.repair.apply_change builds it. */
@@ -45,10 +46,10 @@ function withChanges(changes: Array<typeof substitution | typeof absence>): Edge
   return changed;
 }
 
-/** The official solution after the absence was accepted: Kurhade's Tuesday P9 lecture moved to Thursday P8. */
+/** The official solution after the absence was accepted: Kurhade's Tuesday P9 lecture moved to Tuesday P0. */
 const repairedForAbsence = () => ({
   ...solution,
-  assignment: solution.assignment.map((a) => (a.session_id === KURHADE_LECTURE ? { ...a, day: 3, period: 8 } : a)),
+  assignment: solution.assignment.map((a) => (a.session_id === KURHADE_LECTURE ? { ...a, day: 1, period: 0 } : a)),
   displaced: [KURHADE_LECTURE],
 });
 
@@ -120,11 +121,11 @@ describe('Faculty workload on the current edge list and the official solution (S
     await openReal('faculty', (b) => {
       b.current = withChanges([substitution]);
     });
-    // committed: both teach 6T + 8P = 14; the CE207 lecture (1 theory hour) moved from Nimkar to Bhavathankar
+    // committed: Nimkar 6T + 8P = 14, Dhage 0T + 8P + 3 fixed = 11; the CE207 lecture (1 theory hour) moved from Nimkar to Dhage
     pickFaculty(NIMKAR);
     await waitFor(() => expect(load()).toHaveTextContent('5T + 8P = 13 h'));
-    pickFaculty(BHAVATHANKAR);
-    expect(load()).toHaveTextContent('7T + 8P = 15 h');
+    pickFaculty(DHAGE);
+    expect(load()).toHaveTextContent('1T + 8P + 3 fixed = 12 h');
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(`/api/instances/${REAL_INSTANCE}/edge-list/current`, expect.anything());
   });
 
@@ -136,37 +137,37 @@ describe('Faculty workload on the current edge list and the official solution (S
     pickFaculty(KURHADE);
     await waitFor(() => expect(load()).toHaveTextContent('6T + 10P = 16 h'));
     // the lecture is where the official timetable now has it
-    expect(within(screen.getByTestId('grid-cell-3-8')).getByTestId(`session-cell-${KURHADE_LECTURE}`)).toBeInTheDocument();
+    expect(within(screen.getByTestId('grid-cell-1-0')).getByTestId(`session-cell-${KURHADE_LECTURE}`)).toBeInTheDocument();
     expect(within(screen.getByTestId('grid-cell-1-9')).queryByTestId(`session-cell-${KURHADE_LECTURE}`)).not.toBeInTheDocument();
   });
 
   it('a substitution proposal shows both teachers’ weekly load before → after; Accept makes the substitute engaged', async () => {
     const backend = await openReal('coordinator', (b) => {
-      b.substitutes = { session_id: LECTURE, faculty_id: NIMKAR, candidates: [{ faculty_id: BHAVATHANKAR, score_change: 0 }], left_out: [] };
+      b.substitutes = { session_id: LECTURE, faculty_id: NIMKAR, candidates: [{ faculty_id: DHAGE, score_change: -0.5 }], left_out: [] };
     });
     fireEvent.change(screen.getByLabelText('Filter timetable by division'), { target: { value: 'coh-se-a' } });
     fireEvent.click(screen.getByTestId(`session-cell-${LECTURE}`));
     fireEvent.click(screen.getByTestId('find-substitute'));
     backend.job = { id: 'rep-1', instance_id: REAL_INSTANCE, kind: 'repair', time_limit_s: 300, base: 'committed', status: 'solved', change: substitution, solution: { ...solution, displaced: [] } };
     backend.jobEdgeList = withChanges([substitution]);
-    fireEvent.click(await screen.findByTestId(`substitute-${BHAVATHANKAR}`));
+    fireEvent.click(await screen.findByTestId(`substitute-${DHAGE}`));
 
     const loads = await screen.findByTestId('substitution-loads');
     expect(within(loads).getByTestId(`substitution-load-${NIMKAR}`)).toHaveTextContent('Anant Nimkar (AVN): 6T + 8P = 14 → 5T + 8P = 13 h');
-    expect(within(loads).getByTestId(`substitution-load-${BHAVATHANKAR}`)).toHaveTextContent(
-      'Prasenjit Bhavathankar (PBB): 6T + 8P = 14 → 7T + 8P = 15 h'
+    expect(within(loads).getByTestId(`substitution-load-${DHAGE}`)).toHaveTextContent(
+      'Sudhir Dhage (SND): 0T + 8P + 3 fixed = 11 → 1T + 8P + 3 fixed = 12 h'
     );
     expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/jobs/rep-1/edge-list', expect.anything());
 
     // the free/engaged view reads the official timetable only, never the proposal
-    atSlot(3, 4);
-    const lecture = `CE207 · SE-Comp A · ${display.rooms['room-605']}`;
+    atSlot(3, 1);
+    const lecture = `CE207 · SE-Comp A · ${display.rooms['room-701']}`;
     expect(engaged(NIMKAR)).toHaveTextContent(lecture);
-    expect(engaged(BHAVATHANKAR)?.textContent ?? '').not.toContain(lecture);
+    expect(engaged(DHAGE)?.textContent ?? '').not.toContain(lecture);
 
     backend.current = withChanges([substitution]);
     fireEvent.click(screen.getByTestId('accept-repair'));
-    await waitFor(() => expect(engaged(BHAVATHANKAR)).toHaveTextContent(lecture));
+    await waitFor(() => expect(engaged(DHAGE)).toHaveTextContent(lecture));
     expect(engaged(NIMKAR)?.textContent ?? '').not.toContain(lecture);
     expect(screen.queryByTestId('substitution-loads')).not.toBeInTheDocument();
   });
@@ -195,7 +196,7 @@ describe('Free and engaged faculty at a slot (S14m)', () => {
     });
     atSlot(1, 9);
     expect(engaged(KURHADE)).toHaveTextContent('Swapnali Kurhade (SK): unavailable');
-    atSlot(3, 8);
+    atSlot(1, 0);
     expect(engaged(KURHADE)).toHaveTextContent(`Swapnali Kurhade (SK): CE206 · ${display.cohorts['coh-se-d'].name} · 609`);
   });
 

@@ -229,7 +229,7 @@ def improve(
     seed: int = SEED,
     time_limit_s: float | None = None,
     extended_moves: bool = False,
-    prefer_sub_rooms: bool = False,
+    prefer_sub_rooms: bool = True,
     stats: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """A ``solution.v2`` timetable at least as good as *solution*, still valid.
@@ -255,7 +255,7 @@ def improve(
         moves alone.
     prefer_sub_rooms:
         A moved session tries a split lab's sub-rooms before the whole lab
-        (D58, S14s); off by default, which keeps every result as it was.
+        (D58, S14s); on by default since S14u, ``False`` for the pre-S14u order.
     stats:
         If given, filled with move counts: ``proposed``, ``infeasible``,
         ``accepted`` and ``improved`` (new best), the last two also per move

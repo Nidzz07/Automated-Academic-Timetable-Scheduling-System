@@ -23,7 +23,7 @@ from solver.repair import apply_change, repair, substitute_candidates
 from solver.validate import validate_solution
 
 FILES = ("edge_list.json", "solution.json", "display.json", "qualifications.json")
-LECTURE = "obs-t0-r1-c3-l0"  # CE207 lecture of SE-Comp A, Anant Nimkar, Thu P4, 605
+LECTURE = "obs-t0-r1-c3-l0"  # CE207 lecture of SE-Comp A, Anant Nimkar, Thu P1, 701
 PRACTICAL = "obs-t0-r4-c1-l0"  # CE206 practical of SE-Comp A batch A, Amey Ganesh Nile
 # S14e's drag onto SE lunch, Wed P5 (display.json pins[5])
 LUNCH_DRAG = {"kind": "move_session", "session_id": LECTURE, "day": 2, "period": 5,
@@ -107,19 +107,22 @@ class TestSubstitutes:
         body = self.get(client, LECTURE).json()
         assert body["faculty_id"] == "fac-anant-nimkar"
         assert body["candidates"] == [
-            {"faculty_id": "fac-prasenjit-bhavathankar", "score_change": 0.0},
-            {"faculty_id": "fac-nataasha-raul", "score_change": -2.0},
+            {"faculty_id": "fac-sudhir-dhage", "score_change": -0.5},
         ]
-        [dhage] = body["left_out"]
-        assert (dhage["faculty_id"], dhage["reasons"]) == ("fac-sudhir-dhage", ["busy"])
-        assert [(v["kind"], v["session_ids"]) for v in dhage["violations"]] == [
-            ("FACULTY_CLASH", [LECTURE, "obs-t6-r4-c4-l1"])]
+        raul, bhavathankar = body["left_out"]
+        assert (raul["faculty_id"], raul["reasons"]) == ("fac-nataasha-raul", ["busy"])
+        assert [(v["kind"], v["session_ids"]) for v in raul["violations"]] == [
+            ("FACULTY_CLASH", [LECTURE, "obs-t4-r4-c4-l1"])]
+        assert (bhavathankar["faculty_id"], bhavathankar["reasons"]) == (
+            "fac-prasenjit-bhavathankar", ["busy"])
+        assert [(v["kind"], v["session_ids"]) for v in bhavathankar["violations"]] == [
+            ("FACULTY_CLASH", [LECTURE, "obs-t6-r5-c1-l0"])]
 
     def test_practical(self, client: TestClient) -> None:
         body = self.get(client, PRACTICAL).json()
         assert body["faculty_id"] == "fac-amey-ganesh-nile"
         assert body["candidates"] == [
-            {"faculty_id": "fac-aishwarya-nalawade", "score_change": -1.0}]
+            {"faculty_id": "fac-aishwarya-nalawade", "score_change": -2.0}]
         assert [(o["faculty_id"], o["reasons"]) for o in body["left_out"]] == [
             ("fac-kailas-devadkar", ["busy"]), ("fac-swapnali-kurhade", ["unavailable"])]
 
@@ -134,7 +137,7 @@ class TestSubstitutes:
         """Listed for CE207 practicals only, Nataasha Raul is no lecture substitute."""
         body = self.get(client, LECTURE, "relabelled").json()
         listed = [c["faculty_id"] for c in body["candidates"] + body["left_out"]]
-        assert listed == ["fac-prasenjit-bhavathankar", "fac-sudhir-dhage"]
+        assert listed == ["fac-sudhir-dhage", "fac-prasenjit-bhavathankar"]
 
     def test_no_qualifications_no_substitutes(self, client: TestClient) -> None:
         body = self.get(client, LECTURE, "bare").json()
@@ -180,7 +183,8 @@ class TestSubstitution:
             "solved", change, [])
         assert without_runtime(first["solution"]) == without_runtime(
             repair(edge_list, committed, change, time_limit_s=60, protected=lunch))
-        assert first["solution"]["displaced"] == []  # he is free there: nothing moves
+        # busy there: his own SE-Comp D CE207 lecture moves, the substituted one stays
+        assert first["solution"]["displaced"] == ["obs-t6-r5-c1-l0"]
         assert accept(client, first["id"], "coordinator", "substituter").status_code == 200
         assert [c["change"] for c in client.get("/instances/sub-accumulates/changes").json()] == [
             change]
