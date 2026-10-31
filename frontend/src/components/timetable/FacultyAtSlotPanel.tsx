@@ -67,7 +67,7 @@ export const FacultyAtSlotPanel: React.FC<FacultyAtSlotPanelProps> = ({ edgeList
       <CardContent className="space-y-3 pt-0">
         {!solved && (
           <p data-testid="faculty-at-slot-unsolved">
-            No official timetable yet: only pinned occupancy and unavailability are counted.
+            No official timetable yet: only fixed items and unavailability are counted.
           </p>
         )}
         <div className="grid gap-4 sm:grid-cols-2">

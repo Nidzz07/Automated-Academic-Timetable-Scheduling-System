@@ -2,11 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { QualityScoreCard } from '../QualityScoreCard';
 import { FacultyWorkloadCard } from '../FacultyWorkloadCard';
-import {
-  buildEnrichedSessions,
-  getExampleEdgeList,
-  getSolvedSolutionFixture,
-} from '@/adapters/timetable';
 import { isSolvedSolution, toQualityView } from '@/adapters/solution';
 import { parseSolution } from '@/api/contractValidation';
 import solvedV2Fixture from '@contracts/examples/solution_v2.solved.example.json';
@@ -94,8 +89,7 @@ describe('Quality flags panel (D34: solver output, displayed as given)', () => {
 });
 
 describe('Faculty load status (S-LOAD16 only)', () => {
-  const sessions = buildEnrichedSessions(getSolvedSolutionFixture().assignment, getExampleEdgeList());
-  const agn = sessions.filter((s) => s.facultyInitials === 'AGN');
+  const load = { theory: 2, practical: 4, scheduled: 6, fixed: 0, total: 6 };
 
   it('shows the solver’s explanation when S-LOAD16 was evaluated', () => {
     const rule = {
@@ -106,19 +100,19 @@ describe('Faculty load status (S-LOAD16 only)', () => {
       penalty: 0,
       explanation: 'Explanation as the solver wrote it.',
     };
-    render(<FacultyWorkloadCard facultyInitials="AGN" facultySessions={agn} loadRule={rule} />);
+    render(<FacultyWorkloadCard facultyName="A. G. Nikam" facultyInitials="AGN" load={load} loadRule={rule} />);
     expect(screen.getByTestId('load-status')).toHaveTextContent('Explanation as the solver wrote it.');
   });
 
   it('shows "not evaluated", or that the solver reported nothing, otherwise', () => {
     const rule = { rule_id: 'S-LOAD16', status: 'not_evaluated' as const, weight: 0, reason: 'r' };
     const { unmount } = render(
-      <FacultyWorkloadCard facultyInitials="AGN" facultySessions={agn} loadRule={rule} />
+      <FacultyWorkloadCard facultyName="A. G. Nikam" facultyInitials="AGN" load={load} loadRule={rule} />
     );
     expect(screen.getByTestId('load-status')).toHaveTextContent('not evaluated');
     unmount();
 
-    render(<FacultyWorkloadCard facultyInitials="AGN" facultySessions={agn} />);
+    render(<FacultyWorkloadCard facultyName="A. G. Nikam" facultyInitials="AGN" load={load} />);
     expect(screen.getByTestId('load-status')).toHaveTextContent('not reported by the solver');
   });
 });

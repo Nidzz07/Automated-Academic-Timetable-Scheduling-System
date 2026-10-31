@@ -123,7 +123,8 @@ describe('Login (http mode)', () => {
     await logIn('administrator');
     await screen.findByTestId('timetable-grid');
     state.refuseAll = true;
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    // the real instance is already open: the next request is the audit log's at another limit
+    fireEvent.change(screen.getByLabelText('Audit entries to show'), { target: { value: '25' } });
     expect(await screen.findByTestId('session-expired')).toHaveTextContent('Session expired, please log in again');
     expect(sessionStorage.getItem('chronos.session')).toBeNull();
   });
@@ -164,7 +165,7 @@ describe('Solve job across instance switches', () => {
     fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: 'example' } });
     await waitFor(() => expect(screen.queryByTestId('solve-panel')).not.toBeInTheDocument());
     state.job = { ...state.job, phase: 'improve' };
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    fireEvent.change(await screen.findByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
 
     await waitFor(() => expect(screen.getByTestId('solve-status')).toHaveAttribute('data-phase', 'improve'));
     expect(screen.getByTestId('solve-button')).toBeDisabled();

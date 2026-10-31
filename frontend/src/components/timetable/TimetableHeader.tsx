@@ -130,7 +130,7 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             </Button>
           )}
 
-          {/* Demo controls (the bundled example only) */}
+          {/* Test controls (static mode's bundled example only: App passes the handlers there and nowhere else) */}
           {caps.showSimulationControls && onToggleOutcome && (
             <Button
               variant="outline"
@@ -176,7 +176,7 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         <span className="font-semibold">Key:</span>
         <Key swatch="border-emerald-300 border-l-emerald-800 bg-emerald-50" name="Lab block" note="batches in parallel" />
         <Key swatch="border-amber-300 border-l-amber-700 bg-amber-50" name="Combined lecture" note="two or more divisions together" />
-        <Key swatch="border-slate-400 border-l-slate-700 bg-slate-100" name="Pinned block" note="cannot be moved" />
+        <Key swatch="border-slate-400 border-l-slate-700 bg-slate-100" name="Fixed item" note="cannot be moved" />
         <Key
           swatch="border-blue-200 border-l-blue-800 bg-blue-50"
           name="Lecture"

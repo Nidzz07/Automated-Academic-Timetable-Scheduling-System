@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ApiError, JobStatus } from '@/api/chronosApi';
+import { ApiError, JobStatus, RepairChange } from '@/api/chronosApi';
 import { useRepair } from '@/api/queries';
 import {
   RepairChangeView,
@@ -25,7 +25,7 @@ import { changeText } from './AcceptedChangesPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatSeconds, periodLabel } from '@/lib/format';
-import { loadLimitHours } from '@/lib/wording';
+import { loadLimitHours, repairSummary } from '@/lib/wording';
 import { OverLimitWarning } from './OverLimitWarning';
 import { Check, Wrench, X } from 'lucide-react';
 
@@ -52,6 +52,8 @@ interface RepairPanelProps {
    * repair waits for it. The backend does not say what else holds its workers.
    */
   waitingFor?: string | null;
+  /** Start a repair for this change */
+  onStart: (change: RepairChange) => void;
   /** Forget the job: the grid shows the official timetable again */
   onDiscard: () => void;
 }
@@ -63,7 +65,8 @@ const score = (s: SolvedSolution) => toQualityView(s).score;
  * Repair the official timetable (S14c): mark a faculty member or a room unavailable at some
  * slots, or (from the grid) move a session, then poll the job. A solved result is shown with
  * every changed session and the score change, and becomes official only when accepted (D49).
- * A timeout is never shown as infeasible (D33).
+ * A timeout is never shown as infeasible (D33). Every ending can be left: a proposal, an
+ * impossible change, a timeout or a failure by Discard, which returns the panel to its start.
  */
 export const RepairPanel: React.FC<RepairPanelProps> = ({
   repair,
@@ -73,6 +76,7 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
   labels,
   workload,
   waitingFor,
+  onStart,
   onDiscard,
 }) => {
   const [kind, setKind] = useState<'faculty' | 'room'>('faculty');
@@ -91,16 +95,28 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
   const { start, job, accept } = repair;
   const data = job.data;
   const failure = start.error ?? job.error;
-  const status: JobStatus | null = failure ? 'error' : data?.status ?? start.data?.status ?? null;
+  // the POST's answer stands in only until the job it started is read; with no job it says nothing
+  const status: JobStatus | null = failure ? 'error' : data?.status ?? (jobId !== null ? start.data?.status : null) ?? null;
   const pending = data?.status === 'solved' && !data.accepted_at;
-  const busy = start.isPending || (jobId !== null && job.isPending) || status === 'queued' || status === 'running';
+  const busy = start.isPending || (jobId !== null && job.isPending && !failure) || status === 'queued' || status === 'running';
+  const ended = status === 'infeasible' || status === 'timeout' || status === 'error';
+
+  const resetForm = () => {
+    setKind('faculty');
+    setTarget('');
+    setSlots([]);
+  };
+  const discard = () => {
+    resetForm();
+    onDiscard();
+  };
 
   const markUnavailable = () => {
     const picked = slots.map((key) => {
       const [day, period] = key.split('-').map(Number);
       return { day, period };
     });
-    start.mutate(
+    onStart(
       kind === 'faculty'
         ? { kind: 'faculty_unavailable', faculty_id: target, slots: picked }
         : { kind: 'room_unavailable', room_id: target, slots: picked }
@@ -116,10 +132,15 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
   const loads = useMemo(() => {
     if (!substitution || !workload) return [];
     const from = workload.before.find((s) => s.sessionId === substitution.session_id)?.facultyId;
-    const load = (sessions: EnrichedSession[], id: string) => facultyLoad(sessions.filter((s) => s.facultyId === id));
     return [...new Set([from ?? '', substitution.faculty_id])]
       .filter((id) => id !== '')
-      .map((id) => ({ id, before: load(workload.before, id), after: load(workload.after, id) }));
+      .map((id) => ({ id, before: facultyLoad(id, workload.before, edgeList), after: facultyLoad(id, workload.after, edgeList) }));
+  }, [substitution, workload, edgeList]);
+  // A substitution changes the session's teacher even when nothing moves
+  const teacherChange = useMemo(() => {
+    if (!substitution || !workload) return null;
+    const from = workload.before.find((s) => s.sessionId === substitution.session_id);
+    return from ? { what: `${from.subjectCode} · ${from.cohortLabel}`, from: from.facultyId, to: substitution.faculty_id } : null;
   }, [substitution, workload]);
   // the weekly limit as the solver states it in the proposal's S-LOAD16 (else the base's)
   const limit = proposal
@@ -262,10 +283,16 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
                     </ul>
                   </div>
                 )}
-                <p className="font-semibold">
-                  {proposal.changes.length} session{proposal.changes.length === 1 ? '' : 's'} changed
+                <p data-testid="repair-summary" className="font-semibold">
+                  {repairSummary(proposal.changes.length, teacherChange ? 1 : 0)}
                 </p>
                 <ul className="space-y-1">
+                  {teacherChange && (
+                    <li data-testid="repair-teacher-change">
+                      <span className="font-medium">{teacherChange.what}</span>: {facultyText(labels, teacherChange.from)} →{' '}
+                      {facultyText(labels, teacherChange.to)}
+                    </li>
+                  )}
                   {proposal.changes.map((c) => (
                     <li
                       key={c.sessionId}
@@ -293,13 +320,13 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
                 size="sm"
                 className="gap-1"
                 disabled={!proposal || accept.isPending || !!accept.error}
-                onClick={() => accept.mutate(data.id)}
+                onClick={() => accept.mutate(data.id, { onSuccess: resetForm })}
                 data-testid="accept-repair"
               >
                 <Check className="h-3.5 w-3.5" />
                 Accept
               </Button>
-              <Button variant="outline" size="sm" className="gap-1" onClick={onDiscard} data-testid="discard-repair">
+              <Button variant="outline" size="sm" className="gap-1" onClick={discard} data-testid="discard-repair">
                 <X className="h-3.5 w-3.5" />
                 Discard
               </Button>
@@ -307,8 +334,15 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
           </div>
         )}
 
-        {data?.status === 'infeasible' && data.solution && isInfeasibleSolution(data.solution) && (
-          <InfeasibilityDiagnosisPanel infeasibleSolution={data.solution} edgeList={edgeList} labels={labels} />
+        {data?.status === 'infeasible' && !failure && data.solution && isInfeasibleSolution(data.solution) && (
+          <InfeasibilityDiagnosisPanel infeasibleSolution={data.solution} edgeList={edgeList} labels={labels} forRepair />
+        )}
+
+        {ended && (
+          <Button variant="outline" size="sm" className="gap-1" onClick={discard} data-testid="discard-repair">
+            <X className="h-3.5 w-3.5" />
+            Discard
+          </Button>
         )}
       </CardContent>
     </Card>

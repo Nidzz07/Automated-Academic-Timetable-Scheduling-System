@@ -1,12 +1,27 @@
 import React from 'react';
 import { InfeasibleSolution, toDiagnosisView } from '@/adapters/solution';
-import { EdgeList, Labels, entityName, EXAMPLE_LABELS, pinName, slotText, slotsText } from '@/adapters/timetable';
+import { EdgeList, Labels, diagnosisName, entityName, EXAMPLE_LABELS, pinName, slotText, slotsText } from '@/adapters/timetable';
 import { Button } from '@/components/ui/button';
 import { formatDuration } from '@/lib/format';
-import { constraintKindLabel, readableSolverText, relaxationActionLabel, verificationLabel } from '@/lib/wording';
+import {
+  REPAIR_NOT_APPLIED,
+  constraintKindLabel,
+  diagnosisHeadings,
+  diagnosisMethodLabel,
+  readableDiagnosisText,
+  readableSolverText,
+  relaxationActionLabel,
+  verificationLabel,
+} from '@/lib/wording';
 import { AlertTriangle, Lightbulb, ArrowRight } from 'lucide-react';
 
 type Slot = { day: number; period: number };
+
+/** How many of a constraint's entities "Involves" lists by name before "and N more". */
+const LISTED_ENTITIES = 8;
+
+/** The contract's codes and ids: small secondary text beside the words, never the main text. */
+const CODE_CLASS = 'font-mono text-[11px] font-normal text-muted-foreground';
 
 /** The ids a relaxation's params name (contracts/solution_v2 params_*), by name; its pin (D51), if any, by unique_label. */
 function relaxationTargets(params: Record<string, unknown>, name: (id: string) => string, pin: string | null): string[] {
@@ -14,7 +29,7 @@ function relaxationTargets(params: Record<string, unknown>, name: (id: string) =
     typeof params[k] === 'string' ? [name(params[k] as string)] : []
   );
   const slots = [...((params.slots as Slot[] | undefined) ?? []), ...(params.slot ? [params.slot as Slot] : [])];
-  return [...ids, ...(pin ? [`pin ${pin}`] : []), ...(slots.length ? [slotsText(slots)] : [])];
+  return [...ids, ...(pin ? [`fixed item ${pin}`] : []), ...(slots.length ? [slotsText(slots)] : [])];
 }
 
 interface InfeasibilityDiagnosisPanelProps {
@@ -22,31 +37,35 @@ interface InfeasibilityDiagnosisPanelProps {
   /** The edge list diagnosed: ids are then shown by name, pins by their unique_label (D41) */
   edgeList?: EdgeList;
   labels?: Labels;
+  /** The diagnosis of a repair: the change is what is impossible, and the official timetable stays */
+  forRepair?: boolean;
   onApplyRelaxation?: (constraintId: string) => void;
   onSwitchToSolved?: () => void;
 }
 
 /**
- * Why no timetable exists: the solver's diagnosis in plain words, each constraint's kind by its
- * meaning with the contract's code beside it. The solver's own sentences are shown as written,
- * with period labels and times put in the UI's form (displayText).
+ * Why no timetable exists: the solver's diagnosis in plain words, every id by name (D51), each
+ * constraint's kind by its meaning with the contract's code as small text beside it.
  */
 export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelProps> = ({
   infeasibleSolution,
   edgeList,
   labels = EXAMPLE_LABELS,
+  forRepair = false,
   onApplyRelaxation,
   onSwitchToSolved,
 }) => {
   const name = (id: string) => (edgeList ? entityName(id, edgeList, labels) : id);
-  // the solver's sentences name cohorts and faculty by id: shown by name where the edge list knows them
-  const text = (t: string) => readableSolverText(t, edgeList ? (id) => (name(id) === id ? null : name(id)) : undefined);
+  // the solver's sentences name everything by id: by name where the edge list knows them
+  const text = (t: string) =>
+    edgeList ? readableDiagnosisText(t, (id) => diagnosisName(id, edgeList, labels)) : readableSolverText(t);
   // a `pin.<i>` constraint id is pinned_occupancy[i], named by display.json pins[i] (D51)
   const pin = (constraintId: string) => (edgeList ? pinName(constraintId, edgeList, labels) : null);
   const { metadata } = infeasibleSolution;
   const diagnosis = toDiagnosisView(infeasibleSolution);
   const { minimal_conflicting_set, suggested_relaxation, partial_placement, unplaced_session_ids } = diagnosis;
-  const method = diagnosis.methodLabel;
+  const method = diagnosisMethodLabel(diagnosis.method);
+  const headings = diagnosisHeadings(forRepair);
 
   return (
     <section data-testid="infeasibility-panel" className="space-y-4 rounded-lg border-2 border-destructive/60 bg-card p-4 sm:p-6">
@@ -54,9 +73,9 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
         <div className="flex items-start gap-3">
           <AlertTriangle aria-hidden="true" className="mt-1 h-6 w-6 shrink-0 text-destructive" />
           <div>
-            <h2 className="text-xl font-semibold">No timetable is possible</h2>
+            <h2 className="text-xl font-semibold">{headings.title}</h2>
             <p>{method.text}</p>
-            <p className="text-xs">
+            <p className={CODE_CLASS}>
               Found by: <span data-testid="diagnosis-method">{method.badge}</span>
             </p>
           </div>
@@ -74,34 +93,40 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
         <div>
           <dt className="font-semibold">Method</dt>
-          <dd className="truncate" title={metadata.algorithm}>
-            {metadata.algorithm}
-          </dd>
+          <dd className={`break-words ${CODE_CLASS}`}>{metadata.algorithm}</dd>
         </div>
         <div>
           <dt className="font-semibold">Time taken</dt>
           <dd>{formatDuration(metadata.runtime_ms)}</dd>
         </div>
-        <div>
-          <dt className="font-semibold">Sessions placed before it stopped</dt>
-          <dd>
-            {metadata.sessions_assigned} / {metadata.sessions_total} sessions placed
-          </dd>
-        </div>
+        {forRepair ? (
+          <div data-testid="repair-not-applied">
+            <dt className="font-semibold">Official timetable</dt>
+            <dd>Unchanged. {REPAIR_NOT_APPLIED}</dd>
+          </div>
+        ) : (
+          <div>
+            <dt className="font-semibold">Sessions placed before it stopped</dt>
+            <dd>
+              {metadata.sessions_assigned} / {metadata.sessions_total} sessions placed
+            </dd>
+          </div>
+        )}
         <div>
           <dt className="font-semibold">Search backtracks</dt>
           <dd>{metadata.backtracks?.toLocaleString()} backtracks</dd>
         </div>
       </dl>
 
-      {/* Minimal conflicting subset (MUS); empty when the method is search exhaustion */}
+      {/* The conflicting rules; empty when the method is search exhaustion */}
       {minimal_conflicting_set.length > 0 && (
         <section className="space-y-2">
           <div>
-            <h3 className="text-lg font-semibold">
-              Why: these {minimal_conflicting_set.length} rules cannot all hold
-            </h3>
-            <p className="text-xs">Drop any one of them and a timetable exists.</p>
+            <h3 className="text-lg font-semibold">{headings.why}</h3>
+            <p className="text-xs">
+              These {minimal_conflicting_set.length} rules cannot all hold.
+              {diagnosis.method !== 'presolve' && ' Drop any one of them and a timetable exists.'}
+            </p>
           </div>
           <ul data-testid="minimal-conflicting-set" className="space-y-2">
             {minimal_conflicting_set.map((constraint) => (
@@ -111,8 +136,8 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                 className="space-y-1 rounded-md border border-border p-3"
               >
                 <p data-testid={`constraint-kind-${constraint.kind}`} className="font-semibold">
-                  {constraintKindLabel(constraint.kind)}{' '}
-                  <span className="font-mono text-xs font-normal">
+                  {constraint.constraint_id === 'change' ? 'The change you asked for' : constraintKindLabel(constraint.kind)}
+                  <span className={`block ${CODE_CLASS}`}>
                     {constraint.kind} · {constraint.constraint_id}
                   </span>
                 </p>
@@ -120,7 +145,7 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
 
                 {pin(constraint.constraint_id) && (
                   <p data-testid={`constraint-pins-${constraint.constraint_id}`} className="text-xs">
-                    Pinned: {pin(constraint.constraint_id)}
+                    Fixed item: {pin(constraint.constraint_id)}
                   </p>
                 )}
 
@@ -132,12 +157,13 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
 
                 <p className="text-xs">
                   Involves:{' '}
-                  {constraint.entity_ids.map((id, i) => (
+                  {constraint.entity_ids.slice(0, LISTED_ENTITIES).map((id, i) => (
                     <React.Fragment key={id}>
                       {i > 0 && ', '}
                       <span title={id}>{name(id)}</span>
                     </React.Fragment>
                   ))}
+                  {constraint.entity_ids.length > LISTED_ENTITIES && ` and ${constraint.entity_ids.length - LISTED_ENTITIES} more`}
                 </p>
               </li>
             ))}
@@ -154,7 +180,7 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
           <div className="space-y-1">
             <h3 className="flex items-center gap-2 text-lg font-semibold">
               <Lightbulb aria-hidden="true" className="h-5 w-5 text-emerald-800 dark:text-emerald-300" />
-              Smallest change that would allow it
+              {headings.fix}
             </h3>
             <p className="font-semibold">{text(suggested_relaxation.description)}</p>
             {suggested_relaxation.action_type && suggested_relaxation.verification && (
@@ -163,7 +189,7 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                 {verificationLabel(suggested_relaxation.verification.status)}
                 {suggested_relaxation.verification.runtime_ms !== null &&
                   ` (${formatDuration(suggested_relaxation.verification.runtime_ms)})`}{' '}
-                <span className="font-mono">
+                <span className={CODE_CLASS}>
                   {suggested_relaxation.action_type}, {suggested_relaxation.verification.status}
                 </span>
               </p>
@@ -173,7 +199,7 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                 Applies to: {relaxationTargets(suggested_relaxation.action_params, name, pin(suggested_relaxation.constraint_id)).join('; ') || 'nothing named'}
               </p>
             )}
-            <p data-testid="relaxation-constraint-id" className="font-mono text-xs">
+            <p data-testid="relaxation-constraint-id" className={CODE_CLASS}>
               Constraint {suggested_relaxation.constraint_id}
             </p>
           </div>
@@ -198,13 +224,11 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
             How far the search got (diagnostic only — not a timetable): {partial_placement.length} placed,{' '}
             {unplaced_session_ids.length} unplaced
           </summary>
-          <p className="mt-1 font-mono">
+          <p className="mt-1">
             Placed:{' '}
-            {partial_placement.map((p) => `${p.session_id} (${slotText(p.day, p.period)})`).join(', ') || 'none'}
+            {partial_placement.map((p) => `${name(p.session_id)} (${slotText(p.day, p.period)})`).join(', ') || 'none'}
           </p>
-          <p data-testid="unplaced-sessions" className="font-mono">
-            Unplaced: {unplaced_session_ids.join(', ')}
-          </p>
+          <p data-testid="unplaced-sessions">Unplaced: {unplaced_session_ids.map(name).join(', ')}</p>
         </details>
       )}
     </section>

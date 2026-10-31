@@ -40,7 +40,7 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
           <div
             key={sess.sessionId}
             data-testid={`batch-session-${sess.sessionId}`}
-            data-batch={sess.batchLabel}
+            data-batch={sess.cohortLabel}
             data-subroom={sess.subRoomCode ?? sess.roomCode}
             data-flagged={flaggedSessionIds?.has(sess.sessionId) || undefined}
             onClick={() => onSelectSession?.(sess.sessionId)}
@@ -48,8 +48,8 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
               flaggedSessionIds?.has(sess.sessionId) ? flagClass : ''
             }`}
           >
-            <div className="flex items-baseline justify-between gap-1">
-              <span className="font-semibold">{sess.batchLabel ?? 'Batch'}</span>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-1">
+              <span className="font-semibold">{sess.cohortLabel}</span>
               <span data-testid={`subroom-badge-${sess.sessionId}`} className="font-semibold">
                 Room {sess.subRoomCode ?? sess.roomCode}
               </span>
@@ -57,8 +57,8 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
             <div className="font-serif font-semibold" title={sess.subjectName}>
               {sess.subjectCode} Lab
             </div>
-            <div className="flex items-baseline justify-between gap-1">
-              <span className="truncate" title={sess.facultyName}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-1">
+              <span className="min-w-0" title={sess.facultyName}>
                 <span className="font-semibold">{sess.facultyInitials}</span> {sess.facultyName}
               </span>
               <span className="shrink-0">{sess.cohortSize} students</span>

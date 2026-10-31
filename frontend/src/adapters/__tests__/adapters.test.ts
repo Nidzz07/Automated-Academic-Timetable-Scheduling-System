@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { ContractValidationError, parseSolution, validateContract } from '@/api/contractValidation';
 import { MockChronosApiClient, REAL_INSTANCE } from '@/api/chronosApi';
 import {
-  DIAGNOSIS_METHOD_LABELS,
   InfeasibleSolution,
   isInfeasibleSolution,
   isSolvedSolution,
@@ -112,7 +111,6 @@ describe('diagnosis view', () => {
     const view = toDiagnosisView(infeasible(infeasibleV2Example));
 
     expect(view.method).toBe('mus');
-    expect(view.methodLabel).toBe(DIAGNOSIS_METHOD_LABELS.mus);
     expect(view.minimal_conflicting_set.map((c) => c.kind)).toEqual([
       'LAB_CONTIGUITY',
       'ROOM_OCCUPANCY',
@@ -144,7 +142,6 @@ describe('diagnosis view', () => {
 
     const view = toDiagnosisView(infeasible(raw));
     expect(view.method).toBe('search_exhaustion');
-    expect(view.methodLabel).toBe(DIAGNOSIS_METHOD_LABELS.search_exhaustion);
     expect(view.minimal_conflicting_set).toEqual([]);
     expect(view.suggested_relaxation).toBeNull();
     expect(view.unplaced_session_ids).toHaveLength(4);
@@ -153,7 +150,6 @@ describe('diagnosis view', () => {
   it('maps the v2 presolve example (row 9): a proven, not minimal, set and every session unplaced', () => {
     const view = toDiagnosisView(infeasible(presolveExample));
     expect(view.method).toBe('presolve');
-    expect(view.methodLabel.text).toBe('Proved infeasible by a counting check (not minimal)');
     expect(view.minimal_conflicting_set.length).toBeGreaterThan(0);
     expect(view.suggested_relaxation).toMatchObject({ action_type: 'MANUAL' });
     expect(view.partial_placement).toEqual([]);
@@ -162,7 +158,6 @@ describe('diagnosis view', () => {
   it('maps a v1 diagnosis with no method, no slots and no partial placement', () => {
     const view = toDiagnosisView(infeasible(infeasibleExample));
     expect(view.method).toBeNull();
-    expect(view.methodLabel.badge).toBe('Method not stated (solution.v1)');
     expect(view.minimal_conflicting_set.every((c) => c.slots.length === 0)).toBe(true);
     expect(view.suggested_relaxation).toMatchObject({ action_type: null, verification: null });
     expect(view.partial_placement).toBeNull();
@@ -275,10 +270,14 @@ describe('the real EVEN 2025-26 instance through its display sidecar (D41)', () 
     expect(labels.clock(2)).toBe('11:00 AM – 11:15 AM');
   });
 
-  it('labels batches by their display label, and tells apart cohorts named alike', () => {
-    const options = cohortOptions(edgeList, labelsFor(display));
+  it('labels every option by its display label alone, never with an id (M10)', () => {
+    const labels = labelsFor(display);
+    const options = cohortOptions(edgeList, labels);
     expect(options.find((o) => o.id === 'coh-se-a-a')?.label).toBe('SE-Comp A batch A');
     expect(options.find((o) => o.id === 'coh-se-a')?.label).toBe('SE-Comp A');
-    expect(new Set(options.map((o) => o.label)).size).toBe(options.length);
+    for (const o of options) {
+      expect(o.label).toBe(labels.cohort(o.id));
+      expect(o.label).not.toContain('coh-');
+    }
   });
 });

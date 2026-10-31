@@ -63,20 +63,8 @@ interface RelaxationV2 {
   };
 }
 
-/**
- * Display label per diagnosis.method: the one place a method is named. A new method in the
- * contract is one more line here; ajv still enforces the enum.
- */
-export const DIAGNOSIS_METHOD_LABELS = {
-  mus: { badge: 'MUS Extraction', text: 'The solver proved no conflict-free assignment exists under the current constraints and isolated a Minimal Unsatisfiable Subset (MUS).' },
-  search_exhaustion: { badge: 'Search Exhaustion', text: 'Complete search proved no conflict-free assignment exists under the current constraints, but no explanation was extracted.' },
-  // contract row 9 (D43): a pre-solve certificate, proven but not minimal
-  presolve: { badge: 'Presolve', text: 'Proved infeasible by a counting check (not minimal)' },
-};
-/** solution.v1 does not say how it was diagnosed. */
-const UNSTATED_METHOD_LABEL = { badge: 'Method not stated (solution.v1)', text: 'The solver reported no conflict-free assignment exists under the current constraints.' };
-
-type DiagnosisMethod = keyof typeof DIAGNOSIS_METHOD_LABELS;
+/** contract row 9 (D43) added presolve; ajv enforces the enum, wording.ts words each method. */
+export type DiagnosisMethod = 'mus' | 'search_exhaustion' | 'presolve';
 
 interface DiagnosisV2 {
   method: DiagnosisMethod;
@@ -173,7 +161,6 @@ export interface ConflictView {
 export interface DiagnosisView {
   /** null: solution.v1 does not say how it was diagnosed. */
   method: DiagnosisMethod | null;
-  methodLabel: { badge: string; text: string };
   minimal_conflicting_set: ConflictView[];
   suggested_relaxation: {
     constraint_id: string;
@@ -195,7 +182,6 @@ export function toDiagnosisView(sol: InfeasibleSolution): DiagnosisView {
     const r = d.suggested_relaxation;
     return {
       method: d.method,
-      methodLabel: DIAGNOSIS_METHOD_LABELS[d.method],
       minimal_conflicting_set: d.minimal_conflicting_set,
       suggested_relaxation: r
         ? {
@@ -213,7 +199,6 @@ export function toDiagnosisView(sol: InfeasibleSolution): DiagnosisView {
   const d = sol.diagnosis;
   return {
     method: null,
-    methodLabel: UNSTATED_METHOD_LABEL,
     minimal_conflicting_set: d.minimal_conflicting_set.map((c) => ({ ...c, slots: [] })),
     suggested_relaxation: { ...d.suggested_relaxation, action_type: null, action_params: null, verification: null },
     partial_placement: null,

@@ -24,12 +24,14 @@ import {
   buildEnrichedSessions,
   buildEnrichedLabBlocks,
   buildPins,
+  EnrichedPin,
   EnrichedSession,
   EXAMPLE_LABELS,
   Labels,
   slotText,
 } from '@/adapters/timetable';
 import { periodLabel } from '@/lib/format';
+import { cohortListText, pinKindLabel } from '@/lib/wording';
 import { ParallelLabBlock } from './ParallelLabBlock';
 import { CombinedLectureBlock } from './CombinedLectureBlock';
 import { PinnedBlock } from './PinnedBlock';
@@ -71,6 +73,8 @@ export interface TimetableGridProps {
   onSelectSession?: (sessionId: string) => void;
   /** Whether to render immovable institutional pinned blocks */
   showPinnedBlocks?: boolean;
+  /** A teacher's own view: only the pinned blocks that name them, which their weekly load counts */
+  pinsOfFaculty?: string;
   /** Whether drag-and-drop is enabled for the current user role */
   canDragAndDrop?: boolean;
   /** Currently selected session ID (for persistent selection highlight) */
@@ -219,6 +223,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   cohortFilter = 'all',
   onSelectSession,
   showPinnedBlocks = true,
+  pinsOfFaculty,
   canDragAndDrop = true,
   selectedSessionId = null,
   provisionalSessionId = null,
@@ -263,9 +268,15 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   const filteredPins = useMemo(() => {
     if (!showPinnedBlocks) return [];
     const pins = buildPins(edgeList, labels);
+    if (pinsOfFaculty) return pins.filter((p) => p.facultyIds.includes(pinsOfFaculty));
     if (cohortFilter === 'all') return pins;
     return pins.filter((p) => p.cohortIds.some((c) => labels.overlap(c, cohortFilter)));
-  }, [edgeList, cohortFilter, showPinnedBlocks, labels]);
+  }, [edgeList, cohortFilter, showPinnedBlocks, pinsOfFaculty, labels]);
+  // A card names the cohorts in view: one pin can hold dozens, and a filter asks about one division
+  const pinCohortsInView = (pin: EnrichedPin) =>
+    cohortFilter === 'all'
+      ? pin.cohortLabels
+      : pin.cohortIds.filter((c) => labels.overlap(c, cohortFilter)).map((c) => labels.cohort(c));
 
   // Cells under a multi-period lab block (break rows included) are covered by its rowSpan
   const coveredSlots = useMemo(() => {
@@ -310,20 +321,27 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
+      {/*
+        The five days share the width (fixed layout, wrapping text). Below 1100 px the box scrolls by
+        itself, so its scrollbar stays on screen and its sticky headers and period column stick to it;
+        wider, the page scrolls and the day headers stick to the window.
+      */}
       <div
         data-testid="timetable-grid"
-        className="w-full overflow-x-auto rounded-lg border border-border bg-card"
+        className="w-full max-h-[85vh] overflow-auto rounded-lg border border-border bg-card min-[1100px]:max-h-none min-[1100px]:overflow-visible"
       >
-        <table className="w-full border-collapse text-left text-xs min-w-[1100px]">
+        <table className="w-full min-w-[1000px] table-fixed border-collapse break-words text-left text-xs">
           {/* Table Header: Days of the week */}
           <thead>
             <tr className="border-b-2 border-border bg-muted">
-              <th className="w-44 p-3 text-center font-sans text-sm font-semibold border-r border-border">Period</th>
+              <th className="sticky left-0 top-0 z-30 w-24 bg-muted p-2 text-center font-sans text-sm font-semibold border-r border-border shadow-[inset_0_-2px_0_hsl(var(--border))]">
+                Period
+              </th>
               {grid.days.map((day) => (
                 <th
                   key={day}
                   data-testid={`day-header-${day}`}
-                  className="p-3 text-center font-serif text-lg font-semibold border-r last:border-r-0 border-border"
+                  className="sticky top-0 z-20 bg-muted p-3 text-center font-serif text-lg font-semibold border-r last:border-r-0 border-border shadow-[inset_0_-2px_0_hsl(var(--border))]"
                 >
                   {DAY_NAMES[day]}
                 </th>
@@ -341,12 +359,12 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                   data-testid={`break-row-${period}`}
                   className="bg-muted border-y border-dashed border-border"
                 >
-                  <td className="p-2 text-center font-semibold border-r border-border">
+                  <td className="sticky left-0 z-10 bg-muted p-2 text-center font-semibold border-r border-border">
                     <span className="inline-flex items-center gap-1">
                       <Coffee aria-hidden="true" className="h-4 w-4" />
                       {periodLabel(period)}
                     </span>
-                    {labels.clock(period) && <div className="whitespace-nowrap font-normal">{labels.clock(period)}</div>}
+                    {labels.clock(period) && <div className="font-normal">{labels.clock(period)}</div>}
                   </td>
                   {grid.days.map((day) =>
                     coveredSlots.has(`${day}-${period}`) ? null : (
@@ -366,10 +384,10 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                   className=""
                 >
                   {/* Period Column */}
-                  <td className="p-3 text-center border-r border-border bg-muted align-top">
+                  <td data-testid={`period-cell-${period}`} className="sticky left-0 z-10 p-2 text-center border-r border-border bg-muted align-top">
                     <div className="font-serif text-lg font-semibold">{periodLabel(period)}</div>
                     {labels.clock(period) && (
-                      <div data-testid={`period-clock-${period}`} className="whitespace-nowrap text-xs">
+                      <div data-testid={`period-clock-${period}`} className="text-xs">
                         {labels.clock(period)}
                       </div>
                     )}
@@ -455,18 +473,12 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                             <PinnedBlock
                               key={pin.key}
                               id={pin.key}
-                              label={pin.label ?? 'Pinned occupancy'}
-                              kind={
-                                [
-                                  pin.kind,
-                                  pin.decision,
-                                  pin.facultyInitials.length ? `Faculty: ${pin.facultyInitials.join(', ')}` : null,
-                                ]
-                                  .filter(Boolean)
-                                  .join(' · ') || undefined
-                              }
+                              label={pin.label ?? 'Fixed item'}
+                              kind={pinKindLabel(pin.kind, pin.decision)}
+                              teachers={pin.facultyNames.join(', ') || undefined}
                               roomCode={pin.roomCodes.join(', ') || undefined}
-                              cohortLabel={pin.cohortLabels.join(', ') || undefined}
+                              cohortLabel={cohortListText(pinCohortsInView(pin)) || undefined}
+                              cohortTitle={pin.cohortLabels.join(', ') || undefined}
                             />
                           )
                         )}

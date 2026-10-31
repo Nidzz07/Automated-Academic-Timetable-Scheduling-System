@@ -190,11 +190,8 @@ export function cohortOptions(
     ...edgeList.sessions.map((s) => s.cohort_id),
     ...edgeList.pinned_occupancy.flatMap((p) => p.cohort_ids),
   ]);
-  const options = [...ids].map((id) => ({ id, label: labels.cohort(id) }));
-  // two cohorts with one display name (e.g. two "MDM-DBMS" groups): the id tells them apart
-  return options
-    .map((o) => (options.some((x) => x !== o && x.label === o.label) ? { ...o, label: `${o.label} (${o.id})` } : o))
-    .sort((a, b) => a.label.localeCompare(b.label));
+  // the display label only, never an id; display.json keeps labels unique (S14r)
+  return [...ids].map((id) => ({ id, label: labels.cohort(id) })).sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /**
@@ -224,9 +221,7 @@ export interface EnrichedSession {
   isCombinedDivision: boolean;
   combinedCohortText?: string;
   isPinned: boolean;
-  pinnedReason?: string;
   labBlockId?: string;
-  batchLabel?: string;
 }
 
 /**
@@ -261,7 +256,9 @@ export interface EnrichedPin {
   cohortIds: string[];
   cohortLabels: string[];
   roomCodes: string[];
-  facultyInitials: string[];
+  facultyIds: string[];
+  /** Full names from the display sidecar; initials only for a teacher it does not name */
+  facultyNames: string[];
 }
 
 export function getExampleEdgeList(): EdgeList {
@@ -305,13 +302,6 @@ export function buildEnrichedSessions(
     const isCombined = cohorts.get(cohortId)?.cohort_type === 'combined' || cohortId.includes('comb');
     const isPinned = edgeSession?.fixed_slot !== null && edgeSession?.fixed_slot !== undefined;
 
-    // Extract batch if batch cohort
-    let batchLabel: string | undefined;
-    if (cohortId.includes('batch')) {
-      const parts = cohortId.split('-');
-      batchLabel = `Batch ${parts[parts.length - 1].toUpperCase()}`;
-    }
-
     const duration = edgeSession?.duration_periods ?? 1;
     const subRoomCode = item.sub_room_id ? roomName(item.sub_room_id) : null;
 
@@ -337,9 +327,7 @@ export function buildEnrichedSessions(
       isCombinedDivision: isCombined,
       combinedCohortText: isCombined ? `${cohortLabel} (${edgeSession?.cohort_size ?? 0} students)` : undefined,
       isPinned,
-      pinnedReason: isPinned ? "Fixed slot in the edge list (fixed_slot)" : undefined,
       labBlockId: labBlock?.id,
-      batchLabel,
     };
   });
 }
@@ -383,32 +371,113 @@ export function buildPins(edgeList: EdgeList, labels: Labels = EXAMPLE_LABELS): 
         const room = rooms.get(id);
         return room ? labels.room(room) : id;
       }),
-      // faculty with no initials (they teach only frozen BE/M.Tech items) show their name
-      facultyInitials: p.faculty_ids.map((id) => labels.faculty(id).initials || labels.faculty(id).name),
+      facultyIds: p.faculty_ids,
+      facultyNames: p.faculty_ids.map((id) => {
+        const { name, initials } = labels.faculty(id);
+        // labels.faculty names a teacher it does not know by id ('Faculty' in the examples)
+        return name && name !== id && name !== 'Faculty' ? name : initials || name;
+      }),
     };
   });
 }
 
-/** A teacher's weekly hours as the department counts them (CONTEXT §3.4 "6T+ 8P =14", D11). */
+/**
+ * A teacher's weekly hours as the department counts them (CONTEXT §3.4 "6T+ 8P =14", D11) and as
+ * the solver's S-LOAD16 counts them: `scheduled` + `fixed` = `total`.
+ */
 export interface FacultyLoad {
+  /** A non-lab session's periods */
   theory: number;
+  /** A lab session's periods */
   practical: number;
+  /** Teaching slots the teacher's placed sessions hold; two sessions in one slot (printed clash) count once */
+  scheduled: number;
+  /** Teaching slots only pinned occupancy holds for the teacher */
+  fixed: number;
   total: number;
 }
 
-/** The load of these placed sessions: a lab session's periods are practical hours, any other's theory hours. */
-export function facultyLoad(sessions: EnrichedSession[]): FacultyLoad {
+/**
+ * A teacher's load, counted as solver/scoring.py counts it (`taught`, `_load_above`, D11, D24): the
+ * teaching slots they teach in, from placed sessions and from pinned_occupancy naming them; a slot
+ * counts once however many items hold it, and a pin on a non-teaching period does not count.
+ */
+export function facultyLoad(facultyId: string, sessions: EnrichedSession[], edgeList: EdgeList): FacultyLoad {
   let theory = 0;
   let practical = 0;
+  const scheduled = new Set<string>();
   for (const s of sessions) {
+    if (s.facultyId !== facultyId) continue;
     if (s.sessionType === 'lab') practical += s.durationPeriods;
     else theory += s.durationPeriods;
+    s.periods.forEach((p) => scheduled.add(`${s.day}-${p}`));
   }
-  return { theory, practical, total: theory + practical };
+  const teaching = new Set(edgeList.slot_grid.teaching_periods);
+  const fixed = new Set<string>();
+  for (const pin of edgeList.pinned_occupancy) {
+    const slot = `${pin.day}-${pin.period}`;
+    if (pin.faculty_ids.includes(facultyId) && teaching.has(pin.period) && !scheduled.has(slot)) fixed.add(slot);
+  }
+  return { theory, practical, scheduled: scheduled.size, fixed: fixed.size, total: scheduled.size + fixed.size };
 }
 
-/** "6T + 8P = 14" */
-export const loadText = (load: FacultyLoad) => `${load.theory}T + ${load.practical}P = ${load.total}`;
+/** "6T + 8P = 14", or "6T + 0P + 12 fixed = 18" with fixed items */
+export const loadText = (load: FacultyLoad) =>
+  `${load.theory}T + ${load.practical}P${load.fixed > 0 ? ` + ${load.fixed} fixed` : ''} = ${load.total}`;
+
+/**
+ * How many hard rules these placements break on time alone, by the same count as
+ * solver.validate.validate_slot_placements, which gave the printed timetable its violations (S12b):
+ * one per contiguity failure, overlapping conflict edge, unavailable session, session slot a pin
+ * holds for its teacher or cohort, lab block split across starts, and session off its fixed slot.
+ * Only for showing the generated timetable beside the printed one; the solver stays the judge.
+ */
+export function hardRuleViolations(assignment: SessionAssignment[], edgeList: EdgeList): number {
+  const grid = buildWeekGrid(edgeList);
+  const starts = new Map(assignment.map((a) => [a.session_id, a]));
+  const occupied = new Map<string, string[]>();
+  let count = 0;
+
+  for (const s of edgeList.sessions) {
+    const start = starts.get(s.id);
+    if (!start) continue;
+    const periods = occupiedPeriods(grid, start.period, s.duration_periods);
+    if (periods.length < s.duration_periods) count += 1;
+    occupied.set(s.id, periods.map((p) => `${start.day}-${p}`));
+  }
+
+  for (const { u, v } of edgeList.edges) {
+    const other = new Set(occupied.get(v) ?? []);
+    if ((occupied.get(u) ?? []).some((slot) => other.has(slot))) count += 1;
+  }
+
+  const unavailable = new Map(
+    edgeList.faculty_availability.map((f) => [f.faculty_id, new Set(f.unavailable_slots.map((s) => `${s.day}-${s.period}`))])
+  );
+  const pinnedFaculty = new Map<string, Set<string>>();
+  const pinnedCohort = new Map<string, Set<string>>();
+  for (const pin of edgeList.pinned_occupancy) {
+    const slot = `${pin.day}-${pin.period}`;
+    pinnedFaculty.set(slot, new Set([...(pinnedFaculty.get(slot) ?? []), ...pin.faculty_ids]));
+    pinnedCohort.set(slot, new Set([...(pinnedCohort.get(slot) ?? []), ...pin.cohort_ids]));
+  }
+  for (const s of edgeList.sessions) {
+    const slots = occupied.get(s.id) ?? [];
+    if (slots.some((slot) => unavailable.get(s.faculty_id)?.has(slot))) count += 1;
+    count += slots.filter((slot) => pinnedFaculty.get(slot)?.has(s.faculty_id) || pinnedCohort.get(slot)?.has(s.cohort_id)).length;
+    const start = starts.get(s.id);
+    if (s.fixed_slot && start && (s.fixed_slot.day !== start.day || s.fixed_slot.period !== start.period)) count += 1;
+  }
+
+  for (const block of edgeList.lab_blocks) {
+    const blockStarts = block.session_ids.flatMap((id) => {
+      const start = starts.get(id);
+      return start ? [`${start.day}-${start.period}`] : [];
+    });
+    if (new Set(blockStarts).size > 1) count += 1;
+  }
+  return count;
+}
 
 /** One faculty member at a slot: free, or engaged with what (sessions by name, pins by label, "unavailable"). */
 export interface FacultyAtSlot {
@@ -476,11 +545,13 @@ export function entityName(id: string, edgeList: EdgeList, labels: Labels = EXAM
   }
   const isCohort =
     edgeList.sessions.some((s) => s.cohort_id === id) || edgeList.pinned_occupancy.some((p) => p.cohort_ids.includes(id));
-  return isCohort ? labels.cohort(id) : id;
+  if (isCohort) return labels.cohort(id);
+  const block = edgeList.lab_blocks.find((b) => b.id === id);
+  return block ? `Lab block of ${block.session_ids.length} batches` : id;
 }
 
 /**
- * A diagnosis's `pin.<i>` by display.json pins[i] (D51): "unique_label (pin.<i>)"; null for any other id.
+ * A diagnosis's `pin.<i>` by display.json pins[i] (D51): its unique_label; null for any other id.
  * Past display.json's pins it is a room an accepted change made unavailable (ACCEPTED_ROOM_PIN).
  */
 export function pinName(id: string, edgeList: EdgeList, labels: Labels): string | null {
@@ -491,9 +562,30 @@ export function pinName(id: string, edgeList: EdgeList, labels: Labels): string 
   const name =
     shown?.unique_label ??
     shown?.label ??
-    (pin ? `Pinned occupancy, ${slotText(pin.day, pin.period)}` : ACCEPTED_ROOM_PIN.label);
+    (pin ? `Fixed item, ${slotText(pin.day, pin.period)}` : ACCEPTED_ROOM_PIN.label);
   // display.json's unique_label names its periods "Mon P0–P1"
-  return `${displayText(name)} (${id})`;
+  return displayText(name);
+}
+
+/** "Operating Systems for SE-Comp A (Kailas Devadkar)", as the UI names one session in a sentence. */
+export const sessionPhrase = (subject: string, cohort: string, teacher: string) => `${subject} for ${cohort} (${teacher})`;
+
+/**
+ * What a diagnosis sentence calls an id of the edge list (D51): a session as sessionPhrase, a room
+ * as "room 601", a `pin.<i>`, faculty and cohorts by name; null for an id it does not know.
+ */
+export function diagnosisName(id: string, edgeList: EdgeList, labels: Labels): string | null {
+  const pin = pinName(id, edgeList, labels);
+  if (pin) return pin;
+  const session = edgeList.sessions.find((s) => s.id === id);
+  if (session) {
+    const subject = labels.subject(session.subject_id);
+    return sessionPhrase(subject?.name ?? subject?.code ?? session.subject_id, labels.cohort(session.cohort_id), labels.faculty(session.faculty_id).name);
+  }
+  const room = edgeList.rooms.find((r) => r.id === id);
+  if (room) return `room ${labels.room(room)}`;
+  const name = entityName(id, edgeList, labels);
+  return name === id ? null : name;
 }
 
 /** What a dragged session would clash with at its target: in order room, teacher, cohort, fixed item, unavailability. */
