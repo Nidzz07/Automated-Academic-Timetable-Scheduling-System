@@ -47,6 +47,13 @@ earlier "every lab block first, starts ascending" order packed the real EVEN ins
 the slots its lectures needed and timed out at 300 s; this order solves it in
 under a second (docs/real-solve-even-2025-26.md).  All of it is deterministic.
 
+**Two attempts when sub-rooms come first (S14u fix).**  Each room order has
+feasible instances it thrashes on.  So with ``prefer_sub_rooms`` and no caller
+node budget, the sub-rooms-first search gets :data:`SUB_ROOM_NODES` nodes; if
+they run out with no verdict, the search runs again with rooms by id in what is
+left of the time limit.  A verdict of the first attempt stands.  A portfolio
+of two orders with a fixed node budget: Design and Analysis of Algorithms.
+
 **LabBlock joint allocation.**
 A LabBlock's N parallel batch sessions are one composite decision variable.
 The solver picks a ``(start_slot, room_for_each_session)`` tuple for the
@@ -133,6 +140,7 @@ if TYPE_CHECKING:
     from solver.presolve import Certificate
 
 __all__ = [
+    "SUB_ROOM_NODES",
     "BacktrackResult",
     "LabBlock",
     "Room",
@@ -141,6 +149,10 @@ __all__ = [
     "parse_lab_blocks",
     "parse_rooms",
 ]
+
+# Nodes the sub-rooms-first attempt gets before rooms by id are tried: the budget
+# solver.repair.RING_NODES gives each frozen ring (S14a), fixed before any measurement of it
+SUB_ROOM_NODES = 5_000
 
 
 # ---------------------------------------------------------------------------
@@ -201,6 +213,8 @@ class BacktrackResult:
     partial_rooms: dict[str, str] = field(default_factory=dict)
     # the edge-list payload this result solves; scoring reads it
     edge_list: dict[str, Any] | None = None
+    # the sub-rooms-first attempt ran out of SUB_ROOM_NODES and rooms by id found this result
+    rooms_by_id_fallback: bool = False
 
     @property
     def outcome(self) -> Literal["solved", "infeasible", "timeout"]:
@@ -221,7 +235,9 @@ class BacktrackResult:
             else None
         )
         return {
-            "algorithm": "backtracking(forward-checking, mrv)",
+            "algorithm": "backtracking(forward-checking, mrv)" + (
+                f", rooms by id after {SUB_ROOM_NODES} nodes" if self.rooms_by_id_fallback else ""
+            ),
             "runtime_ms": max(0.0, float(runtime_ms)),
             "sessions_total": tot,
             "sessions_assigned": len(self.assignment),
@@ -1205,6 +1221,8 @@ def backtrack_solve(
     node_limit: int | None = None,
     break_symmetry: bool = True,
     prefer_sub_rooms: bool = True,
+    sub_room_nodes: int | None = SUB_ROOM_NODES,
+    stats: dict[str, Any] | None = None,
 ) -> BacktrackResult:
     """Solve the timetable by backtracking with forward checking and MRV.
 
@@ -1246,6 +1264,18 @@ def backtrack_solve(
         Try a split lab's sub-rooms before the whole lab (D58, S14s).  On by
         default since S14u; ``False`` gives the pre-S14u order (rooms by id).  It
         changes which solution is found first, never whether one exists.
+    sub_room_nodes:
+        With *prefer_sub_rooms* and no *node_limit*: the nodes the
+        sub-rooms-first attempt gets.  If it runs out of them with no verdict,
+        a second attempt runs with rooms by id in what is left of
+        *time_limit_s*, so nothing the id order solved before S14u stops
+        finishing.  A verdict of the first attempt stands, infeasible included;
+        if the clock runs out first it is a timeout, never infeasible (D33).
+        After a second attempt the result has ``rooms_by_id_fallback`` set and
+        ``nodes_explored`` counts both.  ``None``: one attempt, as before.
+    stats:
+        If given, filled with ``attempts``: ``[order, nodes, outcome]`` per
+        attempt, ``order`` being ``"sub-rooms first"`` or ``"rooms by id"``.
 
     Returns
     -------
@@ -1261,6 +1291,28 @@ def backtrack_solve(
         On an inconsistent lab-block declaration (see :func:`_new_state`).
     """
     from solver.presolve import presolve  # presolve imports this module's helpers
+
+    order = "sub-rooms first" if prefer_sub_rooms else "rooms by id"
+    if prefer_sub_rooms and node_limit is None and sub_room_nodes is not None:
+        started = time.perf_counter()
+        options: dict[str, Any] = dict(seed_assignment=seed_assignment, seed_rooms=seed_rooms,
+                                       prefer=prefer, break_symmetry=break_symmetry,
+                                       sub_room_nodes=None)
+        first = backtrack_solve(graph, payload, time_limit_s=time_limit_s,
+                                node_limit=sub_room_nodes, **options)
+        attempts = [[order, first.nodes_explored, first.outcome]]
+        if first.timed_out and first.nodes_explored > sub_room_nodes:  # budget out, no verdict
+            left = None if time_limit_s is None else max(
+                0.0, time_limit_s - (time.perf_counter() - started))
+            second = backtrack_solve(graph, payload, time_limit_s=left, prefer_sub_rooms=False,
+                                     **options)
+            attempts.append(["rooms by id", second.nodes_explored, second.outcome])
+            second.nodes_explored += first.nodes_explored
+            second.rooms_by_id_fallback = True
+            first = second
+        if stats is not None:
+            stats["attempts"] = attempts
+        return first
 
     state = _new_state(graph, payload)
     state.break_symmetry = break_symmetry and not seed_rooms and not prefer
@@ -1289,6 +1341,9 @@ def backtrack_solve(
             solved = _solve(state)
         except _Timeout:
             solved, timed_out = False, True
+    if stats is not None:
+        stats["attempts"] = [[order, state.nodes_explored,
+                              "solved" if solved else "timeout" if timed_out else "infeasible"]]
 
     unplaced = [
         sid for sid in graph.sessions if sid not in state.slot_assignment

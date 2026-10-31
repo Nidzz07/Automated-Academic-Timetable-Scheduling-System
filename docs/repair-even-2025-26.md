@@ -603,6 +603,15 @@ change accepted (D52).
   shorter limit cuts it to the unfinished result, still infeasible (S14k).
 - **0 hard violations** in every repaired row.
 
+**Fresh solves: a regression, now fixed (branch `track/solver-solve-fallback`).** With sub-rooms
+first alone, a fresh solve after one feasible accepted substitution (the CE207 lecture to
+Sudhir Dhage) timed out at 30 s and 120 s, where rooms by id take 92 nodes. A backend solve job
+built with that change would have reported a timeout. `backtrack_solve` now gives the
+sub-rooms-first attempt 5,000 nodes (repair's `RING_NODES`), then tries rooms by id in the time
+left. That solve now takes 1.79 s (5,093 nodes), and the committed instance still solves in the
+first attempt (`docs/real-solve-even-2025-26.md` § S14u). Repair is not changed by it: its own
+calls pass `sub_room_nodes=None`, so every number above stands.
+
 ### Demo flows
 
 From the new `solution.json`, with the defaults. Names come from `display.json`; T-labels are

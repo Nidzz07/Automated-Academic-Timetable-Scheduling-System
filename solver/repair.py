@@ -405,6 +405,7 @@ def repair(
             node_limit=ring_nodes if not everything or last_ring_portfolio else None,
             time_limit_s=budget,
             prefer_sub_rooms=prefer_sub_rooms,
+            sub_room_nodes=None,  # the rings and the portfolio below have repair's own budgets
         )
         nodes += result.nodes_explored
         rings.append(["all" if everything else len(rings), len(free), result.outcome])
@@ -413,7 +414,8 @@ def repair(
         if everything and last_ring_portfolio and result.timed_out:
             # S14l: the old places in whole split labs can stall this search; try without them
             result = backtrack_solve(graph, changed, seed_rooms=forced or None,
-                                     time_limit_s=left(), prefer_sub_rooms=True)
+                                     time_limit_s=left(), prefer_sub_rooms=True,
+                                     sub_room_nodes=None)
             nodes += result.nodes_explored
             rings.append(["fallback", len(free), result.outcome])
             if result.solved:

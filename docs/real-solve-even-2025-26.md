@@ -493,6 +493,57 @@ Proposed for the team, not built: give a fresh solve the same portfolio as repai
 (a node budget, then the other room order). `backend/tests/test_substitution.py` therefore
 accumulates the Bhavathankar substitution, as it did before S14u.
 
+### Fixed: a fresh solve tries rooms by id when sub-rooms first runs out of nodes
+
+2026-10-31 · Dhruv (with Claude Code) · branch `track/solver-solve-fallback`. Same machine.
+
+The regression broke D58's first criterion ("nothing that finished before times out") for
+fresh solves. The fix is in `backtrack_solve`, the call the backend's solve job makes
+(`backend/app/service.py`, `solve_edge_list`; no backend code changed). With
+`prefer_sub_rooms` on and no `node_limit` from the caller, it makes up to two attempts:
+
+1. **Sub-rooms first, within `SUB_ROOM_NODES = 5,000` nodes.** A verdict stands: solved, or
+   infeasible whether proven by pre-solve or by search. If the clock runs out first, the result
+   is a timeout, never infeasible (D33).
+2. **Rooms by id, in what is left of `time_limit_s`.** Only if the first attempt used up its
+   nodes with no verdict.
+
+Then `improve()` runs as before.
+
+- **The node budget rule.** `SUB_ROOM_NODES` equals `RING_NODES`, the budget `repair` already
+  gives each frozen ring (S14a). It was fixed before any measurement of this fix, never by a
+  score, and `test_the_first_attempt_gets_repairs_ring_budget` holds the two equal.
+- **Deterministic.** The budget is in nodes, so whether the second attempt runs is the same on
+  every machine. Only a clock that runs out first changes it, and that is a timeout.
+- **What is recorded.** `backtrack_solve(..., stats=)` gets `attempts`: `[order, nodes, outcome]`
+  per attempt. After a second attempt the result has `rooms_by_id_fallback` set and
+  `nodes_explored` counts both attempts. `solution.v2`'s `metadata` allows no new key, so the
+  free-text `metadata.algorithm` says it instead: `backtracking(forward-checking, mrv), rooms by
+  id after 5000 nodes`. No contract change; a first-attempt result keeps today's text.
+- **Repair is unchanged.** It passes `sub_room_nodes=None`, because its rings and its last-ring
+  portfolio have their own budgets. Every number in `docs/repair-even-2025-26.md` § S14u
+  stands. `explain()` keeps rooms by id, so it makes one attempt.
+
+The id-order attempt runs in full after the budget. So whatever the id order solved before
+S14u still solves, given the budget's extra time (about 1.5 s here).
+
+Fresh solves, 30 s limit, as the backend calls it:
+
+| Edge list | Attempts (order, nodes, outcome) | Result | Time |
+|---|---|---|---|
+| committed | sub-rooms first, 92, solved | solved, 92 nodes | as before |
+| committed + CE207 to Sudhir Dhage | sub-rooms first, 5,001, budget out; rooms by id, 92, solved | **solved**, 5,093 nodes, 0 hard violations | **1.79 s** (two runs; was a timeout at 30 s and 120 s) |
+| committed + CE207 to Nataasha Raul | sub-rooms first, 92, solved | solved | 0.27 s |
+| committed + CE207 to Prasenjit Bhavathankar | sub-rooms first, 92, solved | solved | 0.29 s |
+| synthetic `infeasible` preset, seed 1 | sub-rooms first, 0, infeasible (pre-solve, `cohort_load`) | infeasible, no second attempt | |
+| odd cycle (`test_search_equivalence.py`) | sub-rooms first, 3, infeasible (search) | infeasible, no second attempt | |
+
+`solution.json` is byte-identical: the committed instance solves in the first attempt, and
+`test_real_instance_reproduces_the_committed_result` (slow) re-derives it. The search-equivalence
+digests (defaults), the pre-S12h digests (options off) and the verdicts of the property
+instances and synthetic presets are all unchanged. None of them needs a second attempt. Tests:
+`solver/tests/test_d58_options.py`.
+
 ## S12d: why the old search got stuck
 
 Re-run of the S12a search (commit 75a3f31) for 300 s on the same machine: timeout, 563,081
