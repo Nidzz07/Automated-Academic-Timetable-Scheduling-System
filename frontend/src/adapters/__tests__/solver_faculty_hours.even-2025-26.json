@@ -1,0 +1,187 @@
+{
+  "fac-abhijeet-salunke": {
+    "scheduled": 14,
+    "fixed": 2,
+    "total": 16
+  },
+  "fac-aishwarya-nalawade": {
+    "scheduled": 10,
+    "fixed": 6,
+    "total": 16
+  },
+  "fac-aman-yadav": {
+    "scheduled": 0,
+    "fixed": 2,
+    "total": 2
+  },
+  "fac-amey-ganesh-nile": {
+    "scheduled": 18,
+    "fixed": 0,
+    "total": 18
+  },
+  "fac-anand-godbole": {
+    "scheduled": 14,
+    "fixed": 0,
+    "total": 14
+  },
+  "fac-anant-nimkar": {
+    "scheduled": 14,
+    "fixed": 0,
+    "total": 14
+  },
+  "fac-anas-ansari": {
+    "scheduled": 4,
+    "fixed": 12,
+    "total": 16
+  },
+  "fac-anuj-tawari": {
+    "scheduled": 10,
+    "fixed": 3,
+    "total": 13
+  },
+  "fac-asma-tambe": {
+    "scheduled": 0,
+    "fixed": 3,
+    "total": 3
+  },
+  "fac-azman-qureshi": {
+    "scheduled": 6,
+    "fixed": 12,
+    "total": 18
+  },
+  "fac-c-r-gajbiye": {
+    "scheduled": 0,
+    "fixed": 1,
+    "total": 1
+  },
+  "fac-d-r-kalbande": {
+    "scheduled": 0,
+    "fixed": 3,
+    "total": 3
+  },
+  "fac-dayanand-ambawade": {
+    "scheduled": 0,
+    "fixed": 2,
+    "total": 2
+  },
+  "fac-deepak-nair": {
+    "scheduled": 0,
+    "fixed": 15,
+    "total": 15
+  },
+  "fac-isha-sawalkar": {
+    "scheduled": 14,
+    "fixed": 4,
+    "total": 18
+  },
+  "fac-jignesh-sisodia": {
+    "scheduled": 16,
+    "fixed": 1,
+    "total": 17
+  },
+  "fac-jostna-bhagat": {
+    "scheduled": 4,
+    "fixed": 12,
+    "total": 16
+  },
+  "fac-jyoti-ramteke": {
+    "scheduled": 6,
+    "fixed": 12,
+    "total": 18
+  },
+  "fac-kailas-devadkar": {
+    "scheduled": 16,
+    "fixed": 0,
+    "total": 16
+  },
+  "fac-nataasha-raul": {
+    "scheduled": 8,
+    "fixed": 8,
+    "total": 16
+  },
+  "fac-pramod-bide": {
+    "scheduled": 0,
+    "fixed": 14,
+    "total": 14
+  },
+  "fac-prasenjit-bhavathankar": {
+    "scheduled": 14,
+    "fixed": 0,
+    "total": 14
+  },
+  "fac-reeta-koshy": {
+    "scheduled": 8,
+    "fixed": 6,
+    "total": 14
+  },
+  "fac-rupali-sawant": {
+    "scheduled": 0,
+    "fixed": 14,
+    "total": 14
+  },
+  "fac-sanjyuktarani-jena": {
+    "scheduled": 8,
+    "fixed": 8,
+    "total": 16
+  },
+  "fac-sonali-dudhihalli": {
+    "scheduled": 0,
+    "fixed": 15,
+    "total": 15
+  },
+  "fac-soni-bhambar": {
+    "scheduled": 0,
+    "fixed": 14,
+    "total": 14
+  },
+  "fac-sudeep-mali": {
+    "scheduled": 6,
+    "fixed": 12,
+    "total": 18
+  },
+  "fac-sudhir-dhage": {
+    "scheduled": 8,
+    "fixed": 3,
+    "total": 11
+  },
+  "fac-suman-m": {
+    "scheduled": 0,
+    "fixed": 2,
+    "total": 2
+  },
+  "fac-sunil-ghane": {
+    "scheduled": 12,
+    "fixed": 4,
+    "total": 16
+  },
+  "fac-surekha-dholay": {
+    "scheduled": 8,
+    "fixed": 4,
+    "total": 12
+  },
+  "fac-swapnali-kurhade": {
+    "scheduled": 16,
+    "fixed": 0,
+    "total": 16
+  },
+  "fac-taqdis-pawle": {
+    "scheduled": 0,
+    "fixed": 2,
+    "total": 2
+  },
+  "fac-vaishnavee-rathod": {
+    "scheduled": 12,
+    "fixed": 4,
+    "total": 16
+  },
+  "fac-vandana-wekhande": {
+    "scheduled": 0,
+    "fixed": 6,
+    "total": 6
+  },
+  "fac-yogita-patil": {
+    "scheduled": 6,
+    "fixed": 10,
+    "total": 16
+  }
+}

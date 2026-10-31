@@ -40,7 +40,9 @@ import {
   EdgeList,
   EnrichedSession,
   entityName,
+  facultyLoad,
   facultyText,
+  hardRuleViolations,
   labelsFor,
   slotText,
 } from '@/adapters/timetable';
@@ -58,6 +60,8 @@ import {
   REAL_INSTANCE,
   RepairChange,
   setSession,
+  storedInstance,
+  storeInstance,
   subscribeAuth,
 } from '@/api/chronosApi';
 import { ContractValidationError } from '@/api/contractError';
@@ -99,7 +103,7 @@ function SessionApp({ client, session }: { client: MockChronosApiClient; session
     <QueryClientProvider client={queryClient}>
       {session && (
         <div className="bg-background text-foreground">
-          <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-4 pt-4 sm:px-6 lg:px-8">
+          <div className="flex w-full items-center justify-end gap-3 px-4 pt-4 lg:px-6">
             <span data-testid="signed-in-as">
               Signed in as <span className="font-semibold">{session.username}</span> ({ROLE_CAPABILITIES[session.role].title})
             </span>
@@ -115,9 +119,24 @@ function SessionApp({ client, session }: { client: MockChronosApiClient; session
 }
 
 function TimetableApp({ client, session }: { client: MockChronosApiClient; session: AuthSession | null }) {
-  // an account linked to a faculty member or cohort (D50) opens on the real timetable they are in
-  const [instance, setInstance] = useState<EdgeListInstance>(
-    session?.facultyId || session?.cohortId ? REAL_INSTANCE : 'example'
+  // A login (http mode) opens on the real timetable, or the instance it last picked (kept across a
+  // reload); static mode opens on the bundled example
+  const [instanceChoice, setInstanceChoice] = useState<EdgeListInstance>(() =>
+    session ? storedInstance() ?? REAL_INSTANCE : 'example'
+  );
+  const instances = useInstancesQuery(client);
+  // An instance the backend does not offer (any more) falls back to the first it can solve
+  const instance = useMemo(() => {
+    const offered = instances.data;
+    if (!offered || offered.some((i) => i.id === instanceChoice)) return instanceChoice;
+    return offered.find((i) => i.solvable)?.id ?? offered[0]?.id ?? instanceChoice;
+  }, [instances.data, instanceChoice]);
+  const onInstanceChange = useCallback(
+    (next: EdgeListInstance) => {
+      setInstanceChoice(next);
+      if (session) storeInstance(next);
+    },
+    [session]
   );
   // The latest solve and repair job per instance, kept here so switching instance and back keeps tracking them
   const [solveJobs, setSolveJobs] = useState<Record<EdgeListInstance, string>>({});
@@ -137,7 +156,6 @@ function TimetableApp({ client, session }: { client: MockChronosApiClient; sessi
       setRepairJobs(({ [repaired]: _discarded, ...jobs }) => jobs),
     []
   );
-  const instances = useInstancesQuery(client);
   const timetable = useTimetableQuery(client);
   const edgeList = useEdgeListQuery(instance, client);
   const currentEdgeList = useCurrentEdgeListQuery(instance, client);
@@ -160,7 +178,7 @@ function TimetableApp({ client, session }: { client: MockChronosApiClient; sessi
     const error = queries.find((q) => q.error)?.error;
     return (
       <div className="min-h-screen bg-background text-foreground">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="w-full px-4 py-8 lg:px-6">
           {error ? (
             <TimetableLoadError
               error={error}
@@ -189,7 +207,7 @@ function TimetableApp({ client, session }: { client: MockChronosApiClient; sessi
       baseline={printed.data}
       instances={instances.data}
       instance={instance}
-      onInstanceChange={setInstance}
+      onInstanceChange={onInstanceChange}
       client={client}
       session={session}
       solveJobs={solveJobs}
@@ -321,6 +339,8 @@ function TimetableWorkspace({
   // The solution examples were solved for the example instance; other instances show their own
   // published solution, or none (Not solved yet)
   const isExample = instance === 'example';
+  // "Simulate Infeasible" and "Test Revert on Move" act on the mock's example: static mode only
+  const testControls = isExample && !(client instanceof HttpChronosApiClient);
   const shown = isExample ? solution : publishedSolution;
   // The printed view lays the printed timetable on the grid; the real instance compares with it
   const printed = instance === PRINTED_INSTANCE ? baseline : null;
@@ -358,19 +378,33 @@ function TimetableWorkspace({
   // drop pre-check use the current one, so accepted absences, closures and substitutions are in them
   const edgeList = proposal && repairEdgeList ? repairEdgeList : currentEdgeList;
   const canRepair = caps.canSolve && solvable && http !== null;
-  // one repair at a time: none while one runs or waits to be accepted or discarded
+  // one repair at a time: none while one runs or waits to be accepted or discarded (a job that can no longer be read does neither)
   const repairOpen =
     repair.start.isPending ||
-    (repairJobId !== null && !isFinished(repairJob?.status)) ||
+    (repairJobId !== null && !repair.job.error && !isFinished(repairJob?.status)) ||
     (repairJob?.status === 'solved' && !repairJob.accepted_at);
   const startRepair = (change: RepairChange) => {
     setRejectionAlert(null);
     repair.accept.reset();
+    // the ended repair goes, so its message and diagnosis never stand beside the new one's outcome
+    onRepairDiscarded(instance);
     repair.start.mutate(change);
   };
+  // Forget the job and what started it: the panel is back at its start, whatever way the repair ended
   const discardRepair = () => {
+    repair.start.reset();
     repair.accept.reset();
     onRepairDiscarded(instance);
+  };
+  // "Accepted: ... now the official one" holds only until the official timetable changes again
+  const forgetAcceptedRepair = () => {
+    if (repairJob?.accepted_at) discardRepair();
+  };
+  // A repair started from the grid reports in the repair panel, far above where the drop happened
+  const repairPanelRef = useRef<HTMLDivElement>(null);
+  const startRepairFromGrid = (change: RepairChange) => {
+    startRepair(change);
+    repairPanelRef.current?.scrollIntoView?.({ block: 'start' });
   };
   // The mock validates moves against the example edge list only; a backend instance's moves are repairs
   const canDrag =
@@ -477,9 +511,9 @@ function TimetableWorkspace({
     return allSessions.filter((s) => s.facultyId === selectedFaculty);
   }, [allSessions, selectedFaculty]);
   // The workload view counts the printed timetable on the printed view, else the official one
-  const workloadSessions = useMemo(
-    () => (printed ? facultySessions : officialSessions.filter((s) => s.facultyId === selectedFaculty)),
-    [printed, facultySessions, officialSessions, selectedFaculty]
+  const workload = useMemo(
+    () => facultyLoad(selectedFaculty, printed ? facultySessions : officialSessions, printed ? edgeList : currentEdgeList),
+    [printed, facultySessions, officialSessions, selectedFaculty, edgeList, currentEdgeList]
   );
 
   // Determine effective cohort filter based on role
@@ -527,14 +561,14 @@ function TimetableWorkspace({
       };
       const check = checkMove(edgeList, labels, allSessions, sessionId, targetDay, targetPeriod);
       if (check === null) {
-        startRepair(change);
+        startRepairFromGrid(change);
       } else {
         setRejectionAlert({
           reason: check.heading,
           clashes: check.clashes.map((c) => c.text),
           sessionId: entityName(sessionId, edgeList, labels),
           originalSlotLabel: slotText(from.day, from.wallClockPeriod),
-          onRepair: () => startRepair(change),
+          onRepair: () => startRepairFromGrid(change),
         });
       }
       return;
@@ -608,7 +642,7 @@ function TimetableWorkspace({
           result.rejectionReason || 'Move rejected by solver constraint validation.';
         setRejectionAlert({
           reason,
-          sessionId,
+          sessionId: entityName(sessionId, edgeList, labels),
           originalSlotLabel,
         });
       }
@@ -619,7 +653,7 @@ function TimetableWorkspace({
       setProvisionalSessionId(null);
       setRejectionAlert({
         reason: (err instanceof Error && err.message) || 'Network exception during move validation.',
-        sessionId,
+        sessionId: entityName(sessionId, edgeList, labels),
         originalSlotLabel,
       });
     }
@@ -643,7 +677,7 @@ function TimetableWorkspace({
         darkMode ? 'dark' : ''
       }`}
     >
-      <div className="mx-auto max-w-7xl px-4 py-8 space-y-5 sm:px-6 lg:px-8">
+      <div className="w-full px-4 py-8 space-y-5 lg:px-6">
         {/* Header Toolbar */}
         <TimetableHeader
           cohortFilter={selectedCohortFilter}
@@ -662,9 +696,9 @@ function TimetableWorkspace({
           onToggleDarkMode={toggleDarkMode}
           currentRole={currentRole}
           solutionStatus={printed ? 'printed' : shown?.status ?? null}
-          onToggleOutcome={isExample ? handleToggleOutcome : undefined}
+          onToggleOutcome={testControls ? handleToggleOutcome : undefined}
           rejectMoveMode={rejectMoveMode}
-          onToggleRejectMode={handleToggleRejectMode}
+          onToggleRejectMode={testControls ? handleToggleRejectMode : undefined}
         />
 
         {/* Four Role-Differentiated Views Selector */}
@@ -680,18 +714,6 @@ function TimetableWorkspace({
           personaLocked={!!(lockedFaculty || lockedCohort)}
         />
 
-        {/* Rejection Alert Banner (when an optimistic move is rejected) */}
-        {rejectionAlert && (
-          <RejectionAlert
-            reason={rejectionAlert.reason}
-            clashes={rejectionAlert.clashes}
-            sessionId={rejectionAlert.sessionId}
-            originalSlotLabel={rejectionAlert.originalSlotLabel}
-            onDismiss={() => setRejectionAlert(null)}
-            onRepair={rejectionAlert.onRepair}
-          />
-        )}
-
         {/* Solve on the backend (administrator and coordinator; backend instances only) */}
         {caps.canSolve && solvable && client instanceof HttpChronosApiClient && (
           <SolvePanel
@@ -700,22 +722,26 @@ function TimetableWorkspace({
             instance={instance}
             jobId={solveJobs[instance] ?? null}
             onJobStarted={onSolveStarted}
+            onOfficial={forgetAcceptedRepair}
           />
         )}
 
         {/* Repair the official timetable (administrator and coordinator; backend instances only) */}
         {canRepair && (
-          <RepairPanel
-            key={`repair-${instance}`}
-            repair={repair}
-            jobId={repairJobId}
-            proposal={proposal}
-            edgeList={repairEdgeList ?? edgeList}
-            labels={labels}
-            workload={proposalWorkload}
-            waitingFor={waitingFor}
-            onDiscard={discardRepair}
-          />
+          <div ref={repairPanelRef} className="scroll-mt-2">
+            <RepairPanel
+              key={`repair-${instance}`}
+              repair={repair}
+              jobId={repairJobId}
+              proposal={proposal}
+              edgeList={repairEdgeList ?? edgeList}
+              labels={labels}
+              workload={proposalWorkload}
+              waitingFor={waitingFor}
+              onStart={startRepair}
+              onDiscard={discardRepair}
+            />
+          </div>
         )}
         {canRepair && http && substituteFor?.instance === instance && (
           <SubstitutePanel
@@ -741,18 +767,16 @@ function TimetableWorkspace({
             edgeList={edgeList}
             labels={labels}
             canClear={currentRole === 'administrator'}
+            onCleared={forgetAcceptedRepair}
           />
         )}
 
         {/* Faculty Workload View (Visible only to Faculty Role) */}
         {currentRole === 'faculty' && quality && (
           <FacultyWorkloadCard
-            facultyInitials={
-              workloadSessions[0]?.facultyInitials ||
-              workloadSessions[0]?.facultyName ||
-              (selectedFaculty ? labels.faculty(selectedFaculty).initials || labels.faculty(selectedFaculty).name : '')
-            }
-            facultySessions={workloadSessions}
+            facultyName={labels.faculty(selectedFaculty).name}
+            facultyInitials={labels.faculty(selectedFaculty).initials}
+            load={workload}
             loadRule={quality.rules.find((r) => r.rule_id === 'S-LOAD16')}
             nameOf={nameOf}
           />
@@ -764,8 +788,8 @@ function TimetableWorkspace({
             infeasibleSolution={shown}
             edgeList={edgeList}
             labels={labels}
-            onApplyRelaxation={isExample ? handleToggleOutcome : undefined}
-            onSwitchToSolved={isExample ? handleToggleOutcome : undefined}
+            onApplyRelaxation={testControls ? handleToggleOutcome : undefined}
+            onSwitchToSolved={testControls ? handleToggleOutcome : undefined}
           />
         )}
 
@@ -776,7 +800,11 @@ function TimetableWorkspace({
 
         {/* The real instance's generated timetable beside the printed one */}
         {baseline && !printed && shown && caps.showQualityScore && isSolvedSolution(shown) && (
-          <GeneratedVsPrintedCard generated={toQualityView(shown)} printed={baseline} />
+          <GeneratedVsPrintedCard
+            generated={toQualityView(shown)}
+            generatedHard={hardRuleViolations(shown.assignment, currentEdgeList)}
+            printed={baseline}
+          />
         )}
 
         {/* The printed timetable: its violations and score (not a solver output) */}
@@ -822,8 +850,21 @@ function TimetableWorkspace({
             {!shown && !printed && (
               <p data-testid="no-solution-note" className="px-1">
                 Not solved yet. No solution is published for this instance; the grid shows its
-                periods, breaks and pinned occupancy only.
+                periods, breaks and fixed items only.
               </p>
+            )}
+
+            {/* A refused drop: stuck to the top of the window, so it shows wherever the grid is scrolled to */}
+            {rejectionAlert && (
+              <RejectionAlert
+                key={`${rejectionAlert.reason}|${rejectionAlert.sessionId}`}
+                reason={rejectionAlert.reason}
+                clashes={rejectionAlert.clashes}
+                sessionId={rejectionAlert.sessionId}
+                originalSlotLabel={rejectionAlert.originalSlotLabel}
+                onDismiss={() => setRejectionAlert(null)}
+                onRepair={rejectionAlert.onRepair}
+              />
             )}
 
             <TimetableGrid
@@ -831,7 +872,7 @@ function TimetableWorkspace({
               solution={roleFilteredSolution}
               labels={labels}
               cohortFilter={effectiveCohortFilter}
-              showPinnedBlocks={currentRole !== 'faculty'}
+              pinsOfFaculty={currentRole === 'faculty' ? selectedFaculty : undefined}
               canDragAndDrop={canDrag}
               selectedSessionId={selectedSessionId}
               provisionalSessionId={provisionalSessionId}

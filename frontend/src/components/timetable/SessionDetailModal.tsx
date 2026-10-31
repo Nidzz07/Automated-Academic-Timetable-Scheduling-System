@@ -2,6 +2,7 @@ import React from 'react';
 import { EnrichedSession } from '@/adapters/timetable';
 import { Button } from '@/components/ui/button';
 import { periodLabel } from '@/lib/format';
+import { FIXED_SESSION_NOTE, sessionTitle } from '@/lib/wording';
 import { X, Pin } from 'lucide-react';
 
 interface SessionDetailModalProps {
@@ -37,19 +38,19 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
               ? 'Combined division lecture'
               : session.sessionType === 'lab'
                 ? 'Lab (practical)'
-                : 'Lecture (theory)'}{' '}
-          <span className="font-mono text-xs font-normal">{session.sessionId}</span>
+                : 'Lecture (theory)'}
+          , {session.subjectCode}
         </p>
 
         <h3 id="session-detail-title" className="text-xl font-semibold">
-          {session.subjectCode} — {session.subjectName}
+          {sessionTitle(session)}
         </h3>
 
         <dl className="my-4 grid grid-cols-2 gap-x-6 gap-y-3">
           <div>
             <dt className="text-xs font-semibold">Teacher</dt>
             <dd className="font-semibold">{session.facultyName}</dd>
-            <dd className="text-xs">Initials: {session.facultyInitials}</dd>
+            {session.facultyInitials && <dd className="text-xs">Initials: {session.facultyInitials}</dd>}
           </div>
           <div>
             <dt className="text-xs font-semibold">Room</dt>
@@ -76,28 +77,10 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
           <p className="mb-4 flex items-center gap-2 rounded-md border border-slate-400 bg-slate-100 p-2.5 text-xs dark:bg-slate-900">
             <Pin aria-hidden="true" className="h-4 w-4 shrink-0" />
             <span>
-              <strong>Cannot be moved:</strong> {session.pinnedReason}
+              <strong>Cannot be moved:</strong> {FIXED_SESSION_NOTE}
             </span>
           </p>
         )}
-
-        {/* The placement as the solution contract stores it */}
-        <details className="text-xs">
-          <summary className="cursor-pointer font-semibold">Placement record (as stored)</summary>
-          <pre className="mt-1 overflow-x-auto rounded border border-border bg-muted p-2 font-mono">
-            {JSON.stringify(
-              {
-                session_id: session.sessionId,
-                day: session.day,
-                period: session.wallClockPeriod,
-                room_id: session.roomCode,
-                sub_room_id: session.subRoomCode,
-              },
-              null,
-              2
-            )}
-          </pre>
-        </details>
 
         <div className="mt-4 flex justify-end gap-2">
           {onFindSubstitute && (

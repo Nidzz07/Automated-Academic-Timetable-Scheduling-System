@@ -6,8 +6,8 @@
  */
 
 import type { AuditEntry, JobStatus, RepairChange } from '@/api/chronosApi';
-import type { QualityRule } from '@/adapters/solution';
-import { EdgeList, Labels, entityName, slotsText } from '@/adapters/timetable';
+import type { DiagnosisMethod, QualityRule } from '@/adapters/solution';
+import { EdgeList, EnrichedSession, FacultyLoad, Labels, entityName, sessionPhrase, slotsText } from '@/adapters/timetable';
 import { displayText } from '@/lib/format';
 
 /** An unlisted code in words: "frozen_out_of_scope" -> "Frozen out of scope". */
@@ -91,7 +91,101 @@ export function loadLimitHours(rule: QualityRule | undefined): number | null {
 export const overLimitText = (hours: number, limit: number | null) =>
   limit !== null && hours > limit ? `Over ${num(limit)} h limit: ${num(hours)} h` : null;
 
+/** "18 h: 6 h scheduled + 12 h fixed items" */
+export const loadPartsText = (load: FacultyLoad) => `${load.total} h: ${load.scheduled} h scheduled + ${load.fixed} h fixed items`;
+
+// --- Fixed items (display.json pins: kind and, for frozen items, the decision behind it) -------
+
+/** The pin's kind in words; a frozen item by its decision (D24, D26, D44), never naming either. */
+export const PIN_KIND_LABELS: Record<string, string> = {
+  'frozen:D24': 'Fixed: elective or minor course',
+  'frozen:D26': 'Fixed: runs alongside another subject',
+  'frozen:D44': 'Fixed: taught by another department',
+  frozen: 'Fixed: kept at its printed time',
+  out_of_scope: 'Fixed: session of another programme',
+  mdm: 'Fixed: multidisciplinary minor course',
+  hss: 'Fixed: humanities course',
+  llc: 'Fixed: liberal learning course',
+  activity: 'Fixed: student activity',
+  project: 'Fixed: major project',
+  exam: 'Fixed: exam',
+  'accepted change': 'Fixed: closed by an accepted change',
+};
+
+export function pinKindLabel(kind: string | null, decision?: string | null): string {
+  if (!kind) return 'Fixed: cannot be moved';
+  return PIN_KIND_LABELS[`${kind}:${decision}`] ?? PIN_KIND_LABELS[kind] ?? `Fixed: ${humanise(kind).toLowerCase()}`;
+}
+
+/** How many cohorts a fixed-item card names before "and N more". */
+const LISTED_COHORTS = 3;
+
+/** "SE-Comp A, SE-Comp A batch A, SE-Comp A batch B and 2 more" */
+export const cohortListText = (labels: string[]) =>
+  labels.length > LISTED_COHORTS
+    ? `${labels.slice(0, LISTED_COHORTS).join(', ')} and ${labels.length - LISTED_COHORTS} more`
+    : labels.join(', ');
+
+/** A session with a fixed slot, in its details window. */
+export const FIXED_SESSION_NOTE = 'It is fixed to this time, so the solver never moves it.';
+
+// --- Session details ---------------------------------------------------------------------------
+
+/** "Operating Systems for SE-Comp A (Kailas Devadkar)" */
+export const sessionTitle = (s: Pick<EnrichedSession, 'subjectCode' | 'subjectName' | 'cohortLabel' | 'facultyName'>) =>
+  sessionPhrase(s.subjectName === 'Subject' ? s.subjectCode : s.subjectName, s.cohortLabel, s.facultyName);
+
 // --- Diagnosis (contract solution_v2 Kind, relaxation action and verification) -----------------
+
+/** Per diagnosis.method; `badge` is small secondary text, a new contract method is one more line here. */
+export const DIAGNOSIS_METHOD_LABELS: Record<DiagnosisMethod, { badge: string; text: string }> = {
+  mus: { badge: 'MUS Extraction', text: 'The solver proved that no timetable meets every rule, and found the smallest set of rules that cannot all hold.' },
+  search_exhaustion: { badge: 'Search Exhaustion', text: 'A complete search proved that no timetable meets every rule, but no explanation was extracted.' },
+  // contract row 9 (D43): a pre-solve certificate, proven but not minimal
+  presolve: { badge: 'Presolve', text: 'Proved infeasible by a counting check (not minimal)' },
+};
+/** solution.v1 does not say how it was diagnosed. */
+const UNSTATED_METHOD_LABEL = { badge: 'Method not stated (solution.v1)', text: 'The solver reported that no timetable meets every rule.' };
+export const diagnosisMethodLabel = (method: DiagnosisMethod | null) => (method ? DIAGNOSIS_METHOD_LABELS[method] : UNSTATED_METHOD_LABEL);
+
+/** The panel's headings: for a repair the change is what is impossible, for a solve the timetable. */
+export const diagnosisHeadings = (forRepair: boolean) => ({
+  title: forRepair ? 'This change is not possible' : 'No timetable is possible',
+  why: forRepair ? 'Why this change is impossible' : 'Why no timetable is possible',
+  fix: 'What would make it possible',
+});
+
+/** What an impossible repair means for the timetable; its placed-session count means nothing to a reader. */
+export const REPAIR_NOT_APPLIED = 'Nothing from this repair was applied.';
+
+/** How many of an item's named ids a sentence lists before "and N more". */
+const LISTED_NAMES = 6;
+
+const DAY_WORDS: Record<string, string> = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday' };
+
+/**
+ * A sentence of solver/mus.py with names instead of ids: sessions, rooms, faculty, cohorts and
+ * `pin.<i>` by `nameOf` (null keeps the id), "Mon P0" as "Monday T0". Its known forms are put in the
+ * UI's words ("X moved to Monday T0 in room 601"); any other sentence only gets the names.
+ */
+export function readableDiagnosisText(text: string, nameOf: (id: string) => string | null): string {
+  const name = (id: string) => nameOf(id) ?? id;
+  const names = (ids: string) => {
+    const all = ids.split(', ').map(name);
+    return all.length > LISTED_NAMES ? `${all.slice(0, LISTED_NAMES).join(', ')} and ${all.length - LISTED_NAMES} more` : all.join(', ');
+  };
+  const reworded = text
+    .replace(/^The change: (\S+) is moved to (.+) in (\S+)\.$/, '$1 moved to $2 in $3.')
+    .replace(/^The change: /, '')
+    .replace(/\b[Rr]oom (?=(?:room|sub)-)/g, '')
+    .replace(/Pinned occupancy (\d+) holds (.+?) at /, (_, i: string, ids: string) => `${name(`pin.${i}`)} holds ${names(ids)} at `)
+    .replace(/\bFree (?:faculty|cohort|room) (\S+) from the pinned occupancy at /, 'Free $1 from the fixed item at ')
+    .replace(/^Lab block \S+: (.+) start together and run over the same contiguous periods\.$/, (_, ids: string) => `These lab sessions start together and run over the same consecutive periods: ${names(ids)}.`)
+    .replace(/\bpin\.\d+\b|\b[a-z]+-[a-z0-9]+(?:[-_.][a-z0-9]+)*\b/gi, (id) => nameOf(id) ?? id)
+    .replace(/\b(Mon|Tue|Wed|Thu|Fri) (P\d)\b/g, (_, day: string, period: string) => `${DAY_WORDS[day]} ${period}`);
+  const shown = displayText(reworded);
+  return shown.charAt(0).toUpperCase() + shown.slice(1);
+}
 
 export const CONSTRAINT_KIND_LABELS: Record<string, string> = {
   FACULTY_CLASH: 'A teacher would be in two places at once',
@@ -179,6 +273,38 @@ export const ANOMALY_CATEGORY_LABELS: Record<string, string> = {
   frozen_faculty_tt_mdm: 'Minor-course lab from the faculty timetable kept fixed',
 };
 export const anomalyCategoryLabel = (category: string) => lookup(ANOMALY_CATEGORY_LABELS, category);
+
+// --- Generated beside printed (numbers read from the data; quality is the solver's, D34) --------
+
+const hardRules = (n: number) => `${n} hard rule${n === 1 ? '' : 's'}`;
+
+/** The comparison card's one factual sentence: hard rules first, the soft-rule score as it falls. */
+export function comparisonSentence(
+  generatedHard: number,
+  printedHard: number,
+  generatedScore: number | null,
+  printedScore: number | null
+): string {
+  const soft =
+    generatedScore === null || printedScore === null || generatedScore === printedScore
+      ? null
+      : printedScore > generatedScore
+        ? 'higher'
+        : 'lower';
+  const printed = soft ? `scores ${soft} on the soft rules ${soft === 'higher' ? 'but' : 'and'} breaks ${hardRules(printedHard)}` : `breaks ${hardRules(printedHard)}`;
+  return `The printed timetable ${printed}; the generated one breaks ${generatedHard === 0 ? 'none' : hardRules(generatedHard)}.`;
+}
+
+// --- A repair's proposal ------------------------------------------------------------------------
+
+/** "2 sessions changed; 1 session: teacher changed", or one of the two; "0 sessions changed" only when nothing did. */
+export function repairSummary(placementsChanged: number, teachersChanged: number): string {
+  const sessions = (n: number) => `${n} session${n === 1 ? '' : 's'}`;
+  return [
+    ...(placementsChanged > 0 || teachersChanged === 0 ? [`${sessions(placementsChanged)} changed`] : []),
+    ...(teachersChanged > 0 ? [`${sessions(teachersChanged)}: teacher changed`] : []),
+  ].join('; ');
+}
 
 // --- Audit log (backend/app/service.py: login, solve, repair, accept, clear_changes) ------------
 

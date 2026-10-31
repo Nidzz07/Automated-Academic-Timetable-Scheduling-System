@@ -47,7 +47,7 @@ export const SessionCell: React.FC<SessionCellProps> = ({
       }`}
     >
       {/* Kind, drag handle, room */}
-      <div className="mb-1 flex items-center justify-between gap-1">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-x-1">
         <div className="flex items-center gap-1">
           {isDraggable && (
             <span data-testid={`drag-handle-${session.sessionId}`} className="shrink-0 cursor-grab" title="Drag to reschedule">
@@ -82,8 +82,8 @@ export const SessionCell: React.FC<SessionCellProps> = ({
       </div>
 
       {/* Faculty and size */}
-      <div className="mt-1 flex items-center justify-between gap-2 border-t border-dashed border-border pt-1.5">
-        <span className="truncate" title={session.facultyName}>
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 border-t border-dashed border-border pt-1.5">
+        <span className="min-w-0" title={session.facultyName}>
           <span className="font-semibold">{session.facultyInitials}</span> {session.facultyName}
         </span>
         <span className="shrink-0">{session.cohortSize} students</span>

@@ -1,0 +1,5 @@
+# What tsc emits beside a .ts config. Vite reads vite.config.js before vite.config.ts, so a stray
+# copy silently overrides later edits; tsconfig.node.json has noEmit so none should appear.
+/vite.config.js
+/vite.config.d.ts
+*.tsbuildinfo

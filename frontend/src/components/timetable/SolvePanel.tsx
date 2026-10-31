@@ -26,6 +26,8 @@ interface SolvePanelProps {
   onJobStarted: (instance: EdgeListInstance, jobId: string) => void;
   /** How often to poll GET /jobs/{id} */
   pollMs?: number;
+  /** A finished solve just became the official timetable */
+  onOfficial?: () => void;
 }
 
 // D56: the accepted changes were accepted or cleared while the solve ran (GET /jobs/{id} `stale`)
@@ -37,7 +39,7 @@ const STALE_MESSAGE = 'Finished, but not official: the accepted changes changed 
  * grid, quality card and diagnosis panel show it. A timeout leaves it untouched (D33), and so
  * does a stale result, which the backend keeps but never makes official (D56).
  */
-export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId, onJobStarted, pollMs = 1000 }) => {
+export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId, onJobStarted, pollMs = 1000, onOfficial }) => {
   const [timeLimit, setTimeLimit] = useState(DEFAULT_TIME_LIMIT_S);
   const solve = useSolveMutation(client, onJobStarted);
   const job = useJobQuery(client, jobId, pollMs);
@@ -46,7 +48,11 @@ export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId,
   const solution = job.data?.solution;
   const stale = job.data?.stale === true;
   useEffect(() => {
-    if (solution && !stale) queryClient.setQueryData(instanceSolutionQueryKey(instance), solution);
+    if (solution && !stale) {
+      queryClient.setQueryData(instanceSolutionQueryKey(instance), solution);
+      onOfficial?.();
+    }
+    // onOfficial changes every render; only a new result is news
   }, [solution, stale, instance, queryClient]);
 
   const failure = solve.error ?? job.error;

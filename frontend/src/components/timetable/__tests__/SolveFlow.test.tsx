@@ -305,7 +305,7 @@ describe('The real instance against the printed timetable (static mode)', () => 
   it('names faculty who teach no SE/TE session without initials, never "Unresolved"', async () => {
     const labels = labelsFor(await files.getDisplay(REAL_INSTANCE));
     const pins = buildPins(await files.getEdgeList(REAL_INSTANCE), labels);
-    const faculty = new Set(pins.flatMap((p) => p.facultyInitials));
+    const faculty = new Set(pins.flatMap((p) => p.facultyNames));
     expect(faculty).toContain('Dayanand Ambawade');
     expect(faculty).toContain('Vandana Wekhande');
     expect(faculty).not.toContain('Unresolved');
