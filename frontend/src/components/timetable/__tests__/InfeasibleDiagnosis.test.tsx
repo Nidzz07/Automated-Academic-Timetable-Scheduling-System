@@ -13,8 +13,8 @@ describe('Infeasibility Diagnosis Panel on a presolve certificate (contract row 
     if (!isInfeasibleSolution(presolve)) throw new Error('expected an infeasible payload');
     render(<InfeasibilityDiagnosisPanel infeasibleSolution={presolve} />);
 
-    expect(screen.getByTestId('diagnosis-method')).toHaveTextContent('Presolve');
-    expect(screen.getByText('Proved infeasible by a counting check (not minimal)')).toBeInTheDocument();
+    expect(screen.getByTestId('diagnosis-method')).toHaveTextContent('presolve');
+    expect(screen.getByText('A counting check proved that no timetable meets every rule; these rules may not be the smallest such set.')).toBeInTheDocument();
     for (const c of presolve.diagnosis.minimal_conflicting_set) {
       expect(screen.getByTestId(`conflicting-constraint-${c.constraint_id}`)).toBeInTheDocument();
     }
@@ -36,7 +36,7 @@ describe('Infeasibility Diagnosis Panel', () => {
     expect(screen.getByText(/backtracking\(forward-checking, mrv\) \+ mus-extraction\(deletion-based\)/i)).toBeInTheDocument();
     expect(screen.getByText('1.3 s')).toBeInTheDocument();
     expect(screen.getByText(/5 \/ 8 sessions placed/i)).toBeInTheDocument();
-    expect(screen.getByText(/9,417 backtracks/i)).toBeInTheDocument();
+    expect(screen.getByText(/9,417 steps undone/i)).toBeInTheDocument();
   });
 
   it('renders all constraints in the minimal conflicting subset (MUS) with kinds and entity ids', () => {
@@ -104,7 +104,7 @@ describe('Infeasibility Diagnosis Panel (solution.v2)', () => {
   it('shows the mus method, constraint cells, the typed relaxation with its verification and the partial placement', () => {
     render(<InfeasibilityDiagnosisPanel infeasibleSolution={parse(infeasibleV2Fixture)} />);
 
-    expect(screen.getByTestId('diagnosis-method')).toHaveTextContent('MUS Extraction');
+    expect(screen.getByTestId('diagnosis-method')).toHaveTextContent('mus');
     expect(screen.getByTestId('constraint-kind-ROOM_OCCUPANCY')).toBeInTheDocument();
     expect(screen.getByTestId('constraint-slots-lab-rooms.monday-10.00')).toHaveTextContent(
       'When: Monday T1, Monday T3'
@@ -115,10 +115,10 @@ describe('Infeasibility Diagnosis Panel (solution.v2)', () => {
     );
 
     const partial = screen.getByTestId('partial-placement');
-    expect(partial).toHaveTextContent(/diagnostic only — not a timetable\): 4 placed, 4 unplaced/i);
+    expect(partial).toHaveTextContent(/for diagnosis only, not a timetable\): 4 placed, 4 not placed/i);
     expect(partial).toHaveTextContent('sess-0005 (Tuesday T0)');
     expect(screen.getByTestId('unplaced-sessions')).toHaveTextContent(
-      'Unplaced: sess-0001, sess-0002, sess-0003, sess-0004'
+      'Not placed: sess-0001, sess-0002, sess-0003, sess-0004'
     );
   });
 
@@ -129,7 +129,7 @@ describe('Infeasibility Diagnosis Panel (solution.v2)', () => {
     delete raw.diagnosis.suggested_relaxation;
     render(<InfeasibilityDiagnosisPanel infeasibleSolution={parse(raw)} onApplyRelaxation={() => {}} />);
 
-    expect(screen.getByTestId('diagnosis-method')).toHaveTextContent('Search Exhaustion');
+    expect(screen.getByTestId('diagnosis-method')).toHaveTextContent('search_exhaustion');
     expect(screen.getByText(/no explanation was extracted/i)).toBeInTheDocument();
     expect(screen.queryByTestId('minimal-conflicting-set')).not.toBeInTheDocument();
     expect(screen.queryByTestId('suggested-relaxation')).not.toBeInTheDocument();

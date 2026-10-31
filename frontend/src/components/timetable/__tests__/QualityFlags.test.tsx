@@ -45,7 +45,7 @@ describe('Quality flags panel (D34: solver output, displayed as given)', () => {
     expect(screen.getByTestId('quality-rule-FAC_LOAD_IMBALANCE')).toHaveTextContent(
       'AGN teaches 2 h on Monday (the SE-Comp B OS lab)'
     );
-    expect(screen.getByTestId('quality-rule-FAC_LOAD_IMBALANCE')).toHaveTextContent('Found 2 hours → −1 point (0.5 points each)');
+    expect(screen.getByTestId('quality-rule-FAC_LOAD_IMBALANCE')).toHaveTextContent('Found 2 h → −1.0 points (0.5 points each)');
     // plain title and meaning first, the rule id only as secondary text
     expect(screen.getByTestId('quality-rule-FAC_LOAD_IMBALANCE')).toHaveTextContent('Uneven teaching days');
   });
@@ -59,7 +59,7 @@ describe('Quality flags panel (D34: solver output, displayed as given)', () => {
     expect(within(row).queryByTestId('rule-penalty')).not.toBeInTheDocument();
     expect(row).not.toHaveTextContent(/point|Found/);
 
-    expect(screen.getByTestId('quality-partial')).toHaveTextContent('Partial: S-LOAD16 not evaluated');
+    expect(screen.getByTestId('quality-partial')).toHaveTextContent('Partial: Teachers over the weekly limit not checked');
     expect(screen.getByText(/rules version 1/)).toBeInTheDocument();
   });
 

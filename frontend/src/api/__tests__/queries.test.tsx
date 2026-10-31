@@ -26,10 +26,7 @@ function stubClient(overrides: Partial<ChronosApiClient>): ChronosApiClient {
     getAnomalies: vi.fn(),
     getPrintedBaseline: vi.fn(),
     listInstances: vi.fn(),
-    generateTimetable: vi.fn(),
     moveSession: vi.fn(),
-    getSolvedSolution: vi.fn(),
-    getInfeasibleSolution: vi.fn(),
     ...overrides,
   };
 }
@@ -90,7 +87,7 @@ describe('App query states', () => {
     render(<App />);
 
     const error = await screen.findByTestId('timetable-error');
-    expect(error).toHaveTextContent(/failed solution_v1 contract validation/i);
+    expect(error).toHaveTextContent(/failed its check \(solution_v1\)/i);
     expect(within(error).getByTestId('contract-issues')).toHaveTextContent(
       "must have required property 'assignment'"
     );

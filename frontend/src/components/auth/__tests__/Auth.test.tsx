@@ -156,16 +156,16 @@ describe('Solve job across instance switches', () => {
     renderApp();
     await logIn('administrator');
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
     fireEvent.click(await screen.findByTestId('solve-button'));
     state.job = { ...state.job, status: 'running', phase: 'search' };
     await waitFor(() => expect(screen.getByTestId('solve-status')).toHaveAttribute('data-phase', 'search'));
-    expect(screen.getByTestId('solve-status')).toHaveTextContent('Running (search)');
+    expect(screen.getByTestId('solve-status')).toHaveTextContent('Searching for a timetable.');
 
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: 'example' } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: 'example' } });
     await waitFor(() => expect(screen.queryByTestId('solve-panel')).not.toBeInTheDocument());
     state.job = { ...state.job, phase: 'improve' };
-    fireEvent.change(await screen.findByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    fireEvent.change(await screen.findByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
 
     await waitFor(() => expect(screen.getByTestId('solve-status')).toHaveAttribute('data-phase', 'improve'));
     expect(screen.getByTestId('solve-button')).toBeDisabled();

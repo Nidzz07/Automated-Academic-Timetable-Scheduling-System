@@ -73,9 +73,7 @@ export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions, la
                         : here.map((o, i) => (
                             <div key={i}>
                               {o.label}
-                              {o.subRoomId && (
-                                <span> ({code.get(o.subRoomId)})</span>
-                              )}
+                              {o.subRoomId && <span>, {code.get(o.subRoomId)}</span>}
                             </div>
                           ))}
                     </td>

@@ -39,7 +39,7 @@ export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
           </div>
           {/* The department's own notation, e.g. 6T + 8P = 14 */}
           <p data-testid="workload-formula-badge" className="font-serif text-xl font-semibold">
-            {loadText(load)} hrs/wk
+            {loadText(load)} h
           </p>
         </div>
       </CardHeader>
@@ -57,19 +57,19 @@ export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
           <div>
             <dt className="text-xs font-semibold">Theory (T)</dt>
-            <dd className="text-base">{load.theory} hours a week</dd>
+            <dd className="text-base">{load.theory} h a week</dd>
           </div>
           <div>
             <dt className="text-xs font-semibold">Practical (P)</dt>
-            <dd className="text-base">{load.practical} hours a week</dd>
+            <dd className="text-base">{load.practical} h a week</dd>
           </div>
           <div>
             <dt className="text-xs font-semibold">Fixed items</dt>
-            <dd className="text-base">{load.fixed} hours a week</dd>
+            <dd className="text-base">{load.fixed} h a week</dd>
           </div>
           <div>
             <dt className="text-xs font-semibold">Total teaching</dt>
-            <dd className="text-base font-semibold">{load.total} hours a week</dd>
+            <dd className="text-base font-semibold">{load.total} h a week</dd>
           </div>
           <div className="col-span-2 sm:col-span-4">
             <dt className="text-xs font-semibold">

@@ -56,12 +56,12 @@ describe('quality rule wording (D34 ids; numbers are the solver’s)', () => {
   });
 
   it('says what was found and what it cost, from raw, penalty and weight as given', () => {
-    expect(ruleResult(evaluated('S-GAP', 2, 3))).toBe('Found 3 free periods → −6 points (2 points each)');
-    expect(ruleResult(evaluated('S-LOAD16', 1, 1))).toBe('Found 1 teacher → −1 point (1 point each)');
-    expect(ruleResult(evaluated('FAC_LOAD_IMBALANCE', 0.5, 101))).toBe('Found 101 hours → −50.5 points (0.5 points each)');
+    expect(ruleResult(evaluated('S-GAP', 2, 3))).toBe('Found 3 free periods → −6.0 points (2.0 points each)');
+    expect(ruleResult(evaluated('S-LOAD16', 1, 1))).toBe('Found 1 teacher → −1.0 points (1.0 points each)');
+    expect(ruleResult(evaluated('FAC_LOAD_IMBALANCE', 0.5, 101))).toBe('Found 101 h → −50.5 points (0.5 points each)');
     expect(ruleResult(evaluated('S-B2B', 1, 0))).toBe('Found 0 pairs of periods → no points lost');
     // the solver's penalty is shown as it is, never recomputed from weight × raw
-    expect(ruleResult({ ...evaluated('S-GAP', 2, 3), penalty: 7 })).toBe('Found 3 free periods → −7 points (2 points each)');
+    expect(ruleResult({ ...evaluated('S-GAP', 2, 3), penalty: 7 })).toBe('Found 3 free periods → −7.0 points (2.0 points each)');
     expect(ruleResult({ rule_id: 'S-LOAD16', status: 'not_evaluated', weight: 1, reason: 'too few sessions' })).toBe(
       'Not checked: too few sessions'
     );
@@ -69,7 +69,7 @@ describe('quality rule wording (D34 ids; numbers are the solver’s)', () => {
 
   it('falls back to the id in words for a rule it does not know', () => {
     expect(ruleWording('NEW_RULE').title).toBe('New rule');
-    expect(ruleResult(evaluated('NEW_RULE', 1, 2))).toBe('Found 2 cases → −2 points (1 point each)');
+    expect(ruleResult(evaluated('NEW_RULE', 1, 2))).toBe('Found 2 cases → −2.0 points (1.0 points each)');
   });
 });
 
@@ -156,14 +156,14 @@ describe('auditSentence: an audit row as a sentence (real names from display.jso
 
   it("names an accepted repair's change from its repair row, with the actor's role when known", () => {
     expect(auditSentence(accept, [accept, repair], describeChange, 'Administrator')).toBe(
-      "Nidhi (administrator) accepted the repair for Swapnali Kurhade's absence on Tuesday T6–T7."
+      "Nidhi (administrator) accepted the repair for the absence of Swapnali Kurhade (SK) on Tuesday T6–T7."
     );
     expect(auditSentence(accept, [accept], describeChange)).toBe('Nidhi accepted a repair.');
   });
 
   it('says what a repair asked for and how it ended', () => {
     expect(auditSentence(repair, [repair], describeChange)).toBe(
-      "Nidhi asked for a repair for Swapnali Kurhade's absence on Tuesday T6–T7. A timetable was found."
+      "Nidhi asked for a repair for the absence of Swapnali Kurhade (SK) on Tuesday T6–T7. A timetable was found."
     );
     const move = row(4, 'repair', {
       change: { kind: 'move_session', session_id: 'obs-t0-r1-c3-l0', day: 2, period: 1, room_id: 'room-605' },
@@ -180,7 +180,7 @@ describe('auditSentence: an audit row as a sentence (real names from display.jso
       status: 'solved',
     });
     expect(auditSentence(sub, [sub], describeChange)).toBe(
-      'Nidhi asked for a repair for Prasenjit Bhavathankar teaching CE207 · SE-Comp A instead. A timetable was found.'
+      'Nidhi asked for a repair for Prasenjit Bhavathankar (PBB) teaching CE207 · SE-Comp A instead. A timetable was found.'
     );
   });
 

@@ -17,7 +17,7 @@ import {
   labelsFor,
 } from '@/adapters/timetable';
 import { parseSolution } from '@/api/contractValidation';
-import { displayText, formatTimestamp } from '@/lib/format';
+import { displayText, formatScore, formatTimestamp } from '@/lib/format';
 
 // The real instance's files, as the backend serves them
 let real: Record<string, unknown>;
@@ -162,7 +162,7 @@ const openReal = async (role: UserRole = 'coordinator', setUp?: (backend: Return
   setSession({ username: `test-${role}`, token: `token-${role}`, role });
   render(<App client={new HttpChronosApiClient('/api')} />);
   await screen.findByTestId('timetable-grid');
-  fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+  fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
   await screen.findByTestId('period-clock-0');
   return backend;
 };
@@ -224,7 +224,8 @@ describe('Repair in the app (http mode, S14d)', () => {
   ] as const)('offers repair and drag to the logged-in %s: %s', async (role, offered) => {
     await openReal(role);
     expect(!!screen.queryByTestId('repair-panel')).toBe(offered);
-    expect(!!screen.queryAllByTestId(/^drop-slot-/).length).toBe(offered);
+    // drag: a draggable card; the drop targets exist only during a drag (S14t)
+    expect(screen.queryAllByTestId(/^drag-handle-/).length > 0).toBe(offered);
   });
 
   it('a clean drag posts a move repair; a solved result highlights slot and room changes and the score change', async () => {
@@ -243,7 +244,7 @@ describe('Repair in the app (http mode, S14d)', () => {
     expect(screen.getByTestId(`repair-change-${s.sessionId}`)).toHaveAttribute('data-change', 'slot');
     expect(screen.getByTestId(`repair-change-${other.sessionId}`)).toHaveAttribute('data-change', 'room');
     const score = solution.quality.score;
-    expect(screen.getByTestId('repair-score')).toHaveTextContent(`${score.toFixed(1)} → ${(score - 1.5).toFixed(1)} (-1.5)`);
+    expect(screen.getByTestId('repair-score')).toHaveTextContent(`${formatScore(score)} → ${formatScore(score - 1.5)} (−1.5)`);
 
     // the grid shows the proposal: the moved session at its new slot, both changes outlined
     expect(screen.getByTestId('proposal-note')).toBeInTheDocument();
@@ -252,7 +253,7 @@ describe('Repair in the app (http mode, S14d)', () => {
     expect(card).toHaveClass('ring-amber-500');
     expect(screen.getByTestId(`session-cell-${other.sessionId}`).closest('[data-flagged]')).toBeInTheDocument();
     // no second repair or drag while one waits
-    expect(screen.queryAllByTestId(/^drop-slot-/)).toHaveLength(0);
+    expect(screen.queryAllByTestId(/^drag-handle-/)).toHaveLength(0);
     expect(screen.getByTestId('mark-unavailable-button')).toBeDisabled();
   });
 
@@ -290,7 +291,7 @@ describe('Repair in the app (http mode, S14d)', () => {
     await waitFor(() => expect(status()).toHaveTextContent('Accepted: the repaired timetable is now the official one.'));
     expect(screen.queryByTestId('proposal-note')).not.toBeInTheDocument();
     expect(within(screen.getByTestId(`grid-cell-${day}-${period}`)).getByTestId(`session-cell-${s.sessionId}`)).toBeInTheDocument();
-    expect(screen.getByTestId('quality-score')).toHaveTextContent((solution.quality.score - 1.5).toFixed(1));
+    expect(screen.getByTestId('quality-score')).toHaveTextContent(formatScore(solution.quality.score - 1.5));
   });
 
   it('a 409 on Accept says the timetable changed meanwhile', async () => {
@@ -327,7 +328,7 @@ describe('Repair in the app (http mode, S14d)', () => {
     const backend = await openReal('administrator');
     const panel = screen.getByTestId('repair-panel');
     backend.job = repairJob({ status: 'timeout' });
-    const facultySelect = within(panel).getByLabelText('Unavailable faculty member');
+    const facultySelect = within(panel).getByLabelText('Unavailable teacher');
     expect(within(facultySelect).getByRole('option', { name: 'Swapnali Kurhade (SK)' })).toBeInTheDocument();
     fireEvent.change(facultySelect, { target: { value: 'fac-swapnali-kurhade' } });
     expect(screen.getByTestId('mark-unavailable-button')).toBeDisabled();
@@ -387,7 +388,7 @@ describe('Repair in the app (http mode, S14d)', () => {
       metadata: { algorithm: 'repair', runtime_ms: 40, sessions_total: 156, sessions_assigned: 155, slots_used: null, backtracks: 3 },
     });
     backend.job = repairJob({ status: 'infeasible', solution: infeasible });
-    fireEvent.change(screen.getByLabelText('Unavailable faculty member'), { target: { value: 'fac-swapnali-kurhade' } });
+    fireEvent.change(screen.getByLabelText('Unavailable teacher'), { target: { value: 'fac-swapnali-kurhade' } });
     fireEvent.click(screen.getByLabelText('Tuesday T0'));
     fireEvent.click(screen.getByTestId('mark-unavailable-button'));
 
@@ -481,7 +482,7 @@ describe('The current edge list (S14j: GET /instances/{id}/edge-list/current)', 
     vi.stubGlobal('fetch', fetchMock);
     render(<App client={new MockChronosApiClient()} />);
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
     await screen.findByTestId('period-clock-0');
     expect(screen.getAllByTestId('pinned-block').some((el) => el.textContent?.includes('accepted change'))).toBe(false);
     expect(screen.queryByTestId('repair-panel')).not.toBeInTheDocument();
@@ -498,9 +499,9 @@ const openSession = (sessionId: string) => fireEvent.click(screen.getByTestId(`s
 const showLecture = (role: UserRole, teacher = 'fac-anant-nimkar') => {
   const [label, value] =
     role === 'faculty'
-      ? ['Select faculty persona', teacher]
+      ? ['Select teacher', teacher]
       : role === 'student'
-        ? ['Select student division', 'coh-se-a']
+        ? ['Select class', 'coh-se-a']
         : ['Filter timetable by division', 'coh-se-a'];
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 };
@@ -536,17 +537,17 @@ describe('Accepted changes (S14h, D52)', () => {
     // D52: the current edge list has the accepted substitute teaching the session
     showLecture('administrator');
     openSession(LECTURE);
-    expect(within(screen.getByRole('dialog')).getByText('Prasenjit Bhavathankar')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('Prasenjit Bhavathankar (PBB)')).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole('dialog')).getByText('Close'));
 
     fireEvent.click(within(panel).getByTestId('clear-changes'));
-    expect(within(panel).getByTestId('confirm-clear')).toHaveTextContent('Clear all 3 accepted changes?');
+    expect(within(panel).getByTestId('confirm-clear')).toHaveTextContent('Remove all 3 accepted changes?');
     fireEvent.click(within(panel).getByText('Cancel'));
     expect(within(panel).queryByTestId('confirm-clear')).not.toBeInTheDocument();
     expect(backend.cleared).toBe(0);
 
     fireEvent.click(within(panel).getByTestId('clear-changes'));
-    expect(within(panel).getByTestId('confirm-clear')).toHaveTextContent('The official timetable may change');
+    expect(within(panel).getByTestId('confirm-clear')).toHaveTextContent('The timetable in use may change');
     fireEvent.click(within(panel).getByTestId('confirm-clear-button'));
     expect(await within(panel).findByTestId('no-accepted-changes')).toBeInTheDocument();
     expect(backend.cleared).toBe(1);
@@ -556,7 +557,7 @@ describe('Accepted changes (S14h, D52)', () => {
       expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === `/api/instances/${REAL_INSTANCE}/edge-list/current`)).toHaveLength(2)
     );
     openSession(LECTURE);
-    expect(within(screen.getByRole('dialog')).getByText('Anant Nimkar')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('Anant Nimkar (AVN)')).toBeInTheDocument();
   });
 
   it('after Clear, reads the official solution, the current edge list and the changes again (D56)', async () => {
@@ -632,9 +633,9 @@ describe('Find substitute (S14h, D53)', () => {
     expect(within(panel).getByTestId(`substitute-${BHAVATHANKAR}`)).toHaveTextContent('Prasenjit Bhavathankar (PBB)');
     expect(within(panel).getByTestId(`substitute-score-${BHAVATHANKAR}`)).toHaveTextContent('score +0.0');
     expect(within(panel).getByTestId('substitute-fac-nataasha-raul')).toHaveTextContent('Nataasha Raul (NR)');
-    expect(within(panel).getByTestId('substitute-score-fac-nataasha-raul')).toHaveTextContent('score -2.0');
+    expect(within(panel).getByTestId('substitute-score-fac-nataasha-raul')).toHaveTextContent('score −2.0');
     expect(within(panel).getByTestId('left-out-fac-sudhir-dhage')).toHaveTextContent(
-      `Sudhir Dhage (SND): busy (teaches ${entityName('obs-t6-r4-c4-l1', edgeList, labelsFor(display))} then)`
+      `Sudhir Dhage (SND): teaches ${entityName('obs-t6-r4-c4-l1', edgeList, labelsFor(display))} then`
     );
 
     // nobody moves: the result is the official placement with the new teacher, in the job's edge list
@@ -649,7 +650,7 @@ describe('Find substitute (S14h, D53)', () => {
     // the proposal is shown on GET /jobs/{id}/edge-list; the current edge list still has Anant Nimkar
     expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/jobs/rep-1/edge-list', expect.anything());
     openSession(LECTURE);
-    expect(within(screen.getByRole('dialog')).getByText('Prasenjit Bhavathankar')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('Prasenjit Bhavathankar (PBB)')).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole('dialog')).getByText('Close'));
 
     backend.changes = [{ job_id: 'rep-1', change: substitution, requested_by: 'test-coordinator', accepted_by: 'test-coordinator', accepted_at: '2026-10-21T12:00:00Z' }];
@@ -663,7 +664,7 @@ describe('Find substitute (S14h, D53)', () => {
       expect(vi.mocked(fetch).mock.calls.filter(([url]) => url === `/api/instances/${REAL_INSTANCE}/edge-list/current`)).toHaveLength(2)
     );
     openSession(LECTURE);
-    expect(within(screen.getByRole('dialog')).getByText('Prasenjit Bhavathankar')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('Prasenjit Bhavathankar (PBB)')).toBeInTheDocument();
   });
 
   it.each(['faculty', 'student'] as const)('is not offered to the %s', async (role) => {
@@ -693,24 +694,24 @@ describe('Accounts linked to a faculty member or cohort (D50)', () => {
   it('a linked faculty login opens on the real timetable, locked to that teacher', async () => {
     await logInWith('faculty', { faculty_id: 'fac-swapnali-kurhade', cohort_id: null });
     await screen.findByTestId('period-clock-0');
-    const picker = screen.getByLabelText('Select faculty persona');
+    const picker = screen.getByLabelText('Select teacher');
     expect(picker).toBeDisabled();
     expect(picker).toHaveValue('fac-swapnali-kurhade');
-    expect(screen.getByLabelText('Select instance')).toHaveValue(REAL_INSTANCE);
+    expect(screen.getByLabelText('Select timetable')).toHaveValue(REAL_INSTANCE);
   });
 
   it('a linked student login is locked to that cohort', async () => {
     await logInWith('student', { faculty_id: null, cohort_id: 'coh-se-a' });
     await screen.findByTestId('period-clock-0');
-    const picker = screen.getByLabelText('Select student division');
+    const picker = screen.getByLabelText('Select class');
     expect(picker).toBeDisabled();
     expect(picker).toHaveValue('coh-se-a');
   });
 
   it('without a link the picker stays free, on the real timetable', async () => {
     await logInWith('faculty', { faculty_id: null, cohort_id: null });
-    expect(screen.getByLabelText('Select faculty persona')).toBeEnabled();
-    expect(screen.getByLabelText('Select instance')).toHaveValue(REAL_INSTANCE);
+    expect(screen.getByLabelText('Select teacher')).toBeEnabled();
+    expect(screen.getByLabelText('Select timetable')).toHaveValue(REAL_INSTANCE);
   });
 });
 
@@ -718,7 +719,7 @@ describe('A queued repair and the audit log (S14o)', () => {
   const solveJob = (status: string) => ({ id: 'solve-1', instance_id: REAL_INSTANCE, kind: 'solve', time_limit_s: 300, status });
   const markKurhadeUnavailable = () => {
     const panel = screen.getByTestId('repair-panel');
-    fireEvent.change(within(panel).getByLabelText('Unavailable faculty member'), { target: { value: 'fac-swapnali-kurhade' } });
+    fireEvent.change(within(panel).getByLabelText('Unavailable teacher'), { target: { value: 'fac-swapnali-kurhade' } });
     fireEvent.click(within(panel).getByLabelText('Tuesday T6'));
     fireEvent.click(screen.getByTestId('mark-unavailable-button'));
   };
@@ -732,23 +733,23 @@ describe('A queued repair and the audit log (S14o)', () => {
 
     markKurhadeUnavailable();
     await waitFor(() =>
-      expect(status()).toHaveTextContent('Waiting for the previous job to finish: the solve of this instance is still running.')
+      expect(status()).toHaveTextContent('Waiting: the timetable being generated must finish first.')
     );
     expect(status()).toHaveAttribute('data-status', 'queued');
 
     backend.jobs['solve-1'] = solveJob('timeout');
     await waitFor(() => expect(solveStatus()).toHaveAttribute('data-status', 'timeout'), { timeout: 3000 });
-    await waitFor(() => expect(status()).toHaveTextContent('Queued: waiting for a solver worker.'));
+    await waitFor(() => expect(status()).toHaveTextContent('Waiting its turn on the server.'));
   });
 
   it('a solve started after the repair is not what the repair waits for', async () => {
     const backend = await openReal('administrator');
     markKurhadeUnavailable();
-    await waitFor(() => expect(status()).toHaveTextContent('Queued: waiting for a solver worker.'));
+    await waitFor(() => expect(status()).toHaveTextContent('Waiting its turn on the server.'));
     backend.jobs['solve-1'] = solveJob('running');
     fireEvent.click(screen.getByTestId('solve-button'));
     await waitFor(() => expect(solveStatus()).toHaveAttribute('data-status', 'running'));
-    expect(status()).toHaveTextContent('Queued: waiting for a solver worker.');
+    expect(status()).toHaveTextContent('Waiting its turn on the server.');
   });
 
   it('the audit log shows new rows after a solve, a repair, its end, an accept and a clear, at the same "Show entries"', async () => {

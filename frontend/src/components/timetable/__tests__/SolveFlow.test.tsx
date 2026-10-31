@@ -16,6 +16,7 @@ import { instanceSolutionQueryKey } from '@/api/queries';
 import { SolvedSolution, isSolvedSolution, toQualityView } from '@/adapters/solution';
 import { PrintedBaseline } from '@/adapters/realInstance';
 import { buildPins, labelsFor } from '@/adapters/timetable';
+import { formatScore } from '@/lib/format';
 import infeasibleFixture from '@contracts/examples/solution_v2.infeasible.example.json';
 
 // The real instance's files, as the backend serves them
@@ -137,7 +138,7 @@ describe('SolvePanel: the job lifecycle', () => {
     backend.job = job({ status: 'error', error: 'RuntimeError: solved but invalid' });
     fireEvent.click(screen.getByTestId('solve-button'));
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'error'));
-    expect(status()).toHaveTextContent('Solve failed: RuntimeError: solved but invalid');
+    expect(status()).toHaveTextContent('Could not generate a timetable: RuntimeError: solved but invalid');
   });
 
   it('shows the backend’s reason when the POST is refused', async () => {
@@ -174,7 +175,7 @@ describe('Solving the real instance in the app (http mode)', () => {
     logIn(role);
     render(<App client={new HttpChronosApiClient('/api')} />);
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
     await screen.findByTestId('period-clock-0');
     return backend;
   };
@@ -192,7 +193,7 @@ describe('Solving the real instance in the app (http mode)', () => {
   it('offers Solve on backend instances only', async () => {
     await openReal();
     expect(screen.getByTestId('solve-panel')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: PRINTED_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: PRINTED_INSTANCE } });
     await screen.findByTestId('printed-violations');
     expect(screen.queryByTestId('solve-panel')).not.toBeInTheDocument();
   });
@@ -226,7 +227,7 @@ describe('Solving the real instance in the app (http mode)', () => {
   });
 
   // D56, S14i: GET /jobs/{id} `stale` is true when an accept or a clear happened while it ran
-  const STALE = 'Finished, but not official: the accepted changes changed while it ran. Run Solve again.';
+  const STALE = 'Finished, but not used: the accepted changes changed while it ran. Generate it again.';
 
   it('a finished solve that is not official says so and does not replace the grid', async () => {
     const backend = await openReal();
@@ -241,7 +242,7 @@ describe('Solving the real instance in the app (http mode)', () => {
     fireEvent.click(screen.getByTestId('solve-button'));
     await waitFor(() => expect(status()).toHaveAttribute('data-stale', 'true'));
     expect(status()).toHaveTextContent(STALE);
-    expect(status()).not.toHaveTextContent('Solved: the grid');
+    expect(status()).not.toHaveTextContent('Done: the grid');
     await wait(50);
     expect(screen.getByTestId('quality-score').textContent).toBe(score);
     expect(screen.getByTestId('quality-score')).not.toHaveTextContent('42');
@@ -272,7 +273,7 @@ describe('The real instance against the printed timetable (static mode)', () => 
   const open = async (instance: string) => {
     render(<App />);
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: instance } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: instance } });
   };
 
   it('compares score, each rule penalty and hard violations, read from the files', async () => {
@@ -280,12 +281,12 @@ describe('The real instance against the printed timetable (static mode)', () => 
     const card = await screen.findByTestId('generated-vs-printed');
     const row = (key: string) => within(card).getByTestId(`compare-${key}`);
     const generated = toQualityView(solution);
-    expect(row('score')).toHaveTextContent(`${generated.score!.toFixed(1)}${baseline.quality.score!.toFixed(1)}`);
+    expect(row('score')).toHaveTextContent(`${formatScore(generated.score!)}${formatScore(baseline.quality.score!)}`);
     expect(generated.rules).toHaveLength(4);
     for (const rule of generated.rules) {
       const printed = baseline.quality.rules.find((r) => r.rule_id === rule.rule_id);
       if (rule.status !== 'evaluated' || printed?.status !== 'evaluated') throw new Error(`${rule.rule_id} not evaluated`);
-      expect(row(rule.rule_id)).toHaveTextContent(`-${rule.penalty.toFixed(1)}-${printed.penalty.toFixed(1)}`);
+      expect(row(rule.rule_id)).toHaveTextContent(`${formatScore(-rule.penalty)}${formatScore(-printed.penalty)}`);
     }
     expect(row('hard')).toHaveTextContent(`0${baseline.violations.length}`);
     // hidden from the read-only roles, like the quality card

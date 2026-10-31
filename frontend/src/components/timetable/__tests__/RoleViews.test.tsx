@@ -9,7 +9,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
 
     // Assert Administrator role is active
     expect(screen.getByTestId('role-button-administrator')).toBeInTheDocument();
-    expect(screen.getByTestId('capability-badge-drag')).toHaveTextContent(/Drag-and-Drop Enabled/i);
+    expect(screen.getByTestId('capability-badge-drag')).toHaveTextContent(/Can move sessions/i);
 
     // Assert whole-department scope controls exist
     expect(screen.getByLabelText(/Filter timetable by division/i)).toBeInTheDocument();
@@ -38,7 +38,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     fireEvent.click(screen.getByTestId('role-button-coordinator'));
 
     // Assert Coordinator role badge and capabilities
-    expect(screen.getByTestId('capability-badge-drag')).toHaveTextContent(/Drag-and-Drop Enabled/i);
+    expect(screen.getByTestId('capability-badge-drag')).toHaveTextContent(/Can move sessions/i);
     expect(screen.getByText(/Manages the department timetable/i)).toBeInTheDocument();
 
     // Dragging remains enabled
@@ -54,7 +54,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     fireEvent.click(screen.getByTestId('role-button-faculty'));
 
     // 1. MUST BE READ-ONLY (DO capability difference)
-    expect(screen.getByTestId('capability-badge-readonly')).toHaveTextContent(/Read-Only View/i);
+    expect(screen.getByTestId('capability-badge-readonly')).toHaveTextContent(/Read only/i);
     expect(screen.queryByTestId('capability-badge-drag')).not.toBeInTheDocument();
 
     // Sessions are NOT draggable (no drag handle, data-draggable="false")
@@ -71,10 +71,10 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     // Verify institutional T/P workload formula is shown (e.g. 6T + 8P = 14 or similar)
     const formulaBadge = screen.getByTestId('workload-formula-badge');
     expect(formulaBadge).toBeInTheDocument();
-    expect(formulaBadge.textContent).toMatch(/\d+T \+ \d+P = \d+ hrs\/wk/);
+    expect(formulaBadge.textContent).toMatch(/\d+T \+ \d+P = \d+ h$/);
 
     // Persona options are the faculty placed in the payload, as "Name (INITIALS)"; no invented names or titles
-    const facultySelect = screen.getByLabelText('Select faculty persona') as HTMLSelectElement;
+    const facultySelect = screen.getByLabelText('Select teacher') as HTMLSelectElement;
     expect([...facultySelect.options].map((o) => o.text)).toEqual([
       'A. G. Nikam (AGN)',
       'D. Naik (DN)',
@@ -100,12 +100,12 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
 
     // Switch to student role, viewing SE-Comp C (the default is the first cohort the payload names)
     fireEvent.click(screen.getByTestId('role-button-student'));
-    fireEvent.change(screen.getByLabelText('Select student division'), {
+    fireEvent.change(screen.getByLabelText('Select class'), {
       target: { value: 'coh-div-se-c' },
     });
 
     // 1. MUST BE READ-ONLY
-    expect(screen.getByTestId('capability-badge-readonly')).toHaveTextContent(/Read-Only View/i);
+    expect(screen.getByTestId('capability-badge-readonly')).toHaveTextContent(/Read only/i);
     expect(screen.queryByTestId('capability-badge-drag')).not.toBeInTheDocument();
 
     // Sessions are NOT draggable
@@ -117,7 +117,7 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     // 2. MUST SEE OWN DIVISION COHORT
     expect(screen.getByTestId('student-division-selector')).toBeInTheDocument();
     // Options are the cohorts named in the edge list, labelled from the payload
-    const cohortSelect = screen.getByLabelText('Select student division') as HTMLSelectElement;
+    const cohortSelect = screen.getByLabelText('Select class') as HTMLSelectElement;
     expect([...cohortSelect.options].map((o) => o.text)).toContain('SE-Comp B');
     expect(screen.queryByText(/SE-Comp Division B/i)).not.toBeInTheDocument();
 

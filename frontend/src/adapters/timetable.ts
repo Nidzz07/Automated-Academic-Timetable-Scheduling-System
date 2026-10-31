@@ -20,7 +20,6 @@ import ingestionExample from '@contracts/examples/ingestion_v1.example.json';
 import { displayText, formatClockRange, periodLabel, periodSpan } from '@/lib/format';
 
 export type EdgeList = ChronosEdgeListContractV1;
-export type EdgeListSession = EdgeList['sessions'][number];
 
 // shortcut: the contract examples' names come from the ingestion example; swap for API-served names at S13
 // The bundled contract examples are schema-checked in contractValidation.test.ts, not at page
@@ -257,7 +256,7 @@ export interface EnrichedPin {
   cohortLabels: string[];
   roomCodes: string[];
   facultyIds: string[];
-  /** Full names from the display sidecar; initials only for a teacher it does not name */
+  /** "Name (INITIALS)" from the display sidecar; initials only for a teacher it does not name */
   facultyNames: string[];
 }
 
@@ -375,7 +374,7 @@ export function buildPins(edgeList: EdgeList, labels: Labels = EXAMPLE_LABELS): 
       facultyNames: p.faculty_ids.map((id) => {
         const { name, initials } = labels.faculty(id);
         // labels.faculty names a teacher it does not know by id ('Faculty' in the examples)
-        return name && name !== id && name !== 'Faculty' ? name : initials || name;
+        return name && name !== id && name !== 'Faculty' ? facultyText(labels, id) : initials || name;
       }),
     };
   });
@@ -511,7 +510,7 @@ export function facultyAtSlot(
   }
   edgeList.pinned_occupancy.forEach((p, i) => {
     if (p.day !== day || p.period !== period) return;
-    for (const id of p.faculty_ids) add(id, labels.pin(i)?.label ?? 'Pinned occupancy');
+    for (const id of p.faculty_ids) add(id, labels.pin(i)?.label ?? 'Fixed item');
   });
   for (const f of edgeList.faculty_availability) {
     if (f.unavailable_slots.some((s) => s.day === day && s.period === period)) add(f.faculty_id, 'unavailable');
@@ -522,10 +521,25 @@ export function facultyAtSlot(
   return { free: all.filter((f) => f.engagedWith.length === 0), engaged: all.filter((f) => f.engagedWith.length > 0) };
 }
 
-/** "Name (INITIALS)"; the name alone for faculty with no initials. */
+/**
+ * The one way the UI names a teacher: "Name (INITIALS)", the name alone for faculty with no initials.
+ * Never the initials alone: SD and SM are two teachers each (D38).
+ */
 export function facultyText(labels: Labels, id: string): string {
   const f = labels.faculty(id);
   return f.initials ? `${f.name} (${f.initials})` : f.name;
+}
+
+/** facultyText for a session already enriched. */
+export const sessionTeacher = (s: Pick<EnrichedSession, 'facultyName' | 'facultyInitials'>) =>
+  s.facultyInitials ? `${s.facultyName} (${s.facultyInitials})` : s.facultyName;
+
+/**
+ * A fixed item's label with its teachers by name: a printed label names them by initials only
+ * ("PCS / D / SD / 607-B"), and two teachers share SD and two share SM (D38).
+ */
+export function pinWithTeachers(label: string, facultyIds: string[], labels: Labels): string {
+  return [label, ...facultyIds.map((id) => facultyText(labels, id))].join(', ');
 }
 
 /** What the UI calls an id of the edge list: a session, room, faculty member or cohort; else the id. */
@@ -564,11 +578,11 @@ export function pinName(id: string, edgeList: EdgeList, labels: Labels): string 
     shown?.label ??
     (pin ? `Fixed item, ${slotText(pin.day, pin.period)}` : ACCEPTED_ROOM_PIN.label);
   // display.json's unique_label names its periods "Mon P0–P1"
-  return displayText(name);
+  return displayText(pinWithTeachers(name, pin?.faculty_ids ?? [], labels));
 }
 
-/** "Operating Systems for SE-Comp A (Kailas Devadkar)", as the UI names one session in a sentence. */
-export const sessionPhrase = (subject: string, cohort: string, teacher: string) => `${subject} for ${cohort} (${teacher})`;
+/** "Operating Systems for SE-Comp A, Kailas Devadkar (KKD)", as the UI names one session in a sentence. */
+export const sessionPhrase = (subject: string, cohort: string, teacher: string) => `${subject} for ${cohort}, ${teacher}`;
 
 /**
  * What a diagnosis sentence calls an id of the edge list (D51): a session as sessionPhrase, a room
@@ -580,7 +594,7 @@ export function diagnosisName(id: string, edgeList: EdgeList, labels: Labels): s
   const session = edgeList.sessions.find((s) => s.id === id);
   if (session) {
     const subject = labels.subject(session.subject_id);
-    return sessionPhrase(subject?.name ?? subject?.code ?? session.subject_id, labels.cohort(session.cohort_id), labels.faculty(session.faculty_id).name);
+    return sessionPhrase(subject?.name ?? subject?.code ?? session.subject_id, labels.cohort(session.cohort_id), facultyText(labels, session.faculty_id));
   }
   const room = edgeList.rooms.find((r) => r.id === id);
   if (room) return `room ${labels.room(room)}`;
@@ -612,6 +626,11 @@ const CLASH_ORDER: ClashKind[] = ['room', 'teacher', 'cohort', 'fixed', 'unavail
  * placed sessions (room, teacher, shared students), pinned occupancy (a fixed item, named by its
  * display label; one holding the room is a room clash) and faculty unavailability. Only decides
  * whether to offer a repair: the backend's repair is the judge.
+ *
+ * A fixed item holds a session as solver/graph.py slot_is_open and solver/validate.py read it: its
+ * teacher or its own cohort id in the pin's lists. Parent and child cohorts (a division and its
+ * batches) clash between two sessions, where the edge list has a COHORT edge, but not with a pin
+ * unless the pin names that cohort. Checked against slot_is_open in repair.test.ts.
  */
 export function checkMove(
   edgeList: EdgeList,
@@ -660,11 +679,11 @@ export function checkMove(
 
   edgeList.pinned_occupancy.forEach((p, i) => {
     if (!at(p.day, p.period)) return;
-    const label = labels.pin(i)?.label ?? 'pinned occupancy';
+    const label = pinWithTeachers(labels.pin(i)?.label ?? 'A fixed item', p.faculty_ids, labels);
     if (p.room_ids.some(holdsRoom)) add('room', roomTaken(p.period, label));
     const holds = [
       ...(p.faculty_ids.includes(session.faculty_id) ? [teacher] : []),
-      ...(p.cohort_ids.some((c) => labels.overlap(c, session.cohort_id)) ? [placed.cohortLabel] : []),
+      ...(p.cohort_ids.includes(session.cohort_id) ? [placed.cohortLabel] : []),
     ];
     if (holds.length) add('fixed', `${label} holds ${holds.join(' and ')} then.`);
   });
@@ -680,17 +699,4 @@ export function checkMove(
     heading: `Clashes for ${name} at ${span}:`,
     clashes: [...found].sort((a, b) => CLASH_ORDER.indexOf(a.kind) - CLASH_ORDER.indexOf(b.kind)),
   };
-}
-
-/** checkMove as one line: the heading and every clash; null when there is none. */
-export function moveConflict(
-  edgeList: EdgeList,
-  labels: Labels,
-  sessions: EnrichedSession[],
-  sessionId: string,
-  day: number,
-  period: number
-): string | null {
-  const check = checkMove(edgeList, labels, sessions, sessionId, day, period);
-  return check && [check.heading, ...check.clashes.map((c) => c.text)].join(' ');
 }

@@ -13,7 +13,7 @@ import { FacultyAtSlotPanel } from '@/components/timetable/FacultyAtSlotPanel';
 import { AnomalyReportPanel } from '@/components/timetable/AnomalyReport';
 import { PrintedViolationsPanel } from '@/components/timetable/PrintedViolations';
 import { SolvePanel } from '@/components/timetable/SolvePanel';
-import { RepairPanel, RepairProposal } from '@/components/timetable/RepairPanel';
+import { RepairPanel, RepairPrefill, RepairProposal } from '@/components/timetable/RepairPanel';
 import { AcceptedChangesPanel } from '@/components/timetable/AcceptedChangesPanel';
 import { SubstitutePanel } from '@/components/timetable/SubstitutePanel';
 import { GeneratedVsPrintedCard } from '@/components/timetable/GeneratedVsPrintedCard';
@@ -44,11 +44,13 @@ import {
   facultyText,
   hardRuleViolations,
   labelsFor,
+  sessionTeacher,
   slotText,
 } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline } from '@/adapters/realInstance';
 import {
   AuthSession,
+  ChronosApiClient,
   chronosApiClient,
   EdgeListInstance,
   getAuthState,
@@ -79,10 +81,11 @@ import {
   useRepair,
   useTimetableQuery,
 } from '@/api/queries';
+import { SKIP_PAST_TIMETABLE, SKIP_TO_TIMETABLE, UI, contractFailedText, gridHint } from '@/lib/wording';
 
 interface AppProps {
   /** The API client; by default the one VITE_API_MODE picks */
-  client?: MockChronosApiClient;
+  client?: ChronosApiClient;
 }
 
 export function App({ client = chronosApiClient }: AppProps) {
@@ -96,7 +99,7 @@ export function App({ client = chronosApiClient }: AppProps) {
   return <SessionApp key={session?.token ?? 'static'} client={client} session={session} />;
 }
 
-function SessionApp({ client, session }: { client: MockChronosApiClient; session: AuthSession | null }) {
+function SessionApp({ client, session }: { client: ChronosApiClient; session: AuthSession | null }) {
   // One client per App mount, so every render (and every test) starts with an empty cache.
   const [queryClient] = useState(() => new QueryClient());
   return (
@@ -118,11 +121,16 @@ function SessionApp({ client, session }: { client: MockChronosApiClient; session
   );
 }
 
-function TimetableApp({ client, session }: { client: MockChronosApiClient; session: AuthSession | null }) {
+/** D50: a faculty or student login linked to one teacher or cohort is locked to it, on the real timetable. */
+const isLinked = (session: AuthSession | null) =>
+  (session?.role === 'faculty' && !!session.facultyId) || (session?.role === 'student' && !!session.cohortId);
+
+function TimetableApp({ client, session }: { client: ChronosApiClient; session: AuthSession | null }) {
   // A login (http mode) opens on the real timetable, or the instance it last picked (kept across a
-  // reload); static mode opens on the bundled example
+  // reload); static mode opens on the bundled example; a linked account stays on the real timetable
+  const linked = isLinked(session);
   const [instanceChoice, setInstanceChoice] = useState<EdgeListInstance>(() =>
-    session ? storedInstance() ?? REAL_INSTANCE : 'example'
+    linked ? REAL_INSTANCE : session ? storedInstance() ?? REAL_INSTANCE : 'example'
   );
   const instances = useInstancesQuery(client);
   // An instance the backend does not offer (any more) falls back to the first it can solve
@@ -208,6 +216,7 @@ function TimetableApp({ client, session }: { client: MockChronosApiClient; sessi
       instances={instances.data}
       instance={instance}
       onInstanceChange={onInstanceChange}
+      instanceLocked={linked}
       client={client}
       session={session}
       solveJobs={solveJobs}
@@ -227,7 +236,7 @@ function TimetableLoadError({ error, onRetry }: { error: Error; onRetry: () => v
       <CardHeader>
         <CardTitle>
           {isContractError
-            ? `Timetable payload failed ${error.schema} contract validation`
+            ? contractFailedText(error.schema)
             : 'Could not load the timetable'}
         </CardTitle>
         {!isContractError && <CardDescription>{error.message}</CardDescription>}
@@ -248,6 +257,9 @@ function TimetableLoadError({ error, onRetry }: { error: Error; onRetry: () => v
   );
 }
 
+const SKIP_LINK =
+  'sr-only rounded-md bg-primary font-semibold text-primary-foreground focus:not-sr-only focus:inline-block focus:px-3 focus:py-2';
+
 interface TimetableWorkspaceProps {
   solution: SolutionContract;
   /** The edge list with every accepted change (http mode, D52): absences, room closures, substitutions */
@@ -265,7 +277,9 @@ interface TimetableWorkspaceProps {
   instances: InstanceOption[];
   instance: EdgeListInstance;
   onInstanceChange: (instance: EdgeListInstance) => void;
-  client: MockChronosApiClient;
+  /** The account is linked to one teacher or class (D50) */
+  instanceLocked: boolean;
+  client: ChronosApiClient;
   /** Who is logged in (http mode): role and D50 link; null in static mode, where the RoleSelector picks the role */
   session: AuthSession | null;
   solveJobs: Record<EdgeListInstance, string>;
@@ -289,6 +303,7 @@ function TimetableWorkspace({
   instances,
   instance,
   onInstanceChange,
+  instanceLocked,
   client,
   session,
   solveJobs,
@@ -312,6 +327,8 @@ function TimetableWorkspace({
   const [selectedViolation, setSelectedViolation] = useState<number | null>(null);
   // The session whose substitutes are listed, per instance
   const [substituteFor, setSubstituteFor] = useState<{ instance: EdgeListInstance; sessionId: string } | null>(null);
+  // The substitute finder's way out: the repair form filled in with the teacher and the session's periods
+  const [repairPrefill, setRepairPrefill] = useState<RepairPrefill | null>(null);
 
   // The query cache holds the solution; optimistic moves and reverts write straight into it
   const queryClient = useQueryClient();
@@ -340,7 +357,8 @@ function TimetableWorkspace({
   // published solution, or none (Not solved yet)
   const isExample = instance === 'example';
   // "Simulate Infeasible" and "Test Revert on Move" act on the mock's example: static mode only
-  const testControls = isExample && !(client instanceof HttpChronosApiClient);
+  const mock = client instanceof MockChronosApiClient ? client : null;
+  const testControls = isExample && !!mock;
   const shown = isExample ? solution : publishedSolution;
   // The printed view lays the printed timetable on the grid; the real instance compares with it
   const printed = instance === PRINTED_INSTANCE ? baseline : null;
@@ -350,7 +368,7 @@ function TimetableWorkspace({
   const nameOf = useMemo(
     () =>
       display
-        ? (id: string) => (display.faculty[id] ? labels.faculty(id).name : display.cohorts[id] ? labels.cohort(id) : null)
+        ? (id: string) => (display.faculty[id] ? facultyText(labels, id) : display.cohorts[id] ? labels.cohort(id) : null)
         : undefined,
     [display, labels]
   );
@@ -413,7 +431,7 @@ function TimetableWorkspace({
 
   // Helper to toggle between solved timetable and infeasible diagnosis
   const handleToggleOutcome = async () => {
-    client.setSimulatedOutcome(isSolvedSolution(solution) ? 'infeasible' : 'solved');
+    mock?.setSimulatedOutcome(isSolvedSolution(solution) ? 'infeasible' : 'solved');
     await queryClient.refetchQueries({ queryKey: timetableQueryKey });
     setRejectionAlert(null);
   };
@@ -422,12 +440,7 @@ function TimetableWorkspace({
   const handleToggleRejectMode = () => {
     setRejectMoveMode((prev) => {
       const next = !prev;
-      client.setRejectMode(
-        next,
-        next
-          ? 'Mock Backend Rejection: Target slot causes faculty overlap and violates room capacity.'
-          : undefined
-      );
+      mock?.setRejectMode(next, next ? UI.trialRefusal : undefined);
       return next;
     });
   };
@@ -481,9 +494,7 @@ function TimetableWorkspace({
   const lockedFaculty = sessionRole === 'faculty' ? session?.facultyId ?? null : null;
   const lockedCohort = sessionRole === 'student' ? session?.cohortId ?? null : null;
   const facultyOptions = useMemo(() => {
-    const options = new Map(
-      allSessions.map((s) => [s.facultyId, s.facultyInitials ? `${s.facultyName} (${s.facultyInitials})` : s.facultyName])
-    );
+    const options = new Map(allSessions.map((s) => [s.facultyId, sessionTeacher(s)]));
     // a linked teacher with no placed session is still the one shown
     if (lockedFaculty && !options.has(lockedFaculty)) options.set(lockedFaculty, facultyText(labels, lockedFaculty));
     return [...options].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label));
@@ -678,6 +689,11 @@ function TimetableWorkspace({
       }`}
     >
       <div className="w-full px-4 py-8 space-y-5 lg:px-6">
+        {/* The grid is far down the page, past the panels */}
+        <a href="#timetable" data-testid="skip-to-timetable" className={SKIP_LINK}>
+          {SKIP_TO_TIMETABLE}
+        </a>
+
         {/* Header Toolbar */}
         <TimetableHeader
           cohortFilter={selectedCohortFilter}
@@ -690,6 +706,7 @@ function TimetableWorkspace({
             setSelectedViolation(null);
             onInstanceChange(next);
           }}
+          instanceLocked={instanceLocked}
           showQualityCard={showQualityCard}
           onToggleQualityCard={() => setShowQualityCard((prev) => !prev)}
           darkMode={darkMode}
@@ -738,6 +755,8 @@ function TimetableWorkspace({
               labels={labels}
               workload={proposalWorkload}
               waitingFor={waitingFor}
+              official={officialSessions}
+              prefill={repairPrefill}
               onStart={startRepair}
               onDiscard={discardRepair}
             />
@@ -755,6 +774,12 @@ function TimetableWorkspace({
             onPick={(facultyId) => {
               startRepair({ kind: 'substitute_faculty', session_id: substituteFor.sessionId, faculty_id: facultyId });
               setSubstituteFor(null);
+            }}
+            onRepairInstead={(facultyId) => {
+              const held = officialSessions.find((s) => s.sessionId === substituteFor.sessionId);
+              setRepairPrefill({ facultyId, slots: held?.periods.map((period) => ({ day: held.day, period })) ?? [] });
+              setSubstituteFor(null);
+              repairPanelRef.current?.scrollIntoView?.({ block: 'start' });
             }}
             onClose={() => setSubstituteFor(null)}
           />
@@ -831,13 +856,17 @@ function TimetableWorkspace({
 
         {/* Main Weekly Grid (the edge list's periods and days; rendered when solved) */}
         {(!shown || (isSolvedSolution(shown) && shown.assignment.length > 0 && roleFilteredSolution)) && (
-          <main className="space-y-2">
+          <main id="timetable" tabIndex={-1} className="scroll-mt-2 space-y-2 outline-none">
+            {/* Every card in the grid is a tab stop: the all-divisions view has hundreds */}
+            <a href="#after-timetable" data-testid="skip-past-timetable" className={SKIP_LINK}>
+              {SKIP_PAST_TIMETABLE}
+            </a>
+
             <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
               <h2 className="text-xl font-semibold">Weekly timetable</h2>
               <p className="text-xs">
                 {edgeList.slot_grid.teaching_periods.length} teaching periods, {edgeList.slot_grid.days} days,{' '}
-                {caps.title.toLowerCase()} view.{' '}
-                {canDrag ? 'Drag a session to move it.' : 'Read only.'}
+                {caps.title.toLowerCase()} view. {gridHint(canDrag)}
               </p>
             </div>
 
@@ -849,8 +878,7 @@ function TimetableWorkspace({
 
             {!shown && !printed && (
               <p data-testid="no-solution-note" className="px-1">
-                Not solved yet. No solution is published for this instance; the grid shows its
-                periods, breaks and fixed items only.
+                {UI.noTimetableNote}
               </p>
             )}
 
@@ -886,6 +914,7 @@ function TimetableWorkspace({
             />
           </main>
         )}
+        <div id="after-timetable" tabIndex={-1} className="outline-none" />
 
         {/* Room timetable and free rooms (whole-department roles; ROADMAP D15) */}
         {caps.viewScope === 'all' && (!shown || isSolvedSolution(shown)) && (
@@ -933,7 +962,7 @@ function TimetableWorkspace({
         {/* Institutional Traceability Footer */}
         <footer className="border-t border-border pt-6 text-xs">
           <p className="font-semibold">Chronos timetable scheduling, Sardar Patel Institute of Technology</p>
-          <p>Every timetable shown is checked against the project's data contracts and made by its own solver.</p>
+          <p>{UI.footerNote}</p>
         </footer>
       </div>
     </div>

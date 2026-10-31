@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ApiError, HttpChronosApiClient } from '@/api/chronosApi';
 import { useSubstitutesQuery } from '@/api/queries';
 import { EdgeList, Labels, entityName, facultyText } from '@/adapters/timetable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UserRoundCog, X } from 'lucide-react';
+import { formatScoreChange } from '@/lib/format';
+import { NOBODY_FREE, SUBSTITUTE_NOTE, leftOutReason, repairInsteadText } from '@/lib/wording';
+import { UserRoundCog, Wrench, X } from 'lucide-react';
 
 interface SubstitutePanelProps {
   client: HttpChronosApiClient;
@@ -16,10 +18,10 @@ interface SubstitutePanelProps {
   disabled: boolean;
   /** Propose the substitution as a repair */
   onPick: (facultyId: string) => void;
+  /** Nobody qualified is free: fill in the repair panel with this teacher and these periods */
+  onRepairInstead: (facultyId: string) => void;
   onClose: () => void;
 }
-
-const signed = (d: number) => `${d >= 0 ? '+' : ''}${d.toFixed(1)}`;
 
 /**
  * Who may take a session where it is (S14g): the faculty SPIT's faculty–subject sheets list for
@@ -34,22 +36,27 @@ export const SubstitutePanel: React.FC<SubstitutePanelProps> = ({
   labels,
   disabled,
   onPick,
+  onRepairInstead,
   onClose,
 }) => {
+  // It opens from the details window, whose focus would otherwise go back to the card far below
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    panel.current?.focus();
+  }, []);
   const subs = useSubstitutesQuery(client, instance, sessionId);
   const data = subs.data;
   const others = (ids: string[]) =>
     [...new Set(ids.filter((id) => id !== sessionId))].map((id) => entityName(id, edgeList, labels));
 
   return (
-    <Card data-testid="substitute-panel">
+    <Card ref={panel} tabIndex={-1} data-testid="substitute-panel" className="scroll-mt-2 outline-none">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div>
             <CardTitle>Find a substitute</CardTitle>
             <CardDescription>
-              {entityName(sessionId, edgeList, labels)}. Qualified teachers from SPIT's faculty–subject sheets who are
-              free at this slot. Picking one proposes a repair to accept or discard.
+              {entityName(sessionId, edgeList, labels)}. {SUBSTITUTE_NOTE}
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close substitutes">
@@ -69,7 +76,19 @@ export const SubstitutePanel: React.FC<SubstitutePanelProps> = ({
         {data && (
           <>
             {data.candidates.length === 0 ? (
-              <p data-testid="no-substitutes">Nobody qualified is free at this slot.</p>
+              <div className="space-y-2">
+                <p data-testid="no-substitutes">{NOBODY_FREE}</p>
+                <Button
+                  size="sm"
+                  className="h-auto gap-1.5 whitespace-normal py-1.5 text-left"
+                  disabled={disabled}
+                  onClick={() => onRepairInstead(data.faculty_id)}
+                  data-testid="repair-instead"
+                >
+                  <Wrench className="h-4 w-4 shrink-0" />
+                  {repairInsteadText(facultyText(labels, data.faculty_id))}
+                </Button>
+              </div>
             ) : (
               <ul className="space-y-1">
                 {data.candidates.map((c) => (
@@ -85,7 +104,7 @@ export const SubstitutePanel: React.FC<SubstitutePanelProps> = ({
                       <UserRoundCog className="h-4 w-4" />
                       {facultyText(labels, c.faculty_id)}
                     </Button>
-                    <span data-testid={`substitute-score-${c.faculty_id}`}>quality score {signed(c.score_change)} if picked</span>
+                    <span data-testid={`substitute-score-${c.faculty_id}`}>quality score {formatScoreChange(c.score_change)} if picked</span>
                   </li>
                 ))}
               </ul>
@@ -98,8 +117,12 @@ export const SubstitutePanel: React.FC<SubstitutePanelProps> = ({
                     const clashes = others(o.violations.flatMap((v) => (v.kind === 'FACULTY_CLASH' ? v.session_ids : [])));
                     return (
                       <li key={o.faculty_id} data-testid={`left-out-${o.faculty_id}`}>
-                        {facultyText(labels, o.faculty_id)}: {o.reasons.join(', ')}
-                        {clashes.length > 0 && ` (teaches ${clashes.join('; ')} then)`}
+                        {facultyText(labels, o.faculty_id)}:{' '}
+                        {[
+                          // "busy" with the sessions named says it once
+                          ...(clashes.length > 0 ? [`teaches ${clashes.join('; ')} then`] : []),
+                          ...o.reasons.filter((r) => clashes.length === 0 || r !== 'busy').map(leftOutReason),
+                        ].join(', ')}
                       </li>
                     );
                   })}

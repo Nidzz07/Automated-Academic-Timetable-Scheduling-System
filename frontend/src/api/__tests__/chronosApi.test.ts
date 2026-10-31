@@ -77,8 +77,8 @@ describe('MockChronosApiClient', () => {
     );
 
     expect(res.success).toBe(false);
-    expect(res.rejectionReason).toContain('Cannot move session');
-    expect(res.rejectionReason).toContain('pinned');
+    expect(res.rejectionReason).toContain('Cannot move this session');
+    expect(res.rejectionReason).toContain('fixed to its time');
     expect(res.violatedConstraint?.kind).toBe('PINNED_SESSION');
   });
 
@@ -92,7 +92,7 @@ describe('MockChronosApiClient', () => {
 
     expect(res.success).toBe(false);
     expect(res.rejectionReason).toBe(
-      'Slot conflict: Wednesday T7 is held by pinned occupancy (SE-Comp C, room 002).'
+      'Wednesday T7 is held by a fixed item (SE-Comp C, room 002).'
     );
     expect(res.violatedConstraint?.kind).toBe('PINNED_BLOCK');
   });
@@ -162,10 +162,10 @@ describe('MockChronosApiClient', () => {
 
   it('lists the contract examples, the real instance and its printed view, none solvable', async () => {
     expect(await client.listInstances()).toEqual([
-      { id: 'example', label: 'Example instance', solvable: false },
-      { id: 'd6_grid', label: 'D6 grid example (no solution)', solvable: false },
-      { id: REAL_INSTANCE, label: 'EVEN 2025-26 SE+TE (real)', solvable: false },
-      { id: PRINTED_INSTANCE, label: 'EVEN 2025-26 printed (real)', solvable: false },
+      { id: 'example', label: 'Example data', solvable: false },
+      { id: 'd6_grid', label: 'Example with lunch per year (no timetable yet)', solvable: false },
+      { id: REAL_INSTANCE, label: 'Even semester 2025–26, SE and TE', solvable: false },
+      { id: PRINTED_INSTANCE, label: 'Even semester 2025–26, as printed by SPIT', solvable: false },
     ]);
   });
 

@@ -5,9 +5,13 @@ import { Button } from '@/components/ui/button';
 import { formatDuration } from '@/lib/format';
 import {
   REPAIR_NOT_APPLIED,
+  UI,
+  backtracksText,
   constraintKindLabel,
   diagnosisHeadings,
   diagnosisMethodLabel,
+  methodText,
+  partialPlacementText,
   readableDiagnosisText,
   readableSolverText,
   relaxationActionLabel,
@@ -76,14 +80,14 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
             <h2 className="text-xl font-semibold">{headings.title}</h2>
             <p>{method.text}</p>
             <p className={CODE_CLASS}>
-              Found by: <span data-testid="diagnosis-method">{method.badge}</span>
+              <span data-testid="diagnosis-method">{method.badge}</span>
             </p>
           </div>
         </div>
 
         {onSwitchToSolved && (
           <Button variant="outline" size="sm" onClick={onSwitchToSolved} className="gap-1">
-            <span>View Solved Baseline</span>
+            <span>{UI.showSolved}</span>
             <ArrowRight className="h-4 w-4" />
           </Button>
         )}
@@ -92,8 +96,9 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
       {/* Solver run statistics */}
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
         <div>
-          <dt className="font-semibold">Method</dt>
-          <dd className={`break-words ${CODE_CLASS}`}>{metadata.algorithm}</dd>
+          <dt className="font-semibold">{UI.howChecked}</dt>
+          <dd>{methodText(metadata.algorithm)}</dd>
+          <dd className={`break-all ${CODE_CLASS}`}>{metadata.algorithm}</dd>
         </div>
         <div>
           <dt className="font-semibold">Time taken</dt>
@@ -113,8 +118,8 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
           </div>
         )}
         <div>
-          <dt className="font-semibold">Search backtracks</dt>
-          <dd>{metadata.backtracks?.toLocaleString()} backtracks</dd>
+          <dt className="font-semibold">{UI.searchEffort}</dt>
+          <dd>{backtracksText(metadata.backtracks)}</dd>
         </div>
       </dl>
 
@@ -211,7 +216,7 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
               className="shrink-0 gap-1.5 bg-emerald-800 text-white hover:bg-emerald-900"
             >
               <Lightbulb className="h-4 w-4" />
-              <span>Simulate Relaxation</span>
+              <span>{UI.tryThisFix}</span>
             </Button>
           )}
         </section>
@@ -221,14 +226,13 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
       {partial_placement && unplaced_session_ids && (
         <details data-testid="partial-placement" className="text-xs">
           <summary className="cursor-pointer font-semibold">
-            How far the search got (diagnostic only — not a timetable): {partial_placement.length} placed,{' '}
-            {unplaced_session_ids.length} unplaced
+            {partialPlacementText(partial_placement.length, unplaced_session_ids.length)}
           </summary>
           <p className="mt-1">
             Placed:{' '}
             {partial_placement.map((p) => `${name(p.session_id)} (${slotText(p.day, p.period)})`).join(', ') || 'none'}
           </p>
-          <p data-testid="unplaced-sessions">Unplaced: {unplaced_session_ids.map(name).join(', ')}</p>
+          <p data-testid="unplaced-sessions">{UI.notPlaced}: {unplaced_session_ids.map(name).join(', ')}</p>
         </details>
       )}
     </section>

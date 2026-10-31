@@ -1,6 +1,8 @@
 import React from 'react';
-import { EnrichedLabBlock } from '@/adapters/timetable';
+import { EnrichedLabBlock, sessionTeacher } from '@/adapters/timetable';
 import { periodLabel, periodSpan } from '@/lib/format';
+import { UI, acrossBreakText } from '@/lib/wording';
+import { CARD_FOCUS, cardProps } from './cardKeyboard';
 
 interface ParallelLabBlockProps {
   labBlock: EnrichedLabBlock;
@@ -30,7 +32,7 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
       <div className="mb-2 border-b border-emerald-300 pb-1.5 dark:border-emerald-800">
         <span className="font-semibold">Lab block</span>, {labBlock.periods.length} periods ({periodSpan(first, last)}),{' '}
         <span>
-          {labBlock.sessions.length} batch{labBlock.sessions.length === 1 ? '' : 'es'} in parallel
+          {labBlock.sessions.length} batch{labBlock.sessions.length === 1 ? '' : 'es'} {UI.atSameTime}
         </span>
       </div>
 
@@ -43,8 +45,8 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
             data-batch={sess.cohortLabel}
             data-subroom={sess.subRoomCode ?? sess.roomCode}
             data-flagged={flaggedSessionIds?.has(sess.sessionId) || undefined}
-            onClick={() => onSelectSession?.(sess.sessionId)}
-            className={`cursor-pointer rounded border border-emerald-300 bg-card p-1.5 hover:border-emerald-700 dark:border-emerald-800 ${
+            {...cardProps(onSelectSession && (() => onSelectSession(sess.sessionId)), false, false)}
+            className={`cursor-pointer rounded border border-emerald-300 bg-card p-1.5 hover:border-emerald-700 dark:border-emerald-800 ${CARD_FOCUS} ${
               flaggedSessionIds?.has(sess.sessionId) ? flagClass : ''
             }`}
           >
@@ -58,9 +60,7 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
               {sess.subjectCode} Lab
             </div>
             <div className="flex flex-wrap items-baseline justify-between gap-x-1">
-              <span className="min-w-0" title={sess.facultyName}>
-                <span className="font-semibold">{sess.facultyInitials}</span> {sess.facultyName}
-              </span>
+              <span className="min-w-0 font-semibold">{sessionTeacher(sess)}</span>
               <span className="shrink-0">{sess.cohortSize} students</span>
             </div>
           </div>
@@ -69,8 +69,8 @@ export const ParallelLabBlock: React.FC<ParallelLabBlockProps> = ({
 
       <div className="mt-1 text-center">
         {labBlock.spannedBreaks.length
-          ? `Runs across the break ${labBlock.spannedBreaks.map(periodLabel).join(', ')}; the periods follow on in teaching order`
-          : 'Periods contiguous'}
+          ? acrossBreakText(labBlock.spannedBreaks.map(periodLabel).join(', '))
+          : UI.consecutivePeriods}
       </div>
     </div>
   );

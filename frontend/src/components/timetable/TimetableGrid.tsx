@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   CollisionDetection,
   DndContext,
   DragEndEvent,
   DragStartEvent,
   DragOverlay,
+  KeyboardCode,
   PointerSensor,
   KeyboardSensor,
   useSensor,
@@ -31,7 +32,7 @@ import {
   slotText,
 } from '@/adapters/timetable';
 import { periodLabel } from '@/lib/format';
-import { cohortListText, pinKindLabel } from '@/lib/wording';
+import { DRAG_INSTRUCTIONS, dragAnnouncements, pinKindLabel } from '@/lib/wording';
 import { ParallelLabBlock } from './ParallelLabBlock';
 import { CombinedLectureBlock } from './CombinedLectureBlock';
 import { PinnedBlock } from './PinnedBlock';
@@ -97,6 +98,8 @@ interface DroppableGridCellProps {
   className?: string;
   activeDragSessionId?: string | null;
   onMoveSession?: MoveHandler;
+  /** The drop target that has the keyboard focus during a drag: a keyboard drop lands there */
+  onDropTargetFocus?: (slot: { day: DayIndex; period: number } | null) => void;
   children: React.ReactNode;
 }
 
@@ -109,6 +112,7 @@ const DroppableGridCell: React.FC<DroppableGridCellProps> = ({
   className = '',
   activeDragSessionId,
   onMoveSession,
+  onDropTargetFocus,
   children,
 }) => {
   const slotId = `slot-${day}-${period}`;
@@ -141,19 +145,19 @@ const DroppableGridCell: React.FC<DroppableGridCellProps> = ({
         isOver && canDragAndDrop ? 'bg-primary/15 ring-2 ring-primary ring-inset' : ''
       } ${className}`}
     >
-      {canDragAndDrop && (
+      {/* Only during a drag: otherwise these 45 buttons would come before the content in the tab order */}
+      {canDragAndDrop && activeDragSessionId && (
         <button
           type="button"
           data-testid={`drop-slot-${day}-${period}`}
-          aria-label={`Drop into ${slotText(day, period)}`}
-          className="sr-only"
-          onClick={(e) => {
-            const sid = e.currentTarget.getAttribute('data-session-id') || activeDragSessionId;
-            if (sid && onMoveSession) {
-              onMoveSession(sid, day, period);
-            }
-          }}
-        />
+          // invisible until the keyboard reaches it; it never takes a pointer drag's events
+          className="pointer-events-none absolute inset-1 z-20 flex items-start justify-center rounded-md bg-primary/10 p-2 opacity-0 outline-none ring-4 ring-primary focus:opacity-100"
+          onFocus={() => onDropTargetFocus?.({ day, period })}
+          onBlur={() => onDropTargetFocus?.(null)}
+          onClick={() => onMoveSession?.(activeDragSessionId, day, period)}
+        >
+          <span className="rounded bg-primary px-2 py-1 font-semibold text-primary-foreground">Drop into {slotText(day, period)}</span>
+        </button>
       )}
       {children}
     </td>
@@ -233,15 +237,24 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
 }) => {
   const flagClass = flagTone === 'change' ? 'ring-2 ring-amber-500' : 'ring-2 ring-destructive';
   const [activeDragSessionId, setActiveDragSessionId] = useState<string | null>(null);
+  // During a keyboard drag, the cell whose drop target has the focus (Tab moves it)
+  const focusedDropTarget = useRef<{ day: DayIndex; period: number } | null>(null);
 
-  // Configure dnd-kit sensors
+  // Configure dnd-kit sensors. Space picks a session up and Enter opens its details (cardKeyboard.ts);
+  // Tab does not end a drag, so it can reach the drop targets
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 4,
       },
     }),
-    useSensor(KeyboardSensor)
+    useSensor(KeyboardSensor, {
+      keyboardCodes: {
+        start: [KeyboardCode.Space],
+        cancel: [KeyboardCode.Esc],
+        end: [KeyboardCode.Space, KeyboardCode.Enter],
+      },
+    })
   );
 
   // 1. Days, periods and breaks from the edge list's slot_grid
@@ -294,9 +307,20 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     setActiveDragSessionId(String(event.active.id));
   };
 
+  const handleDragCancel = () => {
+    focusedDropTarget.current = null;
+    setActiveDragSessionId(null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    const focused = focusedDropTarget.current;
+    focusedDropTarget.current = null;
     setActiveDragSessionId(null);
+    if (focused && active) {
+      onMoveSession?.(String(active.id), focused.day, focused.period);
+      return;
+    }
     if (!over || !active) return;
 
     const sessionId = String(active.id);
@@ -314,12 +338,37 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     return sessions.find((s) => s.sessionId === activeDragSessionId) ?? null;
   }, [activeDragSessionId, sessions]);
 
+  // During a drag Tab goes from cell to cell: everything but the dragged card is out of the tab order
+  const outOfTabOrder = activeDragSessionId ? { inert: '' } : {};
+
+  // dnd-kit's live region would read out session ids and "droppable slot-1-3"
+  const sessionWords = (id: string | number) => {
+    const s = sessions.find((x) => x.sessionId === String(id));
+    return s ? `${s.subjectCode} · ${s.cohortLabel}` : 'The session';
+  };
+  const cellWords = (id: string | number) => {
+    const m = String(id).match(/^slot-(\d+)-(\d+)$/);
+    return m ? slotText(Number(m[1]), Number(m[2])) : '';
+  };
+
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={pointerCellFirst}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+      accessibility={{
+        screenReaderInstructions: { draggable: DRAG_INSTRUCTIONS },
+        announcements: {
+          onDragStart: ({ active }) => dragAnnouncements.picked(sessionWords(active.id)),
+          onDragOver: ({ active, over }) =>
+            over ? dragAnnouncements.over(sessionWords(active.id), cellWords(over.id)) : dragAnnouncements.outside(sessionWords(active.id)),
+          onDragEnd: ({ active, over }) =>
+            over ? dragAnnouncements.dropped(sessionWords(active.id), cellWords(over.id)) : dragAnnouncements.outside(sessionWords(active.id)),
+          onDragCancel: ({ active }) => dragAnnouncements.cancelled(sessionWords(active.id)),
+        },
+      }}
     >
       {/*
         The five days share the width (fixed layout, wrapping text). Below 1100 px the box scrolls by
@@ -426,16 +475,21 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                         canDragAndDrop={canDragAndDrop}
                         activeDragSessionId={activeDragSessionId}
                         onMoveSession={onMoveSession}
+                        onDropTargetFocus={(slot) => {
+                          focusedDropTarget.current = slot;
+                        }}
                         className=""
                       >
                         {/* 1. Multi-period Parallel Lab Block Case */}
                         {labBlock && (
-                          <ParallelLabBlock
-                            labBlock={labBlock}
-                            onSelectSession={onSelectSession}
-                            flaggedSessionIds={flaggedSessionIds}
-                            flagClass={flagClass}
-                          />
+                          <div className="contents" {...outOfTabOrder}>
+                            <ParallelLabBlock
+                              labBlock={labBlock}
+                              onSelectSession={onSelectSession}
+                              flaggedSessionIds={flaggedSessionIds}
+                              flagClass={flagClass}
+                            />
+                          </div>
                         )}
 
                         {/* 2 & 3. Draggable Session (Combined Lecture or Standard Theory) */}
@@ -446,6 +500,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                               key={session.sessionId}
                               data-flagged={flagged || undefined}
                               className={flagged ? `rounded-xl ${flagClass}` : undefined}
+                              {...(session.sessionId === activeDragSessionId ? {} : outOfTabOrder)}
                             >
                               <DraggableSessionItem
                                 session={session}
@@ -459,6 +514,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                         })}
 
                         {/* 4. Pinned occupancy, labelled by its display kind (D41): lunch, a frozen item, an exam, ... */}
+                        <div className="contents" {...outOfTabOrder}>
                         {cellPins.map((pin) =>
                           pin.kind === 'lunch' ? (
                             <div
@@ -477,11 +533,12 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                               kind={pinKindLabel(pin.kind, pin.decision)}
                               teachers={pin.facultyNames.join(', ') || undefined}
                               roomCode={pin.roomCodes.join(', ') || undefined}
-                              cohortLabel={cohortListText(pinCohortsInView(pin)) || undefined}
-                              cohortTitle={pin.cohortLabels.join(', ') || undefined}
+                              cohorts={pinCohortsInView(pin)}
+                              listAll={cohortFilter !== 'all'}
                             />
                           )
                         )}
+                        </div>
 
                         {/* Empty / Unscheduled Slot */}
                         {!labBlock && cellSessions.length === 0 && cellPins.length === 0 && (

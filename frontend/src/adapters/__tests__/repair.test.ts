@@ -13,9 +13,10 @@ import {
   entityName,
   facultyText,
   labelsFor,
-  moveConflict,
   pinName,
 } from '@/adapters/timetable';
+
+import solverPinRule from './solver_pin_rule.even-2025-26.json';
 
 // The real EVEN instance (S9 export, D41 display.json) and its committed solution
 let edgeList: EdgeList;
@@ -85,6 +86,71 @@ describe('entityName and pinName on the real instance (display.json)', () => {
   });
 });
 
+describe('checkMove refuses what the solver refuses at a fixed item (solver/graph.py slot_is_open)', () => {
+  /**
+   * For a sample of slots fixed items hold: every session the solver's own slot_is_open closes
+   * there, over every period the session would occupy. Read from solver/graph.py, not from this
+   * project's TypeScript, so the test does not trust the code it checks. Regenerate from the
+   * repository root when the committed instance changes:
+   *   python -c "import json; from solver.graph import build_conflict_graph as b, slot_is_open as o; d='data/instances/even-2025-26/'; e=json.load(open(d+'edge_list.json')); g=b(e); t=sorted(e['slot_grid']['teaching_periods']); S=sorted({(p['day'],p['period']) for p in [p for p in e['pinned_occupancy'] if p['period'] in t][::14]}); print(json.dumps([{'day':a,'period':p,'closed':sorted(i for i,s in g.sessions.items() if s.fixed_slot is None and len(t[t.index(p):t.index(p)+s.duration_periods])==s.duration_periods and not all(o(g,s,g.grid.slot(a,q)) for q in t[t.index(p):t.index(p)+s.duration_periods]))} for a,p in S],indent=1))"
+   */
+  const held = (s: { id: string }, slot: { day: number; period: number }) =>
+    checkMove(edgeList, labels, sessions, s.id, slot.day, slot.period)?.clashes.some((c) => c.kind === 'fixed' || c.kind === 'unavailable') ?? false;
+  const movable = () =>
+    edgeList.sessions.filter((s) => !s.fixed_slot && sessions.some((p) => p.sessionId === s.id));
+  const fits = (s: { id: string; duration_periods: number }, period: number) => {
+    const teaching = [...edgeList.slot_grid.teaching_periods].sort((a, b) => a - b);
+    return teaching.indexOf(period) + s.duration_periods <= teaching.length;
+  };
+
+  it('for every session at a sample of fixed items: exactly the same refusals', () => {
+    expect(solverPinRule.length).toBeGreaterThanOrEqual(15);
+    let refused = 0;
+    let compared = 0;
+    for (const slot of solverPinRule) {
+      for (const s of movable()) {
+        if (!fits(s, slot.period)) continue;
+        compared += 1;
+        const closed = slot.closed.includes(s.id);
+        if (closed) refused += 1;
+        expect(`${s.id} at ${slot.day}-${slot.period}: ${held(s, slot)}`).toBe(`${s.id} at ${slot.day}-${slot.period}: ${closed}`);
+      }
+    }
+    // not an empty comparison: both answers occur
+    expect(refused).toBeGreaterThan(100);
+    expect(compared - refused).toBeGreaterThan(100);
+  });
+
+  it('a pin that names a parent or child cohort alone does not hold a session; the solver agrees', () => {
+    const overlapOnly = solverPinRule.flatMap((slot) =>
+      movable().flatMap((s) => {
+        const pins = edgeList.pinned_occupancy.filter((p) => p.day === slot.day && p.period === slot.period);
+        const parentOrChild = pins.some((p) => p.cohort_ids.some((c) => c !== s.cohort_id && labels.overlap(c, s.cohort_id)));
+        const named = pins.some((p) => p.cohort_ids.includes(s.cohort_id) || p.faculty_ids.includes(s.faculty_id));
+        return parentOrChild && !named && s.duration_periods === 1 && fits(s, slot.period) ? [{ s, slot }] : [];
+      })
+    );
+    for (const { s, slot } of overlapOnly) {
+      expect(slot.closed.includes(s.id)).toBe(held(s, slot));
+    }
+    // the batch sessions the old rule wrongly refused, on the whole committed instance
+    const wronglyRefused = movable().filter((s) =>
+      [0, 1, 2, 3, 4].some((day) =>
+        edgeList.slot_grid.teaching_periods.some((period) => {
+          if (!fits(s, period)) return false;
+          const pins = edgeList.pinned_occupancy.filter((p) => p.day === day && p.period === period);
+          return (
+            pins.some((p) => p.cohort_ids.some((c) => labels.overlap(c, s.cohort_id))) &&
+            !pins.some((p) => p.cohort_ids.includes(s.cohort_id) || p.faculty_ids.includes(s.faculty_id)) &&
+            !checkMove(edgeList, labels, sessions, s.id, day, period)?.clashes.some((c) => c.kind === 'fixed')
+          );
+        })
+      )
+    );
+    expect(wronglyRefused.length).toBeGreaterThan(0);
+  });
+});
+
 describe('checkMove on the real instance: every clash at the target and its kind', () => {
   const NIMKAR_SE_A = 'obs-t0-r1-c3-l0'; // CE207 · SE-Comp A, Anant Nimkar (AVN), room 605
   const check = (s: EnrichedSession, day: number, period: number) =>
@@ -104,14 +170,10 @@ describe('checkMove on the real instance: every clash at the target and its kind
     expect(check(s, 2, 1)).toEqual({
       heading: 'Clashes for CE207 (SE-Comp A) at Wednesday T1:',
       clashes: [
-        { kind: 'room', text: 'Room 605 is taken at Wednesday T1 by PCS / A / DN / 605.' },
+        { kind: 'room', text: 'Room 605 is taken at Wednesday T1 by PCS / A / DN / 605, Deepak Nair (DN).' },
         { kind: 'teacher', text: 'Anant Nimkar (AVN) teaches CE207 · SE-Comp B then.' },
       ],
     });
-    expect(moveConflict(edgeList, labels, sessions, s.sessionId, 2, 1)).toBe(
-      'Clashes for CE207 (SE-Comp A) at Wednesday T1: Room 605 is taken at Wednesday T1 by PCS / A / DN / 605. ' +
-        'Anant Nimkar (AVN) teaches CE207 · SE-Comp B then.'
-    );
   });
 
   it('room: a placed session in the room', () => {
@@ -158,7 +220,7 @@ describe('checkMove on the real instance: every clash at the target and its kind
         x.id === s.sessionId ? { ...x, fixed_slot: { day: s.day, period: s.wallClockPeriod } } : x
       ),
     };
-    expect(moveConflict(fixed, labels, sessions, s.sessionId, 4, 9)).toMatch(/is fixed to its slot/);
+    expect(checkMove(fixed, labels, sessions, s.sessionId, 4, 9)?.heading).toMatch(/is fixed to its slot/);
   });
 
   it('teacher: another session of the same teacher; clashes come in the order room, teacher, cohort, fixed item, unavailability', () => {

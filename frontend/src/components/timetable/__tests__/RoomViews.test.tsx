@@ -8,6 +8,7 @@ import {
   getExampleEdgeList,
   getSolvedSolutionFixture,
   labelsFor,
+  sessionTeacher,
 } from '@/adapters/timetable';
 import { isSolvedSolution } from '@/adapters/solution';
 import { chronosApiClient, MockChronosApiClient, REAL_INSTANCE } from '@/api/chronosApi';
@@ -24,8 +25,8 @@ describe('Room timetable', () => {
     // The SE-Comp B lab block holds 702-A and 702-B at P1 and, after the P2 break, P3
     for (const period of [1, 3]) {
       const cell = screen.getByTestId(`room-cell-0-${period}`);
-      expect(cell).toHaveTextContent('OS · SE-Comp B / A · AGN (702-A)');
-      expect(cell).toHaveTextContent('DAA · SE-Comp B / B · NR (702-B)');
+      expect(cell).toHaveTextContent('OS · SE-Comp B / A · A. G. Nikam (AGN), 702-A');
+      expect(cell).toHaveTextContent('DAA · SE-Comp B / B · N. Raut (NR), 702-B');
     }
     expect(screen.getByTestId('room-cell-0-2')).toHaveTextContent('Break');
     expect(screen.getByTestId('room-cell-1-1')).toBeEmptyDOMElement();
@@ -34,7 +35,7 @@ describe('Room timetable', () => {
   it('shows pinned occupancy in its room', () => {
     render(<RoomTimetable edgeList={edgeList} sessions={sessions} />);
     fireEvent.change(screen.getByLabelText('Select room'), { target: { value: 'room-508' } });
-    expect(screen.getByTestId('room-cell-3-4')).toHaveTextContent('Pinned');
+    expect(screen.getByTestId('room-cell-3-4')).toHaveTextContent('Fixed item');
   });
 });
 
@@ -71,7 +72,7 @@ describe('Room views in the app', () => {
     expect(screen.getByTestId('room-timetable')).toBeInTheDocument();
     expect(screen.getByTestId('free-rooms')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: 'd6_grid' } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: 'd6_grid' } });
     expect(await screen.findByTestId('no-solution-note')).toBeInTheDocument();
     expect(within(screen.getByTestId('free-rooms')).getByTestId('batch-places-702')).toHaveTextContent(
       '2 of 2 batch places free (702-A, 702-B)'
@@ -88,7 +89,7 @@ describe('The real EVEN 2025-26 instance in the app', () => {
   const openRealInstance = async () => {
     render(<App />);
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
     await screen.findByTestId('period-clock-0');
   };
 
@@ -112,8 +113,8 @@ describe('The real EVEN 2025-26 instance in the app', () => {
     for (const s of placed.filter((p) => p.roomId === roomId)) {
       for (const period of s.periods) {
         const cell = within(rooms).getByTestId(`room-cell-${s.day}-${period}`);
-        expect(cell).toHaveTextContent(`${s.subjectCode} · ${s.cohortLabel} · ${s.facultyInitials}`);
-        if (s.subRoomId) expect(cell).toHaveTextContent(`(${code.get(s.subRoomId)})`);
+        expect(cell).toHaveTextContent(`${s.subjectCode} · ${s.cohortLabel} · ${sessionTeacher(s)}`);
+        if (s.subRoomId) expect(cell).toHaveTextContent(`, ${code.get(s.subRoomId)}`);
       }
     }
   });
@@ -133,7 +134,7 @@ describe('The real EVEN 2025-26 instance in the app', () => {
     const rooms = screen.getByTestId('room-timetable');
     fireEvent.change(within(rooms).getByLabelText('Select room'), { target: { value: 'room-703' } });
     // Tuesday P7: the D24 frozen MDM-III lab holds batch place 703-A
-    expect(within(rooms).getByTestId('room-cell-1-7')).toHaveTextContent('MDM-III Lab (CC) /A /SB (703-A)');
+    expect(within(rooms).getByTestId('room-cell-1-7')).toHaveTextContent('MDM-III Lab (CC) /A /SB, Soni Bhambar (SB), 703-A');
 
     const free = screen.getByTestId('free-rooms');
     fireEvent.change(within(free).getByLabelText('Free rooms day'), { target: { value: '1' } });
@@ -147,16 +148,16 @@ describe('The real EVEN 2025-26 instance in the app', () => {
   it('resets role selections that do not exist in the instance switched to', async () => {
     await openRealInstance();
     fireEvent.click(screen.getByTestId('role-button-student'));
-    fireEvent.change(screen.getByLabelText('Select student division'), { target: { value: 'coh-se-a-a' } });
-    expect(screen.getByLabelText('Select student division')).toHaveValue('coh-se-a-a');
+    fireEvent.change(screen.getByLabelText('Select class'), { target: { value: 'coh-se-a-a' } });
+    expect(screen.getByLabelText('Select class')).toHaveValue('coh-se-a-a');
 
     // back to the example instance (cached, so the workspace keeps its state)
     fireEvent.click(screen.getByTestId('role-button-administrator'));
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: 'example' } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: 'example' } });
     fireEvent.click(screen.getByTestId('role-button-student'));
 
     const first = cohortOptions(getExampleEdgeList())[0].id;
-    expect(screen.getByLabelText('Select student division')).toHaveValue(first);
+    expect(screen.getByLabelText('Select class')).toHaveValue(first);
     // the grid is not empty: before the fix it filtered by a cohort the example does not have
     const grid = screen.getByTestId('timetable-grid');
     expect(within(grid).getAllByTestId(/^(session-cell-|batch-session-|combined-division-lecture)/).length).toBeGreaterThan(0);

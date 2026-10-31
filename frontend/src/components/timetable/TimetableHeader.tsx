@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { UserRole, ROLE_CAPABILITIES } from '@/types/roles';
+import { UI } from '@/lib/wording';
 import type { EdgeListInstance, InstanceOption } from '@/api/chronosApi';
 import { Moon, Sun, AlertTriangle, RotateCcw } from 'lucide-react';
 
@@ -13,6 +14,8 @@ interface TimetableHeaderProps {
   instanceOptions: InstanceOption[];
   instance: EdgeListInstance;
   onInstanceChange: (instance: EdgeListInstance) => void;
+  /** The account is linked to one teacher or class (D50): it stays on the real timetable */
+  instanceLocked?: boolean;
   showQualityCard: boolean;
   onToggleQualityCard: () => void;
   darkMode: boolean;
@@ -51,6 +54,7 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
   instanceOptions,
   instance,
   onInstanceChange,
+  instanceLocked = false,
   showQualityCard,
   onToggleQualityCard,
   darkMode,
@@ -101,14 +105,15 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             </label>
           )}
 
-          {/* Instance picker: every role (a logged-in faculty member or student picks it too) */}
+          {/* Timetable picker: every role, except an account linked to one teacher or class (D50) */}
           <label className={fieldClass}>
-            <span className="font-semibold">Instance:</span>
+            <span className="font-semibold">{UI.timetablePicker}</span>
             <select
-              aria-label="Select instance"
+              aria-label="Select timetable"
+              disabled={instanceLocked}
               value={instance}
               onChange={(e) => onInstanceChange(e.target.value)}
-              className="cursor-pointer bg-transparent font-medium outline-none"
+              className="cursor-pointer bg-transparent font-medium outline-none disabled:cursor-default"
             >
               {instanceOptions.map((i) => (
                 <option key={i.id} value={i.id}>
@@ -137,11 +142,11 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
               size="sm"
               onClick={onToggleOutcome}
               data-testid="toggle-outcome-button"
-              title="Toggle between Solved Timetable and Infeasible Diagnosis fixtures"
+              title={UI.tryNoTimetableHint}
               className="gap-1.5 border-dashed"
             >
               <AlertTriangle className="h-4 w-4" />
-              <span>{solutionStatus === 'solved' ? 'Simulate Infeasible' : 'Show Solved'}</span>
+              <span>{solutionStatus === 'solved' ? UI.tryNoTimetable : UI.showSolved}</span>
             </Button>
           )}
 
@@ -151,11 +156,11 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
               size="sm"
               onClick={onToggleRejectMode}
               data-testid="toggle-reject-mode-button"
-              title="When enabled, mock backend will reject any dragged move to test optimistic revert"
+              title={UI.tryRefusedMoveHint}
               className="gap-1.5"
             >
               <RotateCcw className="h-4 w-4" />
-              <span>{rejectMoveMode ? 'Reject Moves: ON' : 'Test Revert on Move'}</span>
+              <span>{rejectMoveMode ? UI.refusingMoves : UI.tryRefusedMove}</span>
             </Button>
           )}
 
@@ -174,7 +179,7 @@ export const TimetableHeader: React.FC<TimetableHeaderProps> = ({
       {/* Key to the grid */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
         <span className="font-semibold">Key:</span>
-        <Key swatch="border-emerald-300 border-l-emerald-800 bg-emerald-50" name="Lab block" note="batches in parallel" />
+        <Key swatch="border-emerald-300 border-l-emerald-800 bg-emerald-50" name="Lab block" note={UI.labBlockNote} />
         <Key swatch="border-amber-300 border-l-amber-700 bg-amber-50" name="Combined lecture" note="two or more divisions together" />
         <Key swatch="border-slate-400 border-l-slate-700 bg-slate-100" name="Fixed item" note="cannot be moved" />
         <Key

@@ -1,5 +1,7 @@
 import React from 'react';
-import { EnrichedSession } from '@/adapters/timetable';
+import { EnrichedSession, sessionTeacher } from '@/adapters/timetable';
+import { UI } from '@/lib/wording';
+import { CARD_FOCUS, cardProps } from './cardKeyboard';
 import { Users, GripVertical, Loader2 } from 'lucide-react';
 
 interface CombinedLectureBlockProps {
@@ -34,10 +36,8 @@ export const CombinedLectureBlock: React.FC<CombinedLectureBlockProps> = ({
       data-draggable={isDraggable ? 'true' : 'false'}
       data-provisional={isProvisional ? 'true' : 'false'}
       data-selected={isSelected ? 'true' : 'false'}
-      onClick={onSelect}
-      {...(isDraggable ? dragAttributes : {})}
-      {...(isDraggable ? dragListeners : {})}
-      className={`group relative flex h-full w-full flex-col justify-between rounded-md border border-l-4 border-amber-300 border-l-amber-700 bg-amber-50 p-2.5 hover:border-amber-500 dark:border-amber-900 dark:bg-amber-950/40 ${
+      {...cardProps(onSelect, isDraggable, isDragging, dragAttributes, dragListeners)}
+      className={`group relative flex h-full w-full flex-col justify-between rounded-md border border-l-4 border-amber-300 border-l-amber-700 bg-amber-50 p-2.5 hover:border-amber-500 dark:border-amber-900 dark:bg-amber-950/40 ${CARD_FOCUS} ${
         isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
       } ${isDragging ? 'opacity-40 border-dashed' : ''} ${isSelected ? 'ring-2 ring-primary ring-offset-2' : ''} ${
         isProvisional ? 'border-amber-700' : ''
@@ -68,13 +68,11 @@ export const CombinedLectureBlock: React.FC<CombinedLectureBlockProps> = ({
         <div className="font-serif text-base font-semibold leading-tight">
           {session.subjectCode} — {session.subjectName}
         </div>
-        <div className="mt-0.5">Full Union Cohort: {session.cohortLabel}</div>
+        <div className="mt-0.5">{UI.classesTogether}: {session.cohortLabel}</div>
       </div>
 
       <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 border-t border-dashed border-amber-400 pt-1.5">
-        <span className="min-w-0">
-          <span className="font-semibold">{session.facultyInitials}</span> ({session.facultyName})
-        </span>
+        <span className="min-w-0 font-semibold">{sessionTeacher(session)}</span>
         <span className="shrink-0">{session.cohortSize} students</span>
       </div>
     </div>
