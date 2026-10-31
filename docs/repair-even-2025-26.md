@@ -458,7 +458,104 @@ changes only repairs that today time out, or that solve in that ring after more 
 first budget. But some S15c rows could change (6 repairs timed out there), so it needs a
 re-run of the S15c benchmark and the repair tests, and it is best decided together with D58.
 Until then the backend reports this case as a timeout, which is correct (D33): "no repair found
-within N s" does not claim the drag is impossible.
+within N s" does not claim the drag is impossible. S14s implements this as the
+`last_ring_portfolio` option, off by default, measured in § S14s below.
+
+## S14s: the D58 options in repair (measured, off by default)
+
+2026-10-31 · Dhruv (with Claude Code) · branch `track/solver-subrooms-option`. Machine: Intel64
+Family 6 Model 183, Python 3.12.10. Every repair had `time_limit_s=60`.
+
+**The options** (`solver/repair.py`; both off by default, like D54; off, every result is
+unchanged):
+
+- `prefer_sub_rooms`: the rings, the restore pass and the closing `improve()` try a split lab's
+  sub-rooms just before that whole lab (D58; fresh solves in `docs/real-solve-even-2025-26.md` §
+  D58).
+- `last_ring_portfolio`: S14l's proposal.
+  1. The every-session-free ring gets `ring_nodes` (5,000) like every other ring.
+  2. If it runs out, a second search follows with sub-rooms first and no preference for old
+     places (ring `"fallback"` in `stats["rings"]`).
+  3. Only if that one also runs out of time is it a `TimeoutError`.
+
+  A proof from either search is infeasible; a timeout is never reported as infeasible (D33).
+
+**The changes:**
+
+- the six scenarios above (scenario 4 is the demo's drag onto SE-Comp A's MDM-I lab block);
+- the S14i sequence, its steps chained in the same configuration;
+- two demo flows: Swapnali Kurhade unavailable Fri P0 and P6, and a substitute for one of her
+  Friday lectures. The lecture is the first by id, CE206 for SE-Comp C at Fri P6
+  (`obs-t4-r2-c4-l0`). The substitute is Aishwarya Nalawade, the only qualified one who fits:
+  `qualifications.json`, filtered to the instance's faculty as the backend does.
+
+Each cell gives the outcome, time, sessions moved (re-roomed only), hard violations against the
+changed edge list, and the score after.
+
+From the committed `solution.json`:
+
+| Change | Options off (today) | `prefer_sub_rooms` | `last_ring_portfolio` | Both |
+|---|---|---|---|---|
+| Swapnali Kurhade unavailable all Tuesday | infeasible (presolve), 15.88 s | infeasible (presolve), 15.67 s | infeasible (presolve), 15.83 s | infeasible (presolve), 15.74 s |
+| Lab 603 unavailable all Monday | repaired, 0.81 s, 5 (2), 0, −41.0 | repaired, 0.86 s, 5 (2), 0, −31.0 | repaired, 0.79 s, 5 (2), 0, −41.0 | repaired, 0.84 s, 5 (2), 0, −31.0 |
+| CE207 lecture to a free slot (Wed P0, 601) | repaired, 0.22 s, 1 (0), 0, −36.5 | repaired, 0.26 s, 1 (0), 0, −36.5 | repaired, 0.23 s, 1 (0), 0, −36.5 | repaired, 0.22 s, 1 (0), 0, −36.5 |
+| CE207 lecture onto SE-Comp A's MDM-I lab (Mon P0, 605) | infeasible (mus), 0.63 s | infeasible (mus), 0.63 s | infeasible (mus), 0.69 s | infeasible (mus), 0.63 s |
+| Swapnali Kurhade unavailable Tue P5–P9 | repaired, 2.11 s, 6 (1), 0, −17.5 | repaired, 2.10 s, 6 (1), 0, −17.5 | repaired, 2.04 s, 6 (1), 0, −17.5 | repaired, 2.04 s, 6 (1), 0, −17.5 |
+| CE207 lecture onto an occupied slot (Mon P9, 605) | repaired, 0.78 s, 4 (1), 0, −27.0 | repaired, 0.77 s, 4 (1), 0, −27.0 | repaired, 0.77 s, 4 (1), 0, −27.0 | repaired, 0.82 s, 4 (1), 0, −27.0 |
+| S14i A: Kurhade unavailable Tue P5–P9 | repaired, 2.12 s, 6 (1), 0, −17.5 | repaired, 2.13 s, 6 (1), 0, −17.5 | repaired, 2.06 s, 6 (1), 0, −17.5 | repaired, 2.12 s, 6 (1), 0, −17.5 |
+| S14i B: the lecture to Prasenjit Bhavathankar | repaired, 0.14 s, 0 (0), 0, −17.5 | repaired, 0.16 s, 0 (0), 0, −17.5 | repaired, 0.15 s, 0 (0), 0, −17.5 | repaired, 0.14 s, 0 (0), 0, −17.5 |
+| S14i C: the lecture dragged to Wed P0, 601 | **timeout**, 60.05 s | **timeout**, 60.04 s | repaired, 19.93 s, 50 (41), 0, −38.5 | repaired, 21.04 s, 50 (39), 0, −38.5 |
+| Demo: Kurhade unavailable Fri P0 and P6 | **timeout**, 60.06 s | **timeout**, 60.04 s | repaired, 24.06 s, 58 (41), 0, −41.5 | repaired, 27.96 s, 54 (42), 0, −20.0 |
+| Demo: Aishwarya Nalawade takes her Friday CE206 lecture | repaired, 0.15 s, 0 (0), 0, −16.0 | repaired, 0.17 s, 0 (0), 0, −16.0 | repaired, 0.14 s, 0 (0), 0, −16.0 | repaired, 0.16 s, 0 (0), 0, −16.0 |
+
+The "options off" column reproduces the tables above for every scenario. A new finding: the demo
+change "Kurhade unavailable Fri P0 and P6" times out today, at 60 s.
+
+If `prefer_sub_rooms` became the default, `solution.json` would be regenerated with it (26.5, §
+D58). So the same changes were also run from that timetable (1,000,000 moves, seed 0, with the
+option):
+
+| Change | `prefer_sub_rooms` | Both |
+|---|---|---|
+| Swapnali Kurhade unavailable all Tuesday | infeasible (presolve), 44.44 s | infeasible (presolve), 43.92 s |
+| Lab 603 unavailable all Monday | repaired, 0.16 s, 0 (2), 0, 26.5 | repaired, 0.15 s, 0 (2), 0, 26.5 |
+| CE207 lecture to a free slot (Wed P0, 601) | repaired, 0.23 s, 1 (0), 0, 16.0 | repaired, 0.23 s, 1 (0), 0, 16.0 |
+| CE207 lecture onto SE-Comp A's MDM-I lab (Mon P0, 605) | infeasible (mus), 0.64 s | infeasible (mus), 0.63 s |
+| Swapnali Kurhade unavailable Tue P5–P9 | repaired, 0.32 s, 1 (0), 0, 15.5 | repaired, 0.31 s, 1 (0), 0, 15.5 |
+| CE207 lecture onto an occupied slot (Mon P9, 605) | repaired, 0.34 s, 2 (1), 0, 24.5 | repaired, 0.31 s, 2 (1), 0, 24.5 |
+| S14i A: Kurhade unavailable Tue P5–P9 | repaired, 0.30 s, 1 (0), 0, 15.5 | repaired, 0.31 s, 1 (0), 0, 15.5 |
+| S14i B: the lecture to Prasenjit Bhavathankar | repaired, 0.47 s, 1 (0), 0, 14.0 | repaired, 0.52 s, 1 (0), 0, 14.0 |
+| S14i C: the lecture dragged to Wed P0, 601 | **timeout**, 60.04 s | repaired, 16.00 s, 49 (31), 0, 4.0 |
+| Demo: Kurhade unavailable Fri P0 and P6 | **timeout**, 60.04 s | repaired, 13.10 s, 53 (18), 0, 2.5 |
+| Demo: Aishwarya Nalawade takes her Friday CE206 lecture | repaired, 0.15 s, 0 (0), 0, 26.5 | repaired, 0.15 s, 0 (0), 0, 26.5 |
+
+**Recommendation: adopt both as defaults**, as the all-track decision D58 asks for. Checked
+against the three criteria:
+
+1. **Nothing that finishes today times out or fails with an option on: met by both.**
+   - `prefer_sub_rooms`: every change that finishes today finishes, with the same outcome, from
+     today's timetable and from a regenerated one. Infeasible changes keep their method. Unlike
+     S14l's scratch ordering, no repair starts timing out. One gets slower: the all-Tuesday
+     explanation takes 44 s from the regenerated timetable, against 16 s today. That is within
+     60 s; a shorter limit would cut it to the unfinished result, still infeasible.
+   - `last_ring_portfolio`: every row that finishes today is identical, and both of today's
+     timeouts are repaired.
+2. **0 hard violations everywhere: met.** Every repaired row, and every fresh solve (§ D58), has
+   0.
+3. **The score at the committed parameters is not worse: met.** `prefer_sub_rooms` gives 26.5
+   against −15.0. It is also better on every seed at 200,000 moves. The portfolio does not change
+   a fresh solve.
+
+**Caveats for the decision.**
+
+- **The fallback moves a lot.** Its repairs move 49–58 sessions. They are answers where today
+  there is none, but not minimal-change repairs.
+- **The evidence is narrow:** one instance, one machine, and seeds and parameters fixed before
+  the runs.
+- **Adopting means re-running the committed results:** `solution.json`, the S15b, S15c and S15d
+  numbers, these repair tables and the digests that pin today's results all change.
+- **The backend picks up a new default automatically:** it passes neither option today.
+- **The explanation keeps the old order:** `explain()` does not use `prefer_sub_rooms`.
 
 ## Limits
 
@@ -488,29 +585,23 @@ within N s" does not claim the drag is impossible.
   the set is lost. Showing it would need a contract change.
 - **Pins have no id in `edge_list_v1`** (S14b). Members name a pin by its index, `pin.<i>`. That
   is stable only for one exported edge list, the one `display.json` was written with.
-- **Lunch can be suggested** (S14b). The solver cannot tell lunch from any other pin, so a
-  RELAX_PINNED_BLOCK on a lunch slot may be suggested. The backend must refuse it (Row 8
-  assessment). The same holds for absence-derived slots outside the change itself. S14e: the
-  backend can pass the break pins as `protected`, and they are then never suggested. Absence-derived
-  slots have no such option yet.
+- **Lunch can be suggested** (S14b). The solver cannot tell lunch from any other pin. Closed for
+  breaks: since S14g (PR #64) the backend passes the pins `display.json` marks as breaks as `protected` in
+  every repair, and since S14i (PR #71) in the explanation of an infeasible solve too
+  (`backend/app/service.py`, `protected`, by kind, never by shape). Still open: absence-derived
+  slots outside the change itself have no such option.
 - **Qualified people missing from the edge list** (S14e). `substitute_candidates` refuses an id
-  with no `faculty_availability` entry. The real edge list has 37 such entries (24 teach, 13 only
-  hold pins), so Track B must pass only those ids, or the export must list everyone who may
-  substitute.
-- **The backend tests still run the full Kurhade explanation** (S14e).
-  `backend/tests/test_repair.py::test_each_change_type[infeasible]` runs it through the API and
-  again directly. Track B can pass `mus_nodes=0` there, or mark the test slow.
-- **Explanation is slow and not covered by the time limit** (S14b). The Kurhade explanation takes
-  about a minute here. Each of its searches has a node budget, but none uses `repair`'s
-  `time_limit_s`, so the answer is the same on every machine. The cost is that `repair` can run
-  past `time_limit_s` when it explains. A first version did share the clock: under the backend
-  test's 60 s it cut the last verification short, and two runs differed in
-  `metadata.backtracks`. S14k: `time_limit_s` now covers the explanation, by decision. An
-  explanation that finishes within the limit is the same everywhere. One that is cut can differ
-  between machines, so two runs that are compared must both finish (the backend test's Kurhade
-  run takes about 20 s here, under its 60 s).
-- **Only repair explains.** A fresh solve (`backtrack_solve`, the backend's solve job) still
-  returns the bare `presolve` / `search_exhaustion` diagnosis; `solver.mus.explain` can be called
-  on it (S14k: tested on its own, with a deadline; wiring it into solve jobs is S14i).
+  with no `faculty_availability` entry. Closed in the backend: it passes only the qualified ids the
+  edge list knows and reports the others as `not_in_instance` (`backend/app/service.py`,
+  substitutes).
+- **The backend's full Kurhade explanation test** (S14e). Closed:
+  `backend/tests/test_repair.py::test_each_change_type[infeasible-explained]` is now marked
+  `slow`.
+- **Explanation time limit** (S14b). Closed by S14k (PR #70): `repair`'s `time_limit_s` covers the
+  explanation. An explanation that finishes within the limit is the same on every machine; one
+  that is cut can differ between machines, so two runs that are compared must both finish.
+- **Fresh solves are explained** (closed by S14i, PR #71). The backend's solve job runs
+  `solver.mus.explain` on an infeasible `backtrack_solve` result within what is left of its time
+  limit, never suggesting a protected pin (`backend/app/service.py`, `solve_edge_list`).
 - **Where the dragged room lives.** `edge_list_v1` has `fixed_slot` but no fixed room. `repair`
   keeps the dragged room internally, so `apply_change(payload, change)` alone does not record it.

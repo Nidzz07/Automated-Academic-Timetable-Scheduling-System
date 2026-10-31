@@ -41,7 +41,8 @@ Lab blocks and single sessions compete in one ordering: the next variable is
 the one with the fewest start slots left (minimum remaining values), ties to
 the most unassigned conflict neighbours (degree), then to the smaller id - see
 :func:`_select_variable`.  Its starts are tried least constraining first
-(:func:`_start_order`), rooms by id within a start.  The earlier "every lab
+(:func:`_start_order`), rooms by id within a start (a split lab's sub-rooms
+before the whole lab with ``prefer_sub_rooms``, D58, off by default).  The earlier "every lab
 block first, starts ascending" order packed the real EVEN instance's labs into
 the slots its lectures needed and timed out at 300 s; this order solves it in
 under a second (docs/real-solve-even-2025-26.md).  All of it is deterministic.
@@ -259,6 +260,13 @@ class BacktrackResult:
         diagnosis: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Serialise this result into a dict matching ``contracts/solution_v1.schema.json``.
+
+        Its quality block is a hard-coded 100.0 and an infeasible result carries the
+        placeholder diagnosis (see below). Callers (S14s): the solver tests,
+        ``solver/benchmarks/baseline.py`` and ``bench/run_bench.py``, and the last two only
+        pass it to :func:`solver.validate.validate_solution`, which reads the assignment.
+        The backend, ``solver.benchmarks.real_solve``, ``repair`` and ``improve`` use
+        :meth:`to_solution_v2_dict`.
 
         Raises:
             ValueError: on a timeout - ``solution_v1`` can only say solved or
@@ -527,6 +535,8 @@ class _SolverState:
     node_limit: int | None = None  # a node budget: like the deadline, but machine-independent
     # session_id -> (start, room) tried before any other value (repair: where it was)
     prefer: dict[str, tuple[SlotId, str]] = field(default_factory=dict)
+    # D58 (S14s): a split lab's sub-rooms tried before the whole lab (:func:`_room_rank`)
+    prefer_sub_rooms: bool = False
 
     # Deepest consistent partial placement so far: (start slots, rooms).
     deepest: tuple[dict[str, SlotId], dict[str, str]] = field(default_factory=lambda: ({}, {}))
@@ -1014,10 +1024,22 @@ def _start_order(
     return sorted(starts, key=lambda s: (s != preferred, cost(s), s))
 
 
+def _room_rank(state: _SolverState, room: str) -> tuple[str | bool, ...]:
+    """Sort key of a room: its id; with ``state.prefer_sub_rooms`` (D58), a split lab's
+    sub-rooms just before the whole lab, so a batch takes one batch place first.
+
+    Rooms of one interchangeable class (siblings, or top-level rooms without
+    sub-rooms) keep their id order either way, as :func:`_symmetric_duplicate` needs.
+    """
+    if state.prefer_sub_rooms:
+        return (state.parent_of.get(room, room), room not in state.parent_of, room)
+    return (room,)
+
+
 def _room_order(state: _SolverState, sid: str, rooms: Iterable[str]) -> list[str]:
-    """*rooms* by id, the one ``state.prefer`` names for *sid* first."""
+    """*rooms* by :func:`_room_rank`, the one ``state.prefer`` names for *sid* first."""
     preferred = state.prefer.get(sid, (None, None))[1]
-    return sorted(rooms, key=lambda r: (r != preferred, r))
+    return sorted(rooms, key=lambda r: (r != preferred, *_room_rank(state, r)))
 
 
 # ---------------------------------------------------------------------------
@@ -1182,6 +1204,7 @@ def backtrack_solve(
     time_limit_s: float | None = None,
     node_limit: int | None = None,
     break_symmetry: bool = True,
+    prefer_sub_rooms: bool = False,
 ) -> BacktrackResult:
     """Solve the timetable by backtracking with forward checking and MRV.
 
@@ -1219,6 +1242,10 @@ def backtrack_solve(
         Skip placements that differ only by an interchangeable room (see
         :func:`_symmetric_duplicate`).  It never changes the solution found;
         ``False`` exists so tests can show that.
+    prefer_sub_rooms:
+        Try a split lab's sub-rooms before the whole lab (D58, S14s).  Off by
+        default: every result is then the one it always was.  It changes which
+        solution is found first, never whether one exists.
 
     Returns
     -------
@@ -1239,6 +1266,7 @@ def backtrack_solve(
     state.break_symmetry = break_symmetry and not seed_rooms and not prefer
     state.node_limit = node_limit
     state.prefer = dict(prefer or {})
+    state.prefer_sub_rooms = prefer_sub_rooms
     _build_initial_domains(state)
 
     if seed_assignment:
