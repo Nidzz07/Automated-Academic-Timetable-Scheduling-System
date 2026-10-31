@@ -20,7 +20,6 @@ psycopg2-binary==2.9.9     # PostgreSQL driver (sync)
 
 # --- Backend: Auth ---
 PyJWT==2.15.0              # HS256 access tokens; replaces python-jose 3.3.0 (advisories unfixed through 3.5.0, S14r)
-python-multipart==0.0.12   # form data support for auth endpoints
 
 # --- Config / env ---
 python-dotenv==1.0.1
