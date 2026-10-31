@@ -181,7 +181,7 @@ describe('3. text is never cut', () => {
     await openIt();
     expect(document.querySelectorAll('.truncate, .text-ellipsis, [class*="line-clamp"]')).toHaveLength(0);
     expect(screen.getByTestId('quality-method-code')).toHaveTextContent(solution.metadata.algorithm);
-    expect(screen.getByTestId('quality-method-code')).toHaveClass('break-all');
+    expect(screen.getByTestId('quality-method-code')).toHaveClass('break-normal');
   });
 
   it.each(BOTH_MODES)('%s: where a card lists only a few classes, the full list shows on hover and keyboard focus', async (_mode, openIt) => {

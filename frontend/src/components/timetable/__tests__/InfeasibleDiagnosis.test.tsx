@@ -36,7 +36,7 @@ describe('Infeasibility Diagnosis Panel', () => {
     expect(screen.getByText(/backtracking\(forward-checking, mrv\) \+ mus-extraction\(deletion-based\)/i)).toBeInTheDocument();
     expect(screen.getByText('1.3 s')).toBeInTheDocument();
     expect(screen.getByText(/5 \/ 8 sessions placed/i)).toBeInTheDocument();
-    expect(screen.getByText(/9,417 steps undone/i)).toBeInTheDocument();
+    expect(screen.getByText(/9,417 search steps/i)).toBeInTheDocument();
   });
 
   it('renders all constraints in the minimal conflicting subset (MUS) with kinds and entity ids', () => {

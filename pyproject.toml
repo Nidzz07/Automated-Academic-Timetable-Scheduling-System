@@ -29,4 +29,3 @@ quote-style = "double"
 testpaths = ["tests", "solver/tests", "backend/tests", "db/tests", "ingestion/tests", "bench/tests"]
 python_files = ["test_*.py"]
 addopts = "-m \"not slow\""
-filterwarnings = ['ignore:datetime\.datetime\.utcnow\(\) is deprecated:DeprecationWarning:jose\.jwt']

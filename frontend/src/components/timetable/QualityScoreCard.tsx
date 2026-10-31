@@ -6,7 +6,6 @@ import {
   LISTED_FINDINGS,
   SHOW_FEWER,
   UI,
-  backtracksText,
   explanationItems,
   loadLimitHours,
   methodText,
@@ -16,9 +15,11 @@ import {
   readableSolverText,
   ruleResult,
   ruleWording,
+  searchStepsText,
   showAllText,
   slotsUsedText,
 } from '@/lib/wording';
+import { MethodDetails } from './MethodDetails';
 import { OverLimitWarning } from './OverLimitWarning';
 
 /**
@@ -39,10 +40,12 @@ interface QualityScoreCardProps {
  * What a rule found, one finding per line: the first LISTED_FINDINGS, then all of them on request.
  * A teacher above the weekly limit is in red with the over-limit wording (D11).
  */
-const RuleFindings: React.FC<{
+export const RuleFindings: React.FC<{
   rule: Extract<QualityRule, { status: 'evaluated' }>;
   nameOf?: (id: string) => string | null;
-}> = ({ rule, nameOf }) => {
+  /** Where a page has another warning of its own (the workload card), to tell them apart */
+  warningTestId?: string;
+}> = ({ rule, nameOf, warningTestId }) => {
   const [showAll, setShowAll] = useState(false);
   const items = explanationItems(rule.explanation);
   // a sentence that lists nothing ("No faculty member teaches more than 16 h a week.")
@@ -61,7 +64,7 @@ const RuleFindings: React.FC<{
               {over ? (
                 <span className="inline-flex flex-wrap items-center gap-x-1.5 font-semibold text-destructive dark:text-red-300">
                   <span>{nameOf?.(over.who) ?? over.who}:</span>{' '}
-                  <OverLimitWarning hours={over.hours} limit={limit} />
+                  <OverLimitWarning hours={over.hours} limit={limit} testId={warningTestId} />
                 </span>
               ) : (
                 readableItem(item, nameOf)
@@ -132,8 +135,8 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
             <div>
               <dt className="font-semibold">{UI.howMade}</dt>
               <dd data-testid="quality-method">{methodText(metadata.algorithm)}</dd>
-              <dd data-testid="quality-method-code" className="break-all font-mono text-[11px] text-muted-foreground">
-                {metadata.algorithm}
+              <dd>
+                <MethodDetails algorithm={metadata.algorithm} />
               </dd>
             </div>
             <div>
@@ -149,7 +152,10 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
             <div>
               <dt className="font-semibold">{UI.timeSlotsUsed}</dt>
               <dd>{slotsUsedText(metadata.slots_used)}</dd>
-              <dd className="text-muted-foreground">{backtracksText(metadata.backtracks)} on the way</dd>
+            </div>
+            <div>
+              <dt className="font-semibold">{UI.searchEffort}</dt>
+              <dd data-testid="quality-search-steps">{searchStepsText(metadata.backtracks)}</dd>
             </div>
           </dl>
         )}

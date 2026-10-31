@@ -121,11 +121,19 @@ describe('Faculty workload on the current edge list and the official solution (S
     await openReal('faculty', (b) => {
       b.current = withChanges([substitution]);
     });
+<<<<<<< HEAD
     // committed: Nimkar 6T + 8P = 14, Dhage 0T + 8P + 3 fixed = 11; the CE207 lecture (1 theory hour) moved from Nimkar to Dhage
     pickFaculty(NIMKAR);
     await waitFor(() => expect(load()).toHaveTextContent('5T + 8P = 13 h'));
     pickFaculty(DHAGE);
     expect(load()).toHaveTextContent('1T + 8P + 3 fixed = 12 h');
+=======
+    // committed: both teach 6 h lectures + 8 h practicals = 14 h; the CE207 lecture (1 theory hour) moved from Nimkar to Bhavathankar
+    pickFaculty(NIMKAR);
+    await waitFor(() => expect(load()).toHaveTextContent('5 h lectures + 8 h practicals = 13 h'));
+    pickFaculty(BHAVATHANKAR);
+    expect(load()).toHaveTextContent('7 h lectures + 8 h practicals = 15 h');
+>>>>>>> origin/main
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(`/api/instances/${REAL_INSTANCE}/edge-list/current`, expect.anything());
   });
 
@@ -135,7 +143,7 @@ describe('Faculty workload on the current edge list and the official solution (S
       b.official = repairedForAbsence();
     });
     pickFaculty(KURHADE);
-    await waitFor(() => expect(load()).toHaveTextContent('6T + 10P = 16 h'));
+    await waitFor(() => expect(load()).toHaveTextContent('6 h lectures + 10 h practicals = 16 h'));
     // the lecture is where the official timetable now has it
     expect(within(screen.getByTestId('grid-cell-1-0')).getByTestId(`session-cell-${KURHADE_LECTURE}`)).toBeInTheDocument();
     expect(within(screen.getByTestId('grid-cell-1-9')).queryByTestId(`session-cell-${KURHADE_LECTURE}`)).not.toBeInTheDocument();
@@ -153,9 +161,15 @@ describe('Faculty workload on the current edge list and the official solution (S
     fireEvent.click(await screen.findByTestId(`substitute-${DHAGE}`));
 
     const loads = await screen.findByTestId('substitution-loads');
+<<<<<<< HEAD
     expect(within(loads).getByTestId(`substitution-load-${NIMKAR}`)).toHaveTextContent('Anant Nimkar (AVN): 6T + 8P = 14 → 5T + 8P = 13 h');
     expect(within(loads).getByTestId(`substitution-load-${DHAGE}`)).toHaveTextContent(
       'Sudhir Dhage (SND): 0T + 8P + 3 fixed = 11 → 1T + 8P + 3 fixed = 12 h'
+=======
+    expect(within(loads).getByTestId(`substitution-load-${NIMKAR}`)).toHaveTextContent('Anant Nimkar (AVN): 6 h lectures + 8 h practicals = 14 h → 5 h lectures + 8 h practicals = 13 h');
+    expect(within(loads).getByTestId(`substitution-load-${BHAVATHANKAR}`)).toHaveTextContent(
+      'Prasenjit Bhavathankar (PBB): 6 h lectures + 8 h practicals = 14 h → 7 h lectures + 8 h practicals = 15 h'
+>>>>>>> origin/main
     );
     expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/jobs/rep-1/edge-list', expect.anything());
 
@@ -225,7 +239,7 @@ describe('Free and engaged faculty at a slot (S14m)', () => {
     fireEvent.click(screen.getByTestId('role-button-faculty'));
     expect(screen.queryByTestId('faculty-at-slot')).not.toBeInTheDocument();
     pickFaculty(NIMKAR);
-    expect(load()).toHaveTextContent('6T + 8P = 14 h');
+    expect(load()).toHaveTextContent('6 h lectures + 8 h practicals = 14 h');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

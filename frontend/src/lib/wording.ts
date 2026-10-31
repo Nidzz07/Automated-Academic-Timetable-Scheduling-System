@@ -14,7 +14,6 @@ import {
   Labels,
   entityName,
   facultyText,
-  loadText,
   sessionPhrase,
   sessionTeacher,
   slotsText,
@@ -77,7 +76,7 @@ const points = (n: number) => `${formatScore(n)} points`;
 
 /** "Found 15 free periods → −30.0 points (2.0 points each)", or why the rule was not checked. */
 export function ruleResult(rule: QualityRule): string {
-  if (rule.status === 'not_evaluated') return `Not checked: ${rule.reason}`;
+  if (rule.status === 'not_evaluated') return `Not checked: ${displayText(rule.reason)}`;
   const [one, many] = ruleWording(rule.rule_id).unit;
   const found = `Found ${num(rule.raw)} ${rule.raw === 1 ? one : many}`;
   if (rule.penalty === 0) return `${found} → no points lost`;
@@ -139,11 +138,15 @@ export function methodText(algorithm: string): string {
 export const slotsUsedText = (slots: number | null | undefined) =>
   slots === null || slots === undefined ? 'Not reported' : `${slots} time slot${slots === 1 ? '' : 's'}`;
 
-/** "92 steps undone" (metadata.backtracks, for the complexity analysis) */
-export const backtracksText = (backtracks: number | null | undefined) =>
-  backtracks === null || backtracks === undefined
+/**
+ * "174 search steps". metadata.backtracks is the name in the contract, but the solver writes the
+ * search nodes it explored there (solver/backtracking.py nodes_explored; repair.py nodes; mus.py adds
+ * its checks' nodes), not how many choices it undid. Local search's moves are not in it.
+ */
+export const searchStepsText = (nodes: number | null | undefined) =>
+  nodes === null || nodes === undefined
     ? 'Not reported'
-    : `${backtracks.toLocaleString('en-GB')} step${backtracks === 1 ? '' : 's'} undone`;
+    : `${nodes.toLocaleString('en-GB')} search step${nodes === 1 ? '' : 's'}`;
 
 // --- Labels on the page ----------------------------------------------------------------------------
 
@@ -170,6 +173,7 @@ export const UI = {
   acceptedChangesNote: 'Unavailability and substitutions accepted so far. Every timetable generated or repaired from now on includes them.',
   howMade: 'How it was made',
   howChecked: 'How it was checked',
+  details: 'Details',
   timeSlotsUsed: 'Time slots used',
   timeTaken: 'Time taken',
   searchEffort: 'Search effort',
@@ -246,7 +250,7 @@ export function solveStatusText(
     case 'timeout':
       return `No timetable found within ${formatSeconds(timeLimitS)}. This does not prove it is impossible.`;
     case 'error':
-      return `Could not generate a timetable: ${error ?? 'unknown error'}`;
+      return `Could not generate a timetable: ${displayText(error ?? 'unknown error')}`;
   }
 }
 
@@ -269,12 +273,35 @@ export function repairStatusText(
     case 'timeout':
       return `No repair found within ${formatSeconds(timeLimitS)}. This does not prove it is impossible.`;
     case 'error':
-      return `The repair failed: ${error ?? 'unknown error'}`;
+      return `The repair failed: ${displayText(error ?? 'unknown error')}`;
   }
 }
 
-/** A proposed substitution's load change, in hours: "6T + 8P = 14 → 6T + 10P = 16 h". */
-export const loadChangeText = (before: FacultyLoad, after: FacultyLoad) => `${loadText(before)} → ${loadText(after)} h`;
+/**
+ * Why the backend refused a change, by name: ids as the UI calls them, its file and decision names
+ * in words ("'fac-a' is not listed … in qualifications.json (D53)").
+ */
+export const refusalText = (detail: string, nameOf: (id: string) => string | null) =>
+  readableDiagnosisText(
+    detail.replace(/\s*\(D\d+\)/g, '').replace(/\bqualifications\.json\b/g, "SPIT's faculty–subject sheets"),
+    nameOf
+  );
+
+const hoursOf = (hours: number, what: string) => `${hours} h ${what}${hours === 1 ? '' : 's'}`;
+
+/**
+ * A teacher's weekly hours in words: "6 h lectures + 8 h practicals = 14 h", with "+ 12 h fixed items"
+ * when they hold any. The department's own "6T + 8P" would clash with the T0–T9 period labels (D60).
+ */
+export const loadText = (load: FacultyLoad) =>
+  `${[
+    hoursOf(load.theory, 'lecture'),
+    hoursOf(load.practical, 'practical'),
+    ...(load.fixed > 0 ? [hoursOf(load.fixed, 'fixed item')] : []),
+  ].join(' + ')} = ${load.total} h`;
+
+/** A proposed substitution's load change: "6 h lectures + 8 h practicals = 14 h → 7 h lectures + 8 h practicals = 15 h". */
+export const loadChangeText = (before: FacultyLoad, after: FacultyLoad) => `${loadText(before)} → ${loadText(after)}`;
 
 /** The accepted-changes confirmation (D56 says which timetable is official after clearing). */
 export const clearChangesText = (n: number) =>

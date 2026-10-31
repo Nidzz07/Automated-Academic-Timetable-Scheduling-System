@@ -14,6 +14,7 @@ import {
   EnrichedSession,
   Labels,
   buildWeekGrid,
+  diagnosisName,
   entityName,
   facultyLoad,
   facultyText,
@@ -24,7 +25,7 @@ import { changeText } from './AcceptedChangesPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatScore, formatScoreChange, periodLabel } from '@/lib/format';
-import { TAUGHT_PERIOD_KEY, UI, loadChangeText, loadLimitHours, repairStatusText, repairSummary, taughtPeriodText } from '@/lib/wording';
+import { TAUGHT_PERIOD_KEY, UI, loadChangeText, loadLimitHours, refusalText, repairStatusText, repairSummary, taughtPeriodText } from '@/lib/wording';
 import { OverLimitWarning } from './OverLimitWarning';
 import { Check, Wrench, X } from 'lucide-react';
 
@@ -292,7 +293,8 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
               accepted: !!data?.accepted_at,
               waiting: !!waitingFor,
               timeLimitS: data?.time_limit_s,
-              error: failure?.message ?? data?.error,
+              // what the backend said, by name; a job's own error is its text as it stands
+              error: failure ? refusalText(failure.message, (id) => diagnosisName(id, edgeList, labels)) : data?.error,
             })}
           </p>
         )}

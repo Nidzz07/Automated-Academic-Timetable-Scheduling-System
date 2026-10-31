@@ -163,6 +163,14 @@ export const ACCEPTED_ROOM_PIN: Display['pins'][number] = {
 export function labelsFor(display: Display | null | undefined): Labels {
   if (!display) return EXAMPLE_LABELS;
   const clock = new Map(display.periods.map((p) => [p.period, formatClockRange(p.start, p.end)]));
+  // The one place display.json's strings enter the UI: its labels name periods "Mon P7–P8", which a
+  // user reads as T7–T8 (D60). The sidecar itself keeps its P-labels.
+  const cohortText = new Map(Object.entries(display.cohorts).map(([id, c]) => [id, displayText(c.label ?? c.name)]));
+  const pins = display.pins.map((p) => ({
+    ...p,
+    label: displayText(p.label),
+    ...(p.unique_label ? { unique_label: displayText(p.unique_label) } : {}),
+  }));
   return {
     faculty: (id) => {
       // every initial the faculty is known by, across years; none is never guessed. Faculty who
@@ -170,12 +178,12 @@ export function labelsFor(display: Display | null | undefined): Labels {
       const initials = [...new Set(Object.values(display.initials[id] ?? {}).flat())];
       return { initials: initials.join('/'), name: display.faculty[id] ?? id };
     },
-    cohort: (id) => display.cohorts[id]?.label ?? display.cohorts[id]?.name ?? id,
+    cohort: (id) => cohortText.get(id) ?? id,
     subject: (id) => display.subjects[id],
     room: (room) => display.rooms[room.id] ?? room.code,
     // a division and its batches share students; display.json gives elective groups no members
     overlap: (a, b) => a === b || !!display.batches[a]?.includes(b) || !!display.batches[b]?.includes(a),
-    pin: (i) => display.pins[i] ?? ACCEPTED_ROOM_PIN,
+    pin: (i) => pins[i] ?? ACCEPTED_ROOM_PIN,
     clock: (p) => clock.get(p) ?? null,
   };
 }
@@ -420,10 +428,6 @@ export function facultyLoad(facultyId: string, sessions: EnrichedSession[], edge
   return { theory, practical, scheduled: scheduled.size, fixed: fixed.size, total: scheduled.size + fixed.size };
 }
 
-/** "6T + 8P = 14", or "6T + 0P + 12 fixed = 18" with fixed items */
-export const loadText = (load: FacultyLoad) =>
-  `${load.theory}T + ${load.practical}P${load.fixed > 0 ? ` + ${load.fixed} fixed` : ''} = ${load.total}`;
-
 /**
  * How many hard rules these placements break on time alone, by the same count as
  * solver.validate.validate_slot_placements, which gave the printed timetable its violations (S12b):
@@ -577,8 +581,7 @@ export function pinName(id: string, edgeList: EdgeList, labels: Labels): string 
     shown?.unique_label ??
     shown?.label ??
     (pin ? `Fixed item, ${slotText(pin.day, pin.period)}` : ACCEPTED_ROOM_PIN.label);
-  // display.json's unique_label names its periods "Mon P0–P1"
-  return displayText(pinWithTeachers(name, pin?.faculty_ids ?? [], labels));
+  return pinWithTeachers(name, pin?.faculty_ids ?? [], labels);
 }
 
 /** "Operating Systems for SE-Comp A, Kailas Devadkar (KKD)", as the UI names one session in a sentence. */

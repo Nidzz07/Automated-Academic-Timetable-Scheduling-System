@@ -358,7 +358,7 @@ describe('M2: the workload card in the app', () => {
     expectEveryFlaggedWarned();
     fireEvent.change(screen.getByLabelText('Select teacher'), { target: { value: 'fac-azman-qureshi' } });
     expect(screen.getByTestId('workload-parts')).toHaveTextContent('18 h: 6 h scheduled + 12 h fixed items');
-    expect(screen.getByTestId('workload-formula-badge')).toHaveTextContent('0T + 6P + 12 fixed = 18 h');
+    expect(screen.getByTestId('workload-formula-badge')).toHaveTextContent('0 h lectures + 6 h practicals + 12 h fixed items = 18 h');
   });
 
   it('a teacher’s own grid shows the fixed items the card counts, and no one else’s', async () => {
@@ -394,7 +394,7 @@ describe('M2: the workload card in the app', () => {
     backend.jobEdgeList = after;
     fireEvent.click(await screen.findByTestId('substitute-fac-anant-nimkar'));
     const row = await screen.findByTestId('substitution-load-fac-jignesh-sisodia');
-    expect(row).toHaveTextContent('+ 1 fixed = 17');
+    expect(row).toHaveTextContent('+ 1 h fixed item = 17 h');
     expect(within(row).getAllByTestId('load-over-limit')[0]).toHaveTextContent('Over 16 h limit: 17 h');
   });
 });
@@ -581,10 +581,10 @@ describe('M8: where it opens, what it keeps, and the test controls', () => {
     expect(screen.queryByTestId('toggle-reject-mode-button')).not.toBeInTheDocument();
   });
 
-  it('http: no test controls on the example either', async () => {
+  it('http: the example is not offered, so its test controls never show', async () => {
     await open();
-    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: 'example' } });
-    await waitFor(() => expect(screen.queryByTestId('solve-panel')).not.toBeInTheDocument());
+    const offered = [...(screen.getByLabelText('Select timetable') as HTMLSelectElement).options].map((o) => o.value);
+    expect(offered).toEqual([REAL_INSTANCE, PRINTED_INSTANCE]);
     expect(screen.queryByTestId('toggle-outcome-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('toggle-reject-mode-button')).not.toBeInTheDocument();
   });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { HttpChronosApiClient, EdgeListInstance, JobStatus } from '@/api/chronosApi';
 import { instanceSolutionQueryKey, useJobQuery, useSolveMutation } from '@/api/queries';
@@ -21,6 +21,12 @@ interface SolvePanelProps {
   pollMs?: number;
   /** A finished solve just became the official timetable */
   onOfficial?: () => void;
+  /**
+   * The solves already written to the query cache. Kept by the caller, because this panel is mounted
+   * again on every return to its instance, when an older solve must not replace what came after it
+   * (an accepted repair, cleared changes).
+   */
+  appliedSolves?: Set<string>;
 }
 
 /**
@@ -29,21 +35,26 @@ interface SolvePanelProps {
  * grid, quality card and diagnosis panel show it. A timeout leaves it untouched (D33), and so
  * does a stale result, which the backend keeps but never makes official (D56).
  */
-export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId, onJobStarted, pollMs = 1000, onOfficial }) => {
+export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId, onJobStarted, pollMs = 1000, onOfficial, appliedSolves }) => {
   const [timeLimit, setTimeLimit] = useState(DEFAULT_TIME_LIMIT_S);
   const solve = useSolveMutation(client, onJobStarted);
   const job = useJobQuery(client, jobId, pollMs);
   const queryClient = useQueryClient();
+  const ownApplied = useRef(new Set<string>());
+  const applied = appliedSolves ?? ownApplied.current;
 
-  const solution = job.data?.solution;
-  const stale = job.data?.stale === true;
+  const finished = job.data;
+  const solution = finished?.solution;
+  const stale = finished?.stale === true;
   useEffect(() => {
-    if (solution && !stale) {
+    // once per job: a result is news when it ends, even if that happened while on another instance
+    if (finished && solution && !stale && !applied.has(finished.id)) {
+      applied.add(finished.id);
       queryClient.setQueryData(instanceSolutionQueryKey(instance), solution);
       onOfficial?.();
     }
     // onOfficial changes every render; only a new result is news
-  }, [solution, stale, instance, queryClient]);
+  }, [finished?.id, solution, stale, instance, queryClient, applied]);
 
   const failure = solve.error ?? job.error;
   const status: JobStatus | null = failure ? 'error' : job.data?.status ?? solve.data?.status ?? null;

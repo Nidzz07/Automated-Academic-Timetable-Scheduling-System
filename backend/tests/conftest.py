@@ -20,7 +20,8 @@ from db.local_guard import LOCAL_HOSTS, host_of
 from db.models import Base, UserRole
 
 DB_NAME = "chronos_backend_test"
-AUTH = AuthSettings("test-only-secret-" + "0" * 32, expire_minutes=5)
+# 81 bytes: PyJWT warns below 64 bytes for HS512, which test_auth signs with too
+AUTH = AuthSettings("test-only-secret-" + "0" * 64, expire_minutes=5)
 
 
 def bearer(role: str, username: str | None = None) -> dict[str, str]:

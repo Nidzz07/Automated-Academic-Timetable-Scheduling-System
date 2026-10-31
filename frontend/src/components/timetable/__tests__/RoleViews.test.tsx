@@ -68,10 +68,10 @@ describe('Role-Differentiated Views (Phase 2 Track C)', () => {
     expect(screen.getByTestId('faculty-persona-selector')).toBeInTheDocument();
     expect(screen.getByTestId('faculty-workload-card')).toBeInTheDocument();
 
-    // Verify institutional T/P workload formula is shown (e.g. 6T + 8P = 14 or similar)
+    // Verify the weekly hours are shown in words (e.g. 6 h lectures + 8 h practicals = 14 h)
     const formulaBadge = screen.getByTestId('workload-formula-badge');
     expect(formulaBadge).toBeInTheDocument();
-    expect(formulaBadge.textContent).toMatch(/\d+T \+ \d+P = \d+ h$/);
+    expect(formulaBadge.textContent).toMatch(/\d+ h lectures? \+ \d+ h practicals? = \d+ h$/);
 
     // Persona options are the faculty placed in the payload, as "Name (INITIALS)"; no invented names or titles
     const facultySelect = screen.getByLabelText('Select teacher') as HTMLSelectElement;

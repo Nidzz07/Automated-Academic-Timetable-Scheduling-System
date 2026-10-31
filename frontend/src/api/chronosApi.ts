@@ -163,7 +163,7 @@ export interface ChronosApiClient {
    */
   getPrintedBaseline(instance: EdgeListInstance, readEdgeList?: ReadEdgeList): Promise<PrintedBaseline | null>;
 
-  /** The instances to offer: the contract examples, then the real ones. */
+  /** The instances to offer. Static mode: the contract examples, then the real ones; http mode: the backend's and the printed view. */
   listInstances(): Promise<InstanceOption[]>;
 
   /**
@@ -539,15 +539,32 @@ export interface AuditEntry {
   detail: Record<string, unknown> | null;
 }
 
-/** A non-2xx response from the backend. */
+/**
+ * A non-2xx response from the backend. `message` is the backend's own words, what a user reads;
+ * `endpoint` ("POST /instances/x/repair") is for debugging and tests, never for the page.
+ */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
-    message: string
+    message: string,
+    readonly endpoint: string = ''
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+/**
+ * What a refusal says: FastAPI's `detail`, a sentence or a validation error's list of { msg }; else
+ * the HTTP status's own words.
+ */
+function refusalWords(detail: unknown, response: Response): string {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail.flatMap((d: { msg?: unknown }) => (typeof d?.msg === 'string' ? [d.msg] : []));
+    if (messages.length > 0) return messages.join('; ');
+  }
+  return response.statusText || `The server answered with an error (${response.status}).`;
 }
 
 /** Who is logged in (http mode). The role is for display only: the backend enforces it. */
@@ -659,8 +676,7 @@ export class HttpChronosApiClient extends BundledFilesClient {
     }
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { detail?: unknown } | null;
-      const detail = typeof body?.detail === 'string' ? body.detail : response.statusText;
-      throw new ApiError(response.status, `${init.method ?? 'GET'} ${path}: ${response.status} ${detail}`);
+      throw new ApiError(response.status, refusalWords(body?.detail, response), `${init.method ?? 'GET'} ${path}`);
     }
     return response.json();
   }
@@ -693,10 +709,8 @@ export class HttpChronosApiClient extends BundledFilesClient {
 
   public async listInstances(): Promise<InstanceOption[]> {
     const ids = (await this.request('/instances')) as Array<{ id: string }>;
-    return [
-      ...Object.keys(EDGE_LIST_INSTANCES).map((id) => option(id)),
-      ...ids.flatMap(({ id }) => [option(id, true), ...(id === REAL_INSTANCE ? [option(PRINTED_INSTANCE)] : [])]),
-    ];
+    // the contract examples are for static mode: a login sees only what the backend serves
+    return ids.flatMap(({ id }) => [option(id, true), ...(id === REAL_INSTANCE ? [option(PRINTED_INSTANCE)] : [])]);
   }
 
   /** POST /instances/{id}/solve: queue a solve (administrator and coordinator only). */
