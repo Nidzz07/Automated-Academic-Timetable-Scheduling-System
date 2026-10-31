@@ -253,7 +253,7 @@ describe('5. one way to write hours, scores and teachers', () => {
 
   it.each(BOTH_MODES)('%s: the score on the card has one decimal; "hrs/wk" and "hours a week" are gone', async (_mode, openIt) => {
     await openIt();
-    expect(screen.getByTestId('quality-score')).toHaveTextContent(/^−15\.0$/);
+    expect(screen.getByTestId('quality-score')).toHaveTextContent(/^26\.5$/);
     expect(document.body.textContent).not.toMatch(/hrs\/wk|hours a week/);
   });
 

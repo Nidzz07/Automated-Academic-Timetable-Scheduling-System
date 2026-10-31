@@ -365,8 +365,8 @@ flowchart TD
     Solved -- no, not everything free --> Grow[Grow the free set by one ring: conflict neighbours, same room same day]
     Grow --> Ring
     Solved -- no, everything free --> Last{last_ring_portfolio?}
-    Last -- "no (default): uncapped search" --> LastResult{Outcome}
-    Last -- "yes: capped search ran out" --> Fallback[Fallback: sub-rooms first, no old-place preference]
+    Last -- "no: uncapped search" --> LastResult{Outcome}
+    Last -- "yes (default): capped search ran out" --> Fallback[Fallback: sub-rooms first, no old-place preference]
     Fallback --> LastResult
     LastResult -- timeout --> Timeout([TimeoutError, never infeasible])
     LastResult -- infeasible --> Explain[explain within the time left]
@@ -380,7 +380,8 @@ flowchart TD
 
 File: `solver/repair.py` (`repair`, `apply_change`, `_frozen_in_the_way`, `_in_the_way`).
 Defaults: `RING_NODES = 5_000`, `MAX_MOVES = 20_000`. `prefer_sub_rooms` and
-`last_ring_portfolio` are off by default (S14s). `time_limit_s` covers the whole call (S14k).
+`last_ring_portfolio` are on by default since S14u (added off in S14s, D58). `time_limit_s`
+covers the whole call (S14k).
 
 ## 6. Component diagram
 

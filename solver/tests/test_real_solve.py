@@ -33,10 +33,11 @@ from solver.validate import validate_solution
 CAP_S = 600.0
 MOVES = 5_000
 # S12h: the documented extended run (docs/real-solve-even-2025-26.md): from the backtracking
-# timetable, seed 0; its score and the sha256 of its assignment, for a second machine to confirm
+# timetable, seed 0, D58 defaults (S14u); its score and the sha256 of its assignment, for a second
+# machine to confirm
 EXTENDED_MOVES = 1_000_000
-EXTENDED_SCORE = -4.0
-EXTENDED_SHA256 = "35f9bcd0e2c024797e57ee300b601b87e54b6c90e783e327bb8ddf9487d6d75d"
+EXTENDED_SCORE = 26.0
+EXTENDED_SHA256 = "035a6cedb05998551f9549a2f1ec714176c0eeddd8f547060055cffef07c53c2"
 
 
 def _without_runtime(solution: dict[str, Any]) -> dict[str, Any]:

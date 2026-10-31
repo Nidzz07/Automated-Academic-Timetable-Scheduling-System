@@ -4,6 +4,11 @@ Track A · reproduce with `python -m solver.benchmarks.real_solve`
 (`solver/tests/test_real_solve.py` re-runs it under `pytest -m slow` and compares with the
 committed file; CI checks the committed file and a 5,000-move local search, nothing timed).
 
+**Committed result since S14u (2026-10-31): 26.5, 0 hard violations**, above the printed
+timetable's 21.5. Both D58 options are now the default; the same command and parameters
+(1,000,000 moves, seed 0) regenerated `solution.json`. See § S14u below. The S12g outcome
+that follows was the committed result until then and is kept as history.
+
 **Outcome (S12g, 2026-10-21): solved, then improved by local search from −162.5 to −15.0.**
 Backtracking solves the instance in 0.45 s (92 nodes, as in S12d); `solver.improve.improve`
 (simulated annealing, 1,000,000 moves, seed 0) then raises the score to **−15.0**. The result
@@ -261,7 +266,8 @@ Statistical Methods, CE205):
 (S-GAP 7, S-B2B 30, S-LOAD16 6, FAC_LOAD_IMBALANCE 108 raw); sha256 of `json.dumps(assignment,
 sort_keys=True)` `35f9bcd0e2c024797e57ee300b601b87e54b6c90e783e327bb8ddf9487d6d75d`; 64.0 s
 here. `pytest -m slow solver/tests/test_real_solve.py` re-runs it
-(`test_extended_run_reproduces_the_documented_result`).
+(`test_extended_run_reproduces_the_documented_result`); since S14u it does so with the D58
+defaults and pins 26.0 instead (§ S14u).
 
 Reproduce one cell of the table (repo root, venv active):
 
@@ -424,6 +430,68 @@ hard violations. It is better on all five seeds at 200,000 moves, at the same ru
 changes repair, including from a timetable regenerated this way, is in
 `docs/repair-even-2025-26.md` § S14s, with the recommendation. The default stays off (D58)
 until the team decides.
+
+## S14u: both D58 options are the default (committed result)
+
+2026-10-31 · Dhruv (with Claude Code) · branch `track/solver-d58-default`. Machine: Intel64
+Family 6 Model 183 Stepping 1, Windows, Python 3.12.10.
+
+The team decided on 2026-10-31 to make both options the default (D58), after § S14s showed
+that both meet its three criteria. `backtrack_solve`, `improve` and `repair` now default to
+`prefer_sub_rooms=True`, and `repair` to `last_ring_portfolio=True`. Both remain parameters:
+passed as `False`, they give the pre-S14u results. `solver/tests/test_d58_options.py`
+re-derives the old `solution.json` (−15.0) that way and checks its digest (slow).
+`explain()` (`solver/mus.py`) passes `prefer_sub_rooms=False`, so explanations keep the id
+order S14s measured them with. The backend passes neither option, so its solve and repair jobs
+follow the new defaults.
+
+`solution.json` was regenerated with the documented command,
+`python -m solver.benchmarks.real_solve --time-limit 600` (1,000,000 moves, seed 0; neither
+chosen by score). It is the run S14s measured, exactly, and passes `validate_solution` and the
+`solution_v2` schema.
+
+| | Committed until S14u (S12g) | **Committed since S14u** |
+|---|---|---|
+| Score | −15.0 | **26.5** |
+| S-GAP raw (penalty) | 13 (26.0) | 1 (2.0): SE-Comp C batch B, Thursday 10.00 |
+| S-B2B | 30 (30.0) | 20 (20.0) |
+| S-LOAD16 | 6 (6.0) | 6 (6.0) |
+| FAC_LOAD_IMBALANCE | 106 (53.0) | 91 (45.5) |
+| Hard violations | 0 | **0** |
+| Batch practicals in a whole split lab | 35 | **0** |
+| Free lab place-periods (of 720, as in § D58) | 293 | **389** |
+| Periods with no free lab place | 5 | 3 |
+| Backtracking | 92 nodes, −162.5 | 92 nodes, −107.0, 263.8 ms |
+| `improve()` | 136.1 s (AMD machine, S12g) | 77.7 s; 860,159 infeasible, 92,639 accepted (relocate 9,752, swap 76,967, block 5,920), 65 new bests |
+| sha256 of `json.dumps(assignment, sort_keys=True)` | `70040ba1…a17d` | `995a4756…e6b7` |
+
+Against the printed timetable (21.5, 36 hard violations), the generated one now scores 5.0
+higher with 0 hard violations. S-GAP is 1 raw against the printed 2.
+
+**The documented extended run** (S12h: from the backtracking timetable, seed 0, 1,000,000
+moves, `extended_moves=True`) with the new defaults: **26.0** (S-GAP 1, S-B2B 20, S-LOAD16 6,
+FAC_LOAD_IMBALANCE 92 raw), sha256 `035a6cedb05998551f9549a2f1ec714176c0eeddd8f547060055cffef07c53c2`,
+73.7 s. `test_extended_run_reproduces_the_documented_result` pins it.
+
+**Found: a fresh solve that sub-rooms first cannot finish.** S14s measured fresh solves of the
+committed edge list only. With the SE-Comp A CE207 lecture (`obs-t0-r1-c3-l0`) given to Sudhir
+Dhage, the one qualified teacher free at its new slot, a fresh `backtrack_solve` of the changed
+edge list:
+
+| Room order | Outcome | Nodes | Time |
+|---|---|---|---|
+| sub-rooms first (default) | timeout | 131,291 | 30.0 s |
+| sub-rooms first (default) | timeout | 430,708 | 120.0 s |
+| id order (`prefer_sub_rooms=False`) | solved | 92 | 0.34 s |
+
+The change is feasible, and its repair is immediate (nothing moves). But a backend solve job
+built with that accepted substitution (D52) now reports a timeout where the old order solved it
+in under a second. The timeout is reported as a timeout, never as infeasible (D33). The same
+substitution to Prasenjit Bhavathankar or Nataasha Raul solves in 92 nodes either way. This
+is the S14l pattern in the other direction: each room order has instances it thrashes on.
+Proposed for the team, not built: give a fresh solve the same portfolio as repair's last ring
+(a node budget, then the other room order). `backend/tests/test_substitution.py` therefore
+accumulates the Bhavathankar substitution, as it did before S14u.
 
 ## S12d: why the old search got stuck
 

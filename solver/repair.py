@@ -69,11 +69,11 @@ run with everything free runs out of
 nothing (ROADMAP D21, D33). Pins the caller marks *protected* (breaks, lunch)
 are never suggested as the relaxation (S14e).
 
-**Options, off by default (S14s, for the D58 decision).** ``prefer_sub_rooms``
+**Options, on by default since S14u (D58; added off in S14s).** ``prefer_sub_rooms``
 tries a split lab's sub-rooms before the whole lab. ``last_ring_portfolio``
 gives the every-session-free ring a node cap and, when it runs out, a second
-search with sub-rooms first and no preference for old places (S14l). Off, every
-result is the one it was before S14s.
+search with sub-rooms first and no preference for old places (S14l). Both off
+give every result as it was before S14u.
 
 **Substitutes** (S14e, D53). :func:`substitute_candidates` filters the
 faculty members the caller says are qualified - the solver never decides who
@@ -264,8 +264,8 @@ def repair(
     time_limit_s: float | None = None,
     protected: Collection[int] = (),
     mus_nodes: int = MUS_NODES,
-    prefer_sub_rooms: bool = False,
-    last_ring_portfolio: bool = False,
+    prefer_sub_rooms: bool = True,
+    last_ring_portfolio: bool = True,
     stats: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """*solution* repaired for *change*: a ``solution.v2`` valid against
@@ -297,14 +297,14 @@ def repair(
         Search nodes per check of an explanation (:data:`solver.mus.MUS_NODES`).
     prefer_sub_rooms:
         Rings, the restore pass and the closing improve try a split lab's sub-rooms
-        before the whole lab (D58, S14s). Off by default: every result as before.
-        The explanation of an infeasible change does not use it.
+        before the whole lab (D58, S14s). On by default since S14u; ``False`` gives
+        the pre-S14u order. The explanation of an infeasible change does not use it.
     last_ring_portfolio:
         The ring with every session free gets *ring_nodes* like the others; if it
         runs out, a second search follows with sub-rooms first and no preference
         for old places (S14l, S14s). Only when that one also runs out of time is
         it a :class:`TimeoutError`; a proof from either search is infeasible.
-        Off by default: that ring has no node cap, as before.
+        On by default since S14u; ``False``: that ring has no node cap, as before.
     stats:
         If given, filled with ``hit`` (sessions the change hit), ``rings``
         (``[ring, freed, outcome]`` per search; the portfolio's second search

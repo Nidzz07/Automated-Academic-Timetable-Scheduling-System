@@ -685,7 +685,7 @@ describe('M11: hard rules lead the comparison', () => {
   it.each(BOTH_MODES)('%s: leads with the sentence', async (_mode, openIt) => {
     await openIt();
     expect(screen.getByTestId('compare-sentence')).toHaveTextContent(
-      'The printed timetable scores higher on the soft rules but breaks 36 hard rules; the generated one breaks none.'
+      'The printed timetable scores lower on the soft rules and breaks 36 hard rules; the generated one breaks none.'
     );
     expect(screen.getByTestId('compare-hard')).toHaveTextContent('036');
   });

@@ -88,13 +88,13 @@ class TestClearedChanges:
 
     def test_cleared_substitution(self, client: TestClient, database_url: str) -> None:
         edge_list, committed = read("edge_list.json"), read("solution.json")
-        change = sub(LECTURE, "fac-sudhir-dhage")  # busy then: the repair moves the lecture
+        change = sub(LECTURE, "fac-nataasha-raul")  # busy then: the repair moves the lecture
         job = run(client, "cleared-sub", change)
         assert job["status"] == "solved" and accept(client, job["id"]).status_code == 200
         assert official(client, "cleared-sub") == job["solution"]
-        # what D56 fixes: with Anant Nimkar back, that timetable clashes
-        assert [v.kind for v in validate_solution(edge_list, job["solution"])] == [
-            "FACULTY_CLASH"]
+        # with Anant Nimkar back, that timetable clashed in the S12g solution.json (what D56
+        # fixes); in the S14u one his lecture lands where he is free, so it does not
+        assert [v.kind for v in validate_solution(edge_list, job["solution"])] == []
 
         assert [c["job_id"] for c in clear(client, "cleared-sub", "sub-clearer")] == [job["id"]]
         now = official(client, "cleared-sub")
@@ -260,9 +260,9 @@ def test_qualified_but_not_in_the_instance(client: TestClient) -> None:
     response = client.get(f"/instances/outside/sessions/{LECTURE}/substitutes")
     assert response.status_code == 200, response.text
     body = response.json()
-    assert [c["faculty_id"] for c in body["candidates"]] == [
-        "fac-prasenjit-bhavathankar", "fac-nataasha-raul"]
-    assert [o["faculty_id"] for o in body["left_out"]] == ["fac-sudhir-dhage", OUTSIDE]
-    assert body["left_out"][1] == {"faculty_id": OUTSIDE, "reasons": ["not_in_instance"],
+    assert [c["faculty_id"] for c in body["candidates"]] == ["fac-sudhir-dhage"]
+    assert [o["faculty_id"] for o in body["left_out"]] == [
+        "fac-nataasha-raul", "fac-prasenjit-bhavathankar", OUTSIDE]
+    assert body["left_out"][2] == {"faculty_id": OUTSIDE, "reasons": ["not_in_instance"],
                                    "violations": []}
     assert start(client, "outside", sub(LECTURE, OUTSIDE)).status_code == 422

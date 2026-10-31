@@ -96,16 +96,17 @@ the files that exercise each one.
 | FR-18 | Report the service's health. | `GET /health` | none | `backend/tests/test_api.py` |
 | FR-19 | Create accounts and reset the demo from the command line (not a route; D59). | none (`backend/app/create_user.py`, `backend/app/demo_seed.py`) | none | `backend/tests/test_demo_seed.py` |
 
-**D58 options, as built (S14s, PR #85), off by default.**
+**D58 options (added in S14s, PR #85), on by default since S14u.**
 
 - `prefer_sub_rooms` (`solver/backtracking.py` `backtrack_solve`, `solver/improve.py` `improve`,
   `solver/repair.py` `repair`): try a split lab's sub-rooms before the whole lab.
 - `last_ring_portfolio` (`repair`): cap the every-session-free ring, then try a fallback search.
 
-With both off, every result is unchanged. The backend passes neither option, so the default
-decides. Making them the default is a team decision (D58, S14u: **planned, not built**). The
-measurements are in `docs/real-solve-even-2025-26.md` § D58 and `docs/repair-even-2025-26.md`
-§ S14s.
+The team made both the default (D58, S14u, 2026-10-31; `solution.json` regenerated: 26.5).
+Passed as `False`, they give the pre-S14u results. The backend passes neither option, so the
+default decides. `explain()` keeps the id order. The measurements are in
+`docs/real-solve-even-2025-26.md` § D58 and § S14u, and `docs/repair-even-2025-26.md` § S14s
+and § S14u.
 
 ## 6. Hard and soft rules
 

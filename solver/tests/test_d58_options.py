@@ -1,14 +1,16 @@
 """D58 options (S14s): sub-rooms first, and the last-ring portfolio of repair.
 
-Both are off by default (like D54). Off, every result is today's: the committed
-``solution.json`` is re-derived with the options passed explicitly as False
-(slow), and every other existing test runs unchanged. On, every timetable is
-valid on the seeded property instances, and the search keeps its verdict.
+Both are on by default since S14u (D58). Off, every result is the pre-S14u one:
+the solution.json committed before S14u (score -15.0) is re-derived with the
+options passed explicitly as False and checked by its digest (slow); the
+committed ``solution.json`` itself is re-derived with the defaults by
+``test_real_solve.py`` (slow). On, every timetable is valid on the seeded
+property instances, and the search keeps its verdict.
 """
 
 from __future__ import annotations
 
-import copy
+import hashlib
 import inspect
 import json
 import random
@@ -26,30 +28,27 @@ from solver.tests.test_solution_v2 import SOLUTION_V2
 from solver.validate import validate_solution
 
 SPLIT_LABS = {"room-509", "room-603", "room-606", "room-702", "room-703"}  # rooms with sub-rooms
+# sha256 of json.dumps(assignment, sort_keys=True) of solution.json as committed before S14u
+PRE_S14U_SHA256 = "70040ba1869cbabdf6dd53ce293c9502cc17782fc75c7b88552b1cebab52a17d"
 
 
-def _without_runtime(solution: dict) -> dict:
-    out = copy.deepcopy(solution)
-    out["metadata"].pop("runtime_ms")
-    return out
-
-
-def test_options_are_off_by_default() -> None:
+def test_options_are_on_by_default() -> None:
     for function, names in ((backtrack_solve, ["prefer_sub_rooms"]),
                             (improve, ["prefer_sub_rooms"]),
                             (repair, ["prefer_sub_rooms", "last_ring_portfolio"])):
         for name in names:
-            assert inspect.signature(function).parameters[name].default is False
+            assert inspect.signature(function).parameters[name].default is True
 
 
 @pytest.mark.slow
-def test_options_off_reproduce_the_committed_solution() -> None:
+def test_options_off_reproduce_the_pre_s14u_solution() -> None:
     edge_list = json.loads((INSTANCE / "edge_list.json").read_text(encoding="utf-8"))
     start = backtrack_solve(build_conflict_graph(edge_list), edge_list,
                             prefer_sub_rooms=False).to_solution_v2_dict()
     result = improve(edge_list, start, max_moves=MOVES, seed=0, prefer_sub_rooms=False)
-    committed = json.loads((INSTANCE / "solution.json").read_text(encoding="utf-8"))
-    assert _without_runtime(result) == _without_runtime(committed)
+    assert result["quality"]["score"] == -15.0
+    digest = hashlib.sha256(json.dumps(result["assignment"], sort_keys=True).encode())
+    assert digest.hexdigest() == PRE_S14U_SHA256
 
 
 def test_sub_rooms_first_on_the_real_instance() -> None:
@@ -67,7 +66,8 @@ def test_sub_rooms_first_keeps_the_verdict_and_validity_on_property_instances() 
     """The room order changes which timetable is found first, never whether one exists."""
     solved = 0
     for index, edge_list in enumerate(_instances()):
-        default = backtrack_solve(build_conflict_graph(edge_list), edge_list)
+        default = backtrack_solve(build_conflict_graph(edge_list), edge_list,
+                                  prefer_sub_rooms=False)
         result = backtrack_solve(build_conflict_graph(edge_list), edge_list,
                                  prefer_sub_rooms=True)
         assert result.outcome == default.outcome, index
@@ -119,8 +119,9 @@ def test_repair_with_both_options_on_property_instances() -> None:
 
 @pytest.mark.slow
 def test_the_portfolio_repairs_the_s14l_drag() -> None:
-    """S14l's accumulated sequence (test_repair.py: the drag times out today). With the
-    portfolio the capped every-session-free ring runs out and the fallback repairs it."""
+    """S14l's accumulated sequence, from the S14u solution.json with the defaults (the drag
+    timed out before S14u). The capped every-session-free ring runs out and the fallback
+    repairs it."""
     edge_list = json.loads((INSTANCE / "edge_list.json").read_text(encoding="utf-8"))
     solution = json.loads((INSTANCE / "solution.json").read_text(encoding="utf-8"))
     for change in (

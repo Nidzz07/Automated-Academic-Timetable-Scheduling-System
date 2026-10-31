@@ -42,8 +42,8 @@ the one with the fewest start slots left (minimum remaining values), ties to
 the most unassigned conflict neighbours (degree), then to the smaller id - see
 :func:`_select_variable`.  Its starts are tried least constraining first
 (:func:`_start_order`), rooms by id within a start (a split lab's sub-rooms
-before the whole lab with ``prefer_sub_rooms``, D58, off by default).  The earlier "every lab
-block first, starts ascending" order packed the real EVEN instance's labs into
+before the whole lab with ``prefer_sub_rooms``, D58, on by default since S14u).  The
+earlier "every lab block first, starts ascending" order packed the real EVEN instance's labs into
 the slots its lectures needed and timed out at 300 s; this order solves it in
 under a second (docs/real-solve-even-2025-26.md).  All of it is deterministic.
 
@@ -1204,7 +1204,7 @@ def backtrack_solve(
     time_limit_s: float | None = None,
     node_limit: int | None = None,
     break_symmetry: bool = True,
-    prefer_sub_rooms: bool = False,
+    prefer_sub_rooms: bool = True,
 ) -> BacktrackResult:
     """Solve the timetable by backtracking with forward checking and MRV.
 
@@ -1243,9 +1243,9 @@ def backtrack_solve(
         :func:`_symmetric_duplicate`).  It never changes the solution found;
         ``False`` exists so tests can show that.
     prefer_sub_rooms:
-        Try a split lab's sub-rooms before the whole lab (D58, S14s).  Off by
-        default: every result is then the one it always was.  It changes which
-        solution is found first, never whether one exists.
+        Try a split lab's sub-rooms before the whole lab (D58, S14s).  On by
+        default since S14u; ``False`` gives the pre-S14u order (rooms by id).  It
+        changes which solution is found first, never whether one exists.
 
     Returns
     -------

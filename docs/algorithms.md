@@ -127,8 +127,8 @@ presets it colours every session of `small`, `medium` and `large` ([evaluation �
   Ties go to the most unassigned conflict neighbours (degree), then to the smaller id. Lab
   blocks and single sessions compete in that one ordering.
 - **Value order.** Starts are tried least constraining first: fewest (neighbour, start) values
-  removed, then slot order, with rooms by id. With `prefer_sub_rooms` (off by default, D58,
-  S14s) a split lab's sub-rooms come just before the whole lab. A lab block is one variable:
+  removed, then slot order, with rooms by id. With `prefer_sub_rooms` (on by default since
+  S14u, D58; added in S14s) a split lab's sub-rooms come just before the whole lab. A lab block is one variable:
   every member takes the same start, each in its own room or sub-room.
 - **Forward checking.** After each placement, the values that now clash are pruned from
   neighbours' domains and from every domain using the same room. Each prune is recorded on a
@@ -279,8 +279,10 @@ gets the same block, explanation text included.
 DSGT. The range statistic for FAC_LOAD_IMBALANCE: Statistical Methods in Computer Science,
 CE205. Configuration over code: Software Engineering.
 
-**Measured.** Every score in the three docs. The committed timetable's −15.0 against the
-printed 21.5, by rule: [evaluation § 3](evaluation-even-2025-26.md#3-real-generated-vs-printed-timetable).
+**Measured.** Every score in the three docs. The committed timetable's 26.5 (since S14u)
+against the printed 21.5, by rule: [real solve § S14u](real-solve-even-2025-26.md#s14u-both-d58-options-are-the-default-committed-result).
+The earlier −15.0, by rule: [evaluation § 3](evaluation-even-2025-26.md#3-real-generated-vs-printed-timetable)
+(re-run in S15e).
 
 ## Simulated-annealing `improve()`
 
@@ -340,8 +342,11 @@ Graph Theory. The incremental penalty's hash maps: Data Structures.
 
 **Measured.**
 
-- Real instance: −162.5 → −15.0 with 1,000,000 moves, seed 0 (the committed `solution.json`),
-  and −18.5 at 200,000 moves ([real solve § S12g: the local search](real-solve-even-2025-26.md#s12g-the-local-search)).
+- Real instance, committed parameters (1,000,000 moves, seed 0): −107.0 → 26.5 with sub-rooms
+  first, the default since S14u (the committed `solution.json`, [real solve §
+  S14u](real-solve-even-2025-26.md#s14u-both-d58-options-are-the-default-committed-result)).
+  Before S14u, in id order: −162.5 → −15.0, and −18.5 at 200,000 moves ([real solve § S12g:
+  the local search](real-solve-even-2025-26.md#s12g-the-local-search)).
 - Extended against default, seeds 0–9: +1.85 [−5.81, +9.51] at 200,000 moves and +1.45 [−6.68,
   +9.58] at 1,000,000, so no measurable gain; it trades S-GAP for imbalance ([real solve §
   Comparison](real-solve-even-2025-26.md#comparison)).
@@ -363,10 +368,12 @@ change into existing edge-list fields: an absence, a closed room, a drag, or a s
 - **Infeasible:** the result goes to `explain()`.
 - **Drag onto a pin:** a drag onto a frozen pin is explained before any search.
 - **Never relaxed:** protected pins (S14e) are never suggested as the relaxation.
-- **Options, off by default (S14s):** `prefer_sub_rooms` (as in backtracking) and
-  `last_ring_portfolio`. With the portfolio, the every-session-free ring gets `RING_NODES`, then
-  a second search with sub-rooms first and no preference for old places, before a timeout.
-  Measured in [repair § S14s](repair-even-2025-26.md#s14s-the-d58-options-in-repair-measured-off-by-default).
+- **Options, on by default since S14u (added in S14s, D58):** `prefer_sub_rooms` (as in
+  backtracking) and `last_ring_portfolio`. With the portfolio, the every-session-free ring gets
+  `RING_NODES`, then a second search with sub-rooms first and no preference for old places,
+  before a timeout. `False` gives the pre-S14u behaviour. Measured in [repair §
+  S14s](repair-even-2025-26.md#s14s-the-d58-options-in-repair-measured-off-by-default) and [repair §
+  S14u](repair-even-2025-26.md#s14u-the-d58-options-are-the-default).
 
 **Where.** `solver/repair.py`: `repair`, `apply_change`, `_in_the_way`, `_frozen_in_the_way`.
 Constants: `RING_NODES = 5_000`, `MAX_MOVES = 20_000`.
@@ -376,10 +383,11 @@ Constants: `RING_NODES = 5_000`, `MAX_MOVES = 20_000`.
 - `apply_change` copies the payload: O(n + m).
 - Each frozen ring is a backtracking search capped at `RING_NODES` nodes, and the free set grows
   every ring, so there are at most n rings.
-- The last ring, with every session free, has no node cap by default. It is **exponential in
-  the worst case** and stopped only by `time_limit_s` (`TimeoutError`, never infeasible). Since
-  S14k that limit covers the whole call: the rings, the explanation and `improve()`. With
-  `last_ring_portfolio` it gets `RING_NODES`; only its fallback search is uncapped.
+- The last ring, with every session free, gets `RING_NODES` by default (`last_ring_portfolio`,
+  S14u); its fallback search has no node cap. That fallback (and the last ring itself with the
+  option off) is **exponential in the worst case** and stopped only by `time_limit_s`
+  (`TimeoutError`, never infeasible). Since S14k that limit covers the whole call: the rings,
+  the explanation and `improve()`.
 - The restore pass repeats over the units until nothing improves, and the code gives no tighter
   bound on its number of passes.
 - Space: O(n·s·r).
@@ -476,9 +484,11 @@ one validation and one score. Space O(n + m).
 **Course.** "A filter, then a sort by key (Data Structures)" in its docstring.
 
 **Measured.** On the real instance, as a mechanism check with the instance's own CE207 teachers
-(not SPIT data): Prasenjit Bhavathankar 0.0, Nataasha Raul −2.0. Sudhir Dhage clashes, so
-substituting him moves only the lecture (−15.0 → −27.0) ([repair §
-Substitutes](repair-even-2025-26.md#substitutes-d53)).
+(not SPIT data). On the committed `solution.json` since S14u (the lecture at Thu P1, 701), only
+Sudhir Dhage fits (−0.5). Nataasha Raul clashes, so substituting her moves only the lecture, to
+Wed P0 (26.5 → 16.0, 0.34 s, ring 0). On the earlier `solution.json`: Prasenjit Bhavathankar
+0.0 and Nataasha Raul −2.0 fit; Sudhir Dhage clashed, and substituting him moved only the
+lecture (−15.0 → −27.0) ([repair § Substitutes](repair-even-2025-26.md#substitutes-d53)).
 
 ## Clique and load lower bounds
 
@@ -522,16 +532,20 @@ S12i](real-solve-even-2025-26.md#s12i-lower-bounds-on-the-periods-a-week-needs))
   - Backtracking proves feasibility or infeasibility, not quality.
   - `improve()` is a heuristic: it returns the best timetable it saw, not the best one there is.
   - The lower bounds are about periods, not about the score.
-- **The generated timetable does not beat the printed one on soft rules.** The committed
-  `solution.json` scores −15.0 against the printed timetable's 21.5. It has 0 hard violations;
-  the printed one has 36 against this edge list (26 FACULTY_CLASH, 10 PINNED_BLOCK) ([evaluation §
-  3](evaluation-even-2025-26.md#3-real-generated-vs-printed-timetable)).
-  - With the default room order, S-GAP is what blocks it: its lowest value in the S12h runs is 7
-    raw, against 2 printed ([real solve § S12h](real-solve-even-2025-26.md#s12h-kempe-chains-and-gap-aimed-moves-off-by-default)).
-    S12g put the remaining gaps down to frozen items (D24).
-  - Most of that S-GAP comes from the room order instead (D58). With `prefer_sub_rooms` (off by
-    default, S14s) the committed parameters give 26.5, S-GAP 1 raw, with 0 hard violations
-    ([real solve § D58](real-solve-even-2025-26.md#d58-what-preferring-sub-rooms-would-change-measured-not-adopted)).
+- **The generated timetable beats the printed one on soft rules only since S14u, on one seed.**
+  The committed `solution.json` scores 26.5 against the printed timetable's 21.5 (S-GAP 1 raw
+  against 2). It has 0 hard violations; the printed one has 36 against this edge list (26
+  FACULTY_CLASH, 10 PINNED_BLOCK) ([real solve §
+  S14u](real-solve-even-2025-26.md#s14u-both-d58-options-are-the-default-committed-result)).
+  At 200,000 moves, seeds 0–4 average 12.9, below 21.5 ([real solve §
+  S14s](real-solve-even-2025-26.md#s14s-prefer_sub_rooms-now-an-option-off-by-default)).
+  - Before S14u, in id room order, it scored −15.0 and S-GAP blocked it: its lowest value in the
+    S12h runs is 7 raw ([real solve § S12h](real-solve-even-2025-26.md#s12h-kempe-chains-and-gap-aimed-moves-off-by-default)).
+    S12g put the remaining gaps down to frozen items (D24); D58 showed the room order held most
+    of them ([real solve § D58](real-solve-even-2025-26.md#d58-what-preferring-sub-rooms-would-change-measured-not-adopted)).
+  - Each room order has instances it thrashes on: sub-rooms first cannot finish a fresh solve
+    after one feasible substitution that the id order solves in 92 nodes ([real solve §
+    S14u](real-solve-even-2025-26.md#s14u-both-d58-options-are-the-default-committed-result)).
 - **Repair minimises moves heuristically.** No search proves that fewer moves are impossible.
   Its last ring can run until `time_limit_s`, and 6 of 30 changes did so in S15c ([evaluation §
   7](evaluation-even-2025-26.md#7-repair-vs-regeneration-on-the-real-instance-s15c)).
