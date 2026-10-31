@@ -292,7 +292,17 @@ def test_display_feeds_the_ui(exported) -> None:
     batches = {cid: c for cid, c in cohorts.items() if c["type"] == "batch"}
     assert cohorts["coh-se-a-a"]["label"] == "SE-Comp A batch A"
     assert len({c["label"] for c in batches.values()}) == len(batches) == 32
-    assert all("label" not in c for c in cohorts.values() if c["type"] != "batch")
+    # S14r: every cohort's label is unique and readable, never an id; lab groups that share
+    # a name get the batch letter their cells print, else their printed slots
+    labels = [c["label"] for c in cohorts.values()]
+    assert len(set(labels)) == len(labels) == len(cohorts)
+    assert not any("coh-" in label or "grp-" in label for label in labels)
+    assert {cohorts[cid]["label"] for cid in (
+        "coh-grp-mdm-dbms-lab-t7-r8-c1", "coh-grp-mdm-dbms-lab-t7-r8-c2",
+        "coh-grp-mdm-iii-lab-cc-lab-t11-r8-c2", "coh-grp-mdm-iii-lab-cc-lab-t8-r8-c3")} == {
+        "MDM-DBMS, Mon P7\u2013P8", "MDM-DBMS, Tue P7\u2013P8",
+        "MDM-III Lab (CC) batch A", "MDM-III Lab (CC) batch B"}
+    assert all(c["label"] == c["name"] for c in cohorts.values() if c["type"] == "division")
     assert sorted(b for ids in display["batches"].values() for b in ids) == sorted(batches)
     assert {cohorts[d]["type"] for d in display["batches"]} == {"division"}
     assert display["batches"]["coh-te-b"] == ["coh-te-b-a", "coh-te-b-b", "coh-te-b-c",
@@ -316,6 +326,30 @@ def test_display_feeds_the_ui(exported) -> None:
         assert p["unique_label"].startswith(p["label"])
         if p["unique_label"] != p["label"]:
             assert f", {display['days'][occ['day']][:3]} P" in p["unique_label"]
+        # S14r: every pin with a teacher names them; initials only as the label prints them
+        assert [f["id"] for f in p["faculty"]] == occ["faculty_ids"]
+        for f in p["faculty"]:
+            assert f["name"] == display["faculty"][f["id"]]
+            assert all(re.search(rf"\b{i}\b", p["label"]) for i in f["initials"])
+
+
+def test_pin_teachers_by_name(exported) -> None:
+    edge_list, display = exported
+    teachers = {(p["label"], f["name"], tuple(f["initials"]))
+                for p in display["pins"] for f in p["faculty"]}
+    # D38: SM and SD name different people in SE and TE; D25: SRD; D44: legend-only faculty
+    assert {("PCS / A / SM / 607-B", "Suman M.", ("SM",)),
+            ("PCS / A / SD / 609", "Sonali Dudhihalli", ("SD",)),
+            ("DL / PE-I-B / SRD 702-B", "Surekha Dholay", ("SRD",)),
+            ("PCS / A / DN / 605", "Deepak Nair", ("DN",)),
+            ("FOM - II / AsT /307", "Asma Tambe", ("AsT",)),
+            ("PSOOP / A1 / 003", "Pramod Bide", ())} <= teachers
+    # names carry a title for no one: the faculty sheets give none (S14r)
+    assert not any(re.match(r"(Prof|Dr)\.", name) for name in display["faculty"].values())
+    # pins whose teacher the seed could not name keep none (reported, never guessed)
+    unnamed = {p["label"] for p, occ in zip(display["pins"], edge_list["pinned_occupancy"],
+                                            strict=True) if not occ["faculty_ids"]}
+    assert {"PCS /SV / 507 new", "DAA | LAB EXAM ESE | SE COMP NR"} <= unnamed
 
 
 def test_re_export_is_byte_identical_and_committed(engine, exported) -> None:

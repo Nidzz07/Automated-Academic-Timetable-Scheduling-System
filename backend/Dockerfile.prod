@@ -14,10 +14,22 @@ RUN cd frontend && VITE_API_MODE=http npm run build
 
 FROM python:3.12-slim
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
+# runtime packages only (S14r): no test, ingestion or tooling package
+COPY backend/requirements.prod.txt .
+RUN pip install --no-cache-dir -r requirements.prod.txt
+# only what the running app reads (S14r): the code (tests are dockerignored), the contract
+# schemas it checks payloads against, and the instance files; no data/real, ingestion/,
+# migrations/ or docs
+COPY backend backend
+COPY db db
+COPY solver solver
+COPY contracts contracts
+COPY data/instances data/instances
 COPY --from=frontend /app/frontend/dist frontend/dist
+# not root (S14r): the app only reads files; it writes nothing to disk
+RUN useradd --system --no-create-home --uid 10001 chronos
+USER chronos
+# Render sets PORT; 8000 elsewhere
 ENV PORT=8000
 EXPOSE 8000
 # one worker: the service assumes one API process per database (backend/README.md)

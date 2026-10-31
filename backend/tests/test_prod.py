@@ -10,8 +10,9 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app import prod
+from backend.app import main, prod
 from backend.app.main import create_app
+from backend.app.store import REPO
 from backend.tests.conftest import AUTH, bearer
 
 INDEX = "<!doctype html><title>Chronos</title>"
@@ -59,6 +60,25 @@ def test_unknown_api_path_is_the_api_404_not_the_page(client: TestClient) -> Non
     response = client.get("/api/nothing-here")
     assert response.status_code == 404
     assert response.json() == {"detail": "Not Found"}
+
+
+@pytest.mark.parametrize("path", ["/api/docs", "/api/redoc", "/api/openapi.json"])
+def test_production_serves_no_api_docs(dist: Path, path: str) -> None:
+    # S14r: prod's own API (no lifespan needed to route); local development keeps the docs
+    assert TestClient(prod.create_app(dist=dist)).get(path).status_code == 404
+    assert TestClient(main.app).get(path.removeprefix("/api")).status_code == 200
+
+
+def test_image_installs_the_pinned_versions() -> None:
+    # backend/requirements.prod.txt (S14r) repeats requirements.txt's pins, never others
+    def pins(path: Path) -> dict[str, str]:
+        lines = (raw.split("#")[0].strip() for raw in path.read_text("utf-8").splitlines())
+        pairs = (line.split("==") for line in lines if line)
+        return {name.split("[")[0].lower(): version for name, version in pairs}
+
+    prod_pins = pins(REPO / "backend" / "requirements.prod.txt")
+    assert prod_pins.items() <= pins(REPO / "requirements.txt").items()
+    assert "pytest" not in prod_pins and "networkx" not in prod_pins
 
 
 def test_start_fails_without_a_built_frontend(tmp_path: Path, database_url: str) -> None:

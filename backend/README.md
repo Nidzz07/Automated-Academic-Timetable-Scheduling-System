@@ -10,11 +10,13 @@ Read from the environment, else from `backend/.env` (never committed):
 
 | Variable | Use |
 |---|---|
-| `DATABASE_URL` | Postgres for users, the audit log and solve jobs. Local hosts only (`db/local_guard.py`). |
+| `DATABASE_URL` | Postgres for users, the audit log and solve jobs. Local hosts only (`db/local_guard.py`), except with `CHRONOS_ALLOW_REMOTE_DB`. Connections are tested before use and renewed after 5 minutes (Supabase closes idle ones). |
+| `CHRONOS_ALLOW_REMOTE_DB` | `1` lets the app use a non-local database. D57: set only in the Render service's environment, by hand, and for Nidhi's own hand-run `alembic` and `demo_seed` commands (D55, D59); never in a `.env` file, the repository, tests or an agent session. |
 | `SECRET_KEY` | HS256 signing key for access tokens, at least 32 characters. |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime, default 30. |
-| `CHRONOS_DEMO_PASSWORD` | Password of the demo accounts, `python -m backend.app.demo_seed` only (README.md). |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime, default 30; a value outside 5 to 1440 stops the app at startup. |
+| `CHRONOS_DEMO_PASSWORD` | Password of the demo accounts, `python -m backend.app.demo_seed` only (README.md). `CHRONOS_DEMO_PASSWORD_ADMIN`, `_COORDINATOR`, `_FACULTY`, `_STUDENT` override it per account. |
 | `CHRONOS_FRONTEND_DIST` | Built frontend that `backend.app.prod:app` serves at `/` (API under `/api`); default `frontend/dist`. |
+| `PORT` | Port `backend/Dockerfile.prod` listens on; Render sets it; default 8000. |
 
 The database must be at Alembic head (`0009_accepted_changes` or later):
 
@@ -29,6 +31,7 @@ uvicorn backend.app.main:app --reload
 ```
 
 Interactive docs at http://127.0.0.1:8000/docs ("Authorize" takes a token from `/auth/login`).
+The production app (`backend.app.prod:app`) serves no docs, ReDoc or OpenAPI schema.
 
 ## Create a user
 
@@ -57,7 +60,11 @@ the shell history. Minimum 8 characters.
 `{"access_token", "token_type": "bearer", "role", "faculty_id", "cohort_id"}` (the account's
 link, else null; the token carries the same claims). Send the token as
 `Authorization: Bearer <token>`. A missing, invalid or expired token gets 401; a valid
-token with the wrong role gets 403.
+token with the wrong role gets 403. After 5 failed logins for one username within 5 minutes,
+that username gets 429 with `Retry-After` (seconds) until the oldest failure is 5 minutes old,
+even with the right password; a successful login clears its failures. The limit is per
+username only: behind Render's proxy the client address the app sees is the proxy's. It is
+kept in the API process's memory, so a restart forgets it.
 
 Every login attempt (username, success or failure, time; never the password), every
 solve or repair request (user, instance, time budget, job id, final status, start and end;
@@ -90,7 +97,13 @@ are marked `error` with `"server restarted"`, and so are their audit rows. Run o
 process per database: a second process starting would mark the first one's live jobs the
 same way.
 
-`GET /jobs/{id}` has `"kind": "solve"` or `"repair"`.
+`GET /jobs/{id}` has `"kind": "solve"` or `"repair"`. A job that fails with an exception
+ends `error`; the job row, its audit row (`"error"`, first 400 characters) and the server
+log keep the exception, and `GET /jobs/{id}` shows it to an administrator only. Everyone
+else gets `"The solver failed. An administrator can see the details in the audit log."`
+
+Jobs run in the API process's own pool (two at a time); at most 5 wait in `queued`. One
+more solve or repair gets 429 and is not queued.
 
 ## The official solution (ROADMAP D49, D56)
 

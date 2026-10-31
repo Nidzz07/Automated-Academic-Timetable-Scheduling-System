@@ -2,7 +2,8 @@
 
 Each instance directory holds ``edge_list.json`` (edge_list_v1, S9 export) and may hold
 ``display.json`` (D41 sidecar), ``anomalies.json`` and ``solution.json`` (solution.v2).
-shortcut: reads committed files, not the database; S13 moves these reads to the DB.
+shortcut: reads committed files, not the database (S13 did not move them; users, the audit
+log and jobs are in the database); move these reads there before instances change at run time.
 """
 
 from __future__ import annotations

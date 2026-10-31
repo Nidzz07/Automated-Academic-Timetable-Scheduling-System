@@ -2,7 +2,9 @@
 
 Run:  uvicorn backend.app.prod:app --host 0.0.0.0 --port $PORT  (backend/Dockerfile.prod)
 
-The API is ``backend.app.main:app``, unchanged. The frontend's http client calls
+The API is ``backend.app.main``'s, without its public docs (S14r: no /api/docs, /api/redoc
+or /api/openapi.json; ``uvicorn backend.app.main:app`` keeps them). The frontend's http
+client calls
 ``/api/...`` (``VITE_API_BASE_URL`` defaults to ``/api``) and the Vite dev proxy strips
 ``/api`` before the backend; the mount strips it the same way, so the UI needs no change.
 Any other path that is not a built file gets ``index.html``. ``CHRONOS_FRONTEND_DIST``
@@ -40,9 +42,11 @@ class SinglePage(StaticFiles):
             return await super().get_response("index.html", scope)
 
 
-def create_app(api: FastAPI = main.app, dist: Path | None = None) -> Starlette:
-    """*api* at /api and *dist* (default: ``CHRONOS_FRONTEND_DIST``, else
-    ``frontend/dist``) at /. Starting fails when *dist* has no ``index.html``."""
+def create_app(api: FastAPI | None = None, dist: Path | None = None) -> Starlette:
+    """*api* (default: ``main.create_app(docs=False)``) at /api and *dist* (default:
+    ``CHRONOS_FRONTEND_DIST``, else ``frontend/dist``) at /. Starting fails when *dist*
+    has no ``index.html``."""
+    api = api or main.create_app(docs=False)
     dist = dist or Path(os.environ.get("CHRONOS_FRONTEND_DIST") or REPO / "frontend" / "dist")
 
     @asynccontextmanager

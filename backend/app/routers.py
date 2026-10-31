@@ -17,6 +17,9 @@ substitution (ROADMAP D52, D53).
 
 S14i: any role may read the edge list in force and the one a job ran on; a finished
 solve says whether it is stale (ROADMAP D56).
+
+S14r: a failed job's exception text is shown to an administrator only; too many failed
+logins for a username, or too many queued jobs, get 429.
 """
 
 from __future__ import annotations
@@ -327,9 +330,14 @@ def get_substitutes(
     return Substitutes(**_found(service.substitutes(instance_id, session_id), "session"))
 
 
-@jobs.get("/{job_id}", response_model_exclude_none=True)
-def get_job(job_id: str, service: Service) -> JobView:
-    return JobView(**_found(service.job(job_id), "job"))
+@jobs.get(
+    "/{job_id}", response_model_exclude_none=True,
+    description="a failed job's error names the exception for an administrator only (S14r)",
+)
+def get_job(job_id: str, service: Service, actor: Annotated[Actor, Depends(current_actor)]
+            ) -> JobView:
+    details = actor.role is UserRole.ADMINISTRATOR
+    return JobView(**_found(service.job(job_id, details=details), "job"))
 
 
 @jobs.get(

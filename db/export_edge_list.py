@@ -37,6 +37,15 @@ manual rows under "unscoped", since they name no year), and each pin a
 ``unique_label``: its label, plus its slot and room when another block shares
 the label, plus its cohort when that is still not enough.
 
+S14r: every cohort gets a unique ``label``: a division its name, a batch its
+division and letter, any other group its name, plus, when another group shares
+it, the batch letter its printed cells give (lab notation ``SUBJECT / BATCH /
+...``), then its printed slots; never an id. Each pin lists its ``faculty``
+(the edge list's ``faculty_ids``) with the name Faculty___Subjects.xlsx spells
+(D45; D25, D38, D44 resolutions) and the initials its printed label shows for
+them. Names carry no title ("Prof.", "Dr."): the faculty sheets give none, and
+only some legends do.
+
 Run from the repo root::
 
     python -m db.export_edge_list
@@ -46,6 +55,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import Counter
 from itertools import pairwise
 from pathlib import Path
@@ -85,6 +95,16 @@ def load_grid() -> dict:
 
 def faculty_id(f: Faculty) -> str:
     return f"fac-{slug(name_key(f.full_name))}"
+
+
+def plain_name(full_name: str) -> str:
+    """The name without a leading "Prof." or "Dr." (legend-only names carry one)."""
+    return re.sub(r"^(Prof|Dr)\.\s+", "", full_name)
+
+
+def batch_letters(cell: str) -> set[str]:
+    """The batch letters a printed cell names: a field that is one letter A-D."""
+    return {f.strip() for f in cell.split("/") if f.strip() in ("A", "B", "C", "D")}
 
 
 def export(session: Session, name: str = TIMETABLE_NAME) -> tuple[dict, dict]:
@@ -193,15 +213,29 @@ def export(session: Session, name: str = TIMETABLE_NAME) -> tuple[dict, dict]:
     pin_blocks: list[tuple[dict, list[str], str | None]] = []
     room_code = {r["id"]: r["code"] for r in rooms}
 
+    def slot_text(day: int, periods: list[int]) -> str:
+        span = f"P{periods[0]}" + (f"\u2013P{periods[-1]}" if len(periods) > 1 else "")
+        return f"{grid['days'][day][:3]} {span}"
+
+    def teacher(faculty: Faculty | None, label: str) -> list[dict]:
+        """The pin's teacher (its faculty_ids), named, with the initials its label shows."""
+        if faculty is None:
+            return []
+        words = set(re.findall(r"[A-Za-z]+", label))
+        shown_as = sorted({fi.initials for fi in faculty.initials if not fi.is_ambiguous}
+                          & words)
+        return [{"id": faculty_id(faculty), "name": plain_name(faculty.full_name),
+                 "initials": shown_as}]
+
     def pin(day: int, periods: list[int], faculty: Faculty | None, room_ref: str | None,
             cohorts: list[str], about: dict, owner: Cohort | None = None) -> None:
+        about["faculty"] = teacher(faculty, about["label"])
         for period in periods:
             pinned.append({"day": day, "period": period,
                            "faculty_ids": [faculty_id(faculty)] if faculty else [],
                            "room_ids": [room_ref] if room_ref else [], "cohort_ids": cohorts})
             shown.append(about)
-        span = f"P{periods[0]}" + (f"\u2013P{periods[-1]}" if len(periods) > 1 else "")
-        pin_blocks.append((about, [f"{grid['days'][day][:3]} {span}"]
+        pin_blocks.append((about, [slot_text(day, periods)]
                            + ([room_code[room_ref]] if room_ref else []),
                            cohort_label(owner) if owner else None))
 
@@ -289,12 +323,36 @@ def export(session: Session, name: str = TIMETABLE_NAME) -> tuple[dict, dict]:
     in_list = {s["cohort_id"] for s in sessions} | {c for p in pinned for c in p["cohort_ids"]}
     by_id = {cohort_id[c]: c for c in universe}
     subjects = {r.subject for r in placed}
+
+    # Every cohort a unique readable label: groups sharing a name add the batch letter
+    # their printed cells give, then their printed slots (S14r).
+    printed: dict[str, list[tuple[str, str]]] = {}  # cohort id -> (cell, slot) per item
+    for item in [*rows, *(p for p in pins if p.kind is not PinnedKind.BREAK and p.cohort)]:
+        cell = item.source_cell if isinstance(item, SessionRow) else item.label
+        printed.setdefault(cohort_id[item.cohort], []).append(
+            (cell or "", slot_text(item.day, covered(item.period, item.duration_periods))))
+    def by_letter(cid: str) -> str:
+        letters = sorted({x for cell, _ in printed.get(cid, []) for x in batch_letters(cell)})
+        return f" batch {'/'.join(letters)}" if letters else ""
+
+    def by_slot(cid: str) -> str:
+        return ", " + "; ".join(sorted({slot for _, slot in printed.get(cid, [])}))
+
+    labels = {cid: cohort_label(by_id[cid]) for cid in in_list}
+    for qualify in (by_letter, by_slot):
+        repeated = Counter(labels.values())
+        for cid in labels:
+            if repeated[labels[cid]] > 1 and not isinstance(by_id[cid], Division | Batch):
+                labels[cid] += qualify(cid)
+    if alike := [k for k, n in Counter(labels.values()).items() if n > 1]:
+        raise SystemExit(f"cohorts no batch letter or printed slot tells apart: {alike[:5]}")
     display = {
         "note": "D41 display sidecar for edge_list.json: names, pin kinds and labels, clock "
                 "times. Not a contract. pins[i] describes pinned_occupancy[i]; its unique_label "
-                "tells blocks apart that share a label. A batch's label is unique; batches gives "
+                "tells blocks apart that share a label; its faculty names its teacher with the "
+                "initials its label shows. Every cohort's label is unique; batches gives "
                 "each division's batch ids; initials are per year, 'unscoped' for manual "
-                "mappings with no year.",
+                "mappings with no year. Names carry no title.",
         "generated_by": "python -m db.export_edge_list",
         "timetable": timetable.name,
         "days": grid["days"],
@@ -302,13 +360,11 @@ def export(session: Session, name: str = TIMETABLE_NAME) -> tuple[dict, dict]:
                      "teaching": p["period"] != coffee} for p in grid["periods"]],
         "coffee_period": coffee,
         "lunch_period": grid["lunch_period"],
-        "faculty": {fid: names[fid] for fid in sorted(unavailable)},
+        "faculty": {fid: plain_name(names[fid]) for fid in sorted(unavailable)},
         "initials": {fid: {scope: sorted(initials[fid][scope]) for scope in sorted(initials[fid])}
                      for fid in sorted(initials)},
         "cohorts": {cid: {"name": by_id[cid].label, "type": by_id[cid].cohort_type.value,
-                          "years": years[by_id[cid]]}
-                    | ({"label": cohort_label(by_id[cid])}
-                       if isinstance(by_id[cid], Batch) else {})
+                          "years": years[by_id[cid]], "label": labels[cid]}
                     for cid in sorted(in_list)},
         "batches": {cohort_id[d]: sorted(cohort_id[b] for b in d.batches)
                     for d in sorted(divisions, key=lambda d: cohort_id[d])},

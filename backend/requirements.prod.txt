@@ -1,0 +1,12 @@
+# What the production image installs (backend/Dockerfile.prod, S14r): only the packages the
+# running app imports, at the versions requirements.txt pins (backend/tests/test_prod.py checks
+# they match). No test, ingestion or tooling package; Alembic runs from a laptop (D55).
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.9
+PyJWT==2.15.0
+python-dotenv==1.0.1
+jsonschema==4.23.0
+PyYAML==6.0.3

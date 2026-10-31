@@ -15,6 +15,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session as OrmSession
 
 from backend.app import demo_seed
+from backend.app.auth import hash_password
 from backend.app.store import INSTANCES_DIR
 from backend.tests.conftest import bearer, scratch_database
 from backend.tests.test_api import REAL, client_for
@@ -116,3 +117,48 @@ def test_reset_clears_changes_and_leaves_a_valid_official_solve(
     assert official == job.solution
     current = client.get(f"/instances/{REAL}/edge-list/current").json()
     assert validate_solution(current, official) == []
+
+
+def test_reset_restores_the_known_logins(
+    url: str, env: None, client: TestClient, monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+) -> None:
+    """S14r: --reset sets every demo account's password again, each role's own variable
+    first, else CHRONOS_DEMO_PASSWORD; without --reset a changed password is kept."""
+    def login(username: str, password: str) -> int:
+        return client.post("/auth/login", json={"username": username, "password": password}
+                           ).status_code
+
+    assert demo_seed.main([]) == 0  # the accounts exist
+    engine = create_engine(url)
+    try:
+        with OrmSession(engine) as db:
+            for user in db.scalars(select(User)):
+                user.password_hash = hash_password("changed-by-someone")
+            db.commit()
+        assert demo_seed.main([]) == 0
+        assert login("demo-admin", "changed-by-someone") == 200  # kept without --reset
+
+        admin_only = "admin-own-pass-" + "y" * 8
+        monkeypatch.setenv(f"{demo_seed.PASSWORD_VAR}_ADMIN", admin_only)
+        capsys.readouterr()
+        demo_seed.seed_accounts(engine, demo_seed.passwords(), reset=True)  # --reset's step
+    finally:
+        engine.dispose()
+    out = capsys.readouterr().out
+    assert out.count("reset the password of") == 4
+    assert PASSWORD not in out and admin_only not in out
+    assert login("demo-admin", admin_only) == 200
+    assert login("demo-admin", PASSWORD) == 401
+    for username in ("demo-coordinator", "demo-faculty", "demo-student"):
+        assert login(username, PASSWORD) == 200
+
+
+def test_refuses_a_short_role_password(
+    env: None, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    monkeypatch.setenv(f"{demo_seed.PASSWORD_VAR}_STUDENT", "short")
+    assert demo_seed.main(["--reset"]) == 1
+    err = capsys.readouterr().err
+    assert "demo-student" in err and "demo-admin" not in err
+    assert "short" not in err  # the password itself is never printed
