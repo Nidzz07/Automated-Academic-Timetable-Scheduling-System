@@ -29,7 +29,7 @@ const loadRule: QualityRule = {
 describe('over the weekly limit (S-LOAD16)', () => {
   it('shows a load above the limit in words with an icon, in red', () => {
     render(card(load(9, 4), loadRule));
-    expect(screen.getByTestId('workload-formula-badge')).toHaveTextContent('9T + 8P = 17 h');
+    expect(screen.getByTestId('workload-formula-badge')).toHaveTextContent('9 h lectures + 8 h practicals = 17 h');
     const warning = screen.getByTestId('load-over-limit');
     expect(warning).toHaveTextContent('Over 16 h limit: 17 h');
     expect(warning.querySelector('svg')).not.toBeNull();
@@ -50,7 +50,7 @@ describe('over the weekly limit (S-LOAD16)', () => {
 
   it('counts fixed items: 6 h of sessions and 12 h of fixed items is over the limit, and says both parts', () => {
     render(card(load(6, 0, 12), loadRule));
-    expect(screen.getByTestId('workload-formula-badge')).toHaveTextContent('6T + 0P + 12 fixed = 18 h');
+    expect(screen.getByTestId('workload-formula-badge')).toHaveTextContent('6 h lectures + 0 h practicals + 12 h fixed items = 18 h');
     expect(screen.getByTestId('workload-parts')).toHaveTextContent('18 h: 6 h scheduled + 12 h fixed items');
     expect(screen.getByTestId('load-over-limit')).toHaveTextContent('Over 16 h limit: 18 h');
   });

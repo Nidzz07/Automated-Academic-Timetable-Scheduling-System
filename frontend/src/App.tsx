@@ -154,6 +154,8 @@ function TimetableApp({ client, session }: { client: ChronosApiClient; session: 
     startOrder.current.set(jobId, startOrder.current.size);
     setSolveJobs((jobs) => ({ ...jobs, [solved]: jobId }));
   }, []);
+  // The solves already applied: the workspace and its SolvePanel unmount on a switch of instance, this does not
+  const appliedSolves = useRef(new Set<string>());
   const [repairJobs, setRepairJobs] = useState<Record<EdgeListInstance, string>>({});
   const onRepairStarted = useCallback((repaired: EdgeListInstance, jobId: string) => {
     startOrder.current.set(jobId, startOrder.current.size);
@@ -221,6 +223,7 @@ function TimetableApp({ client, session }: { client: ChronosApiClient; session: 
       session={session}
       solveJobs={solveJobs}
       startOrder={startOrder.current}
+      appliedSolves={appliedSolves.current}
       onSolveStarted={onSolveStarted}
       repairJobId={repairJobs[instance] ?? null}
       onRepairStarted={onRepairStarted}
@@ -285,6 +288,8 @@ interface TimetableWorkspaceProps {
   solveJobs: Record<EdgeListInstance, string>;
   /** The order this UI started its solve and repair jobs in, by job id */
   startOrder: ReadonlyMap<string, number>;
+  /** The solve jobs whose result was already written to the query cache */
+  appliedSolves: Set<string>;
   onSolveStarted: (instance: EdgeListInstance, jobId: string) => void;
   /** The instance's latest repair job, until accepted-and-shown or discarded */
   repairJobId: string | null;
@@ -308,6 +313,7 @@ function TimetableWorkspace({
   session,
   solveJobs,
   startOrder,
+  appliedSolves,
   onSolveStarted,
   repairJobId,
   onRepairStarted,
@@ -740,6 +746,7 @@ function TimetableWorkspace({
             jobId={solveJobs[instance] ?? null}
             onJobStarted={onSolveStarted}
             onOfficial={forgetAcceptedRepair}
+            appliedSolves={appliedSolves}
           />
         )}
 

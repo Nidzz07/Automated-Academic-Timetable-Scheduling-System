@@ -4,6 +4,7 @@ import App from '@/App';
 import {
   HttpChronosApiClient,
   MockChronosApiClient,
+  PRINTED_INSTANCE,
   REAL_INSTANCE,
   getAuthState,
   roleFromToken,
@@ -162,7 +163,7 @@ describe('Solve job across instance switches', () => {
     await waitFor(() => expect(screen.getByTestId('solve-status')).toHaveAttribute('data-phase', 'search'));
     expect(screen.getByTestId('solve-status')).toHaveTextContent('Searching for a timetable.');
 
-    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: 'example' } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: PRINTED_INSTANCE } });
     await waitFor(() => expect(screen.queryByTestId('solve-panel')).not.toBeInTheDocument());
     state.job = { ...state.job, phase: 'improve' };
     fireEvent.change(await screen.findByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });

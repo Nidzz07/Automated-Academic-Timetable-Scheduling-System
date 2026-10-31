@@ -6,7 +6,6 @@ import { formatDuration } from '@/lib/format';
 import {
   REPAIR_NOT_APPLIED,
   UI,
-  backtracksText,
   constraintKindLabel,
   diagnosisHeadings,
   diagnosisMethodLabel,
@@ -15,8 +14,10 @@ import {
   readableDiagnosisText,
   readableSolverText,
   relaxationActionLabel,
+  searchStepsText,
   verificationLabel,
 } from '@/lib/wording';
+import { MethodDetails } from './MethodDetails';
 import { AlertTriangle, Lightbulb, ArrowRight } from 'lucide-react';
 
 type Slot = { day: number; period: number };
@@ -98,7 +99,9 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
         <div>
           <dt className="font-semibold">{UI.howChecked}</dt>
           <dd>{methodText(metadata.algorithm)}</dd>
-          <dd className={`break-all ${CODE_CLASS}`}>{metadata.algorithm}</dd>
+          <dd>
+            <MethodDetails algorithm={metadata.algorithm} />
+          </dd>
         </div>
         <div>
           <dt className="font-semibold">Time taken</dt>
@@ -119,7 +122,7 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
         )}
         <div>
           <dt className="font-semibold">{UI.searchEffort}</dt>
-          <dd>{backtracksText(metadata.backtracks)}</dd>
+          <dd>{searchStepsText(metadata.backtracks)}</dd>
         </div>
       </dl>
 

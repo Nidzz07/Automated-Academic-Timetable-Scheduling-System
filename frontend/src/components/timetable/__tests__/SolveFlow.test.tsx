@@ -146,7 +146,8 @@ describe('SolvePanel: the job lifecycle', () => {
     renderPanel();
     fireEvent.click(screen.getByTestId('solve-button'));
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'error'));
-    expect(status()).toHaveTextContent(`POST /instances/${REAL_INSTANCE}/solve: 403 student may not do this`);
+    expect(status()).toHaveTextContent('Could not generate a timetable: student may not do this');
+    expect(status().textContent).not.toMatch(/POST|\/instances|403/);
   });
 
   it('stops polling when unmounted', async () => {

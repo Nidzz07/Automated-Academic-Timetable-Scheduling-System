@@ -46,10 +46,12 @@ export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions, la
         </div>
       </CardHeader>
       <CardContent className="overflow-x-auto pt-0">
-        <table className="w-full min-w-[640px] border-collapse text-xs">
+        {/* Like the main grid: the days share the card's width and the text wraps. Beside another card
+            (lg and up) that is the whole fit; alone on a narrow screen the card scrolls below 560 px. */}
+        <table className="w-full min-w-[560px] table-fixed border-collapse break-words text-xs lg:min-w-0">
           <thead>
             <tr className="border-b border-border bg-muted">
-              <th className="p-2 text-left">Period</th>
+              <th className="w-20 p-2 text-left">Period</th>
               {grid.days.map((d) => (
                 <th key={d} className="p-2 text-left">
                   {DAY_NAMES[d]}
@@ -62,7 +64,7 @@ export const RoomTimetable: React.FC<RoomViewsProps> = ({ edgeList, sessions, la
               <tr key={period} className={teaching ? '' : 'bg-muted'}>
                 <td className="p-2 font-semibold">
                   {periodLabel(period)}
-                  {labels.clock(period) && <div className="whitespace-nowrap font-normal">{labels.clock(period)}</div>}
+                  {labels.clock(period) && <div className="font-normal">{labels.clock(period)}</div>}
                 </td>
                 {grid.days.map((day) => {
                   const here = inRoom.filter((o) => o.day === day && o.period === period);

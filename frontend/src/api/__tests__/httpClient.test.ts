@@ -48,8 +48,6 @@ describe('HttpChronosApiClient (S13a endpoints)', () => {
   it('GET /instances: the backend ids, solvable, with the real instance’s printed view', async () => {
     mockFetch({ '/api/instances': () => json([{ id: REAL_INSTANCE }, { id: 'other' }]) });
     expect(await client.listInstances()).toEqual([
-      { id: 'example', label: 'Example data', solvable: false },
-      { id: 'd6_grid', label: 'Example with lunch per year (no timetable yet)', solvable: false },
       { id: REAL_INSTANCE, label: 'Even semester 2025–26, SE and TE', solvable: true },
       { id: PRINTED_INSTANCE, label: 'Even semester 2025–26, as printed by SPIT', solvable: false },
       { id: 'other', label: 'other', solvable: true },
@@ -93,7 +91,8 @@ describe('HttpChronosApiClient (S13a endpoints)', () => {
     const error = await client.listInstances().catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(401);
-    expect((error as ApiError).message).toBe('GET /instances: 401 missing, invalid or expired token');
+    expect((error as ApiError).message).toBe('missing, invalid or expired token');
+    expect((error as ApiError).endpoint).toBe('GET /instances');
   });
 
   it('sends the session’s bearer token, and none without one', async () => {
