@@ -153,7 +153,7 @@ class TestTokens:
         "Bearer not-a-jwt",
         "Basic " + "x" * 20,
         "Bearer " + issue_token(Actor("x", UserRole.ADMINISTRATOR),
-                                AuthSettings("another-secret-" + "1" * 32)),
+                                AuthSettings("another-secret-" + "1" * 64)),
         "Bearer " + jwt.encode(
             {"sub": "x", "role": "dean", "exp": datetime.now(UTC) + timedelta(minutes=5)},
             AUTH.secret_key, algorithm="HS256"),
