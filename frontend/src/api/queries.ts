@@ -11,7 +11,9 @@ import {
   EdgeListInstance,
   HttpChronosApiClient,
   MoveSessionRequest,
+  ReadEdgeList,
   RepairChange,
+  baseOf,
   chronosApiClient,
   isFinished,
   ApiError,
@@ -35,16 +37,27 @@ export function useTimetableQuery(client: ChronosApiClient = chronosApiClient) {
   });
 }
 
+/** A committed edge list's one key: the printed view reads the real instance's. */
+export const edgeListQueryKey = (instance: EdgeListInstance) => ['edge-list', baseOf(instance)] as const;
+
+const edgeListQuery = (instance: EdgeListInstance, client: ChronosApiClient) => ({
+  queryKey: edgeListQueryKey(instance),
+  queryFn: () => client.getEdgeList(instance),
+  staleTime: Infinity,
+  retry: retryable,
+});
+
+/** The committed edge list through its query key, for the other reads that need it: one fetch per page load. */
+function useReadEdgeList(client: ChronosApiClient): ReadEdgeList {
+  const queryClient = useQueryClient();
+  return (instance) => queryClient.fetchQuery(edgeListQuery(instance, client));
+}
+
 export function useEdgeListQuery(
   instance: EdgeListInstance = 'example',
   client: ChronosApiClient = chronosApiClient
 ) {
-  return useQuery({
-    queryKey: ['edge-list', instance],
-    queryFn: () => client.getEdgeList(instance),
-    staleTime: Infinity,
-    retry: retryable,
-  });
+  return useQuery(edgeListQuery(instance, client));
 }
 
 /** The edge list with every accepted change (D52); refetched after an Accept and a Clear. */
@@ -54,9 +67,10 @@ export function useCurrentEdgeListQuery(
   instance: EdgeListInstance,
   client: ChronosApiClient = chronosApiClient
 ) {
+  const readEdgeList = useReadEdgeList(client);
   return useQuery({
     queryKey: currentEdgeListQueryKey(instance),
-    queryFn: () => client.getCurrentEdgeList(instance),
+    queryFn: () => client.getCurrentEdgeList(instance, readEdgeList),
     staleTime: Infinity,
     retry: retryable,
   });
@@ -66,9 +80,10 @@ export function useDisplayQuery(
   instance: EdgeListInstance,
   client: ChronosApiClient = chronosApiClient
 ) {
+  const readEdgeList = useReadEdgeList(client);
   return useQuery({
     queryKey: ['display', instance],
-    queryFn: () => client.getDisplay(instance),
+    queryFn: () => client.getDisplay(instance, readEdgeList),
     staleTime: Infinity,
     retry: retryable,
   });
@@ -109,9 +124,10 @@ export function usePrintedBaselineQuery(
   instance: EdgeListInstance,
   client: ChronosApiClient = chronosApiClient
 ) {
+  const readEdgeList = useReadEdgeList(client);
   return useQuery({
     queryKey: ['printed-baseline', instance],
-    queryFn: () => client.getPrintedBaseline(instance),
+    queryFn: () => client.getPrintedBaseline(instance, readEdgeList),
     staleTime: Infinity,
     retry: retryable,
   });

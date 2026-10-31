@@ -20,7 +20,8 @@ import {
   labelsFor,
 } from '@/adapters/timetable';
 import { parseSolution } from '@/api/contractValidation';
-import { cohortListText, comparisonSentence, pinKindLabel, readableDiagnosisText, repairSummary } from '@/lib/wording';
+import { formatScore } from '@/lib/format';
+import { cohortListParts, comparisonSentence, pinKindLabel, readableDiagnosisText, repairSummary } from '@/lib/wording';
 
 // S14q: what an audit found would break or embarrass the demo. The real instance's files, as the backend serves them
 let real: Record<string, unknown>;
@@ -114,7 +115,7 @@ const open = async (role: UserRole = 'administrator') => {
 const openStatic = async () => {
   render(<App client={new MockChronosApiClient()} />);
   await screen.findByTestId('timetable-grid');
-  fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+  fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
   await screen.findByTestId('period-clock-0');
 };
 
@@ -128,7 +129,7 @@ const form = () => screen.getByTestId('mark-unavailable') as HTMLFieldSetElement
 
 const markKurhade = () => {
   const panel = screen.getByTestId('repair-panel');
-  fireEvent.change(within(panel).getByLabelText('Unavailable faculty member'), { target: { value: 'fac-swapnali-kurhade' } });
+  fireEvent.change(within(panel).getByLabelText('Unavailable teacher'), { target: { value: 'fac-swapnali-kurhade' } });
   fireEvent.click(within(panel).getByLabelText('Friday T0'));
   fireEvent.click(screen.getByTestId('mark-unavailable-button'));
 };
@@ -139,7 +140,7 @@ const expectAtStart = () => {
   expect(screen.queryByTestId('discard-repair')).not.toBeInTheDocument();
   expect(screen.queryByTestId('infeasibility-panel')).not.toBeInTheDocument();
   expect(form()).toBeEnabled();
-  expect(screen.getByLabelText('Unavailable faculty member')).toHaveValue('');
+  expect(screen.getByLabelText('Unavailable teacher')).toHaveValue('');
   expect(within(form()).getByLabelText('Friday T0')).not.toBeChecked();
   expect(screen.getByTestId('mark-unavailable-button')).toHaveTextContent('Mark unavailable and repair');
 };
@@ -229,7 +230,7 @@ describe('X1, M7: every way a repair ends leaves the panel usable (http mode; st
     markKurhade();
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'error'));
     expect(form()).toBeEnabled();
-    expect(screen.getAllByTestId(/^drop-slot-/).length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId(/^drag-handle-/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByTestId('discard-repair'));
     await waitFor(expectAtStart);
   });
@@ -311,7 +312,7 @@ describe('M1: a refused drop shows where the user is looking', () => {
 
   it('http: right above the grid, stuck to the window, announced and focused; Dismiss gives the focus back', async () => {
     await open();
-    const before = screen.getByLabelText('Select instance');
+    const before = screen.getByLabelText('Select timetable');
     before.focus();
     dropRefused();
     const alert = await screen.findByTestId('rejection-alert');
@@ -344,7 +345,7 @@ describe('M2: the workload card in the app', () => {
   const expectEveryFlaggedWarned = () => {
     expect(flagged()).toHaveLength(6);
     for (const [id, hours] of flagged()) {
-      fireEvent.change(screen.getByLabelText('Select faculty persona'), { target: { value: id } });
+      fireEvent.change(screen.getByLabelText('Select teacher'), { target: { value: id } });
       const warning = within(screen.getByTestId('faculty-workload-card')).getByTestId('load-over-limit');
       expect(warning).toHaveTextContent(`Over 16 h limit: ${hours} h`);
       expect(warning.className).toContain('text-destructive');
@@ -355,27 +356,27 @@ describe('M2: the workload card in the app', () => {
     await openStatic();
     fireEvent.click(screen.getByTestId('role-button-faculty'));
     expectEveryFlaggedWarned();
-    fireEvent.change(screen.getByLabelText('Select faculty persona'), { target: { value: 'fac-azman-qureshi' } });
+    fireEvent.change(screen.getByLabelText('Select teacher'), { target: { value: 'fac-azman-qureshi' } });
     expect(screen.getByTestId('workload-parts')).toHaveTextContent('18 h: 6 h scheduled + 12 h fixed items');
-    expect(screen.getByTestId('workload-formula-badge')).toHaveTextContent('0T + 6P + 12 fixed = 18 hrs/wk');
+    expect(screen.getByTestId('workload-formula-badge')).toHaveTextContent('0T + 6P + 12 fixed = 18 h');
   });
 
   it('a teacher’s own grid shows the fixed items the card counts, and no one else’s', async () => {
     await open('faculty');
-    fireEvent.change(screen.getByLabelText('Select faculty persona'), { target: { value: 'fac-azman-qureshi' } });
+    fireEvent.change(screen.getByLabelText('Select teacher'), { target: { value: 'fac-azman-qureshi' } });
     const cards = screen.getAllByTestId('pinned-block');
     expect(cards).toHaveLength(12);
     for (const card of cards) expect(card).toHaveTextContent('Teacher: ');
     expect(cards[0].textContent).toContain(display.faculty['fac-azman-qureshi']);
     expect(screen.queryAllByTestId(/^lunch-cell-/)).toHaveLength(0);
-    fireEvent.change(screen.getByLabelText('Select faculty persona'), { target: { value: 'fac-anant-nimkar' } });
+    fireEvent.change(screen.getByLabelText('Select teacher'), { target: { value: 'fac-anant-nimkar' } });
     expect(screen.queryAllByTestId('pinned-block')).toHaveLength(0);
   });
 
   it('http: the same; a teacher within the limit gets none', async () => {
     await open('faculty');
     expectEveryFlaggedWarned();
-    fireEvent.change(screen.getByLabelText('Select faculty persona'), { target: { value: 'fac-anant-nimkar' } });
+    fireEvent.change(screen.getByLabelText('Select teacher'), { target: { value: 'fac-anant-nimkar' } });
     expect(screen.getByTestId('workload-parts')).toHaveTextContent('14 h: 14 h scheduled + 0 h fixed items');
     expect(screen.queryByTestId('load-over-limit')).not.toBeInTheDocument();
   });
@@ -455,7 +456,7 @@ describe('M5: fixed-item cards in plain words, in every role', () => {
 
   it.each(['administrator', 'student'] as const)('%s, http: the PCS card has its kind and full teacher name', async (role) => {
     await open(role);
-    fireEvent.change(screen.getByLabelText(role === 'student' ? 'Select student division' : 'Filter timetable by division'), {
+    fireEvent.change(screen.getByLabelText(role === 'student' ? 'Select class' : 'Filter timetable by division'), {
       target: { value: 'coh-se-a' },
     });
     const cards = screen.getAllByTestId('pinned-block');
@@ -476,13 +477,16 @@ describe('M5: fixed-item cards in plain words, in every role', () => {
     expect(pcs).not.toHaveTextContent('D44');
   });
 
-  it('a card names a few cohorts, those in view first, and keeps the full list on hover', () => {
-    expect(cohortListText(['a', 'b', 'c'])).toBe('a, b, c');
-    expect(cohortListText(['a', 'b', 'c', 'd', 'e'])).toBe('a, b, c and 2 more');
+  it('a card names a few cohorts, those in view first, and keeps the full list on hover and keyboard focus', () => {
+    expect(cohortListParts(['a', 'b', 'c'])).toEqual({ listed: 'a, b, c', more: 0 });
+    expect(cohortListParts(['a', 'b', 'c', 'd', 'e'])).toEqual({ listed: 'a, b, c', more: 2 });
+    expect(cohortListParts(['a', 'b', 'c', 'd', 'e'], true)).toEqual({ listed: 'a, b, c, d, e', more: 0 });
     render(<TimetableGrid edgeList={edgeList} labels={labelsFor(display)} solution={null} cohortFilter="coh-se-a" />);
     const pcs = screen.getAllByTestId('pinned-block').find((c) => c.textContent?.includes('PCS / DN / 002'))!;
-    expect(pcs).toHaveTextContent('Cohort: SE-Comp A, SE-Comp A batch A, SE-Comp A batch B and 2 more');
-    expect(within(pcs).getByText(/^Cohort:/).getAttribute('title')).toContain('MDM-DBMS');
+    // a division is chosen: only a few are in view, and they all show
+    expect(pcs).toHaveTextContent('Class: SE-Comp A, SE-Comp A batch A, SE-Comp A batch B');
+    expect(pcs).not.toHaveTextContent(/and \d+ more/);
+    expect(within(pcs).queryByTestId('pinned-more')).not.toBeInTheDocument();
   });
 
   it('a teacher display.json has no name for shows by initials, never an id', () => {
@@ -542,7 +546,7 @@ describe('M6: the diagnosis is written with names', () => {
     const { panel, s } = await openDiagnosis();
     const subject = display.subjects[edgeList.sessions.find((x) => x.id === s.sessionId)!.subject_id].name;
     const change = within(panel).getByTestId('conflicting-constraint-change');
-    const moved = `${subject} for ${s.cohortLabel} (${s.facultyName}) moved to Monday T0 in room 601.`;
+    const moved = `${subject} for ${s.cohortLabel}, ${s.facultyName} (${s.facultyInitials}) moved to Monday T0 in room 601.`;
     expect(within(change).getByText(moved)).toBeInTheDocument();
     expect(within(change).getByTestId('constraint-kind-FIXED_SLOT')).toHaveTextContent('The change you asked for');
 
@@ -572,14 +576,14 @@ describe('M6: the diagnosis is written with names', () => {
 describe('M8: where it opens, what it keeps, and the test controls', () => {
   it.each(['administrator', 'coordinator', 'faculty', 'student'] as const)('http, %s: opens on the real instance, no test controls', async (role) => {
     await open(role);
-    expect(screen.getByLabelText('Select instance')).toHaveValue(REAL_INSTANCE);
+    expect(screen.getByLabelText('Select timetable')).toHaveValue(REAL_INSTANCE);
     expect(screen.queryByTestId('toggle-outcome-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('toggle-reject-mode-button')).not.toBeInTheDocument();
   });
 
   it('http: no test controls on the example either', async () => {
     await open();
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: 'example' } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: 'example' } });
     await waitFor(() => expect(screen.queryByTestId('solve-panel')).not.toBeInTheDocument());
     expect(screen.queryByTestId('toggle-outcome-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('toggle-reject-mode-button')).not.toBeInTheDocument();
@@ -587,7 +591,7 @@ describe('M8: where it opens, what it keeps, and the test controls', () => {
 
   it('http: keeps the choice across a reload; a logout forgets it', async () => {
     await open();
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: PRINTED_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: PRINTED_INSTANCE } });
     await screen.findByTestId('printed-violations');
     expect(storedInstance()).toBe(PRINTED_INSTANCE);
 
@@ -595,7 +599,7 @@ describe('M8: where it opens, what it keeps, and the test controls', () => {
     cleanup();
     render(<App client={new HttpChronosApiClient('/api')} />);
     await screen.findByTestId('printed-violations');
-    expect(screen.getByLabelText('Select instance')).toHaveValue(PRINTED_INSTANCE);
+    expect(screen.getByLabelText('Select timetable')).toHaveValue(PRINTED_INSTANCE);
 
     setSession(null);
     expect(storedInstance()).toBeNull();
@@ -607,16 +611,16 @@ describe('M8: where it opens, what it keeps, and the test controls', () => {
     sessionStorage.setItem('chronos.instance', 'odd-2025-26');
     render(<App client={new HttpChronosApiClient('/api')} />);
     await screen.findByTestId('period-clock-0');
-    expect(screen.getByLabelText('Select instance')).toHaveValue(REAL_INSTANCE);
+    expect(screen.getByLabelText('Select timetable')).toHaveValue(REAL_INSTANCE);
   });
 
   it('static: opens on the example with its test controls, and they stay off the real instance', async () => {
     render(<App client={new MockChronosApiClient()} />);
     await screen.findByTestId('timetable-grid');
-    expect(screen.getByLabelText('Select instance')).toHaveValue('example');
+    expect(screen.getByLabelText('Select timetable')).toHaveValue('example');
     expect(screen.getByTestId('toggle-outcome-button')).toBeInTheDocument();
     expect(screen.getByTestId('toggle-reject-mode-button')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
     await screen.findByTestId('period-clock-0');
     expect(screen.queryByTestId('toggle-outcome-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('toggle-reject-mode-button')).not.toBeInTheDocument();
@@ -627,7 +631,7 @@ describe('M9: the session details window', () => {
   it('is titled with subject, cohort and teacher; no raw id and no raw record', () => {
     const s = sessions.find((x) => x.sessionId === 'obs-t0-r1-c3-l0')!;
     const { container } = render(<SessionDetailModal session={s} onClose={() => {}} />);
-    expect(screen.getByRole('dialog', { name: `${s.subjectName} for SE-Comp A (Anant Nimkar)` })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: `${s.subjectName} for SE-Comp A, Anant Nimkar (AVN)` })).toBeInTheDocument();
     expect(container.textContent).not.toContain(s.sessionId);
     expect(screen.queryByText(/Placement record/)).not.toBeInTheDocument();
     expect(container.querySelector('pre')).toBeNull();
@@ -638,7 +642,7 @@ describe('M9: the session details window', () => {
     fireEvent.change(screen.getByLabelText('Filter timetable by division'), { target: { value: 'coh-se-a' } });
     fireEvent.click(screen.getByTestId('session-cell-obs-t0-r1-c3-l0'));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByRole('heading')).toHaveTextContent('for SE-Comp A (Anant Nimkar)');
+    expect(within(dialog).getByRole('heading')).toHaveTextContent('for SE-Comp A, Anant Nimkar (AVN)');
     expect(dialog).not.toHaveTextContent('obs-t0-r1-c3-l0');
   });
 });
@@ -675,7 +679,7 @@ describe('M11: hard rules lead the comparison', () => {
     expect(rows[1]).toHaveAttribute('data-testid', 'compare-hard');
     expect(rows[2]).toHaveAttribute('data-testid', 'compare-score');
     expect(screen.getByTestId('compare-hard')).toHaveTextContent(`${hard}${printed.violations.length}`);
-    expect(screen.getByTestId('compare-score')).toHaveTextContent(`${generated.score!.toFixed(1)}${printed.quality.score!.toFixed(1)}`);
+    expect(screen.getByTestId('compare-score')).toHaveTextContent(`${formatScore(generated.score!)}${formatScore(printed.quality.score!)}`);
   });
 
   it.each(BOTH_MODES)('%s: leads with the sentence', async (_mode, openIt) => {

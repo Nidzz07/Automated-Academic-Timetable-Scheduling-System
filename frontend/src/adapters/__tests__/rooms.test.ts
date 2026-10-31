@@ -19,7 +19,7 @@ describe('room occupancy', () => {
 
   it('counts pinned_occupancy rooms as held', () => {
     expect(occupancies).toContainEqual(
-      expect.objectContaining({ roomId: 'room-508', subRoomId: null, day: 3, period: 4, label: 'Pinned' })
+      expect.objectContaining({ roomId: 'room-508', subRoomId: null, day: 3, period: 4, label: 'Fixed item' })
     );
   });
 });

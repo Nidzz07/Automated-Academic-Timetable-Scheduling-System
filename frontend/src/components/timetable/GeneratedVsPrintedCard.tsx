@@ -2,7 +2,8 @@ import React from 'react';
 import { QualityView } from '@/adapters/solution';
 import { PrintedBaseline } from '@/adapters/realInstance';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { comparisonSentence, ruleWording } from '@/lib/wording';
+import { formatScore } from '@/lib/format';
+import { UI, comparisonSentence, ruleWording } from '@/lib/wording';
 
 interface GeneratedVsPrintedCardProps {
   generated: QualityView;
@@ -11,10 +12,10 @@ interface GeneratedVsPrintedCardProps {
   printed: PrintedBaseline;
 }
 
-const score = (s: number | null) => (s === null ? '—' : s.toFixed(1));
+const score = (s: number | null) => (s === null ? '—' : formatScore(s));
 const penalty = (q: QualityView, ruleId: string) => {
   const rule = q.rules.find((r) => r.rule_id === ruleId);
-  return rule?.status === 'evaluated' ? `-${rule.penalty.toFixed(1)}` : '—';
+  return rule?.status === 'evaluated' ? formatScore(-rule.penalty) : '—';
 };
 
 /**
@@ -39,9 +40,7 @@ export const GeneratedVsPrintedCard: React.FC<GeneratedVsPrintedCardProps> = ({ 
     <Card data-testid="generated-vs-printed">
       <CardHeader className="pb-3">
         <CardTitle>Generated and printed timetables compared</CardTitle>
-        <CardDescription>
-          Generated: the solver's validated solution. Printed: the SPIT timetable as issued.
-        </CardDescription>
+        <CardDescription>{UI.comparisonNote}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2 pt-0">
         <p data-testid="compare-sentence" className="font-semibold">

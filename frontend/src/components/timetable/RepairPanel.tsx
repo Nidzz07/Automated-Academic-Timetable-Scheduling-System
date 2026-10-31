@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, JobStatus, RepairChange } from '@/api/chronosApi';
 import { useRepair } from '@/api/queries';
 import {
@@ -17,15 +17,14 @@ import {
   entityName,
   facultyLoad,
   facultyText,
-  loadText,
   slotText,
 } from '@/adapters/timetable';
 import { InfeasibilityDiagnosisPanel } from './InfeasibilityDiagnosisPanel';
 import { changeText } from './AcceptedChangesPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { formatSeconds, periodLabel } from '@/lib/format';
-import { loadLimitHours, repairSummary } from '@/lib/wording';
+import { formatScore, formatScoreChange, periodLabel } from '@/lib/format';
+import { TAUGHT_PERIOD_KEY, UI, loadChangeText, loadLimitHours, repairStatusText, repairSummary, taughtPeriodText } from '@/lib/wording';
 import { OverLimitWarning } from './OverLimitWarning';
 import { Check, Wrench, X } from 'lucide-react';
 
@@ -34,6 +33,12 @@ export interface RepairProposal {
   base: SolvedSolution;
   result: SolvedSolution;
   changes: RepairChangeView[];
+}
+
+/** A teacher and the periods to mark unavailable, for a person to check and send. */
+export interface RepairPrefill {
+  facultyId: string;
+  slots: Array<{ day: number; period: number }>;
 }
 
 interface RepairPanelProps {
@@ -52,6 +57,10 @@ interface RepairPanelProps {
    * repair waits for it. The backend does not say what else holds its workers.
    */
   waitingFor?: string | null;
+  /** The official timetable's sessions: the mark-unavailable grid shows which periods a teacher teaches */
+  official?: EnrichedSession[];
+  /** Fills in the mark-unavailable form (the substitute finder's way out); each new object fills it again */
+  prefill?: RepairPrefill | null;
   /** Start a repair for this change */
   onStart: (change: RepairChange) => void;
   /** Forget the job: the grid shows the official timetable again */
@@ -76,6 +85,8 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
   labels,
   workload,
   waitingFor,
+  official = [],
+  prefill,
   onStart,
   onDiscard,
 }) => {
@@ -83,6 +94,34 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
   const [target, setTarget] = useState('');
   const [slots, setSlots] = useState<string[]>([]);
   const grid = useMemo(() => buildWeekGrid(edgeList), [edgeList]);
+  const markButton = useRef<HTMLButtonElement>(null);
+  const focusWhenFilled = useRef(false);
+  useEffect(() => {
+    if (!prefill) return;
+    focusWhenFilled.current = true;
+    setKind('faculty');
+    setTarget(prefill.facultyId);
+    setSlots(prefill.slots.map((s) => `${s.day}-${s.period}`));
+  }, [prefill]);
+  // the button is disabled until the filled-in form has rendered
+  useEffect(() => {
+    if (!focusWhenFilled.current || !target || slots.length === 0) return;
+    focusWhenFilled.current = false;
+    markButton.current?.focus({ preventScroll: true });
+  }, [target, slots]);
+  // What the chosen teacher teaches, by "day-period": placed sessions and the fixed items naming them
+  const taught = useMemo(() => {
+    const at = new Map<string, string[]>();
+    if (kind !== 'faculty' || !target) return at;
+    const add = (key: string, what: string) => at.set(key, [...(at.get(key) ?? []), what]);
+    for (const s of official) {
+      if (s.facultyId === target) s.periods.forEach((p) => add(`${s.day}-${p}`, `${s.subjectCode} · ${s.cohortLabel}`));
+    }
+    edgeList.pinned_occupancy.forEach((p, i) => {
+      if (p.faculty_ids.includes(target)) add(`${p.day}-${p.period}`, labels.pin(i)?.label ?? 'a fixed item');
+    });
+    return at;
+  }, [kind, target, official, edgeList, labels]);
   const options = useMemo(
     () =>
       (kind === 'faculty'
@@ -150,27 +189,11 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
   const before = proposal ? score(proposal.base) : null;
   const after = proposal ? score(proposal.result) : null;
 
-  const message: Record<JobStatus, string> = {
-    queued: waitingFor
-      ? `Waiting for the previous job to finish: ${waitingFor} is still running.`
-      : 'Queued: waiting for a solver worker.',
-    running: 'Running: repairing the timetable.',
-    solved: data?.accepted_at
-      ? 'Accepted: the repaired timetable is now the official one.'
-      : 'Proposed: the grid shows the repaired timetable with every changed session outlined. It is not official until accepted.',
-    infeasible: 'Infeasible: no timetable satisfies this change. The diagnosis below shows why.',
-    timeout: `No repair found within ${formatSeconds(data?.time_limit_s)}. This does not prove it is impossible.`,
-    error: `Repair failed: ${failure?.message ?? data?.error ?? 'unknown error'}`,
-  };
-
   return (
     <Card data-testid="repair-panel">
       <CardHeader className="pb-3">
         <CardTitle>Repair the timetable</CardTitle>
-        <CardDescription>
-          Changes the official timetable as little as possible. Drag a session on the grid to move it, mark a
-          faculty member or a room unavailable, or find a substitute from a session's details.
-        </CardDescription>
+        <CardDescription>{UI.repairNote}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
         <fieldset disabled={busy || pending} className="space-y-2" data-testid="mark-unavailable">
@@ -185,11 +208,11 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
               }}
               className={selectClass}
             >
-              <option value="faculty">Faculty member</option>
+              <option value="faculty">{UI.teacher}</option>
               <option value="room">Room</option>
             </select>
             <select
-              aria-label={kind === 'faculty' ? 'Unavailable faculty member' : 'Unavailable room'}
+              aria-label={kind === 'faculty' ? 'Unavailable teacher' : 'Unavailable room'}
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               className={selectClass}
@@ -219,16 +242,25 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
                   <th className="pr-2 text-left font-medium">{DAY_NAMES[day]}</th>
                   {grid.teachingPeriods.map((p) => {
                     const key = `${day}-${p}`;
+                    const teaches = taught.get(key);
                     return (
-                      <td key={p} className="px-1.5 py-0.5 text-center">
-                        <input
-                          type="checkbox"
-                          aria-label={slotText(day, p)}
-                          checked={slots.includes(key)}
-                          onChange={(e) =>
-                            setSlots((s) => (e.target.checked ? [...s, key] : s.filter((k) => k !== key)))
-                          }
-                        />
+                      <td
+                        key={p}
+                        data-testid={teaches ? `taught-${key}` : undefined}
+                        className={`px-1.5 py-0.5 text-center ${teaches ? 'bg-primary/15 font-semibold' : ''}`}
+                      >
+                        <span className="inline-flex items-center gap-0.5">
+                          <input
+                            type="checkbox"
+                            aria-label={slotText(day, p)}
+                            title={teaches && taughtPeriodText(teaches)}
+                            checked={slots.includes(key)}
+                            onChange={(e) =>
+                              setSlots((s) => (e.target.checked ? [...s, key] : s.filter((k) => k !== key)))
+                            }
+                          />
+                          {teaches && <span aria-hidden="true">●</span>}
+                        </span>
                       </td>
                     );
                   })}
@@ -236,7 +268,13 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
               ))}
             </tbody>
           </table>
+          {taught.size > 0 && (
+            <p data-testid="taught-key" className="text-xs">
+              <span aria-hidden="true">●</span> {TAUGHT_PERIOD_KEY}
+            </p>
+          )}
           <Button
+            ref={markButton}
             size="sm"
             className="gap-1.5"
             disabled={!target || slots.length === 0}
@@ -250,7 +288,12 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
 
         {status && (
           <p role="status" data-testid="repair-status" data-status={status}>
-            {message[status]}
+            {repairStatusText(status, {
+              accepted: !!data?.accepted_at,
+              waiting: !!waitingFor,
+              timeLimitS: data?.time_limit_s,
+              error: failure?.message ?? data?.error,
+            })}
           </p>
         )}
 
@@ -263,7 +306,7 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
                   Score:{' '}
                   {before === null || after === null
                     ? 'not evaluated'
-                    : `${before.toFixed(1)} → ${after.toFixed(1)} (${after - before >= 0 ? '+' : ''}${(after - before).toFixed(1)})`}
+                    : `${formatScore(before)} → ${formatScore(after)} (${formatScoreChange(after - before)})`}
                 </p>
                 {loads.length > 0 && (
                   <div data-testid="substitution-loads">
@@ -272,7 +315,7 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
                       {loads.map((l) => (
                         <li key={l.id} data-testid={`substitution-load-${l.id}`} className="space-x-2">
                           <span>
-                            {facultyText(labels, l.id)}: {loadText(l.before)} → {loadText(l.after)} hrs/wk
+                            {facultyText(labels, l.id)}: {loadChangeText(l.before, l.after)}
                           </span>
                           <OverLimitWarning hours={l.before.total} limit={limit} className="text-xs" />
                           {l.after.total !== l.before.total && (

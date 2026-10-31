@@ -49,8 +49,8 @@ describe('TimetableGrid Component', () => {
 
     // The banner states its periods and the break it straddles, from the edge list
     expect(within(labBlock).getByText(/2 periods \(T1–T3\)/i)).toBeInTheDocument();
-    expect(within(labBlock).getByText(/4 batches in parallel/i)).toBeInTheDocument();
-    expect(within(labBlock).getByText(/Runs across the break T2/i)).toBeInTheDocument();
+    expect(within(labBlock).getByText(/4 batches at the same time/i)).toBeInTheDocument();
+    expect(within(labBlock).getByText(/Runs across the break at T2/i)).toBeInTheDocument();
   });
 
   it('renders Case 2: Four parallel batch sessions occupying the same lab slot in different sub-rooms', () => {
@@ -86,16 +86,16 @@ describe('TimetableGrid Component', () => {
 
     // Verify subjects and faculty in each batch card
     expect(within(sess1).getByText(/OS Lab/i)).toBeInTheDocument();
-    expect(within(sess1).getByText('AGN')).toBeInTheDocument();
+    expect(within(sess1).getByText(/\(AGN\)$/)).toBeInTheDocument();
 
     expect(within(sess2).getByText(/DAA Lab/i)).toBeInTheDocument();
-    expect(within(sess2).getByText('NR')).toBeInTheDocument();
+    expect(within(sess2).getByText(/\(NR\)$/)).toBeInTheDocument();
 
     expect(within(sess3).getByText(/CCN Lab/i)).toBeInTheDocument();
-    expect(within(sess3).getByText('JS')).toBeInTheDocument();
+    expect(within(sess3).getByText(/\(JS\)$/)).toBeInTheDocument();
 
     expect(within(sess4).getByText(/PCS Lab/i)).toBeInTheDocument();
-    expect(within(sess4).getByText('DN')).toBeInTheDocument();
+    expect(within(sess4).getByText(/\(DN\)$/)).toBeInTheDocument();
   });
 
   it('renders Case 3: A combined-division lecture as a single session spanning its full cohort', () => {
@@ -112,10 +112,10 @@ describe('TimetableGrid Component', () => {
     if (daaCombined) {
       expect(daaCombined).toHaveAttribute('data-cohort', 'SE C & D');
       expect(within(daaCombined).getByText(/Combined Lecture/i)).toBeInTheDocument();
-      expect(within(daaCombined).getByText(/Full Union Cohort: SE C & D/i)).toBeInTheDocument();
+      expect(within(daaCombined).getByText(/Classes together: SE C & D/i)).toBeInTheDocument();
       expect(within(daaCombined).getByText(/140 students/i)).toBeInTheDocument();
       expect(within(daaCombined).getByText(/Room 508/i)).toBeInTheDocument();
-      expect(within(daaCombined).getByText('NR')).toBeInTheDocument();
+      expect(within(daaCombined).getByText(/\(NR\)$/)).toBeInTheDocument();
     }
   });
 
@@ -131,7 +131,7 @@ describe('TimetableGrid Component', () => {
     expect(within(pinned).getByText('Fixed: cannot be moved')).toBeInTheDocument();
     expect(within(pinned).getByText('Fixed item')).toBeInTheDocument();
     expect(within(pinned).getByText(/Room 508/i)).toBeInTheDocument();
-    expect(within(pinned).getByText(/Cohort: SE-Comp B/i)).toBeInTheDocument();
+    expect(within(pinned).getByText(/Class: SE-Comp B/i)).toBeInTheDocument();
     expect(screen.queryByText(/MDM/i)).not.toBeInTheDocument();
 
     // Must have distinct styling (bg-pinned-pattern and border-slate)
@@ -141,7 +141,7 @@ describe('TimetableGrid Component', () => {
     // Fixed pre-allocated solver session (sess-0008, ET Theory) also renders with fixed badge
     const sess8 = screen.getByTestId('session-cell-sess-0008');
     expect(sess8).toBeInTheDocument();
-    expect(within(sess8).getByText(/Fixed Slot/i)).toBeInTheDocument();
+    expect(within(sess8).getByText(/Fixed time/i)).toBeInTheDocument();
     expect(sess8.className).toContain('bg-pinned-pattern');
   });
 

@@ -3,6 +3,7 @@ import { HttpChronosApiClient, RepairChange } from '@/api/chronosApi';
 import { useChangesQuery, useClearChangesMutation } from '@/api/queries';
 import { EdgeList, Labels, entityName, facultyText, slotsText } from '@/adapters/timetable';
 import { formatTimestamp } from '@/lib/format';
+import { UI, clearChangesText } from '@/lib/wording';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -49,9 +50,7 @@ export const AcceptedChangesPanel: React.FC<AcceptedChangesPanelProps> = ({ clie
     <Card data-testid="accepted-changes">
       <CardHeader className="pb-3">
         <CardTitle>Accepted changes</CardTitle>
-        <CardDescription>
-          Unavailability and substitutions accepted so far. Every later solve and repair includes them.
-        </CardDescription>
+        <CardDescription>{UI.acceptedChangesNote}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
         {changes.error && <p role="alert">Could not load the accepted changes: {changes.error.message}</p>}
@@ -82,11 +81,7 @@ export const AcceptedChangesPanel: React.FC<AcceptedChangesPanelProps> = ({ clie
         {canClear && rows.length > 0 &&
           (confirming ? (
             <div data-testid="confirm-clear" className="space-y-2 rounded-lg border border-destructive/40 p-3">
-              <p>
-                Clear all {rows.length} accepted change{rows.length === 1 ? '' : 's'}? Later solves and repairs will no
-                longer include them. The official timetable may change: it becomes the newest one that depends on
-                none of them, else the committed one.
-              </p>
+              <p>{clearChangesText(rows.length)}</p>
               <div className="flex gap-2">
                 <Button
                   variant="destructive"

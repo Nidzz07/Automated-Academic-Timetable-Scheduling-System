@@ -48,10 +48,10 @@ describe('HttpChronosApiClient (S13a endpoints)', () => {
   it('GET /instances: the backend ids, solvable, with the real instance’s printed view', async () => {
     mockFetch({ '/api/instances': () => json([{ id: REAL_INSTANCE }, { id: 'other' }]) });
     expect(await client.listInstances()).toEqual([
-      { id: 'example', label: 'Example instance', solvable: false },
-      { id: 'd6_grid', label: 'D6 grid example (no solution)', solvable: false },
-      { id: REAL_INSTANCE, label: 'EVEN 2025-26 SE+TE (real)', solvable: true },
-      { id: PRINTED_INSTANCE, label: 'EVEN 2025-26 printed (real)', solvable: false },
+      { id: 'example', label: 'Example data', solvable: false },
+      { id: 'd6_grid', label: 'Example with lunch per year (no timetable yet)', solvable: false },
+      { id: REAL_INSTANCE, label: 'Even semester 2025–26, SE and TE', solvable: true },
+      { id: PRINTED_INSTANCE, label: 'Even semester 2025–26, as printed by SPIT', solvable: false },
       { id: 'other', label: 'other', solvable: true },
     ]);
   });

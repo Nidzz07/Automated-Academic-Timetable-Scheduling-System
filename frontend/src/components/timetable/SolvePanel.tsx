@@ -4,19 +4,12 @@ import { HttpChronosApiClient, EdgeListInstance, JobStatus } from '@/api/chronos
 import { instanceSolutionQueryKey, useJobQuery, useSolveMutation } from '@/api/queries';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { formatSeconds } from '@/lib/format';
+import { STALE_SOLVE, UI, solveStatusText } from '@/lib/wording';
 import { Play } from 'lucide-react';
 
 // The backend's SolveRequest bounds (backend/app/service.py DEFAULT_TIME_LIMIT_S, MAX_TIME_LIMIT_S)
 const DEFAULT_TIME_LIMIT_S = 300;
 const MAX_TIME_LIMIT_S = 1800;
-
-// The backend's optional phase of a running job (S13d)
-const PHASE_MESSAGE = {
-  search: 'Running (search): searching for a timetable.',
-  improve: 'Running (improve): improving the timetable found.',
-  repair: 'Running (repair): repairing the timetable.',
-};
 
 interface SolvePanelProps {
   client: HttpChronosApiClient;
@@ -29,9 +22,6 @@ interface SolvePanelProps {
   /** A finished solve just became the official timetable */
   onOfficial?: () => void;
 }
-
-// D56: the accepted changes were accepted or cleared while the solve ran (GET /jobs/{id} `stale`)
-const STALE_MESSAGE = 'Finished, but not official: the accepted changes changed while it ran. Run Solve again.';
 
 /**
  * Solve a backend instance: POST /instances/{id}/solve, then poll the job until it ends.
@@ -62,24 +52,15 @@ export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId,
   const validLimit = timeLimit > 0 && timeLimit <= MAX_TIME_LIMIT_S;
   const phase = status === 'running' ? job.data?.phase : undefined;
 
-  const message: Record<JobStatus, string> = {
-    queued: 'Queued: waiting for a solver worker.',
-    running: phase ? PHASE_MESSAGE[phase] : 'Running: searching for a timetable.',
-    solved: 'Solved: the grid and quality score show the new timetable.',
-    infeasible: 'Infeasible: the diagnosis panel shows the conflicting constraints.',
-    timeout: `No timetable found within ${formatSeconds(job.data?.time_limit_s)}. This does not prove it is impossible.`,
-    error: `Solve failed: ${failure?.message ?? job.data?.error ?? 'unknown error'}`,
-  };
-
   return (
     <Card data-testid="solve-panel">
       <CardHeader className="pb-3">
         <CardTitle>Generate a timetable</CardTitle>
-        <CardDescription>Runs the solver on the backend for this instance.</CardDescription>
+        <CardDescription>{UI.generateNote}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap items-center gap-3 pt-0">
         <label className="flex items-center gap-1.5 font-semibold">
-          Time limit (s)
+          {UI.timeLimit}
           <input
             type="number"
             min={1}
@@ -98,11 +79,13 @@ export const SolvePanel: React.FC<SolvePanelProps> = ({ client, instance, jobId,
           data-testid="solve-button"
         >
           <Play className="h-4 w-4" />
-          <span>{busy ? 'Solving…' : 'Solve'}</span>
+          <span>{busy ? UI.generating : UI.generate}</span>
         </Button>
         {status && (
           <span role="status" data-testid="solve-status" data-status={status} data-phase={phase} data-stale={stale || undefined}>
-            {stale && status !== 'error' ? STALE_MESSAGE : message[status]}
+            {stale && status !== 'error'
+              ? STALE_SOLVE
+              : solveStatusText(status, { phase, timeLimitS: job.data?.time_limit_s, error: failure?.message ?? job.data?.error })}
           </span>
         )}
       </CardContent>

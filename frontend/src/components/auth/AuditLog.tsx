@@ -5,7 +5,7 @@ import { EdgeList, Labels } from '@/adapters/timetable';
 import { ROLE_CAPABILITIES } from '@/types/roles';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatTimestamp } from '@/lib/format';
-import { auditSentence, changePhrase } from '@/lib/wording';
+import { UI, auditSentence, changePhrase } from '@/lib/wording';
 
 // GET /audit accepts 1..1000 (backend/app/routers.py); 100 is its default
 const LIMITS = [25, 100, 500, 1000];
@@ -29,7 +29,7 @@ export const AuditLog: React.FC<AuditLogProps> = ({ client, edgeList, labels, se
     <Card data-testid="audit-log">
       <CardHeader className="pb-3">
         <CardTitle>Audit log</CardTitle>
-        <CardDescription>Sign-ins, solves and repairs recorded by the backend, newest first.</CardDescription>
+        <CardDescription>{UI.auditNote}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
         <label className="flex items-center gap-1.5 font-semibold">

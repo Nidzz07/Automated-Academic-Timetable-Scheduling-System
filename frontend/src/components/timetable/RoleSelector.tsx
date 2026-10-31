@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserRole, ROLE_CAPABILITIES } from '@/types/roles';
+import { UI } from '@/lib/wording';
 
 interface RoleSelectorProps {
   currentRole: UserRole;
@@ -60,11 +61,11 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
         <p className="text-xs">
           {caps.canDragAndDrop ? (
             <span data-testid="capability-badge-drag" className="font-semibold">
-              Drag-and-Drop Enabled
+              {UI.canMoveSessions}
             </span>
           ) : (
             <span data-testid="capability-badge-readonly" className="font-semibold">
-              Read-Only View
+              {UI.readOnly}
             </span>
           )}
           {', '}
@@ -79,7 +80,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
           <label data-testid="faculty-persona-selector" className={pickerClass}>
             <span className="font-semibold">Teacher:</span>
             <select
-              aria-label="Select faculty persona"
+              aria-label="Select teacher"
               disabled={personaLocked}
               value={selectedFaculty}
               onChange={(e) => onFacultyChange(e.target.value)}
@@ -96,9 +97,9 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
 
         {currentRole === 'student' && (
           <label data-testid="student-division-selector" className={pickerClass}>
-            <span className="font-semibold">Cohort:</span>
+            <span className="font-semibold">Class:</span>
             <select
-              aria-label="Select student division"
+              aria-label="Select class"
               disabled={personaLocked}
               value={selectedStudentDivision}
               onChange={(e) => onStudentDivisionChange(e.target.value)}

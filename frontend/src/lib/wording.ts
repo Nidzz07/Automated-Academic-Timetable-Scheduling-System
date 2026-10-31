@@ -7,8 +7,19 @@
 
 import type { AuditEntry, JobStatus, RepairChange } from '@/api/chronosApi';
 import type { DiagnosisMethod, QualityRule } from '@/adapters/solution';
-import { EdgeList, EnrichedSession, FacultyLoad, Labels, entityName, sessionPhrase, slotsText } from '@/adapters/timetable';
-import { displayText } from '@/lib/format';
+import {
+  EdgeList,
+  EnrichedSession,
+  FacultyLoad,
+  Labels,
+  entityName,
+  facultyText,
+  loadText,
+  sessionPhrase,
+  sessionTeacher,
+  slotsText,
+} from '@/adapters/timetable';
+import { displayText, formatScore, formatSeconds } from '@/lib/format';
 
 /** An unlisted code in words: "frozen_out_of_scope" -> "Frozen out of scope". */
 export function humanise(code: string): string {
@@ -53,7 +64,7 @@ export const RULE_WORDING: Record<string, RuleWording> = {
   FAC_LOAD_IMBALANCE: {
     title: 'Uneven teaching days',
     meaning: "For each teacher, the hours on their busiest day minus their lightest day, added up over all teachers.",
-    unit: ['hour', 'hours'],
+    unit: ['h', 'h'],
   },
 };
 
@@ -62,9 +73,9 @@ export const ruleWording = (ruleId: string): RuleWording =>
 
 /** A solver number as given, without a trailing ".0": 6, 50.5 */
 const num = (n: number) => (Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2))));
-const points = (n: number) => `${num(n)} point${n === 1 ? '' : 's'}`;
+const points = (n: number) => `${formatScore(n)} points`;
 
-/** "Found 15 free periods → −30 points (2 points each)", or why the rule was not checked. */
+/** "Found 15 free periods → −30.0 points (2.0 points each)", or why the rule was not checked. */
 export function ruleResult(rule: QualityRule): string {
   if (rule.status === 'not_evaluated') return `Not checked: ${rule.reason}`;
   const [one, many] = ruleWording(rule.rule_id).unit;
@@ -72,6 +83,246 @@ export function ruleResult(rule: QualityRule): string {
   if (rule.penalty === 0) return `${found} → no points lost`;
   return `${found} → −${points(rule.penalty)} (${points(rule.weight)} each)`;
 }
+
+/** How many of a rule's findings show before "Show all N". */
+export const LISTED_FINDINGS = 10;
+
+export const showAllText = (n: number) => `Show all ${n}`;
+export const SHOW_FEWER = 'Show fewer';
+
+/**
+ * A rule's "<count> <what> - <item>; <item>." (solver/scoring.py) as its items; the S-LOAD16 list
+ * is comma-separated ("fac-a 18 h, fac-b 17 h"). A sentence that lists nothing is one item.
+ */
+export function explanationItems(explanation: string): string[] {
+  const at = explanation.indexOf(' - ');
+  if (at < 0) return [explanation];
+  const listed = explanation.slice(at + 3).replace(/\.$/, '');
+  const commas = listed.split(', ');
+  return commas.every((item) => /^\S+ \d+(\.\d+)? h$/.test(item)) ? commas : listed.split('; ');
+}
+
+/** One S-LOAD16 item ("fac-a 18 h") as who and hours; null for any other text. */
+export function overLimitItem(item: string): { who: string; hours: number } | null {
+  const m = item.match(/^(\S+) (\d+(?:\.\d+)?) h$/);
+  return m ? { who: m[1], hours: Number(m[2]) } : null;
+}
+
+/** One item for reading: "Name (AB): Monday 11:15 AM – 12:15 PM", every id by name. */
+export const readableItem = (item: string, nameOf?: (id: string) => string | null) =>
+  readableSolverText(item.replace(/^((?:fac|coh)-\S+?):? (?=\S)/, '$1: '), nameOf);
+
+/** The rules' titles for "Partial: … not checked". */
+export const partialRulesText = (ruleIds: string[]) =>
+  `Partial: ${ruleIds.map((id) => ruleWording(id).title).join(', ')} not checked`;
+
+// --- How a timetable was made (metadata.algorithm; the code stays as small text beside the words) -
+
+/** metadata.algorithm is "<step>(<settings>) + <step>(<settings>)" (solver/backtracking.py, improve.py, repair.py, mus.py). */
+const METHOD_STEPS: Array<[RegExp, string]> = [
+  [/^freeze-and-expand/, 'Repaired around the change, leaving the rest as it was'],
+  [/^backtracking/, 'A step-by-step search that undoes any choice leading to a clash'],
+  [/^local-search/, 'then improved by trying many small changes'],
+  [/^mus-extraction/, 'then narrowed down to the rules that cannot all hold'],
+  [/^welsh-powell/, 'A greedy method that places the most-constrained sessions first'],
+];
+
+export function methodText(algorithm: string): string {
+  const words = algorithm
+    .split(' + ')
+    .map((step) => METHOD_STEPS.find(([code]) => code.test(step))?.[1] ?? humanise(step.replace(/\(.*\)$/, '')))
+    .join(', ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** "35 time slots used" */
+export const slotsUsedText = (slots: number | null | undefined) =>
+  slots === null || slots === undefined ? 'Not reported' : `${slots} time slot${slots === 1 ? '' : 's'}`;
+
+/** "92 steps undone" (metadata.backtracks, for the complexity analysis) */
+export const backtracksText = (backtracks: number | null | undefined) =>
+  backtracks === null || backtracks === undefined
+    ? 'Not reported'
+    : `${backtracks.toLocaleString('en-GB')} step${backtracks === 1 ? '' : 's'} undone`;
+
+// --- Labels on the page ----------------------------------------------------------------------------
+
+export const UI = {
+  fixedTime: 'Fixed time',
+  classesTogether: 'Classes together',
+  consecutivePeriods: 'Consecutive periods',
+  atSameTime: 'at the same time',
+  canMoveSessions: 'Can move sessions',
+  readOnly: 'Read only',
+  timetablePicker: 'Timetable:',
+  tryNoTimetable: 'Try "no timetable possible"',
+  showSolved: 'Show the solved timetable',
+  tryNoTimetableHint: 'Example data only: switch between a solved timetable and the case where none is possible',
+  refusingMoves: 'Refusing every move',
+  tryRefusedMove: 'Try a refused move',
+  tryRefusedMoveHint: 'Example data only: refuse every move, to see a session go back to where it was',
+  trialRefusal: 'A trial refusal: every move is set to be refused.',
+  labBlockNote: 'batches at the same time',
+  generateNote: 'Chronos builds a new timetable from this data on the server.',
+  timeLimit: 'Time limit (seconds)',
+  generate: 'Generate',
+  generating: 'Generating…',
+  acceptedChangesNote: 'Unavailability and substitutions accepted so far. Every timetable generated or repaired from now on includes them.',
+  howMade: 'How it was made',
+  howChecked: 'How it was checked',
+  timeSlotsUsed: 'Time slots used',
+  timeTaken: 'Time taken',
+  searchEffort: 'Search effort',
+  tryThisFix: 'Try this fix',
+  notPlaced: 'Not placed',
+  noReport: 'No report for this data.',
+  noProblems: 'The report lists no problems.',
+  auditNote: 'Sign-ins, generated timetables and repairs, newest first.',
+  comparisonNote: 'Generated: made and checked by Chronos. Printed: the SPIT timetable as issued.',
+  repairNote:
+    "Changes the official timetable as little as possible. Drag a session on the grid to move it, mark a teacher or a room unavailable, or find a substitute from a session's details.",
+  teacher: 'Teacher',
+  noTimetableNote: 'Not solved yet. There is no timetable for this data; the grid shows its periods, breaks and fixed items only.',
+  footerNote: "Every generated timetable is made by Chronos's own solver and checked before it is shown.",
+};
+
+/** A lab block running over a break. */
+export const acrossBreakText = (periods: string) => `Runs across the break at ${periods}`;
+
+/** The first line of the details window: what kind of session it is. */
+export const sessionKindText = (s: Pick<EnrichedSession, 'isPinned' | 'isCombinedDivision' | 'sessionType'>) =>
+  s.isPinned ? 'Fixed, cannot be moved' : s.isCombinedDivision ? 'Combined lecture' : s.sessionType === 'lab' ? 'Lab (practical)' : 'Lecture (theory)';
+
+/** An infeasible search's partial placement: diagnosis only. */
+export const partialPlacementText = (placed: number, notPlaced: number) =>
+  `How far the search got (for diagnosis only, not a timetable): ${placed} placed, ${notPlaced} not placed`;
+
+/** The anomaly panel's summary line. */
+export const problemCountText = (total: number, kinds: number) => `${total} problems of ${kinds} kinds`;
+
+/** Contract validation failed for a timetable payload. */
+export const contractFailedText = (schema: string) => `The timetable data failed its check (${schema})`;
+
+// --- Instances (the Timetable picker) ------------------------------------------------------------
+
+const INSTANCE_WORDS: Record<string, string> = {
+  example: 'Example data',
+  d6_grid: 'Example with lunch per year (no timetable yet)',
+  'even-2025-26': 'Even semester 2025–26, SE and TE',
+  'even-2025-26:printed': 'Even semester 2025–26, as printed by SPIT',
+};
+export const instanceLabel = (id: string) => INSTANCE_WORDS[id] ?? id;
+
+/** The substitute finder's line under its title. */
+export const SUBSTITUTE_NOTE =
+  "Qualified teachers from SPIT's faculty–subject sheets who are free at this time. Picking one proposes a repair to accept or discard.";
+export const NOBODY_FREE = 'Nobody qualified is free at this time.';
+
+// --- Solve and repair jobs ------------------------------------------------------------------------
+
+const PHASE_WORDS = {
+  search: 'Searching for a timetable.',
+  improve: 'Improving the timetable it found.',
+  repair: 'Repairing the timetable.',
+};
+
+/** D56: the accepted changes were accepted or cleared while the solve ran. */
+export const STALE_SOLVE = 'Finished, but not used: the accepted changes changed while it ran. Generate it again.';
+
+/** A solve job's status in a sentence. */
+export function solveStatusText(
+  status: JobStatus,
+  { phase, timeLimitS, error }: { phase?: keyof typeof PHASE_WORDS; timeLimitS?: number; error?: string }
+): string {
+  switch (status) {
+    case 'queued':
+      return 'Waiting its turn on the server.';
+    case 'running':
+      return PHASE_WORDS[phase ?? 'search'];
+    case 'solved':
+      return 'Done: the grid and quality score show the new timetable.';
+    case 'infeasible':
+      return 'No timetable is possible: the panel below shows why.';
+    case 'timeout':
+      return `No timetable found within ${formatSeconds(timeLimitS)}. This does not prove it is impossible.`;
+    case 'error':
+      return `Could not generate a timetable: ${error ?? 'unknown error'}`;
+  }
+}
+
+/** A repair job's status in a sentence. */
+export function repairStatusText(
+  status: JobStatus,
+  { accepted, waiting, timeLimitS, error }: { accepted: boolean; waiting: boolean; timeLimitS?: number; error?: string }
+): string {
+  switch (status) {
+    case 'queued':
+      return waiting ? 'Waiting: the timetable being generated must finish first.' : 'Waiting its turn on the server.';
+    case 'running':
+      return PHASE_WORDS.repair;
+    case 'solved':
+      return accepted
+        ? 'Accepted: the repaired timetable is now the official one.'
+        : 'Proposed: the grid shows the repaired timetable with every changed session outlined. It is not official until accepted.';
+    case 'infeasible':
+      return 'Not possible: no timetable can include this change. The panel below shows why.';
+    case 'timeout':
+      return `No repair found within ${formatSeconds(timeLimitS)}. This does not prove it is impossible.`;
+    case 'error':
+      return `The repair failed: ${error ?? 'unknown error'}`;
+  }
+}
+
+/** A proposed substitution's load change, in hours: "6T + 8P = 14 → 6T + 10P = 16 h". */
+export const loadChangeText = (before: FacultyLoad, after: FacultyLoad) => `${loadText(before)} → ${loadText(after)} h`;
+
+/** The accepted-changes confirmation (D56 says which timetable is official after clearing). */
+export const clearChangesText = (n: number) =>
+  `Remove ${n === 1 ? 'the accepted change' : `all ${n} accepted changes`}? Timetables generated or repaired from now on will no longer include ${n === 1 ? 'it' : 'them'}. The timetable in use may change: it goes back to the latest one made without ${n === 1 ? 'it' : 'them'}, or else to the original timetable.`;
+
+// --- Substitutes (S14g; backend/app/service.py LEFT_OUT) ---------------------------------------------
+
+const LEFT_OUT_REASONS: Record<string, string> = {
+  busy: 'teaching then',
+  unavailable: 'not available then',
+  not_in_instance: 'not in this timetable',
+};
+export const leftOutReason = (reason: string) => LEFT_OUT_REASONS[reason] ?? constraintKindLabel(reason);
+
+/** The way out when nobody qualified is free: the repair path, filled in with this teacher and these periods. */
+export const repairInsteadText = (teacher: string) => `Mark ${teacher} unavailable and let Chronos repair instead`;
+
+/** The mark-unavailable grid's key. */
+export const TAUGHT_PERIOD_KEY = 'teaches at this time';
+
+/** A period of the mark-unavailable grid when the chosen teacher teaches then: "Teaches CE207 · SE-Comp A". */
+export const taughtPeriodText = (what: string[]) => `Teaches ${what.join('; ')}`;
+
+// --- The grid, for keyboard and screen-reader users ---------------------------------------------------
+
+/** Replaces dnd-kit's default instructions, which say Enter picks up: here Enter opens the details. */
+export const DRAG_INSTRUCTIONS =
+  'Press Enter for the details of this session. To move it, press Space to pick it up, Tab to the cell you want or use the arrow keys, then press Enter or Space to drop it. Press Escape to cancel.';
+
+export const SKIP_TO_TIMETABLE = 'Skip to timetable';
+export const SKIP_PAST_TIMETABLE = 'Skip past the timetable';
+
+/** The grid's line above it. */
+export const gridHint = (canDrag: boolean) =>
+  canDrag
+    ? 'Drag a session to move it, or press Space on it and Tab to a cell. Press Enter on a session for its details.'
+    : 'Read only. Press Enter on a session for its details.';
+
+export const dragAnnouncements = {
+  picked: (what: string) => `Picked up ${what}.`,
+  over: (what: string, slot: string) => `${what} is over ${slot}.`,
+  dropped: (what: string, slot: string) => `${what} dropped on ${slot}.`,
+  outside: (what: string) => `${what} is not over any cell.`,
+  cancelled: (what: string) => `Moving ${what} cancelled.`,
+};
+
+/** A fixed item's "and N more" (its whole list shows on hover and keyboard focus). */
+export const moreText = (n: number) => `and ${n} more`;
 
 // --- Weekly load limit (D11, S-LOAD16) -----------------------------------------------------------
 
@@ -120,32 +371,37 @@ export function pinKindLabel(kind: string | null, decision?: string | null): str
 /** How many cohorts a fixed-item card names before "and N more". */
 const LISTED_COHORTS = 3;
 
-/** "SE-Comp A, SE-Comp A batch A, SE-Comp A batch B and 2 more" */
-export const cohortListText = (labels: string[]) =>
-  labels.length > LISTED_COHORTS
-    ? `${labels.slice(0, LISTED_COHORTS).join(', ')} and ${labels.length - LISTED_COHORTS} more`
-    : labels.join(', ');
+/**
+ * "SE-Comp A, SE-Comp A batch A, SE-Comp A batch B" and how many more are left out. One pin can hold
+ * 63 cohorts, so the all-divisions view lists a few; with a division chosen only a handful are in
+ * view (listAll) and the text simply wraps.
+ */
+export const cohortListParts = (labels: string[], listAll = false) => {
+  const listed = listAll ? labels.length : LISTED_COHORTS;
+  return { listed: labels.slice(0, listed).join(', '), more: Math.max(0, labels.length - listed) };
+};
 
 /** A session with a fixed slot, in its details window. */
 export const FIXED_SESSION_NOTE = 'It is fixed to this time, so the solver never moves it.';
 
 // --- Session details ---------------------------------------------------------------------------
 
-/** "Operating Systems for SE-Comp A (Kailas Devadkar)" */
-export const sessionTitle = (s: Pick<EnrichedSession, 'subjectCode' | 'subjectName' | 'cohortLabel' | 'facultyName'>) =>
-  sessionPhrase(s.subjectName === 'Subject' ? s.subjectCode : s.subjectName, s.cohortLabel, s.facultyName);
+/** "Operating Systems for SE-Comp A, Kailas Devadkar (KKD)" */
+export const sessionTitle = (
+  s: Pick<EnrichedSession, 'subjectCode' | 'subjectName' | 'cohortLabel' | 'facultyName' | 'facultyInitials'>
+) => sessionPhrase(s.subjectName === 'Subject' ? s.subjectCode : s.subjectName, s.cohortLabel, sessionTeacher(s));
 
 // --- Diagnosis (contract solution_v2 Kind, relaxation action and verification) -----------------
 
 /** Per diagnosis.method; `badge` is small secondary text, a new contract method is one more line here. */
 export const DIAGNOSIS_METHOD_LABELS: Record<DiagnosisMethod, { badge: string; text: string }> = {
-  mus: { badge: 'MUS Extraction', text: 'The solver proved that no timetable meets every rule, and found the smallest set of rules that cannot all hold.' },
-  search_exhaustion: { badge: 'Search Exhaustion', text: 'A complete search proved that no timetable meets every rule, but no explanation was extracted.' },
+  mus: { badge: 'mus', text: 'The solver proved that no timetable meets every rule, and found the smallest set of rules that cannot all hold.' },
+  search_exhaustion: { badge: 'search_exhaustion', text: 'A complete search proved that no timetable meets every rule, but no explanation was extracted.' },
   // contract row 9 (D43): a pre-solve certificate, proven but not minimal
-  presolve: { badge: 'Presolve', text: 'Proved infeasible by a counting check (not minimal)' },
+  presolve: { badge: 'presolve', text: 'A counting check proved that no timetable meets every rule; these rules may not be the smallest such set.' },
 };
 /** solution.v1 does not say how it was diagnosed. */
-const UNSTATED_METHOD_LABEL = { badge: 'Method not stated (solution.v1)', text: 'The solver reported that no timetable meets every rule.' };
+const UNSTATED_METHOD_LABEL = { badge: 'method not stated', text: 'The solver reported that no timetable meets every rule.' };
 export const diagnosisMethodLabel = (method: DiagnosisMethod | null) => (method ? DIAGNOSIS_METHOD_LABELS[method] : UNSTATED_METHOD_LABEL);
 
 /** The panel's headings: for a repair the change is what is impossible, for a solve the timetable. */
@@ -326,12 +582,12 @@ const JOB_OUTCOME: Record<JobStatus, string> = {
   error: 'It failed.',
 };
 
-/** A change in a sentence: "Swapnali Kurhade's absence on Tuesday T6–T7". */
+/** A change in a sentence: "the absence of Swapnali Kurhade (SK) on Tuesday T6–T7". */
 export function changePhrase(change: RepairChange, edgeList: EdgeList, labels: Labels): string {
-  const person = (id: string) => labels.faculty(id).name;
+  const person = (id: string) => facultyText(labels, id);
   switch (change.kind) {
     case 'faculty_unavailable':
-      return `${person(change.faculty_id)}'s absence on ${slotsText(change.slots)}`;
+      return `the absence of ${person(change.faculty_id)} on ${slotsText(change.slots)}`;
     case 'room_unavailable':
       return `${entityName(change.room_id, edgeList, labels)} closed on ${slotsText(change.slots)}`;
     case 'move_session':

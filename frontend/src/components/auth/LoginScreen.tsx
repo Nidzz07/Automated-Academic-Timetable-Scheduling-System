@@ -35,7 +35,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ client, expired }) => 
       <div className="mx-auto max-w-md px-4 py-16">
         <Card data-testid="login-screen">
           <CardHeader>
-            <CardTitle className="text-2xl">Chronos</CardTitle>
+            <CardTitle as="h1" className="text-2xl">Chronos</CardTitle>
             <CardDescription>Log in with your Chronos account to see and manage the department timetable.</CardDescription>
           </CardHeader>
           <CardContent>

@@ -4,7 +4,7 @@ import { Display, EdgeList, Labels, entityName, facultyText, labelsFor } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { displayText } from '@/lib/format';
-import { anomalyCategoryLabel } from '@/lib/wording';
+import { UI, anomalyCategoryLabel, problemCountText } from '@/lib/wording';
 
 type Anomaly = AnomalyReport['anomalies'][number];
 
@@ -83,7 +83,7 @@ export const AnomalyReportPanel: React.FC<{
   );
 
   if (!report) {
-    return <Card data-testid="anomaly-report">{header('No anomaly report for this instance.')}</Card>;
+    return <Card data-testid="anomaly-report">{header(UI.noReport)}</Card>;
   }
 
   const listedHuman = report.anomalies.filter((a) => a.resolution === NEEDS_HUMAN).length;
@@ -111,7 +111,7 @@ export const AnomalyReportPanel: React.FC<{
       <Card data-testid="anomaly-report">
         {header(
           <>
-            The report lists no anomalies.
+            {UI.noProblems}
             {totalsDiffer}
           </>
         )}
@@ -133,7 +133,7 @@ export const AnomalyReportPanel: React.FC<{
       <CardHeader className="pb-3">
         <CardTitle>Problems found in the source files</CardTitle>
         <CardDescription>
-          {report.counts.total} anomalies in {groups.length} categories, {report.counts.needs_human} need
+          {problemCountText(report.counts.total, groups.length)}, {report.counts.needs_human} need
           a human decision. Reported as found in the source files; none is fixed silently.
           {totalsDiffer}
         </CardDescription>

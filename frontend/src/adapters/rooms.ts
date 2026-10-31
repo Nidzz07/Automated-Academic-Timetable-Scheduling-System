@@ -6,7 +6,14 @@
  * scheduled or scored here: this only reads where the solver put things.
  */
 
-import { EXAMPLE_LABELS, type EdgeList, type EnrichedSession, type Labels } from '@/adapters/timetable';
+import {
+  EXAMPLE_LABELS,
+  pinWithTeachers,
+  sessionTeacher,
+  type EdgeList,
+  type EnrichedSession,
+  type Labels,
+} from '@/adapters/timetable';
 
 /** One room or sub-room held in one cell. */
 export interface Occupancy {
@@ -32,7 +39,7 @@ export function roomOccupancies(
       subRoomId: s.subRoomId,
       day: s.day,
       period,
-      label: `${s.subjectCode} · ${s.cohortLabel} · ${s.facultyInitials}`,
+      label: `${s.subjectCode} · ${s.cohortLabel} · ${sessionTeacher(s)}`,
       sessionId: s.sessionId,
     }))
   );
@@ -44,7 +51,7 @@ export function roomOccupancies(
         subRoomId: parent ? id : null,
         day: p.day,
         period: p.period,
-        label: labels.pin(i)?.label ?? 'Pinned',
+        label: pinWithTeachers(labels.pin(i)?.label ?? 'Fixed item', p.faculty_ids, labels),
         sessionId: null,
       };
     })

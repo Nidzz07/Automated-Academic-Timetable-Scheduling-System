@@ -28,11 +28,12 @@ const CardHeader = React.forwardRef<
 ));
 CardHeader.displayName = "CardHeader";
 
+/** A card's title is a level 2 heading: the page's one h1 is Chronos, each card a section under it. */
 const CardTitle = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h3
+  HTMLHeadingElement,
+  React.HTMLAttributes<HTMLHeadingElement> & { as?: "h1" | "h2" | "h3" }
+>(({ className, as: Heading = "h2", ...props }, ref) => (
+  <Heading
     ref={ref}
     className={cn(
       "font-serif text-xl font-semibold leading-snug",

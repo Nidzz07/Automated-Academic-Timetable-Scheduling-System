@@ -1,5 +1,7 @@
 import React from 'react';
-import { EnrichedSession } from '@/adapters/timetable';
+import { EnrichedSession, sessionTeacher } from '@/adapters/timetable';
+import { UI } from '@/lib/wording';
+import { CARD_FOCUS, cardProps } from './cardKeyboard';
 import { Pin, GripVertical, Loader2 } from 'lucide-react';
 
 interface SessionCellProps {
@@ -33,10 +35,8 @@ export const SessionCell: React.FC<SessionCellProps> = ({
       data-draggable={isDraggable ? 'true' : 'false'}
       data-provisional={isProvisional ? 'true' : 'false'}
       data-selected={isSelected ? 'true' : 'false'}
-      onClick={onSelect}
-      {...(isDraggable ? dragAttributes : {})}
-      {...(isDraggable ? dragListeners : {})}
-      className={`group relative flex h-full w-full flex-col justify-between rounded-md border border-l-4 p-2.5 ${
+      {...cardProps(onSelect, isDraggable, isDragging, dragAttributes, dragListeners)}
+      className={`group relative flex h-full w-full flex-col justify-between rounded-md border border-l-4 p-2.5 ${CARD_FOCUS} ${
         isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
       } ${isDragging ? 'opacity-40 border-dashed' : ''} ${isSelected ? 'ring-2 ring-primary ring-offset-2' : ''} ${
         isProvisional
@@ -58,7 +58,7 @@ export const SessionCell: React.FC<SessionCellProps> = ({
           {session.isPinned ? (
             <span className="inline-flex items-center gap-1 font-semibold">
               <Pin aria-hidden="true" className="h-3.5 w-3.5 rotate-45" />
-              Fixed Slot
+              {UI.fixedTime}
             </span>
           ) : isProvisional ? (
             <span className="inline-flex items-center gap-1 font-semibold">
@@ -83,9 +83,7 @@ export const SessionCell: React.FC<SessionCellProps> = ({
 
       {/* Faculty and size */}
       <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 border-t border-dashed border-border pt-1.5">
-        <span className="min-w-0" title={session.facultyName}>
-          <span className="font-semibold">{session.facultyInitials}</span> {session.facultyName}
-        </span>
+        <span className="min-w-0 font-semibold">{sessionTeacher(session)}</span>
         <span className="shrink-0">{session.cohortSize} students</span>
       </div>
     </div>

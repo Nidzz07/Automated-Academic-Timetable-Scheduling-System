@@ -13,6 +13,18 @@ export function formatDuration(ms: number | null | undefined): string {
 export const formatSeconds = (s: number | null | undefined) =>
   formatDuration(s === null || s === undefined ? s : s * 1000);
 
+/** A quality score or points, always with one decimal and a true minus sign: "−15.0", "26.5". */
+export function formatScore(score: number): string {
+  const digits = Math.abs(score).toFixed(1);
+  return score < 0 && digits !== '0.0' ? `−${digits}` : digits;
+}
+
+/** A change of score: "+1.5", "−2.0", "+0.0". */
+export const formatScoreChange = (change: number) => {
+  const text = formatScore(change);
+  return text.startsWith('−') ? text : `+${text}`;
+};
+
 /**
  * What a user sees for a wall-clock period: T0..T9 (the project guide's wording). The contracts,
  * the data and every internal number keep the period index; only this label changes.

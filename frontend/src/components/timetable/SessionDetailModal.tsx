@@ -1,8 +1,8 @@
-import React from 'react';
-import { EnrichedSession } from '@/adapters/timetable';
+import React, { useEffect, useRef } from 'react';
+import { EnrichedSession, sessionTeacher } from '@/adapters/timetable';
 import { Button } from '@/components/ui/button';
 import { periodLabel } from '@/lib/format';
-import { FIXED_SESSION_NOTE, sessionTitle } from '@/lib/wording';
+import { FIXED_SESSION_NOTE, sessionKindText, sessionTitle } from '@/lib/wording';
 import { X, Pin } from 'lucide-react';
 
 interface SessionDetailModalProps {
@@ -12,12 +12,51 @@ interface SessionDetailModalProps {
   onFindSubstitute?: () => void;
 }
 
-export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * The window itself: mounted only while open, so focus moves in on open and goes back to what had
+ * it (the session's card) on close. Tab stays inside; Escape closes.
+ */
+const SessionDetailDialog: React.FC<{ session: EnrichedSession } & Omit<SessionDetailModalProps, 'session'>> = ({
   session,
   onClose,
   onFindSubstitute,
 }) => {
-  if (!session) return null;
+  const dialog = useRef<HTMLDivElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButton.current?.focus();
+    return () => before?.focus({ preventScroll: true });
+  }, []);
+
+  // on the document, so Escape closes wherever a click left the focus
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialog.current) return;
+      const inside = [...dialog.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      if (inside.length === 0) return;
+      const first = inside[0];
+      const last = inside[inside.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialog.current.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !dialog.current.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   return (
     <div
@@ -26,31 +65,28 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
       aria-labelledby="session-detail-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
     >
-      <div className="relative w-full max-w-lg rounded-lg border border-border bg-card p-6">
-        <button onClick={onClose} aria-label="Close details" className="absolute top-4 right-4 rounded-md p-1.5 hover:bg-muted">
+      <div ref={dialog} className="relative w-full max-w-lg rounded-lg border border-border bg-card p-6">
+        <button
+          ref={closeButton}
+          onClick={onClose}
+          aria-label="Close details"
+          className="absolute top-4 right-4 rounded-md p-1.5 hover:bg-muted"
+        >
           <X className="h-5 w-5" />
         </button>
 
         <p className="mb-1 pr-8 font-semibold">
-          {session.isPinned
-            ? 'Pinned, immovable'
-            : session.isCombinedDivision
-              ? 'Combined division lecture'
-              : session.sessionType === 'lab'
-                ? 'Lab (practical)'
-                : 'Lecture (theory)'}
-          , {session.subjectCode}
+          {sessionKindText(session)}, {session.subjectCode}
         </p>
 
-        <h3 id="session-detail-title" className="text-xl font-semibold">
+        <h2 id="session-detail-title" className="text-xl font-semibold">
           {sessionTitle(session)}
-        </h3>
+        </h2>
 
         <dl className="my-4 grid grid-cols-2 gap-x-6 gap-y-3">
           <div>
             <dt className="text-xs font-semibold">Teacher</dt>
-            <dd className="font-semibold">{session.facultyName}</dd>
-            {session.facultyInitials && <dd className="text-xs">Initials: {session.facultyInitials}</dd>}
+            <dd className="font-semibold">{sessionTeacher(session)}</dd>
           </div>
           <div>
             <dt className="text-xs font-semibold">Room</dt>
@@ -96,3 +132,6 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
     </div>
   );
 };
+
+export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({ session, ...props }) =>
+  session ? <SessionDetailDialog session={session} {...props} /> : null;

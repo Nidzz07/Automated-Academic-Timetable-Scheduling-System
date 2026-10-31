@@ -100,12 +100,12 @@ const openReal = async (role: UserRole, setUp?: (backend: ReturnType<typeof mock
   setSession({ username: `test-${role}`, token: `token-${role}`, role });
   render(<App client={new HttpChronosApiClient('/api')} />);
   await screen.findByTestId('timetable-grid');
-  fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+  fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
   await screen.findByTestId('period-clock-0');
   return backend;
 };
 
-const pickFaculty = (id: string) => fireEvent.change(screen.getByLabelText('Select faculty persona'), { target: { value: id } });
+const pickFaculty = (id: string) => fireEvent.change(screen.getByLabelText('Select teacher'), { target: { value: id } });
 const load = () => screen.getByTestId('workload-formula-badge');
 const atSlot = (day: number, period: number) => {
   const panel = screen.getByTestId('faculty-at-slot');
@@ -122,9 +122,9 @@ describe('Faculty workload on the current edge list and the official solution (S
     });
     // committed: both teach 6T + 8P = 14; the CE207 lecture (1 theory hour) moved from Nimkar to Bhavathankar
     pickFaculty(NIMKAR);
-    await waitFor(() => expect(load()).toHaveTextContent('5T + 8P = 13 hrs/wk'));
+    await waitFor(() => expect(load()).toHaveTextContent('5T + 8P = 13 h'));
     pickFaculty(BHAVATHANKAR);
-    expect(load()).toHaveTextContent('7T + 8P = 15 hrs/wk');
+    expect(load()).toHaveTextContent('7T + 8P = 15 h');
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(`/api/instances/${REAL_INSTANCE}/edge-list/current`, expect.anything());
   });
 
@@ -134,7 +134,7 @@ describe('Faculty workload on the current edge list and the official solution (S
       b.official = repairedForAbsence();
     });
     pickFaculty(KURHADE);
-    await waitFor(() => expect(load()).toHaveTextContent('6T + 10P = 16 hrs/wk'));
+    await waitFor(() => expect(load()).toHaveTextContent('6T + 10P = 16 h'));
     // the lecture is where the official timetable now has it
     expect(within(screen.getByTestId('grid-cell-3-8')).getByTestId(`session-cell-${KURHADE_LECTURE}`)).toBeInTheDocument();
     expect(within(screen.getByTestId('grid-cell-1-9')).queryByTestId(`session-cell-${KURHADE_LECTURE}`)).not.toBeInTheDocument();
@@ -152,9 +152,9 @@ describe('Faculty workload on the current edge list and the official solution (S
     fireEvent.click(await screen.findByTestId(`substitute-${BHAVATHANKAR}`));
 
     const loads = await screen.findByTestId('substitution-loads');
-    expect(within(loads).getByTestId(`substitution-load-${NIMKAR}`)).toHaveTextContent('Anant Nimkar (AVN): 6T + 8P = 14 → 5T + 8P = 13 hrs/wk');
+    expect(within(loads).getByTestId(`substitution-load-${NIMKAR}`)).toHaveTextContent('Anant Nimkar (AVN): 6T + 8P = 14 → 5T + 8P = 13 h');
     expect(within(loads).getByTestId(`substitution-load-${BHAVATHANKAR}`)).toHaveTextContent(
-      'Prasenjit Bhavathankar (PBB): 6T + 8P = 14 → 7T + 8P = 15 hrs/wk'
+      'Prasenjit Bhavathankar (PBB): 6T + 8P = 14 → 7T + 8P = 15 h'
     );
     expect(vi.mocked(fetch)).toHaveBeenCalledWith('/api/jobs/rep-1/edge-list', expect.anything());
 
@@ -215,7 +215,7 @@ describe('Free and engaged faculty at a slot (S14m)', () => {
     vi.stubGlobal('fetch', fetchMock);
     render(<App client={new MockChronosApiClient()} />);
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
     await screen.findByTestId('period-clock-0');
     atSlot(0, 0);
     expect(engaged('fac-anand-godbole')).toHaveTextContent('Anand Godbole (AAG): CE306 · TE Comp - D · 701');
@@ -224,7 +224,7 @@ describe('Free and engaged faculty at a slot (S14m)', () => {
     fireEvent.click(screen.getByTestId('role-button-faculty'));
     expect(screen.queryByTestId('faculty-at-slot')).not.toBeInTheDocument();
     pickFaculty(NIMKAR);
-    expect(load()).toHaveTextContent('6T + 8P = 14 hrs/wk');
+    expect(load()).toHaveTextContent('6T + 8P = 14 h');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

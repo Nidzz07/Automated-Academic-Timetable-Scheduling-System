@@ -146,13 +146,13 @@ describe('AnomalyReportPanel: ids named from display.json', () => {
 describe('AnomalyReportPanel: no report, empty report', () => {
   it('a missing report reads "No anomaly report for this instance."', () => {
     render(<AnomalyReportPanel report={null} />);
-    expect(screen.getByTestId('anomaly-report-status')).toHaveTextContent('No anomaly report for this instance.');
+    expect(screen.getByTestId('anomaly-report-status')).toHaveTextContent('No report for this data.');
     expect(screen.queryByTestId('anomaly-row')).not.toBeInTheDocument();
   });
 
   it('an empty report reads "The report lists no anomalies."', () => {
     render(<AnomalyReportPanel report={{ counts: { total: 0, needs_human: 0, by_category: {} }, anomalies: [] }} />);
-    expect(screen.getByTestId('anomaly-report-status')).toHaveTextContent('The report lists no anomalies.');
+    expect(screen.getByTestId('anomaly-report-status')).toHaveTextContent('The report lists no problems.');
     expect(screen.queryByTestId('anomaly-count-mismatch')).not.toBeInTheDocument();
   });
 });
@@ -161,7 +161,7 @@ describe('The anomaly panel in the app (static mode)', () => {
   const openReal = async () => {
     render(<App />);
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
     await screen.findByTestId('period-clock-0');
   };
 
@@ -180,7 +180,7 @@ describe('The anomaly panel in the app (static mode)', () => {
   it('the contract examples have no report', async () => {
     render(<App />);
     await screen.findByTestId('timetable-grid');
-    expect(screen.getByTestId('anomaly-report-status')).toHaveTextContent('No anomaly report for this instance.');
+    expect(screen.getByTestId('anomaly-report-status')).toHaveTextContent('No report for this data.');
   });
 });
 
@@ -206,7 +206,7 @@ describe('The anomaly panel in the app (http mode, fetch mocked)', () => {
     setSession({ username: `test-${role}`, token: `token-${role}`, role });
     render(<App client={new HttpChronosApiClient('/api')} />);
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: REAL_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
     await screen.findByTestId('period-clock-0');
     return fetchMock;
   }
@@ -225,11 +225,11 @@ describe('The anomaly panel in the app (http mode, fetch mocked)', () => {
 
   it('a 404 reads as no report', async () => {
     await openReal('administrator', undefined);
-    expect(screen.getByTestId('anomaly-report-status')).toHaveTextContent('No anomaly report for this instance.');
+    expect(screen.getByTestId('anomaly-report-status')).toHaveTextContent('No report for this data.');
   });
 
   it('an empty report reads as such', async () => {
     await openReal('coordinator', { counts: { total: 0, needs_human: 0, by_category: {} }, anomalies: [] });
-    expect(screen.getByTestId('anomaly-report-status')).toHaveTextContent('The report lists no anomalies.');
+    expect(screen.getByTestId('anomaly-report-status')).toHaveTextContent('The report lists no problems.');
   });
 });

@@ -1,8 +1,25 @@
-import React from 'react';
-import { QualityView, SolutionMetadata } from '@/adapters/solution';
+import React, { useState } from 'react';
+import { QualityRule, QualityView, SolutionMetadata } from '@/adapters/solution';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { formatDuration } from '@/lib/format';
-import { readableSolverText, ruleResult, ruleWording } from '@/lib/wording';
+import { formatDuration, formatScore } from '@/lib/format';
+import {
+  LISTED_FINDINGS,
+  SHOW_FEWER,
+  UI,
+  backtracksText,
+  explanationItems,
+  loadLimitHours,
+  methodText,
+  overLimitItem,
+  partialRulesText,
+  readableItem,
+  readableSolverText,
+  ruleResult,
+  ruleWording,
+  showAllText,
+  slotsUsedText,
+} from '@/lib/wording';
+import { OverLimitWarning } from './OverLimitWarning';
 
 /**
  * The solver's quality flags (S-GAP, S-B2B, S-LOAD16, FAC_LOAD_IMBALANCE; ROADMAP D34), each in
@@ -17,6 +34,56 @@ interface QualityScoreCardProps {
   /** A faculty or cohort id the solver's explanation names, by name; null keeps the id */
   nameOf?: (id: string) => string | null;
 }
+
+/**
+ * What a rule found, one finding per line: the first LISTED_FINDINGS, then all of them on request.
+ * A teacher above the weekly limit is in red with the over-limit wording (D11).
+ */
+const RuleFindings: React.FC<{
+  rule: Extract<QualityRule, { status: 'evaluated' }>;
+  nameOf?: (id: string) => string | null;
+}> = ({ rule, nameOf }) => {
+  const [showAll, setShowAll] = useState(false);
+  const items = explanationItems(rule.explanation);
+  // a sentence that lists nothing ("No faculty member teaches more than 16 h a week.")
+  if (items.length === 1 && items[0] === rule.explanation) {
+    return <p className="mt-1">{readableSolverText(rule.explanation, nameOf)}</p>;
+  }
+  const limit = rule.rule_id === 'S-LOAD16' ? loadLimitHours(rule) : null;
+  const shown = showAll ? items : items.slice(0, LISTED_FINDINGS);
+  return (
+    <div className="mt-1 space-y-1">
+      <ul data-testid={`rule-findings-${rule.rule_id}`} className="list-disc space-y-0.5 pl-5">
+        {shown.map((item) => {
+          const over = limit === null ? null : overLimitItem(item);
+          return (
+            <li key={item} data-testid="rule-finding">
+              {over ? (
+                <span className="inline-flex flex-wrap items-center gap-x-1.5 font-semibold text-destructive dark:text-red-300">
+                  <span>{nameOf?.(over.who) ?? over.who}:</span>{' '}
+                  <OverLimitWarning hours={over.hours} limit={limit} />
+                </span>
+              ) : (
+                readableItem(item, nameOf)
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {items.length > LISTED_FINDINGS && (
+        <button
+          type="button"
+          onClick={() => setShowAll((all) => !all)}
+          aria-expanded={showAll}
+          data-testid={`rule-findings-toggle-${rule.rule_id}`}
+          className="font-semibold text-primary underline-offset-2 hover:underline"
+        >
+          {showAll ? SHOW_FEWER : showAllText(items.length)}
+        </button>
+      )}
+    </div>
+  );
+};
 
 export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
   quality,
@@ -45,13 +112,13 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
               <p>
                 Score{' '}
                 <span data-testid="quality-score" className="font-serif text-2xl font-bold">
-                  {quality.score}
+                  {formatScore(quality.score)}
                 </span>
               </p>
             )}
             {quality.score !== null && quality.notEvaluatedRuleIds.length > 0 && (
               <p data-testid="quality-partial" className="text-xs font-semibold text-amber-900 dark:text-amber-200">
-                Partial: {quality.notEvaluatedRuleIds.join(', ')} not evaluated
+                {partialRulesText(quality.notEvaluatedRuleIds)}
               </p>
             )}
           </div>
@@ -63,13 +130,14 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
         {metadata && (
           <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
             <div>
-              <dt className="font-semibold">Method</dt>
-              <dd className="truncate" title={metadata.algorithm}>
+              <dt className="font-semibold">{UI.howMade}</dt>
+              <dd data-testid="quality-method">{methodText(metadata.algorithm)}</dd>
+              <dd data-testid="quality-method-code" className="break-all font-mono text-[11px] text-muted-foreground">
                 {metadata.algorithm}
               </dd>
             </div>
             <div>
-              <dt className="font-semibold">Time to solve</dt>
+              <dt className="font-semibold">{UI.timeTaken}</dt>
               <dd>{formatDuration(metadata.runtime_ms)}</dd>
             </div>
             <div>
@@ -79,16 +147,15 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
               </dd>
             </div>
             <div>
-              <dt className="font-semibold">Time slots used, search backtracks</dt>
-              <dd>
-                {metadata.slots_used ?? 'N/A'} slots, {metadata.backtracks ?? 0} backtracks
-              </dd>
+              <dt className="font-semibold">{UI.timeSlotsUsed}</dt>
+              <dd>{slotsUsedText(metadata.slots_used)}</dd>
+              <dd className="text-muted-foreground">{backtracksText(metadata.backtracks)} on the way</dd>
             </div>
           </dl>
         )}
 
         <section>
-          <h4 className="mb-1 text-lg font-semibold">Where points were lost</h4>
+          <h3 className="mb-1 text-lg font-semibold">Where points were lost</h3>
           <ul className="divide-y divide-border border-y border-border">
             {quality.rules.map((item) => {
               const words = ruleWording(item.rule_id);
@@ -109,7 +176,7 @@ export const QualityScoreCard: React.FC<QualityScoreCardProps> = ({
                   {item.status === 'evaluated' && (
                     <details className="text-xs">
                       <summary className="cursor-pointer font-semibold text-primary">Show where</summary>
-                      <p className="mt-1">{readableSolverText(item.explanation, nameOf)}</p>
+                      <RuleFindings rule={item} nameOf={nameOf} />
                     </details>
                   )}
                 </li>

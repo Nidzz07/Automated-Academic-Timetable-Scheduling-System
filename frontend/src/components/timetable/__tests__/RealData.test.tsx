@@ -83,7 +83,7 @@ describe('the EVEN 2025-26 printed (real) instance in the app', () => {
   const openPrinted = async () => {
     render(<App />);
     await screen.findByTestId('timetable-grid');
-    fireEvent.change(screen.getByLabelText('Select instance'), { target: { value: PRINTED_INSTANCE } });
+    fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: PRINTED_INSTANCE } });
     await screen.findByTestId('printed-violations');
   };
   const flaggedIds = () =>
@@ -96,7 +96,7 @@ describe('the EVEN 2025-26 printed (real) instance in the app', () => {
     expect(screen.getByTestId('printed-violations')).toHaveTextContent('36 violations');
     expect(screen.getByText('Printed timetable quality')).toBeInTheDocument();
     expect(screen.getByTestId('quality-score')).toHaveTextContent('21.5');
-    expect(screen.getByTestId('quality-rule-S-B2B')).toHaveTextContent('Found 23 pairs of periods → −23 points (1 point each)');
+    expect(screen.getByTestId('quality-rule-S-B2B')).toHaveTextContent('Found 23 pairs of periods → −23.0 points (1.0 points each)');
     expect(screen.queryByTestId('no-solution-note')).not.toBeInTheDocument();
     expect(flaggedIds().length).toBeGreaterThan(2);
 
@@ -109,7 +109,7 @@ describe('the EVEN 2025-26 printed (real) instance in the app', () => {
     await openPrinted();
     expect(screen.getAllByTestId('anomaly-row')).toHaveLength(anomalies.counts.total);
     fireEvent.click(screen.getByTestId('role-button-faculty'));
-    const persona = screen.getByLabelText('Select faculty persona') as HTMLSelectElement;
+    const persona = screen.getByLabelText('Select teacher') as HTMLSelectElement;
     expect([...persona.options].map((o) => o.text)).toContain('Kailas Devadkar (KKD)');
     expect(within(screen.getByTestId('faculty-workload-card')).getByText(/Weekly teaching load/)).toBeInTheDocument();
   });
