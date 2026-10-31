@@ -399,7 +399,7 @@ describe('Repair in the app (http mode, S14d)', () => {
     }
     expect(within(first).queryByText('fac-swapnali-kurhade')).not.toBeInTheDocument();
     // D51: pin.0 is pinned_occupancy[0], named by display.json pins[0]
-    expect(within(panel).getByTestId('constraint-pins-pin.0')).toHaveTextContent('Pinned: TE lunch, Mon T4 (pin.0)');
+    expect(within(panel).getByTestId('constraint-pins-pin.0')).toHaveTextContent('Fixed item: TE lunch, Mon T4');
     expect(within(panel).getByTestId('relaxation-action')).toHaveTextContent('checked: with this change a timetable exists (12 ms)');
     expect(within(panel).getByTestId('relaxation-applies-to')).toHaveTextContent('Swapnali Kurhade (SK); Tuesday T0');
     expect(status()).toHaveAttribute('data-status', 'infeasible');
@@ -435,9 +435,9 @@ describe('Diagnosis pins by pin.<i> (S14h, D51)', () => {
     });
     if (!isInfeasibleSolution(infeasible)) throw new Error('expected an infeasible payload');
     render(<InfeasibilityDiagnosisPanel infeasibleSolution={infeasible} edgeList={edgeList} labels={labelsFor(display)} />);
-    const pin = `${displayText(display.pins[1].unique_label!)} (pin.1)`;
-    expect(screen.getByTestId('constraint-pins-pin.1')).toHaveTextContent(`Pinned: ${pin}`);
-    expect(screen.getByTestId('relaxation-applies-to')).toHaveTextContent(`SE-Comp A; pin ${pin}; Monday T5`);
+    const pin = displayText(display.pins[1].unique_label!);
+    expect(screen.getByTestId('constraint-pins-pin.1')).toHaveTextContent(`Fixed item: ${pin}`);
+    expect(screen.getByTestId('relaxation-applies-to')).toHaveTextContent(`SE-Comp A; fixed item ${pin}; Monday T5`);
   });
 });
 
@@ -707,10 +707,10 @@ describe('Accounts linked to a faculty member or cohort (D50)', () => {
     expect(picker).toHaveValue('coh-se-a');
   });
 
-  it('without a link the picker stays as it was', async () => {
+  it('without a link the picker stays free, on the real timetable', async () => {
     await logInWith('faculty', { faculty_id: null, cohort_id: null });
     expect(screen.getByLabelText('Select faculty persona')).toBeEnabled();
-    expect(screen.getByLabelText('Select instance')).toHaveValue('example');
+    expect(screen.getByLabelText('Select instance')).toHaveValue(REAL_INSTANCE);
   });
 });
 

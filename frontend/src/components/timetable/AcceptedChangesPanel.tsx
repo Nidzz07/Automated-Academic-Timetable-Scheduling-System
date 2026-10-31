@@ -31,13 +31,15 @@ interface AcceptedChangesPanelProps {
   labels: Labels;
   /** Administrator only (the backend refuses anyone else) */
   canClear: boolean;
+  /** The changes were cleared: the official timetable may have changed (D56) */
+  onCleared?: () => void;
 }
 
 /**
  * The accepted unavailability changes and substitutions every later solve and repair includes
  * (D52), in acceptance order. An administrator can clear them after a confirm step.
  */
-export const AcceptedChangesPanel: React.FC<AcceptedChangesPanelProps> = ({ client, instance, edgeList, labels, canClear }) => {
+export const AcceptedChangesPanel: React.FC<AcceptedChangesPanelProps> = ({ client, instance, edgeList, labels, canClear, onCleared }) => {
   const changes = useChangesQuery(client, instance, true);
   const clear = useClearChangesMutation(client, instance);
   const [confirming, setConfirming] = useState(false);
@@ -90,7 +92,7 @@ export const AcceptedChangesPanel: React.FC<AcceptedChangesPanelProps> = ({ clie
                   variant="destructive"
                   size="sm"
                   disabled={clear.isPending}
-                  onClick={() => clear.mutate(undefined, { onSettled: () => setConfirming(false) })}
+                  onClick={() => clear.mutate(undefined, { onSuccess: () => onCleared?.(), onSettled: () => setConfirming(false) })}
                   data-testid="confirm-clear-button"
                 >
                   Clear all

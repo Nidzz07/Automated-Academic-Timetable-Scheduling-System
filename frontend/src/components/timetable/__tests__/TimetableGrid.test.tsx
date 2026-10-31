@@ -72,11 +72,11 @@ describe('TimetableGrid Component', () => {
     expect(sess3).toBeInTheDocument();
     expect(sess4).toBeInTheDocument();
 
-    // Verify Batches A, B, C, D labels
-    expect(sess1).toHaveAttribute('data-batch', 'Batch A');
-    expect(sess2).toHaveAttribute('data-batch', 'Batch B');
-    expect(sess3).toHaveAttribute('data-batch', 'Batch C');
-    expect(sess4).toHaveAttribute('data-batch', 'Batch D');
+    // Each batch by its cohort's label
+    expect(sess1).toHaveAttribute('data-batch', 'SE-Comp B / A');
+    expect(sess2).toHaveAttribute('data-batch', 'SE-Comp B / B');
+    expect(sess3).toHaveAttribute('data-batch', 'SE-Comp B / C');
+    expect(sess4).toHaveAttribute('data-batch', 'SE-Comp B / D');
 
     // Verify different sub-rooms
     expect(sess1).toHaveAttribute('data-subroom', '702-A');
@@ -128,9 +128,8 @@ describe('TimetableGrid Component', () => {
     const pinned = within(screen.getByTestId('grid-cell-3-4')).getByTestId('pinned-block');
 
     // Must carry pinned badges and distinct immovable indicators
-    expect(within(pinned).getByText(/PINNED BLOCK/i)).toBeInTheDocument();
-    expect(within(pinned).getByText(/Immovable/i)).toBeInTheDocument();
-    expect(within(pinned).getByText(/Pinned occupancy/i)).toBeInTheDocument();
+    expect(within(pinned).getByText('Fixed: cannot be moved')).toBeInTheDocument();
+    expect(within(pinned).getByText('Fixed item')).toBeInTheDocument();
     expect(within(pinned).getByText(/Room 508/i)).toBeInTheDocument();
     expect(within(pinned).getByText(/Cohort: SE-Comp B/i)).toBeInTheDocument();
     expect(screen.queryByText(/MDM/i)).not.toBeInTheDocument();
@@ -205,7 +204,7 @@ describe('TimetableGrid on the real EVEN 2025-26 instance (display.json labels, 
     const frozen = screen
       .getAllByTestId('pinned-block')
       .find((b) => b.textContent?.includes('MDM-III Lab (CC) /A /SB'));
-    expect(frozen).toHaveTextContent('frozen · D24');
+    expect(frozen).toHaveTextContent('Fixed: elective or minor course');
     expect(screen.getByTestId('period-clock-0')).toHaveTextContent('9:00 AM – 10:00 AM');
     expect(screen.getByTestId('period-clock-9')).toHaveTextContent('5:15 PM – 6:15 PM');
   });

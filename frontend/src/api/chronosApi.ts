@@ -554,6 +554,7 @@ export interface AuthState {
 }
 
 const SESSION_KEY = 'chronos.session';
+const INSTANCE_KEY = 'chronos.instance';
 
 const isRole = (role: unknown): role is UserRole => typeof role === 'string' && role in ROLE_CAPABILITIES;
 
@@ -584,11 +585,32 @@ function setAuthState(next: AuthState) {
   authState = next;
   try {
     if (next.session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(next.session));
-    else sessionStorage.removeItem(SESSION_KEY);
+    else {
+      sessionStorage.removeItem(SESSION_KEY);
+      // the next login, maybe someone else's, opens on the default
+      sessionStorage.removeItem(INSTANCE_KEY);
+    }
   } catch {
     // memory only
   }
   authListeners.forEach((listener) => listener());
+}
+
+/** The instance this login last picked, kept across a reload like the session; null if none. */
+export function storedInstance(): EdgeListInstance | null {
+  try {
+    return sessionStorage.getItem(INSTANCE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function storeInstance(instance: EdgeListInstance) {
+  try {
+    sessionStorage.setItem(INSTANCE_KEY, instance);
+  } catch {
+    // not kept across a reload
+  }
 }
 
 export const getAuthState = () => authState;

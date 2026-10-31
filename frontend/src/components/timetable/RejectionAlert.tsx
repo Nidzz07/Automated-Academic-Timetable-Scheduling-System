@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AlertCircle, X, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -13,6 +13,11 @@ export interface RejectionAlertProps {
   onRepair?: () => void;
 }
 
+/**
+ * Above the grid, and stuck to the top of the window while the grid is scrolled, so a refused drop
+ * shows where the user is looking. It takes the focus (and gives it back when it goes) without
+ * scrolling the page; role="alert" announces it.
+ */
 export const RejectionAlert: React.FC<RejectionAlertProps> = ({
   reason,
   clashes,
@@ -21,11 +26,20 @@ export const RejectionAlert: React.FC<RejectionAlertProps> = ({
   onDismiss,
   onRepair,
 }) => {
+  const alert = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    alert.current?.focus({ preventScroll: true });
+    return () => before?.focus({ preventScroll: true });
+  }, []);
+
   return (
     <div
+      ref={alert}
+      tabIndex={-1}
       data-testid="rejection-alert"
       role="alert"
-      className="flex flex-col justify-between gap-3 rounded-lg border-2 border-destructive/70 bg-red-50 p-4 dark:bg-red-950/40 sm:flex-row sm:items-start"
+      className="sticky top-2 z-40 flex max-h-[60vh] flex-col justify-between gap-3 overflow-y-auto rounded-lg border-2 border-destructive/70 bg-red-50 p-4 shadow-lg outline-none dark:bg-red-950 sm:flex-row sm:items-start"
     >
       <div className="flex items-start gap-3">
         <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />

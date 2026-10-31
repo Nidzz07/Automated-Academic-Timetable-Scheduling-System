@@ -43,7 +43,7 @@ export const CombinedLectureBlock: React.FC<CombinedLectureBlockProps> = ({
         isProvisional ? 'border-amber-700' : ''
       }`}
     >
-      <div className="mb-1 flex items-center justify-between gap-1">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-x-1">
         <div className="flex items-center gap-1">
           {isDraggable && (
             <span data-testid={`drag-handle-${session.sessionId}`} className="shrink-0 cursor-grab" title="Drag to reschedule">
@@ -71,8 +71,8 @@ export const CombinedLectureBlock: React.FC<CombinedLectureBlockProps> = ({
         <div className="mt-0.5">Full Union Cohort: {session.cohortLabel}</div>
       </div>
 
-      <div className="mt-1 flex items-center justify-between gap-2 border-t border-dashed border-amber-400 pt-1.5">
-        <span>
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 border-t border-dashed border-amber-400 pt-1.5">
+        <span className="min-w-0">
           <span className="font-semibold">{session.facultyInitials}</span> ({session.facultyName})
         </span>
         <span className="shrink-0">{session.cohortSize} students</span>

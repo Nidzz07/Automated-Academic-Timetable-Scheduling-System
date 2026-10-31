@@ -30,7 +30,7 @@ describe('Infeasibility Diagnosis Panel', () => {
 
     // Assert main panel and heading
     expect(screen.getByTestId('infeasibility-panel')).toBeInTheDocument();
-    expect(screen.getByText(/No timetable is possible/i)).toBeInTheDocument();
+    expect(screen.getByText('No timetable is possible')).toBeInTheDocument();
 
     // Assert solver diagnostic metadata
     expect(screen.getByText(/backtracking\(forward-checking, mrv\) \+ mus-extraction\(deletion-based\)/i)).toBeInTheDocument();
