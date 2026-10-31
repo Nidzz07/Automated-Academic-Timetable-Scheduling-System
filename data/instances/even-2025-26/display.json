@@ -1,5 +1,5 @@
 {
- "note": "D41 display sidecar for edge_list.json: names, pin kinds and labels, clock times. Not a contract. pins[i] describes pinned_occupancy[i]; its unique_label tells blocks apart that share a label. A batch's label is unique; batches gives each division's batch ids; initials are per year, 'unscoped' for manual mappings with no year.",
+ "note": "D41 display sidecar for edge_list.json: names, pin kinds and labels, clock times. Not a contract. pins[i] describes pinned_occupancy[i]; its unique_label tells blocks apart that share a label; its faculty names its teacher with the initials its label shows. Every cohort's label is unique; batches gives each division's batch ids; initials are per year, 'unscoped' for manual mappings with no year. Names carry no title.",
  "generated_by": "python -m db.export_edge_list",
  "timetable": "CE EVEN 2025-26 SE+TE (observed)",
  "days": [
@@ -79,18 +79,18 @@
  "faculty": {
   "fac-abhijeet-salunke": "Abhijeet Salunke",
   "fac-aishwarya-nalawade": "Aishwarya Nalawade",
-  "fac-aman-yadav": "Prof. Aman Yadav",
+  "fac-aman-yadav": "Aman Yadav",
   "fac-amey-ganesh-nile": "Amey Ganesh Nile",
   "fac-anand-godbole": "Anand Godbole",
   "fac-anant-nimkar": "Anant Nimkar",
   "fac-anas-ansari": "Anas Ansari",
   "fac-anuj-tawari": "Anuj Tawari",
-  "fac-asma-tambe": "Prof. Asma Tambe",
+  "fac-asma-tambe": "Asma Tambe",
   "fac-azman-qureshi": "Azman Qureshi",
   "fac-c-r-gajbiye": "C R Gajbiye",
   "fac-d-r-kalbande": "D. R. Kalbande",
   "fac-dayanand-ambawade": "Dayanand Ambawade",
-  "fac-deepak-nair": "Dr. Deepak Nair",
+  "fac-deepak-nair": "Deepak Nair",
   "fac-isha-sawalkar": "Isha Sawalkar",
   "fac-jignesh-sisodia": "Jignesh Sisodia",
   "fac-jostna-bhagat": "Jostna Bhagat",
@@ -102,11 +102,11 @@
   "fac-reeta-koshy": "Reeta Koshy",
   "fac-rupali-sawant": "Rupali Sawant",
   "fac-sanjyuktarani-jena": "Sanjyuktarani Jena",
-  "fac-sonali-dudhihalli": "Prof. Sonali Dudhihalli",
+  "fac-sonali-dudhihalli": "Sonali Dudhihalli",
   "fac-soni-bhambar": "Soni Bhambar",
   "fac-sudeep-mali": "Sudeep Mali",
   "fac-sudhir-dhage": "Sudhir Dhage",
-  "fac-suman-m": "Prof. Suman M.",
+  "fac-suman-m": "Suman M.",
   "fac-sunil-ghane": "Sunil Ghane",
   "fac-surekha-dholay": "Surekha Dholay",
   "fac-swapnali-kurhade": "Swapnali Kurhade",
@@ -339,35 +339,40 @@
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "BDA"
   },
   "coh-grp-dl": {
    "name": "DL",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "DL"
   },
   "coh-grp-fom-ii": {
    "name": "FOM - II",
    "type": "elective",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "FOM - II"
   },
   "coh-grp-iv": {
    "name": "IV",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "IV"
   },
   "coh-grp-mdm-dbms-lab-t7-r8-c1": {
    "name": "MDM-DBMS",
    "type": "elective",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "MDM-DBMS, Mon P7–P8"
   },
   "coh-grp-mdm-dbms-lab-t7-r8-c2": {
    "name": "MDM-DBMS",
@@ -375,7 +380,8 @@
    "years": [
     "SE",
     "TE"
-   ]
+   ],
+   "label": "MDM-DBMS, Tue P7–P8"
   },
   "coh-grp-mdm-iii-lab-cc-lab-t11-r8-c2": {
    "name": "MDM-III Lab (CC)",
@@ -383,126 +389,144 @@
    "years": [
     "SE",
     "TE"
-   ]
+   ],
+   "label": "MDM-III Lab (CC) batch A"
   },
   "coh-grp-mdm-iii-lab-cc-lab-t8-r8-c3": {
    "name": "MDM-III Lab (CC)",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "MDM-III Lab (CC) batch B"
   },
   "coh-grp-mdm-iii-lab-lab-t13-r8-c4": {
    "name": "MDM III Lab",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "MDM III Lab"
   },
   "coh-grp-nlp": {
    "name": "NLP",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "NLP"
   },
   "coh-grp-pe-i-a": {
    "name": "PE-I-A",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE-I-A"
   },
   "coh-grp-pe-i-b": {
    "name": "PE-I-B",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE-I-B"
   },
   "coh-grp-pe-i-c": {
    "name": "PE-I-C",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE-I-C"
   },
   "coh-grp-pe-i-d": {
    "name": "PE-I-D",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE-I-D"
   },
   "coh-grp-pe-i-e": {
    "name": "PE-I-E",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE-I-E"
   },
   "coh-grp-pe-ii-a": {
    "name": "PE-II-A",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE-II-A"
   },
   "coh-grp-pe-ii-b": {
    "name": "PE-II-B",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE-II-B"
   },
   "coh-grp-pe-ii-c": {
    "name": "PE II -C",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE II -C"
   },
   "coh-grp-pe-ii-d": {
    "name": "PE II -D",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE II -D"
   },
   "coh-grp-pe-ii-e": {
    "name": "PE-II-E",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE-II-E"
   },
   "coh-grp-pe-ii-f": {
    "name": "PE-II-F",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE-II-F"
   },
   "coh-grp-pe-ii-g": {
    "name": "PE II -G",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE II -G"
   },
   "coh-grp-pe-ii-h": {
    "name": "PE II -H",
    "type": "elective",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "PE II -H"
   },
   "coh-se-a": {
    "name": "SE-Comp A",
    "type": "division",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp A"
   },
   "coh-se-a-a": {
    "name": "A",
@@ -541,7 +565,8 @@
    "type": "division",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp B"
   },
   "coh-se-b-a": {
    "name": "A",
@@ -580,7 +605,8 @@
    "type": "division",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp C"
   },
   "coh-se-c-a": {
    "name": "A",
@@ -619,7 +645,8 @@
    "type": "division",
    "years": [
     "SE"
-   ]
+   ],
+   "label": "SE-Comp D"
   },
   "coh-se-d-a": {
    "name": "A",
@@ -658,7 +685,8 @@
    "type": "division",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE-Comp A"
   },
   "coh-te-a-a": {
    "name": "A",
@@ -697,7 +725,8 @@
    "type": "division",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp- B"
   },
   "coh-te-b-a": {
    "name": "A",
@@ -736,7 +765,8 @@
    "type": "division",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp - C"
   },
   "coh-te-c-a": {
    "name": "A",
@@ -775,7 +805,8 @@
    "type": "division",
    "years": [
     "TE"
-   ]
+   ],
+   "label": "TE Comp - D"
   },
   "coh-te-d-a": {
    "name": "A",
@@ -918,60 +949,70 @@
    "kind": "lunch",
    "label": "TE lunch",
    "year": "TE",
+   "faculty": [],
    "unique_label": "TE lunch, Mon P4"
   },
   {
    "kind": "lunch",
    "label": "SE lunch",
    "year": "SE",
+   "faculty": [],
    "unique_label": "SE lunch, Mon P5"
   },
   {
    "kind": "lunch",
    "label": "TE lunch",
    "year": "TE",
+   "faculty": [],
    "unique_label": "TE lunch, Tue P4"
   },
   {
    "kind": "lunch",
    "label": "SE lunch",
    "year": "SE",
+   "faculty": [],
    "unique_label": "SE lunch, Tue P5"
   },
   {
    "kind": "lunch",
    "label": "TE lunch",
    "year": "TE",
+   "faculty": [],
    "unique_label": "TE lunch, Wed P4"
   },
   {
    "kind": "lunch",
    "label": "SE lunch",
    "year": "SE",
+   "faculty": [],
    "unique_label": "SE lunch, Wed P5"
   },
   {
    "kind": "lunch",
    "label": "TE lunch",
    "year": "TE",
+   "faculty": [],
    "unique_label": "TE lunch, Thu P4"
   },
   {
    "kind": "lunch",
    "label": "SE lunch",
    "year": "SE",
+   "faculty": [],
    "unique_label": "SE lunch, Thu P5"
   },
   {
    "kind": "lunch",
    "label": "TE lunch",
    "year": "TE",
+   "faculty": [],
    "unique_label": "TE lunch, Fri P4"
   },
   {
    "kind": "lunch",
    "label": "SE lunch",
    "year": "SE",
+   "faculty": [],
    "unique_label": "SE lunch, Fri P5"
   },
   {
@@ -979,6 +1020,15 @@
    "label": "MDM-III Lab (CC) /A /SB",
    "decision": "D24",
    "source_ref": "obs-lab-t11-r8-c2",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": [
+      "SB"
+     ]
+    }
+   ],
    "unique_label": "MDM-III Lab (CC) /A /SB"
   },
   {
@@ -986,6 +1036,15 @@
    "label": "MDM-III Lab (CC) /A /SB",
    "decision": "D24",
    "source_ref": "obs-lab-t11-r8-c2",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": [
+      "SB"
+     ]
+    }
+   ],
    "unique_label": "MDM-III Lab (CC) /A /SB"
   },
   {
@@ -993,6 +1052,15 @@
    "label": "MDM III Lab | / Major Project | M.tech DFIR ESE /SB",
    "decision": "D24",
    "source_ref": "obs-lab-t13-r8-c4",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": [
+      "SB"
+     ]
+    }
+   ],
    "unique_label": "MDM III Lab | / Major Project | M.tech DFIR ESE /SB"
   },
   {
@@ -1000,6 +1068,15 @@
    "label": "MDM III Lab | / Major Project | M.tech DFIR ESE /SB",
    "decision": "D24",
    "source_ref": "obs-lab-t13-r8-c4",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": [
+      "SB"
+     ]
+    }
+   ],
    "unique_label": "MDM III Lab | / Major Project | M.tech DFIR ESE /SB"
   },
   {
@@ -1007,6 +1084,15 @@
    "label": "MDM-DBMS /RS",
    "decision": "D24",
    "source_ref": "obs-lab-t7-r8-c1",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": [
+      "RS"
+     ]
+    }
+   ],
    "unique_label": "MDM-DBMS /RS, Mon P7–P8, 603"
   },
   {
@@ -1014,6 +1100,15 @@
    "label": "MDM-DBMS /RS",
    "decision": "D24",
    "source_ref": "obs-lab-t7-r8-c1",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": [
+      "RS"
+     ]
+    }
+   ],
    "unique_label": "MDM-DBMS /RS, Mon P7–P8, 603"
   },
   {
@@ -1021,6 +1116,15 @@
    "label": "MDM-DBMS /RS",
    "decision": "D24",
    "source_ref": "obs-lab-t7-r8-c2",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": [
+      "RS"
+     ]
+    }
+   ],
    "unique_label": "MDM-DBMS /RS, Tue P7–P8, 603"
   },
   {
@@ -1028,6 +1132,15 @@
    "label": "MDM-DBMS /RS",
    "decision": "D24",
    "source_ref": "obs-lab-t7-r8-c2",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": [
+      "RS"
+     ]
+    }
+   ],
    "unique_label": "MDM-DBMS /RS, Tue P7–P8, 603"
   },
   {
@@ -1035,6 +1148,15 @@
    "label": "MDM-III Lab (CC) /B /SB",
    "decision": "D24",
    "source_ref": "obs-lab-t8-r8-c3",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": [
+      "SB"
+     ]
+    }
+   ],
    "unique_label": "MDM-III Lab (CC) /B /SB"
   },
   {
@@ -1042,6 +1164,15 @@
    "label": "MDM-III Lab (CC) /B /SB",
    "decision": "D24",
    "source_ref": "obs-lab-t8-r8-c3",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": [
+      "SB"
+     ]
+    }
+   ],
    "unique_label": "MDM-III Lab (CC) /B /SB"
   },
   {
@@ -1049,6 +1180,15 @@
    "label": "PCS / DN / 002",
    "decision": "D44",
    "source_ref": "obs-t0-r1-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / DN / 002, Thu P0, SE-Comp A"
   },
   {
@@ -1056,6 +1196,15 @@
    "label": "FOM - II / AsT /307",
    "decision": "D26",
    "source_ref": "obs-t0-r2-c5-l0",
+   "faculty": [
+    {
+     "id": "fac-asma-tambe",
+     "name": "Asma Tambe",
+     "initials": [
+      "AsT"
+     ]
+    }
+   ],
    "unique_label": "FOM - II / AsT /307, Fri P1"
   },
   {
@@ -1063,6 +1212,15 @@
    "label": "SMCS / AT / 002",
    "decision": "D26",
    "source_ref": "obs-t0-r2-c5-l1",
+   "faculty": [
+    {
+     "id": "fac-anuj-tawari",
+     "name": "Anuj Tawari",
+     "initials": [
+      "AT"
+     ]
+    }
+   ],
    "unique_label": "SMCS / AT / 002, Fri P1, SE-Comp A"
   },
   {
@@ -1070,6 +1228,15 @@
    "label": "PCS / D / DN / 608",
    "decision": "D44",
    "source_ref": "obs-t0-r4-c1-l3",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / D / DN / 608"
   },
   {
@@ -1077,6 +1244,15 @@
    "label": "PCS / D / DN / 608",
    "decision": "D44",
    "source_ref": "obs-t0-r4-c1-l3",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / D / DN / 608"
   },
   {
@@ -1084,6 +1260,15 @@
    "label": "PCS / A / DN / 605",
    "decision": "D44",
    "source_ref": "obs-t0-r4-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / A / DN / 605, Tue P3–P4, 605"
   },
   {
@@ -1091,6 +1276,15 @@
    "label": "PCS / A / DN / 605",
    "decision": "D44",
    "source_ref": "obs-t0-r4-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / A / DN / 605, Tue P3–P4, 605"
   },
   {
@@ -1098,6 +1292,15 @@
    "label": "PCS / B / DN / 608",
    "decision": "D44",
    "source_ref": "obs-t0-r4-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / B / DN / 608"
   },
   {
@@ -1105,6 +1308,15 @@
    "label": "PCS / B / DN / 608",
    "decision": "D44",
    "source_ref": "obs-t0-r4-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / B / DN / 608"
   },
   {
@@ -1112,6 +1324,15 @@
    "label": "FOM - II / AsT /307",
    "decision": "D26",
    "source_ref": "obs-t0-r7-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-asma-tambe",
+     "name": "Asma Tambe",
+     "initials": [
+      "AsT"
+     ]
+    }
+   ],
    "unique_label": "FOM - II / AsT /307, Wed P6"
   },
   {
@@ -1119,6 +1340,15 @@
    "label": "SMCS / AT / 508",
    "decision": "D26",
    "source_ref": "obs-t0-r7-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-anuj-tawari",
+     "name": "Anuj Tawari",
+     "initials": [
+      "AT"
+     ]
+    }
+   ],
    "unique_label": "SMCS / AT / 508, Wed P6, SE-Comp A"
   },
   {
@@ -1126,6 +1356,15 @@
    "label": "FOM - II / AsT /307",
    "decision": "D26",
    "source_ref": "obs-t0-r7-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-asma-tambe",
+     "name": "Asma Tambe",
+     "initials": [
+      "AsT"
+     ]
+    }
+   ],
    "unique_label": "FOM - II / AsT /307, Thu P6"
   },
   {
@@ -1133,6 +1372,15 @@
    "label": "SMCS / AT / 002",
    "decision": "D26",
    "source_ref": "obs-t0-r7-c4-l1",
+   "faculty": [
+    {
+     "id": "fac-anuj-tawari",
+     "name": "Anuj Tawari",
+     "initials": [
+      "AT"
+     ]
+    }
+   ],
    "unique_label": "SMCS / AT / 002, Thu P6, SE-Comp A"
   },
   {
@@ -1140,6 +1388,15 @@
    "label": "PCS / C / DN /703-A",
    "decision": "D44",
    "source_ref": "obs-t0-r7-c5-l2",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / C / DN /703-A"
   },
   {
@@ -1147,6 +1404,15 @@
    "label": "PCS / C / DN /703-A",
    "decision": "D44",
    "source_ref": "obs-t0-r7-c5-l2",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / C / DN /703-A"
   },
   {
@@ -1154,6 +1420,15 @@
    "label": "PCS / DN / 002",
    "decision": "D44",
    "source_ref": "obs-t2-r1-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / DN / 002, Thu P0, SE-Comp B"
   },
   {
@@ -1161,6 +1436,15 @@
    "label": "SMCS / AT / 002",
    "decision": "D26",
    "source_ref": "obs-t2-r2-c5-l1",
+   "faculty": [
+    {
+     "id": "fac-anuj-tawari",
+     "name": "Anuj Tawari",
+     "initials": [
+      "AT"
+     ]
+    }
+   ],
    "unique_label": "SMCS / AT / 002, Fri P1, SE-Comp B"
   },
   {
@@ -1168,6 +1452,15 @@
    "label": "PCS / D / SD / 607-B",
    "decision": "D44",
    "source_ref": "obs-t2-r4-c1-l3",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / D / SD / 607-B"
   },
   {
@@ -1175,6 +1468,15 @@
    "label": "PCS / D / SD / 607-B",
    "decision": "D44",
    "source_ref": "obs-t2-r4-c1-l3",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / D / SD / 607-B"
   },
   {
@@ -1182,6 +1484,15 @@
    "label": "PCS / A / SM / 607-B",
    "decision": "D44",
    "source_ref": "obs-t2-r4-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-suman-m",
+     "name": "Suman M.",
+     "initials": [
+      "SM"
+     ]
+    }
+   ],
    "unique_label": "PCS / A / SM / 607-B"
   },
   {
@@ -1189,6 +1500,15 @@
    "label": "PCS / A / SM / 607-B",
    "decision": "D44",
    "source_ref": "obs-t2-r4-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-suman-m",
+     "name": "Suman M.",
+     "initials": [
+      "SM"
+     ]
+    }
+   ],
    "unique_label": "PCS / A / SM / 607-B"
   },
   {
@@ -1196,6 +1516,15 @@
    "label": "PCS / B / SD /607-B",
    "decision": "D44",
    "source_ref": "obs-t2-r4-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / B / SD /607-B"
   },
   {
@@ -1203,6 +1532,15 @@
    "label": "PCS / B / SD /607-B",
    "decision": "D44",
    "source_ref": "obs-t2-r4-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / B / SD /607-B"
   },
   {
@@ -1210,6 +1548,15 @@
    "label": "SMCS / AT / 508",
    "decision": "D26",
    "source_ref": "obs-t2-r7-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-anuj-tawari",
+     "name": "Anuj Tawari",
+     "initials": [
+      "AT"
+     ]
+    }
+   ],
    "unique_label": "SMCS / AT / 508, Wed P6, SE-Comp B"
   },
   {
@@ -1217,6 +1564,15 @@
    "label": "SMCS / AT / 002",
    "decision": "D26",
    "source_ref": "obs-t2-r7-c4-l1",
+   "faculty": [
+    {
+     "id": "fac-anuj-tawari",
+     "name": "Anuj Tawari",
+     "initials": [
+      "AT"
+     ]
+    }
+   ],
    "unique_label": "SMCS / AT / 002, Thu P6, SE-Comp B"
   },
   {
@@ -1224,6 +1580,15 @@
    "label": "PCS / C/ SD /703-B",
    "decision": "D44",
    "source_ref": "obs-t2-r7-c5-l2",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / C/ SD /703-B"
   },
   {
@@ -1231,6 +1596,15 @@
    "label": "PCS / C/ SD /703-B",
    "decision": "D44",
    "source_ref": "obs-t2-r7-c5-l2",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / C/ SD /703-B"
   },
   {
@@ -1238,6 +1612,15 @@
    "label": "PCS / A / DN / 605",
    "decision": "D44",
    "source_ref": "obs-t4-r1-c3-l3",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / A / DN / 605, Wed P0–P1, 605"
   },
   {
@@ -1245,6 +1628,15 @@
    "label": "PCS / A / DN / 605",
    "decision": "D44",
    "source_ref": "obs-t4-r1-c3-l3",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / A / DN / 605, Wed P0–P1, 605"
   },
   {
@@ -1252,6 +1644,15 @@
    "label": "PCS / SD / 508",
    "decision": "D44",
    "source_ref": "obs-t4-r1-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / SD / 508, Thu P0, SE-Comp C"
   },
   {
@@ -1259,6 +1660,15 @@
    "label": "SMCS / TP / 508",
    "decision": "D26",
    "source_ref": "obs-t4-r2-c5-l1",
+   "faculty": [
+    {
+     "id": "fac-taqdis-pawle",
+     "name": "Taqdis Pawle",
+     "initials": [
+      "TP"
+     ]
+    }
+   ],
    "unique_label": "SMCS / TP / 508, Fri P1, SE-Comp C"
   },
   {
@@ -1266,6 +1676,15 @@
    "label": "PCS / D / SD / 505",
    "decision": "D44",
    "source_ref": "obs-t4-r4-c2-l3",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / D / SD / 505"
   },
   {
@@ -1273,6 +1692,15 @@
    "label": "PCS / D / SD / 505",
    "decision": "D44",
    "source_ref": "obs-t4-r4-c2-l3",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / D / SD / 505"
   },
   {
@@ -1280,6 +1708,15 @@
    "label": "PCS / B / DN / 505",
    "decision": "D44",
    "source_ref": "obs-t4-r4-c4-l3",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / B / DN / 505"
   },
   {
@@ -1287,6 +1724,15 @@
    "label": "PCS / B / DN / 505",
    "decision": "D44",
    "source_ref": "obs-t4-r4-c4-l3",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / B / DN / 505"
   },
   {
@@ -1294,6 +1740,15 @@
    "label": "PCS / C / DN / 609",
    "decision": "D44",
    "source_ref": "obs-t4-r4-c5-l3",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / C / DN / 609"
   },
   {
@@ -1301,6 +1756,15 @@
    "label": "PCS / C / DN / 609",
    "decision": "D44",
    "source_ref": "obs-t4-r4-c5-l3",
+   "faculty": [
+    {
+     "id": "fac-deepak-nair",
+     "name": "Deepak Nair",
+     "initials": [
+      "DN"
+     ]
+    }
+   ],
    "unique_label": "PCS / C / DN / 609"
   },
   {
@@ -1308,6 +1772,15 @@
    "label": "SMCS / CRG / 202",
    "decision": "D26",
    "source_ref": "obs-t4-r7-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-c-r-gajbiye",
+     "name": "C R Gajbiye",
+     "initials": [
+      "CRG"
+     ]
+    }
+   ],
    "unique_label": "SMCS / CRG / 202, Wed P6, SE-Comp C"
   },
   {
@@ -1315,6 +1788,15 @@
    "label": "SMCS / TP / 508",
    "decision": "D26",
    "source_ref": "obs-t4-r7-c4-l1",
+   "faculty": [
+    {
+     "id": "fac-taqdis-pawle",
+     "name": "Taqdis Pawle",
+     "initials": [
+      "TP"
+     ]
+    }
+   ],
    "unique_label": "SMCS / TP / 508, Thu P6, SE-Comp C"
   },
   {
@@ -1322,6 +1804,15 @@
    "label": "PCS / A / SD / 609",
    "decision": "D44",
    "source_ref": "obs-t6-r1-c3-l3",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / A / SD / 609"
   },
   {
@@ -1329,6 +1820,15 @@
    "label": "PCS / A / SD / 609",
    "decision": "D44",
    "source_ref": "obs-t6-r1-c3-l3",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / A / SD / 609"
   },
   {
@@ -1336,6 +1836,15 @@
    "label": "PCS / SD / 508",
    "decision": "D44",
    "source_ref": "obs-t6-r1-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / SD / 508, Thu P0, SE-Comp D"
   },
   {
@@ -1343,6 +1852,15 @@
    "label": "SMCS / TP / 508",
    "decision": "D26",
    "source_ref": "obs-t6-r2-c5-l1",
+   "faculty": [
+    {
+     "id": "fac-taqdis-pawle",
+     "name": "Taqdis Pawle",
+     "initials": [
+      "TP"
+     ]
+    }
+   ],
    "unique_label": "SMCS / TP / 508, Fri P1, SE-Comp D"
   },
   {
@@ -1350,6 +1868,15 @@
    "label": "PCS / D / AY / 608",
    "decision": "D44",
    "source_ref": "obs-t6-r4-c2-l3",
+   "faculty": [
+    {
+     "id": "fac-aman-yadav",
+     "name": "Aman Yadav",
+     "initials": [
+      "AY"
+     ]
+    }
+   ],
    "unique_label": "PCS / D / AY / 608"
   },
   {
@@ -1357,6 +1884,15 @@
    "label": "PCS / D / AY / 608",
    "decision": "D44",
    "source_ref": "obs-t6-r4-c2-l3",
+   "faculty": [
+    {
+     "id": "fac-aman-yadav",
+     "name": "Aman Yadav",
+     "initials": [
+      "AY"
+     ]
+    }
+   ],
    "unique_label": "PCS / D / AY / 608"
   },
   {
@@ -1364,6 +1900,15 @@
    "label": "PCS / B / SD / 607-B",
    "decision": "D44",
    "source_ref": "obs-t6-r4-c4-l3",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / B / SD / 607-B"
   },
   {
@@ -1371,6 +1916,15 @@
    "label": "PCS / B / SD / 607-B",
    "decision": "D44",
    "source_ref": "obs-t6-r4-c4-l3",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / B / SD / 607-B"
   },
   {
@@ -1378,6 +1932,15 @@
    "label": "PCS / C / SD /703-A",
    "decision": "D44",
    "source_ref": "obs-t6-r4-c5-l3",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / C / SD /703-A"
   },
   {
@@ -1385,6 +1948,15 @@
    "label": "PCS / C / SD /703-A",
    "decision": "D44",
    "source_ref": "obs-t6-r4-c5-l3",
+   "faculty": [
+    {
+     "id": "fac-sonali-dudhihalli",
+     "name": "Sonali Dudhihalli",
+     "initials": [
+      "SD"
+     ]
+    }
+   ],
    "unique_label": "PCS / C / SD /703-A"
   },
   {
@@ -1392,6 +1964,15 @@
    "label": "SMCS / CRG / 202",
    "decision": "D26",
    "source_ref": "obs-t6-r7-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-c-r-gajbiye",
+     "name": "C R Gajbiye",
+     "initials": [
+      "CRG"
+     ]
+    }
+   ],
    "unique_label": "SMCS / CRG / 202, Wed P6, SE-Comp D"
   },
   {
@@ -1399,6 +1980,15 @@
    "label": "SMCS / TP / 508",
    "decision": "D26",
    "source_ref": "obs-t6-r7-c4-l1",
+   "faculty": [
+    {
+     "id": "fac-taqdis-pawle",
+     "name": "Taqdis Pawle",
+     "initials": [
+      "TP"
+     ]
+    }
+   ],
    "unique_label": "SMCS / TP / 508, Thu P6, SE-Comp D"
   },
   {
@@ -1406,6 +1996,15 @@
    "label": "NLP / PE-I-A / RK /606-4",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-reeta-koshy",
+     "name": "Reeta Koshy",
+     "initials": [
+      "RK"
+     ]
+    }
+   ],
    "unique_label": "NLP / PE-I-A / RK /606-4"
   },
   {
@@ -1413,6 +2012,15 @@
    "label": "NLP / PE-I-A / RK /606-4",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-reeta-koshy",
+     "name": "Reeta Koshy",
+     "initials": [
+      "RK"
+     ]
+    }
+   ],
    "unique_label": "NLP / PE-I-A / RK /606-4"
   },
   {
@@ -1420,6 +2028,15 @@
    "label": "NLP/ PE-I-B / AN /608",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l1",
+   "faculty": [
+    {
+     "id": "fac-aishwarya-nalawade",
+     "name": "Aishwarya Nalawade",
+     "initials": [
+      "AN"
+     ]
+    }
+   ],
    "unique_label": "NLP/ PE-I-B / AN /608"
   },
   {
@@ -1427,6 +2044,15 @@
    "label": "NLP/ PE-I-B / AN /608",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l1",
+   "faculty": [
+    {
+     "id": "fac-aishwarya-nalawade",
+     "name": "Aishwarya Nalawade",
+     "initials": [
+      "AN"
+     ]
+    }
+   ],
    "unique_label": "NLP/ PE-I-B / AN /608"
   },
   {
@@ -1434,6 +2060,15 @@
    "label": "DL / PE-I-C / SJ /702-A",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l2",
+   "faculty": [
+    {
+     "id": "fac-sanjyuktarani-jena",
+     "name": "Sanjyuktarani Jena",
+     "initials": [
+      "SJ"
+     ]
+    }
+   ],
    "unique_label": "DL / PE-I-C / SJ /702-A"
   },
   {
@@ -1441,6 +2076,15 @@
    "label": "DL / PE-I-C / SJ /702-A",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l2",
+   "faculty": [
+    {
+     "id": "fac-sanjyuktarani-jena",
+     "name": "Sanjyuktarani Jena",
+     "initials": [
+      "SJ"
+     ]
+    }
+   ],
    "unique_label": "DL / PE-I-C / SJ /702-A"
   },
   {
@@ -1448,6 +2092,15 @@
    "label": "DL / PE-I-D / SRD /607-B",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l3",
+   "faculty": [
+    {
+     "id": "fac-surekha-dholay",
+     "name": "Surekha Dholay",
+     "initials": [
+      "SRD"
+     ]
+    }
+   ],
    "unique_label": "DL / PE-I-D / SRD /607-B"
   },
   {
@@ -1455,6 +2108,15 @@
    "label": "DL / PE-I-D / SRD /607-B",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l3",
+   "faculty": [
+    {
+     "id": "fac-surekha-dholay",
+     "name": "Surekha Dholay",
+     "initials": [
+      "SRD"
+     ]
+    }
+   ],
    "unique_label": "DL / PE-I-D / SRD /607-B"
   },
   {
@@ -1462,6 +2124,15 @@
    "label": "BDA / PE-II-A / PJB / 603-2",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l4",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": [
+      "PJB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-A / PJB / 603-2"
   },
   {
@@ -1469,6 +2140,15 @@
    "label": "BDA / PE-II-A / PJB / 603-2",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l4",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": [
+      "PJB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-A / PJB / 603-2"
   },
   {
@@ -1476,6 +2156,15 @@
    "label": "BDA / PE-II-B / JB / 603-3",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l5",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": [
+      "JB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-B / JB / 603-3"
   },
   {
@@ -1483,6 +2172,15 @@
    "label": "BDA / PE-II-B / JB / 603-3",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l5",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": [
+      "JB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-B / JB / 603-3"
   },
   {
@@ -1490,6 +2188,15 @@
    "label": "IV / PE II -C / YP /505",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l6",
+   "faculty": [
+    {
+     "id": "fac-yogita-patil",
+     "name": "Yogita Patil",
+     "initials": [
+      "YP"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -C / YP /505"
   },
   {
@@ -1497,6 +2204,15 @@
    "label": "IV / PE II -C / YP /505",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l6",
+   "faculty": [
+    {
+     "id": "fac-yogita-patil",
+     "name": "Yogita Patil",
+     "initials": [
+      "YP"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -C / YP /505"
   },
   {
@@ -1504,6 +2220,15 @@
    "label": "IV / PE II -D / AA /509",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l7",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": [
+      "AA"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -D / AA /509"
   },
   {
@@ -1511,6 +2236,15 @@
    "label": "IV / PE II -D / AA /509",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c2-l7",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": [
+      "AA"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -D / AA /509"
   },
   {
@@ -1518,6 +2252,15 @@
    "label": "NLP / PE-I-C / RK /606-4",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-reeta-koshy",
+     "name": "Reeta Koshy",
+     "initials": [
+      "RK"
+     ]
+    }
+   ],
    "unique_label": "NLP / PE-I-C / RK /606-4"
   },
   {
@@ -1525,6 +2268,15 @@
    "label": "NLP / PE-I-C / RK /606-4",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-reeta-koshy",
+     "name": "Reeta Koshy",
+     "initials": [
+      "RK"
+     ]
+    }
+   ],
    "unique_label": "NLP / PE-I-C / RK /606-4"
   },
   {
@@ -1532,6 +2284,15 @@
    "label": "NLP/ PE-I-D / AN /608",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-aishwarya-nalawade",
+     "name": "Aishwarya Nalawade",
+     "initials": [
+      "AN"
+     ]
+    }
+   ],
    "unique_label": "NLP/ PE-I-D / AN /608"
   },
   {
@@ -1539,6 +2300,15 @@
    "label": "NLP/ PE-I-D / AN /608",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-aishwarya-nalawade",
+     "name": "Aishwarya Nalawade",
+     "initials": [
+      "AN"
+     ]
+    }
+   ],
    "unique_label": "NLP/ PE-I-D / AN /608"
   },
   {
@@ -1546,6 +2316,15 @@
    "label": "DL / PE-I-E / SJ 702-A",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l2",
+   "faculty": [
+    {
+     "id": "fac-sanjyuktarani-jena",
+     "name": "Sanjyuktarani Jena",
+     "initials": [
+      "SJ"
+     ]
+    }
+   ],
    "unique_label": "DL / PE-I-E / SJ 702-A"
   },
   {
@@ -1553,6 +2332,15 @@
    "label": "DL / PE-I-E / SJ 702-A",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l2",
+   "faculty": [
+    {
+     "id": "fac-sanjyuktarani-jena",
+     "name": "Sanjyuktarani Jena",
+     "initials": [
+      "SJ"
+     ]
+    }
+   ],
    "unique_label": "DL / PE-I-E / SJ 702-A"
   },
   {
@@ -1560,6 +2348,15 @@
    "label": "DL / PE-I-B / SRD 702-B",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l3",
+   "faculty": [
+    {
+     "id": "fac-surekha-dholay",
+     "name": "Surekha Dholay",
+     "initials": [
+      "SRD"
+     ]
+    }
+   ],
    "unique_label": "DL / PE-I-B / SRD 702-B"
   },
   {
@@ -1567,6 +2364,15 @@
    "label": "DL / PE-I-B / SRD 702-B",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l3",
+   "faculty": [
+    {
+     "id": "fac-surekha-dholay",
+     "name": "Surekha Dholay",
+     "initials": [
+      "SRD"
+     ]
+    }
+   ],
    "unique_label": "DL / PE-I-B / SRD 702-B"
   },
   {
@@ -1574,6 +2380,15 @@
    "label": "BDA / PE-II-C / PJB /603-2",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l4",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": [
+      "PJB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-C / PJB /603-2"
   },
   {
@@ -1581,6 +2396,15 @@
    "label": "BDA / PE-II-C / PJB /603-2",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l4",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": [
+      "PJB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-C / PJB /603-2"
   },
   {
@@ -1588,6 +2412,15 @@
    "label": "BDA / PE-II-D / JB / 603-3",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l5",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": [
+      "JB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-D / JB / 603-3"
   },
   {
@@ -1595,6 +2428,15 @@
    "label": "BDA / PE-II-D / JB / 603-3",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l5",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": [
+      "JB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-D / JB / 603-3"
   },
   {
@@ -1602,6 +2444,15 @@
    "label": "IV / PE II -G / YP / 505",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l6",
+   "faculty": [
+    {
+     "id": "fac-yogita-patil",
+     "name": "Yogita Patil",
+     "initials": [
+      "YP"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -G / YP / 505"
   },
   {
@@ -1609,6 +2460,15 @@
    "label": "IV / PE II -G / YP / 505",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l6",
+   "faculty": [
+    {
+     "id": "fac-yogita-patil",
+     "name": "Yogita Patil",
+     "initials": [
+      "YP"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -G / YP / 505"
   },
   {
@@ -1616,6 +2476,15 @@
    "label": "IV / PE II -H / AA / 509",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l7",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": [
+      "AA"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -H / AA / 509"
   },
   {
@@ -1623,6 +2492,15 @@
    "label": "IV / PE II -H / AA / 509",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c3-l7",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": [
+      "AA"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -H / AA / 509"
   },
   {
@@ -1630,6 +2508,15 @@
    "label": "NLP / PE-I-E / AN /702-B",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-aishwarya-nalawade",
+     "name": "Aishwarya Nalawade",
+     "initials": [
+      "AN"
+     ]
+    }
+   ],
    "unique_label": "NLP / PE-I-E / AN /702-B"
   },
   {
@@ -1637,6 +2524,15 @@
    "label": "NLP / PE-I-E / AN /702-B",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-aishwarya-nalawade",
+     "name": "Aishwarya Nalawade",
+     "initials": [
+      "AN"
+     ]
+    }
+   ],
    "unique_label": "NLP / PE-I-E / AN /702-B"
   },
   {
@@ -1644,6 +2540,15 @@
    "label": "DL / PE-I-A / SJ /606-4",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l1",
+   "faculty": [
+    {
+     "id": "fac-sanjyuktarani-jena",
+     "name": "Sanjyuktarani Jena",
+     "initials": [
+      "SJ"
+     ]
+    }
+   ],
    "unique_label": "DL / PE-I-A / SJ /606-4"
   },
   {
@@ -1651,6 +2556,15 @@
    "label": "DL / PE-I-A / SJ /606-4",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l1",
+   "faculty": [
+    {
+     "id": "fac-sanjyuktarani-jena",
+     "name": "Sanjyuktarani Jena",
+     "initials": [
+      "SJ"
+     ]
+    }
+   ],
    "unique_label": "DL / PE-I-A / SJ /606-4"
   },
   {
@@ -1658,6 +2572,15 @@
    "label": "BDA / PE-II-E / PJB / 603-2",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l2",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": [
+      "PJB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-E / PJB / 603-2"
   },
   {
@@ -1665,6 +2588,15 @@
    "label": "BDA / PE-II-E / PJB / 603-2",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l2",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": [
+      "PJB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-E / PJB / 603-2"
   },
   {
@@ -1672,6 +2604,15 @@
    "label": "BDA / PE-II-F / JB / 603-3",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l3",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": [
+      "JB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-F / JB / 603-3"
   },
   {
@@ -1679,6 +2620,15 @@
    "label": "BDA / PE-II-F / JB / 603-3",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l3",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": [
+      "JB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-F / JB / 603-3"
   },
   {
@@ -1686,6 +2636,15 @@
    "label": "IV / PE II -A / YP /505",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l4",
+   "faculty": [
+    {
+     "id": "fac-yogita-patil",
+     "name": "Yogita Patil",
+     "initials": [
+      "YP"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -A / YP /505"
   },
   {
@@ -1693,6 +2652,15 @@
    "label": "IV / PE II -A / YP /505",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l4",
+   "faculty": [
+    {
+     "id": "fac-yogita-patil",
+     "name": "Yogita Patil",
+     "initials": [
+      "YP"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -A / YP /505"
   },
   {
@@ -1700,6 +2668,15 @@
    "label": "IV / PE II -B / AA /509",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l5",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": [
+      "AA"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -B / AA /509"
   },
   {
@@ -1707,6 +2684,15 @@
    "label": "IV / PE II -B / AA /509",
    "decision": "D24",
    "source_ref": "obs-t8-r1-c4-l5",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": [
+      "AA"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -B / AA /509"
   },
   {
@@ -1714,6 +2700,15 @@
    "label": "DL / SJ / 508",
    "decision": "D24",
    "source_ref": "obs-t8-r4-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-sanjyuktarani-jena",
+     "name": "Sanjyuktarani Jena",
+     "initials": [
+      "SJ"
+     ]
+    }
+   ],
    "unique_label": "DL / SJ / 508"
   },
   {
@@ -1721,6 +2716,15 @@
    "label": "IV / YP / 002",
    "decision": "D24",
    "source_ref": "obs-t8-r4-c2-l1",
+   "faculty": [
+    {
+     "id": "fac-yogita-patil",
+     "name": "Yogita Patil",
+     "initials": [
+      "YP"
+     ]
+    }
+   ],
    "unique_label": "IV / YP / 002, Tue P3"
   },
   {
@@ -1728,6 +2732,15 @@
    "label": "DL / SJ / 703",
    "decision": "D24",
    "source_ref": "obs-t8-r4-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-sanjyuktarani-jena",
+     "name": "Sanjyuktarani Jena",
+     "initials": [
+      "SJ"
+     ]
+    }
+   ],
    "unique_label": "DL / SJ / 703"
   },
   {
@@ -1735,6 +2748,15 @@
    "label": "IV / YP / 002",
    "decision": "D24",
    "source_ref": "obs-t8-r4-c3-l1",
+   "faculty": [
+    {
+     "id": "fac-yogita-patil",
+     "name": "Yogita Patil",
+     "initials": [
+      "YP"
+     ]
+    }
+   ],
    "unique_label": "IV / YP / 002, Wed P3"
   },
   {
@@ -1742,6 +2764,15 @@
    "label": "BDA / PJB / 508",
    "decision": "D24",
    "source_ref": "obs-t8-r4-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": [
+      "PJB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PJB / 508, Thu P3"
   },
   {
@@ -1749,6 +2780,15 @@
    "label": "NLP/ RK/ 703",
    "decision": "D24",
    "source_ref": "obs-t8-r4-c4-l1",
+   "faculty": [
+    {
+     "id": "fac-reeta-koshy",
+     "name": "Reeta Koshy",
+     "initials": [
+      "RK"
+     ]
+    }
+   ],
    "unique_label": "NLP/ RK/ 703, Thu P3, 703"
   },
   {
@@ -1756,6 +2796,15 @@
    "label": "BDA / PJB / 508",
    "decision": "D24",
    "source_ref": "obs-t8-r6-c5-l0",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": [
+      "PJB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PJB / 508, Fri P5"
   },
   {
@@ -1763,6 +2812,15 @@
    "label": "NLP/ RK/ 703",
    "decision": "D24",
    "source_ref": "obs-t8-r6-c5-l1",
+   "faculty": [
+    {
+     "id": "fac-reeta-koshy",
+     "name": "Reeta Koshy",
+     "initials": [
+      "RK"
+     ]
+    }
+   ],
    "unique_label": "NLP/ RK/ 703, Fri P5, 703"
   },
   {
@@ -1770,6 +2828,15 @@
    "label": "BDA / PE-II-G / PJB / 603-2",
    "decision": "D24",
    "source_ref": "obs-t8-r7-c5-l2",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": [
+      "PJB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-G / PJB / 603-2"
   },
   {
@@ -1777,6 +2844,15 @@
    "label": "BDA / PE-II-G / PJB / 603-2",
    "decision": "D24",
    "source_ref": "obs-t8-r7-c5-l2",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": [
+      "PJB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-G / PJB / 603-2"
   },
   {
@@ -1784,6 +2860,15 @@
    "label": "BDA / PE-II-H / JB / 603-3",
    "decision": "D24",
    "source_ref": "obs-t8-r7-c5-l3",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": [
+      "JB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-H / JB / 603-3"
   },
   {
@@ -1791,6 +2876,15 @@
    "label": "BDA / PE-II-H / JB / 603-3",
    "decision": "D24",
    "source_ref": "obs-t8-r7-c5-l3",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": [
+      "JB"
+     ]
+    }
+   ],
    "unique_label": "BDA / PE-II-H / JB / 603-3"
   },
   {
@@ -1798,6 +2892,15 @@
    "label": "IV / PE II -E / YP /505",
    "decision": "D24",
    "source_ref": "obs-t8-r7-c5-l4",
+   "faculty": [
+    {
+     "id": "fac-yogita-patil",
+     "name": "Yogita Patil",
+     "initials": [
+      "YP"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -E / YP /505"
   },
   {
@@ -1805,6 +2908,15 @@
    "label": "IV / PE II -E / YP /505",
    "decision": "D24",
    "source_ref": "obs-t8-r7-c5-l4",
+   "faculty": [
+    {
+     "id": "fac-yogita-patil",
+     "name": "Yogita Patil",
+     "initials": [
+      "YP"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -E / YP /505"
   },
   {
@@ -1812,6 +2924,15 @@
    "label": "IV / PE II -F / AA /509",
    "decision": "D24",
    "source_ref": "obs-t8-r7-c5-l5",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": [
+      "AA"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -F / AA /509"
   },
   {
@@ -1819,1254 +2940,2171 @@
    "label": "IV / PE II -F / AA /509",
    "decision": "D24",
    "source_ref": "obs-t8-r7-c5-l5",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": [
+      "AA"
+     ]
+    }
+   ],
    "unique_label": "IV / PE II -F / AA /509"
   },
   {
    "kind": "exam",
    "label": "DAA | LAB EXAM ESE | SE COMP NR",
    "source_ref": "exam-lab-t5-r4-c3",
+   "faculty": [],
    "unique_label": "DAA | LAB EXAM ESE | SE COMP NR"
   },
   {
    "kind": "exam",
    "label": "DAA | LAB EXAM ESE | SE COMP NR",
    "source_ref": "exam-lab-t5-r4-c3",
+   "faculty": [],
    "unique_label": "DAA | LAB EXAM ESE | SE COMP NR"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC /MTech /609",
    "source_ref": "oos-fac-t10-r8-c5",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": []
+    }
+   ],
    "unique_label": "HPC /MTech /609"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / B1 / 003",
    "source_ref": "oos-fac-t11-r7-c1",
+   "faculty": [
+    {
+     "id": "fac-nataasha-raul",
+     "name": "Nataasha Raul",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / B1 / 003, Mon P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / B1 / 003",
    "source_ref": "oos-fac-t11-r7-c1",
+   "faculty": [
+    {
+     "id": "fac-nataasha-raul",
+     "name": "Nataasha Raul",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / B1 / 003, Mon P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / B1 / 003",
    "source_ref": "oos-fac-t11-r7-c5",
+   "faculty": [
+    {
+     "id": "fac-nataasha-raul",
+     "name": "Nataasha Raul",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / B1 / 003, Fri P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / B1 / 003",
    "source_ref": "oos-fac-t11-r7-c5",
+   "faculty": [
+    {
+     "id": "fac-nataasha-raul",
+     "name": "Nataasha Raul",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / B1 / 003, Fri P6–P7"
   },
   {
    "kind": "mdm",
    "label": "MDM-I lab /A /603-7",
    "source_ref": "oos-fac-t12-r1-c1",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": []
+    }
+   ],
    "unique_label": "MDM-I lab /A /603-7"
   },
   {
    "kind": "mdm",
    "label": "MDM-I lab /A /603-7",
    "source_ref": "oos-fac-t12-r1-c1",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": []
+    }
+   ],
    "unique_label": "MDM-I lab /A /603-7"
   },
   {
    "kind": "mdm",
    "label": "MDM-I (DBMS) / 605",
    "source_ref": "oos-fac-t12-r7-c1",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": []
+    }
+   ],
    "unique_label": "MDM-I (DBMS) / 605, Mon P6, 605"
   },
   {
    "kind": "mdm",
    "label": "MDM-I (DBMS) / 605",
    "source_ref": "oos-fac-t12-r7-c2",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": []
+    }
+   ],
    "unique_label": "MDM-I (DBMS) / 605, Tue P6, 605"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D2 /003",
    "source_ref": "oos-fac-t16-r1-c1",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / D2 /003, Mon P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D2 /003",
    "source_ref": "oos-fac-t16-r1-c1",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / D2 /003, Mon P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G2 /003",
    "source_ref": "oos-fac-t16-r1-c3",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G2 /003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G2 /003",
    "source_ref": "oos-fac-t16-r1-c3",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G2 /003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D2 /003",
    "source_ref": "oos-fac-t16-r1-c4",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / D2 /003, Thu P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D2 /003",
    "source_ref": "oos-fac-t16-r1-c4",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / D2 /003, Thu P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A2 /003",
    "source_ref": "oos-fac-t16-r4-c2",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A2 /003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A2 /003",
    "source_ref": "oos-fac-t16-r4-c2",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A2 /003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G2 /003",
    "source_ref": "oos-fac-t16-r7-c2",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G2 /003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G2 /003",
    "source_ref": "oos-fac-t16-r7-c2",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G2 /003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A2 /003",
    "source_ref": "oos-fac-t16-r7-c3",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A2 /003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A2 /003",
    "source_ref": "oos-fac-t16-r7-c3",
+   "faculty": [
+    {
+     "id": "fac-sudeep-mali",
+     "name": "Sudeep Mali",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A2 /003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F1 / 003",
    "source_ref": "oos-fac-t18-r1-c2",
+   "faculty": [
+    {
+     "id": "fac-vaishnavee-rathod",
+     "name": "Vaishnavee Rathod",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / F1 / 003, Tue P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F1 / 003",
    "source_ref": "oos-fac-t18-r1-c2",
+   "faculty": [
+    {
+     "id": "fac-vaishnavee-rathod",
+     "name": "Vaishnavee Rathod",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / F1 / 003, Tue P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F1 / 003",
    "source_ref": "oos-fac-t18-r4-c1",
+   "faculty": [
+    {
+     "id": "fac-vaishnavee-rathod",
+     "name": "Vaishnavee Rathod",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / F1 / 003, Mon P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F1 / 003",
    "source_ref": "oos-fac-t18-r4-c1",
+   "faculty": [
+    {
+     "id": "fac-vaishnavee-rathod",
+     "name": "Vaishnavee Rathod",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / F1 / 003, Mon P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G4 / 003",
    "source_ref": "oos-fac-t19-r1-c3",
+   "faculty": [
+    {
+     "id": "fac-isha-sawalkar",
+     "name": "Isha Sawalkar",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G4 / 003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G4 / 003",
    "source_ref": "oos-fac-t19-r1-c3",
+   "faculty": [
+    {
+     "id": "fac-isha-sawalkar",
+     "name": "Isha Sawalkar",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G4 / 003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G4 / 003",
    "source_ref": "oos-fac-t19-r7-c2",
+   "faculty": [
+    {
+     "id": "fac-isha-sawalkar",
+     "name": "Isha Sawalkar",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G4 / 003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G4 / 003",
    "source_ref": "oos-fac-t19-r7-c2",
+   "faculty": [
+    {
+     "id": "fac-isha-sawalkar",
+     "name": "Isha Sawalkar",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G4 / 003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A1 / 003",
    "source_ref": "oos-fac-t1-r4-c2",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A1 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A1 / 003",
    "source_ref": "oos-fac-t1-r4-c2",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A1 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A1 / 003",
    "source_ref": "oos-fac-t1-r7-c3",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A1 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A1 / 003",
    "source_ref": "oos-fac-t1-r7-c3",
+   "faculty": [
+    {
+     "id": "fac-pramod-bide",
+     "name": "Pramod Bide",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A1 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A3 / 003",
    "source_ref": "oos-fac-t20-r4-c2",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A3 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A3 / 003",
    "source_ref": "oos-fac-t20-r4-c2",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A3 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A3 / 003",
    "source_ref": "oos-fac-t20-r7-c3",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A3 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A3 / 003",
    "source_ref": "oos-fac-t20-r7-c3",
+   "faculty": [
+    {
+     "id": "fac-jostna-bhagat",
+     "name": "Jostna Bhagat",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A3 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A4 / 003",
    "source_ref": "oos-fac-t23-r5-c2",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A4 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A4 / 003",
    "source_ref": "oos-fac-t23-r5-c2",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A4 / 003, Tue P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A4 / 003",
    "source_ref": "oos-fac-t23-r8-c3",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A4 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / A4 / 003",
    "source_ref": "oos-fac-t23-r8-c3",
+   "faculty": [
+    {
+     "id": "fac-anas-ansari",
+     "name": "Anas Ansari",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / A4 / 003, Wed P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D3 / 003",
    "source_ref": "oos-fac-t24-r1-c1",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / D3 / 003, Mon P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D3 / 003",
    "source_ref": "oos-fac-t24-r1-c1",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / D3 / 003, Mon P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F2 / 003",
    "source_ref": "oos-fac-t24-r1-c2",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / F2 / 003, Tue P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F2 / 003",
    "source_ref": "oos-fac-t24-r1-c2",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / F2 / 003, Tue P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D3 / 003",
    "source_ref": "oos-fac-t24-r1-c4",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / D3 / 003, Thu P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / D3 / 003",
    "source_ref": "oos-fac-t24-r1-c4",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / D3 / 003, Thu P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / C2 / 003",
    "source_ref": "oos-fac-t24-r1-c5",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / C2 / 003, Fri P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / C2 / 003",
    "source_ref": "oos-fac-t24-r1-c5",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / C2 / 003, Fri P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F2 / 003",
    "source_ref": "oos-fac-t24-r4-c1",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / F2 / 003, Mon P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / F2 / 003",
    "source_ref": "oos-fac-t24-r4-c1",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / F2 / 003, Mon P3–P4"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / C2 / 003",
    "source_ref": "oos-fac-t24-r9-c3",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / C2 / 003, Wed P8–P9"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / C2 / 003",
    "source_ref": "oos-fac-t24-r9-c3",
+   "faculty": [
+    {
+     "id": "fac-azman-qureshi",
+     "name": "Azman Qureshi",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / C2 / 003, Wed P8–P9"
   },
   {
    "kind": "mdm",
    "label": "MDM III Theory (CC) /601 / TE",
    "source_ref": "oos-fac-t26-r2-c1",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": []
+    }
+   ],
    "unique_label": "MDM III Theory (CC) /601 / TE"
   },
   {
    "kind": "mdm",
    "label": "MDM III Theory(CC) / 601/ TE",
    "source_ref": "oos-fac-t26-r4-c1",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": []
+    }
+   ],
    "unique_label": "MDM III Theory(CC) / 601/ TE"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / E2 / 003",
    "source_ref": "oos-fac-t26-r4-c3",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / E2 / 003"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / E2 / 003",
    "source_ref": "oos-fac-t26-r4-c3",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / E2 / 003"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI Theory /B.E CE /online",
    "source_ref": "oos-fac-t30-r4-c5",
+   "faculty": [
+    {
+     "id": "fac-vandana-wekhande",
+     "name": "Vandana Wekhande",
+     "initials": []
+    }
+   ],
    "unique_label": "HMI Theory /B.E CE /online"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G1 / 003",
    "source_ref": "oos-fac-t5-r1-c3",
+   "faculty": [
+    {
+     "id": "fac-sunil-ghane",
+     "name": "Sunil Ghane",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G1 / 003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G1 / 003",
    "source_ref": "oos-fac-t5-r1-c3",
+   "faculty": [
+    {
+     "id": "fac-sunil-ghane",
+     "name": "Sunil Ghane",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G1 / 003, Wed P0–P1"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G1 / 003",
    "source_ref": "oos-fac-t5-r7-c2",
+   "faculty": [
+    {
+     "id": "fac-sunil-ghane",
+     "name": "Sunil Ghane",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G1 / 003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "PSOOP / G1 / 003",
    "source_ref": "oos-fac-t5-r7-c2",
+   "faculty": [
+    {
+     "id": "fac-sunil-ghane",
+     "name": "Sunil Ghane",
+     "initials": []
+    }
+   ],
    "unique_label": "PSOOP / G1 / 003, Tue P6–P7"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC / B / 703-B /JR || HPC / B / JR | BE COMP || HPC / B / 703-B / BE - A & B",
    "source_ref": "oos-t17-r1-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC / B / 703-B /JR || HPC / B / JR | BE COMP || HPC / B / 703-B / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC / B / 703-B /JR || HPC / B / JR | BE COMP || HPC / B / 703-B / BE - A & B",
    "source_ref": "oos-t17-r1-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC / B / 703-B /JR || HPC / B / JR | BE COMP || HPC / B / 703-B / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /B / 603-7 / RS || BDAV / B / RS | BECOMP || BDAV / B / 603-7 / BE",
    "source_ref": "oos-t17-r1-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": [
+      "RS"
+     ]
+    }
+   ],
    "unique_label": "BDAV /B / 603-7 / RS || BDAV / B / RS | BECOMP || BDAV / B / 603-7 / BE"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /B / 603-7 / RS || BDAV / B / RS | BECOMP || BDAV / B / 603-7 / BE",
    "source_ref": "oos-t17-r1-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": [
+      "RS"
+     ]
+    }
+   ],
    "unique_label": "BDAV /B / 603-7 / RS || BDAV / B / RS | BECOMP || BDAV / B / 603-7 / BE"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /A / 603-7 / RS || BDAV / A / RS | BE COMP || BDAV /A / 603-7 / BE",
    "source_ref": "oos-t17-r1-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": [
+      "RS"
+     ]
+    }
+   ],
    "unique_label": "BDAV /A / 603-7 / RS || BDAV / A / RS | BE COMP || BDAV /A / 603-7 / BE"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /A / 603-7 / RS || BDAV / A / RS | BE COMP || BDAV /A / 603-7 / BE",
    "source_ref": "oos-t17-r1-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": [
+      "RS"
+     ]
+    }
+   ],
    "unique_label": "BDAV /A / 603-7 / RS || BDAV / A / RS | BE COMP || BDAV /A / 603-7 / BE"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC /605 / JR || HPC / 605 / BE - A & B",
    "source_ref": "oos-t17-r4-c1-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC /605 / JR || HPC / 605 / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /601 / RS || BDAV / 605 / BE - A & B",
    "source_ref": "oos-t17-r4-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": [
+      "RS"
+     ]
+    }
+   ],
    "unique_label": "BDAV /601 / RS || BDAV / 605 / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "BDAV /605 / RS || BDAV / 605 / BE - A & B",
    "source_ref": "oos-t17-r4-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-rupali-sawant",
+     "name": "Rupali Sawant",
+     "initials": [
+      "RS"
+     ]
+    }
+   ],
    "unique_label": "BDAV /605 / RS || BDAV / 605 / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /A /412 / DRK (CSE+CE) || HMI /BA /412 (CE_CSE)_BE-Comp",
    "source_ref": "oos-t17-r6-c1-l0",
+   "faculty": [
+    {
+     "id": "fac-d-r-kalbande",
+     "name": "D. R. Kalbande",
+     "initials": [
+      "DRK"
+     ]
+    }
+   ],
    "unique_label": "HMI /A /412 / DRK (CSE+CE) || HMI /BA /412 (CE_CSE)_BE-Comp"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /A /412 / DRK (CSE+CE) || HMI /BA /412 (CE_CSE)_BE-Comp",
    "source_ref": "oos-t17-r6-c1-l0",
+   "faculty": [
+    {
+     "id": "fac-d-r-kalbande",
+     "name": "D. R. Kalbande",
+     "initials": [
+      "DRK"
+     ]
+    }
+   ],
    "unique_label": "HMI /A /412 / DRK (CSE+CE) || HMI /BA /412 (CE_CSE)_BE-Comp"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /B /404 /VW ( CE) || HMI /B /404 CE_BE-Comp A-B",
    "source_ref": "oos-t17-r6-c1-l1",
+   "faculty": [
+    {
+     "id": "fac-vandana-wekhande",
+     "name": "Vandana Wekhande",
+     "initials": [
+      "VW"
+     ]
+    }
+   ],
    "unique_label": "HMI /B /404 /VW ( CE) || HMI /B /404 CE_BE-Comp A-B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /B /404 /VW ( CE) || HMI /B /404 CE_BE-Comp A-B",
    "source_ref": "oos-t17-r6-c1-l1",
+   "faculty": [
+    {
+     "id": "fac-vandana-wekhande",
+     "name": "Vandana Wekhande",
+     "initials": [
+      "VW"
+     ]
+    }
+   ],
    "unique_label": "HMI /B /404 /VW ( CE) || HMI /B /404 CE_BE-Comp A-B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI Theory / DRK /409 || HMI Theory /409 BE CE",
    "source_ref": "oos-t17-r6-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-d-r-kalbande",
+     "name": "D. R. Kalbande",
+     "initials": [
+      "DRK"
+     ]
+    }
+   ],
    "unique_label": "HMI Theory / DRK /409 || HMI Theory /409 BE CE"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC /703-B / JR || HPC / JR | BE COMP || HPC /703-B /BE -A & B",
    "source_ref": "oos-t17-r6-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC /703-B / JR || HPC / JR | BE COMP || HPC /703-B /BE -A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B",
    "source_ref": "oos-t17-r7-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-vandana-wekhande",
+     "name": "Vandana Wekhande",
+     "initials": [
+      "VW"
+     ]
+    }
+   ],
    "unique_label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B",
    "source_ref": "oos-t17-r7-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-vandana-wekhande",
+     "name": "Vandana Wekhande",
+     "initials": [
+      "VW"
+     ]
+    }
+   ],
    "unique_label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B"
   },
   {
    "kind": "out_of_scope",
    "label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B",
    "source_ref": "oos-t17-r7-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-vandana-wekhande",
+     "name": "Vandana Wekhande",
+     "initials": [
+      "VW"
+     ]
+    }
+   ],
    "unique_label": "HMI /C /412 /VW (CE) || HMI /C / 412 CE_ BE-Comp A-B"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC / A /703-B /JR || HPC / A /JR | BE COMP || HPC / A /703-B / BE - A & B",
    "source_ref": "oos-t17-r7-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC / A /703-B /JR || HPC / A /JR | BE COMP || HPC / A /703-B / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC / A /703-B /JR || HPC / A /JR | BE COMP || HPC / A /703-B / BE - A & B",
    "source_ref": "oos-t17-r7-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC / A /703-B /JR || HPC / A /JR | BE COMP || HPC / A /703-B / BE - A & B"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC Lab /JR /403-A || HPC Lab /M.Tech /403-A",
    "source_ref": "oos-t19-r1-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC Lab /JR /403-A || HPC Lab /M.Tech /403-A"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC Lab /JR /403-A || HPC Lab /M.Tech /403-A",
    "source_ref": "oos-t19-r1-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC Lab /JR /403-A || HPC Lab /M.Tech /403-A"
   },
   {
    "kind": "out_of_scope",
    "label": "ANC /JS /609 || ANC /MTech /609",
    "source_ref": "oos-t19-r1-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-jignesh-sisodia",
+     "name": "Jignesh Sisodia",
+     "initials": [
+      "JS"
+     ]
+    }
+   ],
    "unique_label": "ANC /JS /609 || ANC /MTech /609"
   },
   {
    "kind": "out_of_scope",
    "label": "MDCF Lab /SB / 509 || MDCF Lab / SB | M.TECH COMP || MDCF Lab /SPG 509",
    "source_ref": "oos-t19-r1-c5-l0",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": [
+      "SB"
+     ]
+    }
+   ],
    "unique_label": "MDCF Lab /SB / 509 || MDCF Lab / SB | M.TECH COMP || MDCF Lab /SPG 509"
   },
   {
    "kind": "out_of_scope",
    "label": "MDCF Lab /SB / 509 || MDCF Lab / SB | M.TECH COMP || MDCF Lab /SPG 509",
    "source_ref": "oos-t19-r1-c5-l0",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": [
+      "SB"
+     ]
+    }
+   ],
    "unique_label": "MDCF Lab /SB / 509 || MDCF Lab / SB | M.TECH COMP || MDCF Lab /SPG 509"
   },
   {
    "kind": "out_of_scope",
    "label": "ET Lab /DDA /509 || ET Lab /DDA | M.TECH COMP || ET Lab /M.Tech /509 (10.00 -12.00)",
    "source_ref": "oos-t19-r2-c1-l0",
+   "faculty": [
+    {
+     "id": "fac-dayanand-ambawade",
+     "name": "Dayanand Ambawade",
+     "initials": [
+      "DDA"
+     ]
+    }
+   ],
    "unique_label": "ET Lab /DDA /509 || ET Lab /DDA | M.TECH COMP || ET Lab /M.Tech /509 (10.00 -12.00)"
   },
   {
    "kind": "out_of_scope",
    "label": "ET Lab /DDA /509 || ET Lab /DDA | M.TECH COMP || ET Lab /M.Tech /509 (10.00 -12.00)",
    "source_ref": "oos-t19-r2-c1-l0",
+   "faculty": [
+    {
+     "id": "fac-dayanand-ambawade",
+     "name": "Dayanand Ambawade",
+     "initials": [
+      "DDA"
+     ]
+    }
+   ],
    "unique_label": "ET Lab /DDA /509 || ET Lab /DDA | M.TECH COMP || ET Lab /M.Tech /509 (10.00 -12.00)"
   },
   {
    "kind": "out_of_scope",
    "label": "ANC /AVS /609 || ANC /M.tech /609",
    "source_ref": "oos-t19-r2-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-abhijeet-salunke",
+     "name": "Abhijeet Salunke",
+     "initials": [
+      "AVS"
+     ]
+    }
+   ],
    "unique_label": "ANC /AVS /609 || ANC /M.tech /609, Tue P1, 609"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC /JR /609",
    "source_ref": "oos-t19-r2-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC /JR /609"
   },
   {
    "kind": "out_of_scope",
    "label": "MDCF /SB /609 || MDCF /SPG /609",
    "source_ref": "oos-t19-r4-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": [
+      "SB"
+     ]
+    }
+   ],
    "unique_label": "MDCF /SB /609 || MDCF /SPG /609, Tue P3, 609"
   },
   {
    "kind": "out_of_scope",
    "label": "DFIR /NR /609 || DFIR / M.Tech /609",
    "source_ref": "oos-t19-r4-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-nataasha-raul",
+     "name": "Nataasha Raul",
+     "initials": [
+      "NR"
+     ]
+    }
+   ],
    "unique_label": "DFIR /NR /609 || DFIR / M.Tech /609"
   },
   {
    "kind": "out_of_scope",
    "label": "MDCF /SB /609 || MDCF /SPG /609",
    "source_ref": "oos-t19-r4-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-soni-bhambar",
+     "name": "Soni Bhambar",
+     "initials": [
+      "SB"
+     ]
+    }
+   ],
    "unique_label": "MDCF /SB /609 || MDCF /SPG /609, Thu P3, 609"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC Lab /JR /403-A || HPC Lab /MTech /403-A",
    "source_ref": "oos-t19-r4-c5-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC Lab /JR /403-A || HPC Lab /MTech /403-A"
   },
   {
    "kind": "out_of_scope",
    "label": "HPC Lab /JR /403-A || HPC Lab /MTech /403-A",
    "source_ref": "oos-t19-r4-c5-l0",
+   "faculty": [
+    {
+     "id": "fac-jyoti-ramteke",
+     "name": "Jyoti Ramteke",
+     "initials": [
+      "JR"
+     ]
+    }
+   ],
    "unique_label": "HPC Lab /JR /403-A || HPC Lab /MTech /403-A"
   },
   {
    "kind": "out_of_scope",
    "label": "PCS /SV / 507 new",
    "source_ref": "oos-t19-r5-c1-l0",
+   "faculty": [],
    "unique_label": "PCS /SV / 507 new"
   },
   {
    "kind": "out_of_scope",
    "label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.tech /604",
    "source_ref": "oos-t19-r6-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-sudhir-dhage",
+     "name": "Sudhir Dhage",
+     "initials": [
+      "SND"
+     ]
+    }
+   ],
    "unique_label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.tech /604, Tue P5, 604"
   },
   {
    "kind": "out_of_scope",
    "label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.tech /604",
    "source_ref": "oos-t19-r6-c3-l0",
+   "faculty": [
+    {
+     "id": "fac-sudhir-dhage",
+     "name": "Sudhir Dhage",
+     "initials": [
+      "SND"
+     ]
+    }
+   ],
    "unique_label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.tech /604, Wed P5, 604"
   },
   {
    "kind": "out_of_scope",
    "label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.Tech /604",
    "source_ref": "oos-t19-r6-c4-l0",
+   "faculty": [
+    {
+     "id": "fac-sudhir-dhage",
+     "name": "Sudhir Dhage",
+     "initials": [
+      "SND"
+     ]
+    }
+   ],
    "unique_label": "DCS /SND /604 || DCS /SND/ M.TECH COMP || DCS /M.Tech /604"
   },
   {
    "kind": "out_of_scope",
    "label": "ANC /AVS /609 || ANC /M.tech /609",
    "source_ref": "oos-t19-r7-c1-l0",
+   "faculty": [
+    {
+     "id": "fac-abhijeet-salunke",
+     "name": "Abhijeet Salunke",
+     "initials": [
+      "AVS"
+     ]
+    }
+   ],
    "unique_label": "ANC /AVS /609 || ANC /M.tech /609, Mon P6, 609"
   },
   {
    "kind": "out_of_scope",
    "label": "DFIR / NR /509 || DFIR /MTech /NR || DFIR / M.Tech /509",
    "source_ref": "oos-t19-r7-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-nataasha-raul",
+     "name": "Nataasha Raul",
+     "initials": [
+      "NR"
+     ]
+    }
+   ],
    "unique_label": "DFIR / NR /509 || DFIR /MTech /NR || DFIR / M.Tech /509"
   },
   {
    "kind": "out_of_scope",
    "label": "DFIR Lab /NR/ 509 || DFIR Lab /NR | M.TECH COMP || DFIR lab /M.Tech /509",
    "source_ref": "oos-t19-r8-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-nataasha-raul",
+     "name": "Nataasha Raul",
+     "initials": [
+      "NR"
+     ]
+    }
+   ],
    "unique_label": "DFIR Lab /NR/ 509 || DFIR Lab /NR | M.TECH COMP || DFIR lab /M.Tech /509"
   },
   {
    "kind": "out_of_scope",
    "label": "DFIR Lab /NR/ 509 || DFIR Lab /NR | M.TECH COMP || DFIR lab /M.Tech /509",
    "source_ref": "oos-t19-r8-c2-l0",
+   "faculty": [
+    {
+     "id": "fac-nataasha-raul",
+     "name": "Nataasha Raul",
+     "initials": [
+      "NR"
+     ]
+    }
+   ],
    "unique_label": "DFIR Lab /NR/ 509 || DFIR Lab /NR | M.TECH COMP || DFIR lab /M.Tech /509"
   },
   {
    "kind": "llc",
    "label": "LLC",
    "source_ref": "pin-t0-r10-c4-l0",
+   "faculty": [],
    "unique_label": "LLC, Thu P9, SE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
    "source_ref": "pin-t0-r1-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I LABs, Mon P0–P1"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
    "source_ref": "pin-t0-r1-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I LABs, Mon P0–P1"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
    "source_ref": "pin-t0-r7-c1-l0",
+   "faculty": [],
    "unique_label": "MDM -I THEORY, Mon P6, SE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
    "source_ref": "pin-t0-r7-c2-l0",
+   "faculty": [],
    "unique_label": "MDM -I THEORY, Tue P6, SE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
    "source_ref": "pin-t0-r8-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I LABs, Mon P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
    "source_ref": "pin-t0-r8-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I LABs, Mon P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
    "source_ref": "pin-t0-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM - I LABs, Tue P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM - I LABs",
    "source_ref": "pin-t0-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM - I LABs, Tue P7–P8"
   },
   {
    "kind": "hss",
    "label": "HSS",
    "source_ref": "pin-t0-r8-c3-l0",
+   "faculty": [],
    "unique_label": "HSS, Wed P7, SE-Comp A"
   },
   {
    "kind": "hss",
    "label": "HSS",
    "source_ref": "pin-t0-r8-c4-l0",
+   "faculty": [],
    "unique_label": "HSS, Thu P7, SE-Comp A"
   },
   {
    "kind": "llc",
    "label": "LLC",
    "source_ref": "pin-t0-r9-c4-l0",
+   "faculty": [],
    "unique_label": "LLC, Thu P8, SE-Comp A"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t0-r9-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, SE-Comp A"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t0-r9-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, SE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
    "source_ref": "pin-t10-r10-c2-l0",
+   "faculty": [],
    "unique_label": "MDM Lab, Tue P7–P8, TE Comp- B"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
    "source_ref": "pin-t10-r10-c2-l0",
+   "faculty": [],
    "unique_label": "MDM Lab, Tue P7–P8, TE Comp- B"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major - Project",
    "source_ref": "pin-t10-r10-c3-l0",
+   "faculty": [],
    "unique_label": "MDM Lab / Major - Project, Wed P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major - Project",
    "source_ref": "pin-t10-r10-c3-l0",
+   "faculty": [],
    "unique_label": "MDM Lab / Major - Project, Wed P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major - Project",
    "source_ref": "pin-t10-r10-c4-l0",
+   "faculty": [],
    "unique_label": "MDM Lab / Major - Project, Thu P7–P8"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major - Project",
    "source_ref": "pin-t10-r10-c4-l0",
+   "faculty": [],
    "unique_label": "MDM Lab / Major - Project, Thu P7–P8"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t10-r13-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp- B"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t10-r13-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp- B"
   },
   {
    "kind": "project",
    "label": "Major Project",
    "source_ref": "pin-t10-r1-c1-l0",
+   "faculty": [],
    "unique_label": "Major Project, Mon P0, TE Comp- B"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
    "source_ref": "pin-t10-r2-c1-l0",
+   "faculty": [],
    "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp- B"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
    "source_ref": "pin-t10-r2-c1-l0",
+   "faculty": [],
    "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp- B"
   },
   {
    "kind": "project",
    "label": "Major Project",
    "source_ref": "pin-t12-r1-c1-l0",
+   "faculty": [],
    "unique_label": "Major Project, Mon P0, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
    "source_ref": "pin-t12-r2-c1-l0",
+   "faculty": [],
    "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
    "source_ref": "pin-t12-r2-c1-l0",
+   "faculty": [],
    "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
    "source_ref": "pin-t12-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM Lab, Tue P7–P8, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
    "source_ref": "pin-t12-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM Lab, Tue P7–P8, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
    "source_ref": "pin-t12-r8-c3-l0",
+   "faculty": [],
    "unique_label": "MDM Lab / Major Project, Wed P7–P8, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
    "source_ref": "pin-t12-r8-c3-l0",
+   "faculty": [],
    "unique_label": "MDM Lab / Major Project, Wed P7–P8, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
    "source_ref": "pin-t12-r8-c4-l2",
+   "faculty": [],
    "unique_label": "MDM Lab / Major Project, Thu P7–P8, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
    "source_ref": "pin-t12-r8-c4-l2",
+   "faculty": [],
    "unique_label": "MDM Lab / Major Project, Thu P7–P8, TE Comp - C"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t12-r9-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp - C"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t12-r9-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp - C"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
    "source_ref": "pin-t14-r2-c1-l0",
+   "faculty": [],
    "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
    "source_ref": "pin-t14-r2-c1-l0",
+   "faculty": [],
    "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE Comp - D"
   },
   {
    "kind": "project",
    "label": "Major Project",
    "source_ref": "pin-t14-r7-c2-l0",
+   "faculty": [],
    "unique_label": "Major Project, Tue P6"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
    "source_ref": "pin-t14-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM Lab, Tue P7–P8, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab",
    "source_ref": "pin-t14-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM Lab, Tue P7–P8, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
    "source_ref": "pin-t14-r8-c3-l0",
+   "faculty": [],
    "unique_label": "MDM Lab / Major Project, Wed P7–P8, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
    "source_ref": "pin-t14-r8-c3-l0",
+   "faculty": [],
    "unique_label": "MDM Lab / Major Project, Wed P7–P8, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
    "source_ref": "pin-t14-r8-c4-l0",
+   "faculty": [],
    "unique_label": "MDM Lab / Major Project, Thu P7–P8, TE Comp - D"
   },
   {
    "kind": "mdm",
    "label": "MDM Lab / Major Project",
    "source_ref": "pin-t14-r8-c4-l0",
+   "faculty": [],
    "unique_label": "MDM Lab / Major Project, Thu P7–P8, TE Comp - D"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t14-r9-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp - D"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t14-r9-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE Comp - D"
   },
   {
    "kind": "llc",
    "label": "LLC",
    "source_ref": "pin-t2-r10-c4-l0",
+   "faculty": [],
    "unique_label": "LLC, Thu P9, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t2-r1-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t2-r1-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
    "source_ref": "pin-t2-r7-c1-l0",
+   "faculty": [],
    "unique_label": "MDM -I THEORY, Mon P6, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
    "source_ref": "pin-t2-r7-c2-l0",
+   "faculty": [],
    "unique_label": "MDM -I THEORY, Tue P6, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t2-r8-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t2-r8-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp B"
   },
   {
    "kind": "mdm",
    "label": "MDM - I -LAB",
    "source_ref": "pin-t2-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM - I -LAB"
   },
   {
    "kind": "mdm",
    "label": "MDM - I -LAB",
    "source_ref": "pin-t2-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM - I -LAB"
   },
   {
    "kind": "hss",
    "label": "HSS",
    "source_ref": "pin-t2-r8-c3-l0",
+   "faculty": [],
    "unique_label": "HSS, Wed P7, SE-Comp B"
   },
   {
    "kind": "hss",
    "label": "HSS",
    "source_ref": "pin-t2-r8-c4-l0",
+   "faculty": [],
    "unique_label": "HSS, Thu P7, SE-Comp B"
   },
   {
    "kind": "llc",
    "label": "LLC",
    "source_ref": "pin-t2-r9-c4-l0",
+   "faculty": [],
    "unique_label": "LLC, Thu P8, SE-Comp B"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t2-r9-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, SE-Comp B"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t2-r9-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, SE-Comp B"
   },
   {
    "kind": "llc",
    "label": "LLC",
    "source_ref": "pin-t4-r10-c4-l0",
+   "faculty": [],
    "unique_label": "LLC, Thu P9, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t4-r1-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t4-r1-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
    "source_ref": "pin-t4-r7-c1-l0",
+   "faculty": [],
    "unique_label": "MDM -I THEORY, Mon P6, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
    "source_ref": "pin-t4-r7-c2-l0",
+   "faculty": [],
    "unique_label": "MDM -I THEORY, Tue P6, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t4-r8-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t4-r8-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t4-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Tue P7–P8, SE-Comp C"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t4-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Tue P7–P8, SE-Comp C"
   },
   {
    "kind": "hss",
    "label": "HSS",
    "source_ref": "pin-t4-r8-c3-l0",
+   "faculty": [],
    "unique_label": "HSS, Wed P7, SE-Comp C"
   },
   {
    "kind": "hss",
    "label": "HSS",
    "source_ref": "pin-t4-r8-c4-l0",
+   "faculty": [],
    "unique_label": "HSS, Thu P7, SE-Comp C"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t4-r8-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp C"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t4-r8-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp C"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t4-r8-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp C"
   },
   {
    "kind": "llc",
    "label": "LLC",
    "source_ref": "pin-t4-r9-c4-l0",
+   "faculty": [],
    "unique_label": "LLC, Thu P8, SE-Comp C"
   },
   {
    "kind": "llc",
    "label": "LLC",
    "source_ref": "pin-t6-r10-c4-l0",
+   "faculty": [],
    "unique_label": "LLC, Thu P9, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t6-r1-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t6-r1-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P0–P1, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
    "source_ref": "pin-t6-r7-c1-l0",
+   "faculty": [],
    "unique_label": "MDM -I THEORY, Mon P6, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM -I THEORY",
    "source_ref": "pin-t6-r7-c2-l0",
+   "faculty": [],
    "unique_label": "MDM -I THEORY, Tue P6, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t6-r8-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t6-r8-c1-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Mon P7–P8, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t6-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Tue P7–P8, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM - I - LAB",
    "source_ref": "pin-t6-r8-c2-l0",
+   "faculty": [],
    "unique_label": "MDM - I - LAB, Tue P7–P8, SE-Comp D"
   },
   {
    "kind": "hss",
    "label": "HSS",
    "source_ref": "pin-t6-r8-c3-l0",
+   "faculty": [],
    "unique_label": "HSS, Wed P7, SE-Comp D"
   },
   {
    "kind": "hss",
    "label": "HSS",
    "source_ref": "pin-t6-r8-c4-l0",
+   "faculty": [],
    "unique_label": "HSS, Thu P7, SE-Comp D"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t6-r8-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp D"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t6-r8-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp D"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t6-r8-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P7–P9, SE-Comp D"
   },
   {
    "kind": "llc",
    "label": "LLC",
    "source_ref": "pin-t6-r9-c4-l0",
+   "faculty": [],
    "unique_label": "LLC, Thu P8, SE-Comp D"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab",
    "source_ref": "pin-t8-r10-c2-l0",
+   "faculty": [],
    "unique_label": "MDM-III Lab"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab",
    "source_ref": "pin-t8-r10-c2-l0",
+   "faculty": [],
    "unique_label": "MDM-III Lab"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab / Major - Project",
    "source_ref": "pin-t8-r10-c3-l0",
+   "faculty": [],
    "unique_label": "MDM-III Lab / Major - Project"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab / Major - Project",
    "source_ref": "pin-t8-r10-c3-l0",
+   "faculty": [],
    "unique_label": "MDM-III Lab / Major - Project"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab /Major - Project",
    "source_ref": "pin-t8-r10-c4-l0",
+   "faculty": [],
    "unique_label": "MDM-III Lab /Major - Project"
   },
   {
    "kind": "mdm",
    "label": "MDM-III Lab /Major - Project",
    "source_ref": "pin-t8-r10-c4-l0",
+   "faculty": [],
    "unique_label": "MDM-III Lab /Major - Project"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t8-r13-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE-Comp A"
   },
   {
    "kind": "activity",
    "label": "STUDENT ACTIVITY",
    "source_ref": "pin-t8-r13-c5-l0",
+   "faculty": [],
    "unique_label": "STUDENT ACTIVITY, Fri P8–P9, TE-Comp A"
   },
   {
    "kind": "project",
    "label": "Major Project",
    "source_ref": "pin-t8-r1-c1-l0",
+   "faculty": [],
    "unique_label": "Major Project, Mon P0, TE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
    "source_ref": "pin-t8-r2-c1-l0",
+   "faculty": [],
    "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE-Comp A"
   },
   {
    "kind": "mdm",
    "label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode",
    "source_ref": "pin-t8-r2-c1-l0",
+   "faculty": [],
    "unique_label": "ALL MDM- III Theory | ( Except SPJIMR) | Note: Barclays Minor in Banking is from 10.00am to 12.00pm in online mode, Mon P1–P3, TE-Comp A"
   }
  ]

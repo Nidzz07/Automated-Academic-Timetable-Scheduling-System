@@ -26,4 +26,10 @@ htmlcov/
 frontend/node_modules/
 frontend/dist/
 
+# Test and benchmark code the running app never imports (S14r)
+backend/tests/
+db/tests/
+solver/tests/
+solver/benchmarks/
+
 *.md

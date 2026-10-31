@@ -25,8 +25,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session as OrmSession
 
 from backend.app import service as service_module
-from backend.app.main import create_app
-from backend.app.service import MAX_MAX_MOVES, solve_edge_list
+from backend.app.main import POOL_RECYCLE_S, create_app
+from backend.app.service import JOB_FAILED, MAX_MAX_MOVES, ContractError, solve_edge_list
 from backend.app.store import INSTANCES_DIR, InstanceStore
 from backend.tests.conftest import AUTH, bearer
 from db.models import AuditEntry, SolveJob
@@ -199,11 +199,34 @@ class TestJobs:
         assert "solution" not in job  # D33
         assert synthetic.get("/instances/timeout/solution").status_code == 404
 
-    def test_solver_error(self, synthetic: TestClient) -> None:
+    def test_solver_error(self, synthetic: TestClient, database_url: str) -> None:
         job = solve(synthetic, "broken")
         assert job["status"] == "error"
-        assert "ghost" in job["error"]
         assert "solution" not in job
+        # S14r: the exception text for an administrator only; a plain message for the rest
+        assert job["error"] == JOB_FAILED and "ghost" not in json.dumps(job)
+        for role in ("faculty", "student"):
+            seen = synthetic.get(f"/jobs/{job['id']}", headers=bearer(role)).json()
+            assert seen["error"] == JOB_FAILED
+        admin = synthetic.get(f"/jobs/{job['id']}", headers=bearer("administrator")).json()
+        assert "ghost" in admin["error"]
+        engine = create_engine(database_url)
+        try:
+            with OrmSession(engine) as db:
+                row = db.get_one(SolveJob, job["id"])
+                assert "ghost" in row.error  # the job record keeps it
+                detail = json.loads(db.get_one(AuditEntry, row.audit_id).detail)
+        finally:
+            engine.dispose()
+        assert detail["status"] == "error" and "ghost" in detail["error"]  # GET /audit
+
+    def test_queued_jobs_are_capped(
+        self, synthetic: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(service_module, "MAX_QUEUED", 0)  # any queued job is one too many
+        response = synthetic.post("/instances/small/solve", json={"time_limit_s": 1})
+        assert response.status_code == 429
+        assert "already waiting" in response.json()["detail"]
 
     def test_first_status_is_queued_or_running(self, synthetic: TestClient) -> None:
         # infeasible by pre-solve: no local search left running at the default 200000 moves
@@ -221,6 +244,26 @@ class TestJobs:
     def test_rejects_a_bad_move_budget(self, synthetic: TestClient, moves: float) -> None:
         response = synthetic.post("/instances/small/solve", json={"max_moves": moves})
         assert response.status_code == 422
+
+
+def test_closed_connections_are_replaced(real: TestClient) -> None:
+    # S14r: Supabase closes idle connections; the pool tests each one and renews old ones
+    pool = real.app.state.service._engine.pool
+    assert pool._pre_ping and pool._recycle == POOL_RECYCLE_S
+
+
+def test_base_solution_is_contract_checked(synthetic: TestClient) -> None:
+    service = synthetic.app.state.service
+    bad = service.store.root / "bad-committed"
+    bad.mkdir()
+    (bad / "edge_list.json").write_text(json.dumps(generate(PRESETS["small"], 1)), "utf-8")
+    (bad / "solution.json").write_text(json.dumps({"status": "solved"}), "utf-8")
+    with OrmSession(service._engine) as db:
+        db.add(SolveJob(id="s14r-bad-base", instance_id="bad-committed", requested_by="test",
+                        kind="repair", base="committed", status="solved", params={}))
+        db.commit()
+    with pytest.raises(ContractError, match="solution_v2"):
+        synthetic.get("/jobs/s14r-bad-base/base-solution")
 
 
 def test_phases_in_order() -> None:

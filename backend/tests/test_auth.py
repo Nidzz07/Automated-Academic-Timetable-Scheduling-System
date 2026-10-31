@@ -12,9 +12,9 @@ from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import jwt
 import pytest
 from fastapi.testclient import TestClient
-from jose import jwt
 from sqlalchemy import Engine, create_engine, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as OrmSession
@@ -22,8 +22,12 @@ from sqlalchemy.orm import Session as OrmSession
 from backend.app import create_user
 from backend.app import service as service_module
 from backend.app.auth import (
+    FAILED_LOGIN_WINDOW_S,
+    MAX_FAILED_LOGINS,
     Actor,
     AuthSettings,
+    LoginLimiter,
+    TooManyAttempts,
     hash_password,
     issue_token,
     read_token,
@@ -104,7 +108,7 @@ class TestLogin:
         assert response.status_code == 200
         body = response.json()
         assert body["token_type"] == "bearer" and body["role"] == "coordinator"
-        claims = jwt.get_unverified_claims(body["access_token"])
+        claims = jwt.decode(body["access_token"], options={"verify_signature": False})
         assert claims["sub"] == "auth-coordinator" and claims["role"] == "coordinator"
         headers = {"Authorization": f"Bearer {body['access_token']}"}
         assert client.get("/instances", headers=headers).status_code == 200
@@ -172,6 +176,73 @@ class TestTokens:
         monkeypatch.setenv("SECRET_KEY", "s" * 32)
         monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", "7")
         assert AuthSettings.from_env() == AuthSettings("s" * 32, 7.0)
+
+    @pytest.mark.parametrize("minutes", ["4.9", "1441", "0", "-5", "nan", "inf", "soon"])
+    def test_settings_refuse_an_expiry_out_of_bounds(
+        self, monkeypatch: pytest.MonkeyPatch, minutes: str
+    ) -> None:
+        monkeypatch.setenv("SECRET_KEY", "s" * 32)
+        monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", minutes)
+        with pytest.raises(RuntimeError, match="from 5 to 1440"):
+            AuthSettings.from_env()
+
+    @pytest.mark.parametrize("minutes", ["5", "1440"])
+    def test_settings_accept_the_bounds(self, monkeypatch: pytest.MonkeyPatch,
+                                        minutes: str) -> None:
+        monkeypatch.setenv("SECRET_KEY", "s" * 32)
+        monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", minutes)
+        assert AuthSettings.from_env().expire_minutes == float(minutes)
+
+
+class TestLoginLimit:
+    """S14r: 5 failed logins for a username in 5 minutes give 429 with Retry-After; a
+    success clears them; other usernames are not affected."""
+
+    @pytest.fixture(autouse=True)
+    def forget(self, client: TestClient) -> Iterator[None]:
+        yield
+        client.app.state.service.logins = LoginLimiter()  # later tests log in again
+
+    def login(self, client: TestClient, username: str, password: str):
+        return client.post("/auth/login", json={"username": username, "password": password})
+
+    def test_limited_after_five_failures(self, client: TestClient, engine: Engine) -> None:
+        for _ in range(MAX_FAILED_LOGINS):
+            assert self.login(client, "auth-administrator", "wrong").status_code == 401
+        limited = self.login(client, "auth-administrator", PASSWORD)  # even the right one
+        assert limited.status_code == 429
+        assert 0 < int(limited.headers["retry-after"]) <= FAILED_LOGIN_WINDOW_S
+        assert limited.json() == {
+            "detail": "Too many failed sign-in attempts. Try again in a few minutes."}
+        assert json.loads(audit_rows(engine, "auth-administrator", "login")[-1].detail) == {
+            "success": False, "limited": True}
+        # per username: another account still logs in
+        assert self.login(client, "auth-student", PASSWORD).status_code == 200
+
+    def test_a_success_clears_the_failures(self, client: TestClient) -> None:
+        for _ in range(MAX_FAILED_LOGINS - 1):
+            assert self.login(client, "auth-coordinator", "wrong").status_code == 401
+        assert self.login(client, "auth-coordinator", PASSWORD).status_code == 200
+        for _ in range(MAX_FAILED_LOGINS):
+            assert self.login(client, "auth-coordinator", "wrong").status_code == 401
+        assert self.login(client, "auth-coordinator", "wrong").status_code == 429
+
+    def test_window_expires(self) -> None:
+        now = [1000.0]
+        limiter = LoginLimiter(limit=2, window_s=60, clock=lambda: now[0])
+        limiter.failed("u")
+        now[0] += 30
+        limiter.failed("u")
+        with pytest.raises(TooManyAttempts) as raised:
+            limiter.check("u")
+        assert raised.value.retry_after == 30  # the first failure leaves the window then
+        now[0] += 30
+        limiter.check("u")  # one failure left in the window
+        limiter.failed("v")
+        assert set(limiter._failures) == {"u", "v"}
+        now[0] += 60
+        limiter.failed("w")  # expired usernames are dropped
+        assert set(limiter._failures) == {"w"}
 
 
 @pytest.fixture(scope="module")
@@ -285,7 +356,8 @@ class TestCreateUserCli:
         body = client.post("/auth/login", json={"username": username,
                                                 "password": "cli-pass-123"}).json()
         assert body[claim] == value
-        assert jwt.get_unverified_claims(body["access_token"])[claim] == value
+        claims = jwt.decode(body["access_token"], options={"verify_signature": False})
+        assert claims[claim] == value
 
     @pytest.mark.parametrize("args", [["--faculty", "fac-nobody"], ["--cohort", "coh-nobody"],
                                       ["--faculty", "coh-se-a"]])

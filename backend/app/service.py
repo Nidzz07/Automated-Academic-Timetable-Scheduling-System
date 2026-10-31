@@ -39,11 +39,16 @@ lists jobs run on are served.
 
 S14n: a faculty or room unavailability already in force (every slot held by an accepted,
 uncleared change for the same faculty or room) is refused, never queued nor accepted again.
+
+S14r: a job's error keeps the exception in the job row, the audit row and the server log;
+clients other than an administrator get :data:`JOB_FAILED`. At most :data:`MAX_QUEUED`
+jobs wait; failed logins are limited per username (:class:`backend.app.auth.LoginLimiter`).
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import threading
 import time
 import uuid
@@ -58,7 +63,7 @@ from sqlalchemy import Engine, and_, create_engine, func, or_, select, update
 from sqlalchemy.orm import Session as OrmSession
 from sqlalchemy.pool import NullPool
 
-from backend.app.auth import Actor, verify_password
+from backend.app.auth import Actor, LoginLimiter, TooManyAttempts, verify_password
 from backend.app.store import REPO, InstanceStore
 from db.models import AuditEntry, SolveJob, User
 from solver.backtracking import backtrack_solve
@@ -83,6 +88,11 @@ BREAK_PIN_KINDS = ("lunch", "coffee", "break")  # display.json pin kinds never r
 LEFT_OUT = {"FACULTY_CLASH": "busy", "PINNED_BLOCK": "busy",
             "FACULTY_UNAVAILABLE": "unavailable"}
 IN_FORCE = "This change is already in force"
+JOB_FAILED = "The solver failed. An administrator can see the details in the audit log."
+PLAIN_ERRORS = ("server restarted", "cancelled")  # job errors that carry no exception text
+MAX_QUEUED = 5  # jobs waiting for a pool worker; one more is refused (HTTP 429)
+AUDIT_ERROR_CHARS = 400  # of the exception text, so the row stays within detail's 1024
+log = logging.getLogger(__name__)
 UNAVAILABLE_OF = {"faculty_unavailable": "faculty_id", "room_unavailable": "room_id"}
 
 
@@ -96,6 +106,10 @@ class BadChange(ValueError):
 
 class Conflict(Exception):
     """The request does not fit the instance's current state (HTTP 409)."""
+
+
+class Busy(Exception):
+    """Too many jobs are already waiting (HTTP 429)."""
 
 
 @cache
@@ -214,10 +228,13 @@ class ChronosService:
         self._pool = ProcessPoolExecutor(max_workers=max_workers)
         self._lock = threading.Lock()
         self._official_lock = threading.Lock()  # accepting a repair vs. a job ending
+        self._queue_lock = threading.Lock()  # counting queued jobs vs. adding one
+        self.logins = LoginLimiter()
         # instance id -> ((mtime_ns, size) of edge_list.json, the contract-checked payload)
         self._edge_lists: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
-        # shortcut: assumes one API process per database (a second one starting would fail
-        # the first one's live jobs); give jobs an owner id before running several workers.
+        # shortcut: jobs run in this process's pool and live only in it, so this assumes one
+        # API process per database (Render: exactly one instance, one worker); a second one
+        # starting would fail the first one's live jobs here. Give jobs an owner id first.
         with OrmSession(engine) as db:
             unfinished = select(SolveJob).where(SolveJob.status.in_(("queued", "running")))
             for job in db.scalars(unfinished):
@@ -353,14 +370,25 @@ class ChronosService:
         return edge_list
 
     def login(self, username: str, password: str) -> Actor | None:
-        """The account's actor when the password matches, else None. Audited either way."""
+        """The account's actor when the password matches, else None. Audited either way.
+        Raises :class:`backend.app.auth.TooManyAttempts` (audited, password unchecked)
+        while the username has too many recent failures."""
+        try:
+            self.logins.check(username)
+        except TooManyAttempts:
+            with OrmSession(self._engine) as db:
+                self._audit(db, username, "login", {"success": False, "limited": True})
+                db.commit()
+            raise
         with OrmSession(self._engine) as db:
             user = db.scalar(select(User).where(User.username == username))
             ok = verify_password(password, user.password_hash if user else None)
             self._audit(db, username, "login", {"success": ok})
             db.commit()
             if not (ok and user):
+                self.logins.failed(username)
                 return None
+            self.logins.succeeded(username)
             return Actor(user.username, user.role, user.faculty_ref, user.cohort_ref)
 
     def start_solve(
@@ -499,7 +527,12 @@ class ChronosService:
             "started_at": _now(),
             "ended_at": None,
         }
-        with OrmSession(self._engine) as db:  # audited before it runs: no unaudited job
+        # audited before it runs: no unaudited job
+        with self._queue_lock, OrmSession(self._engine) as db:
+            queued = db.scalar(select(func.count()).select_from(SolveJob)
+                               .where(SolveJob.status == "queued"))
+            if queued >= MAX_QUEUED:
+                raise Busy(f"{queued} jobs are already waiting. Try again when one has ended.")
             audit_id = self._audit(db, actor, kind, detail)
             db.add(SolveJob(id=job_id, instance_id=instance_id, requested_by=actor, kind=kind,
                             base=base, status="queued", params=params, audit_id=audit_id,
@@ -518,6 +551,7 @@ class ChronosService:
             status, error = "error", "cancelled"
         elif (exc := future.exception()) is not None:
             status, error = "error", f"{type(exc).__name__}: {exc}"
+            log.error("job %s failed", job_id, exc_info=exc)
         else:
             status, solution = future.result()
         with self._official_lock, OrmSession(self._engine) as db:
@@ -529,6 +563,8 @@ class ChronosService:
                 in_force = [c.id for c in self._accepted(db, job.instance_id)]
                 if job.kind == "solve" and (job.built_with or []) != in_force:
                     extra["stale"] = True  # D56: kept, never official
+            if error is not None:  # the administrator's view of it (GET /audit)
+                extra["error"] = error[:AUDIT_ERROR_CHARS]
             if job.audit_id is not None:
                 self._finish_audit(db, job.audit_id, status, extra)
             db.commit()
@@ -601,8 +637,12 @@ class ChronosService:
                 return None
             if job.base == COMMITTED:
                 # shortcut: the committed file as it is now; it changes only by a commit
-                return self.store.read(job.instance_id, "solution")
-            return db.get_one(SolveJob, job.base).solution
+                solution = self.store.read(job.instance_id, "solution")
+            else:
+                solution = db.get_one(SolveJob, job.base).solution
+        if solution is not None:  # solution.json removed since: 404, as before
+            check_contract("solution_v2", solution)
+        return solution
 
     @staticmethod
     def _finish_audit(
@@ -636,11 +676,12 @@ class ChronosService:
                 for row in rows
             ]
 
-    def job(self, job_id: str) -> dict[str, Any] | None:
+    def job(self, job_id: str, details: bool = False) -> dict[str, Any] | None:
         """The job's kind, status, its phase while running and, once solved or infeasible,
         its solution; a repair's base and change, and when and by whom it was accepted;
         the accepted changes it was built with (D52); for a finished solve, whether it is
-        stale (D56). None if unknown."""
+        stale (D56); its error, the exception text only with *details* (S14r). None if
+        unknown."""
         with OrmSession(self._engine) as db:
             job = db.get(SolveJob, job_id)
             if job is None:
@@ -663,5 +704,6 @@ class ChronosService:
                     view["stale"] = self._stale(
                         job, self._accepted(db, job.instance_id, cleared=True))
             if job.error is not None:
-                view["error"] = job.error
+                view["error"] = (job.error if details or job.error in PLAIN_ERRORS
+                                 else JOB_FAILED)
             return view

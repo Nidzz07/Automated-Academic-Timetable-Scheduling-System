@@ -19,7 +19,7 @@ psycopg2-binary==2.9.9     # PostgreSQL driver (sync)
 # asyncpg==0.29.0           # uncomment if using async SQLAlchemy engine
 
 # --- Backend: Auth ---
-python-jose[cryptography]==3.3.0
+PyJWT==2.15.0              # HS256 access tokens; replaces python-jose 3.3.0 (advisories unfixed through 3.5.0, S14r)
 python-multipart==0.0.12   # form data support for auth endpoints
 
 # --- Config / env ---

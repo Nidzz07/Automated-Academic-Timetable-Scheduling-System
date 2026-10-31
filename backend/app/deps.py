@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
+from jwt import InvalidTokenError
 
 from backend.app.auth import Actor, AuthSettings, read_token
 from backend.app.service import ChronosService
@@ -34,7 +34,7 @@ def current_actor(
         if credentials is None:
             raise ValueError("no bearer token")
         return read_token(credentials.credentials, settings)
-    except (JWTError, KeyError, ValueError) as exc:
+    except (InvalidTokenError, KeyError, ValueError) as exc:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
             "missing, invalid or expired token",

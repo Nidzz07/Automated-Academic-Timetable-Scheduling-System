@@ -131,35 +131,112 @@ cd frontend; npm ci; npm run dev
 Open http://localhost:5173 and log in as one of the demo accounts.
 
 `python -m backend.app.demo_seed` creates the four accounts only if they are missing, so a second
-run changes nothing. The password must be at least 8 characters. With `--reset` it also clears
-the accepted changes of `even-2025-26`, exactly as `DELETE /instances/{id}/changes` does
-(audited as `demo_seed`), then runs one solve with the default budget (about 30 s). That solve
-becomes the official timetable (D56). Run `--reset` while the API is not solving: like an API
-start, it marks jobs left queued or running as `error`.
+run changes nothing. Each account's password is `CHRONOS_DEMO_PASSWORD_ADMIN`,
+`CHRONOS_DEMO_PASSWORD_COORDINATOR`, `CHRONOS_DEMO_PASSWORD_FACULTY` or
+`CHRONOS_DEMO_PASSWORD_STUDENT` when set, else `CHRONOS_DEMO_PASSWORD`; at least 8 characters.
+With `--reset` it also sets every existing demo account's password again, clears the accepted
+changes of `even-2025-26`, exactly as `DELETE /instances/{id}/changes` does (audited as
+`demo_seed`), then runs one solve with the default budget (about 30 s). That solve becomes the
+official timetable (D56). Run `--reset` while the API is not solving: like an API start, it marks
+jobs left queued or running as `error`.
 
-## Deploy (D55)
+## Deploy (D55, D57, D59)
 
 One Render web service serves the API under `/api` and the built frontend at `/`
-(`backend/app/prod.py`). Supabase Postgres is the database.
+(`backend/app/prod.py`, which serves no `/api/docs`, `/api/redoc` or `/api/openapi.json`).
+Supabase Postgres is the database. Every value below in angle brackets is a placeholder: never
+write a real password, key or URL into the repository.
+
+The backend refuses every database host outside `localhost`, `127.0.0.1`, `::1`, `db` and
+`postgres` unless `CHRONOS_ALLOW_REMOTE_DB=1` is set (`db/local_guard.py`, used by
+`backend.app.main` and `demo_seed`; `migrations/env.py` has the same rule). Only the Render
+service sets it permanently, by hand in Render's environment settings (D57); Nidhi sets it for
+the commands in step 2 only (D55, D59). It is never set in `.env` files, the repository, tests or
+an agent session.
+
+### 1. Supabase
+
+1. Create a project; keep its database password somewhere safe.
+2. **Connect → Session pooler**: copy that connection string. Do not use the direct host
+   (`db.<project-ref>.supabase.co`): it is IPv6-only, and Render has no IPv6 outbound.
+3. Make it a SQLAlchemy URL: the scheme `postgresql+psycopg2://`, the password URL-encoded
+   (`@`, `:`, `/`, `#`, `%`, `?` and other special characters break the URL otherwise; PowerShell:
+   `[uri]::EscapeDataString(...)`), and `?sslmode=require` at the end:
+
+   ```
+   postgresql+psycopg2://postgres.<project-ref>:<url-encoded-password>@<session-pooler-host>:5432/postgres?sslmode=require
+   ```
+
+### 2. Migrations and demo accounts, by hand from a laptop (D55, D59)
+
+Only Nidhi runs this, in a **new** PowerShell window at the repo root, closed afterwards, so
+nothing below outlives it:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+
+# The database password, typed and never echoed; the URL is built in memory only.
+$pw = [Net.NetworkCredential]::new('', (Read-Host -AsSecureString 'Supabase database password')).Password
+$env:DATABASE_URL = "postgresql+psycopg2://postgres.<project-ref>:$([uri]::EscapeDataString($pw))@<session-pooler-host>:5432/postgres?sslmode=require"
+Remove-Variable pw
+$env:CHRONOS_ALLOW_REMOTE_DB = "1"
+
+alembic upgrade head
+alembic current        # must print the head revision: 0009_accepted_changes (head)
+
+# Demo passwords (at least 8 characters), typed and never echoed. One for all four accounts,
+# or set CHRONOS_DEMO_PASSWORD_ADMIN, _COORDINATOR, _FACULTY, _STUDENT the same way to give
+# an account its own.
+$env:CHRONOS_DEMO_PASSWORD = [Net.NetworkCredential]::new('', (Read-Host -AsSecureString 'Demo password')).Password
+python -m backend.app.demo_seed --reset
+
+Remove-Item Env:CHRONOS_DEMO_PASSWORD*, Env:CHRONOS_ALLOW_REMOTE_DB, Env:DATABASE_URL
+exit
+```
+
+`demo_seed --reset` creates the four demo accounts if missing, sets every demo account's
+password again (so the known logins come back), clears the accepted changes and solves once
+(about 30 s); that solve becomes the official timetable. It prints no password. Run it when
+nobody is solving on the site: like an API start, it marks jobs left queued or running as
+`error`.
+
+### 3. Render
+
+**New → Web Service**, from this GitHub repository:
 
 | Render setting | Value |
 |---|---|
-| Language / runtime | Docker |
+| Language | Docker |
+| Branch | `main` |
 | Dockerfile path | `backend/Dockerfile.prod` |
-| Docker build context | `.` (repo root) |
+| Docker build context directory | `.` (the repo root) |
+| Instance type | Free |
+| Instances | exactly 1, never scaled out: solve and repair jobs run inside the one API process, so a second instance would mark the first one's live jobs `error` (`backend/README.md`) |
 | Health check path | `/api/health` |
-| Instances | 1 (one API process per database, `backend/README.md`) |
+| Auto-Deploy | On Commit |
 
-Environment variables (set them in Render, never in the repo): `DATABASE_URL`, `SECRET_KEY`,
-`ACCESS_TOKEN_EXPIRE_MINUTES` (optional). Render sets `PORT`.
+Environment variables (Render → the service → Environment), every one the production app reads:
 
-- **Applying migrations to Supabase is a human-only step.** Nidhi runs `alembic upgrade head`
-  by hand, with `CHRONOS_ALLOW_REMOTE_DB=1` for that one command (D55). Agents never do.
-- **Remote database access (D57).** The backend refuses every database host outside
-  `localhost`, `127.0.0.1`, `::1`, `db` and `postgres` unless `CHRONOS_ALLOW_REMOTE_DB=1` is set
-  (`db/local_guard.py`, used by `backend.app.main` and `demo_seed`). Only the Render service
-  sets `CHRONOS_ALLOW_REMOTE_DB=1`, by hand in Render's environment settings, so it can use
-  Supabase. It is never set in `.env` files, the repository, tests or an agent session.
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | the step 1 URL, password URL-encoded, ending `?sslmode=require` |
+| `SECRET_KEY` | a new random key for production only, at least 32 characters (`python -c "import secrets; print(secrets.token_hex(32))"`) |
+| `CHRONOS_ALLOW_REMOTE_DB` | `1` (here and nowhere else, D57) |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | optional, 5 to 1440; default 30 |
+
+Already set, do not add: `PORT` (Render sets it; `backend/Dockerfile.prod` defaults it to 8000)
+and `CHRONOS_FRONTEND_DIST` (unset in the image: the app serves `/app/frontend/dist`, where the
+image puts the built frontend). The image has no `.env` file. The free instance sleeps when idle,
+so the first request after a while takes about a minute; a sleep or redeploy ends any running
+job, which is then marked `error` ("server restarted").
+
+### 4. After deploying
+
+- Open `https://<service-name>.onrender.com` and log in as `demo-admin`, `demo-coordinator`,
+  `demo-faculty` or `demo-student` with the step 2 passwords. Five failed logins for one
+  username within five minutes lock that username for the rest of those five minutes (429).
+- To reset the demo data, run step 2 again in a new window (`alembic upgrade head` changes
+  nothing when Supabase is already at head).
 
 ## Running things
 
