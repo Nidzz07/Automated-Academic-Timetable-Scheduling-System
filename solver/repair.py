@@ -69,6 +69,12 @@ run with everything free runs out of
 nothing (ROADMAP D21, D33). Pins the caller marks *protected* (breaks, lunch)
 are never suggested as the relaxation (S14e).
 
+**Options, off by default (S14s, for the D58 decision).** ``prefer_sub_rooms``
+tries a split lab's sub-rooms before the whole lab. ``last_ring_portfolio``
+gives the every-session-free ring a node cap and, when it runs out, a second
+search with sub-rooms first and no preference for old places (S14l). Off, every
+result is the one it was before S14s.
+
 **Substitutes** (S14e, D53). :func:`substitute_candidates` filters the
 faculty members the caller says are qualified - the solver never decides who
 is - down to those who can take a session where it is: the substitution is
@@ -90,6 +96,7 @@ from solver.backtracking import (
     _build_initial_domains,
     _new_state,
     _placement_ok,
+    _room_rank,
     _SolverState,
     _unassign,
     backtrack_solve,
@@ -257,6 +264,8 @@ def repair(
     time_limit_s: float | None = None,
     protected: Collection[int] = (),
     mus_nodes: int = MUS_NODES,
+    prefer_sub_rooms: bool = False,
+    last_ring_portfolio: bool = False,
     stats: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """*solution* repaired for *change*: a ``solution.v2`` valid against
@@ -286,9 +295,20 @@ def repair(
         explanation never suggests relaxing (:func:`solver.mus.explain`).
     mus_nodes:
         Search nodes per check of an explanation (:data:`solver.mus.MUS_NODES`).
+    prefer_sub_rooms:
+        Rings, the restore pass and the closing improve try a split lab's sub-rooms
+        before the whole lab (D58, S14s). Off by default: every result as before.
+        The explanation of an infeasible change does not use it.
+    last_ring_portfolio:
+        The ring with every session free gets *ring_nodes* like the others; if it
+        runs out, a second search follows with sub-rooms first and no preference
+        for old places (S14l, S14s). Only when that one also runs out of time is
+        it a :class:`TimeoutError`; a proof from either search is infeasible.
+        Off by default: that ring has no node cap, as before.
     stats:
         If given, filled with ``hit`` (sessions the change hit), ``rings``
-        (``[ring, freed, outcome]`` per search), ``room_changed`` (same slot,
+        (``[ring, freed, outcome]`` per search; the portfolio's second search
+        is ring ``"fallback"``), ``room_changed`` (same slot,
         new room), ``nodes``, ``improve`` (its stats) and, when infeasible,
         ``mus`` (the stats of :func:`solver.mus.explain`).
 
@@ -382,13 +402,22 @@ def repair(
             seed_assignment={sid: old[sid][0] for sid in frozen},
             seed_rooms={**{sid: old[sid][1] for sid in frozen}, **forced},
             prefer=old,
-            node_limit=None if everything else ring_nodes,
+            node_limit=ring_nodes if not everything or last_ring_portfolio else None,
             time_limit_s=budget,
+            prefer_sub_rooms=prefer_sub_rooms,
         )
         nodes += result.nodes_explored
         rings.append(["all" if everything else len(rings), len(free), result.outcome])
         if result.solved:
             break
+        if everything and last_ring_portfolio and result.timed_out:
+            # S14l: the old places in whole split labs can stall this search; try without them
+            result = backtrack_solve(graph, changed, seed_rooms=forced or None,
+                                     time_limit_s=left(), prefer_sub_rooms=True)
+            nodes += result.nodes_explored
+            rings.append(["fallback", len(free), result.outcome])
+            if result.solved:
+                break
         if everything:
             if result.timed_out:
                 raise TimeoutError(f"no repair found within {time_limit_s} s (ROADMAP D33)")
@@ -411,6 +440,7 @@ def repair(
 
     # --- restore: put moved sessions back where they were, whole blocks at a time
     state = _state(graph, changed, forced)
+    state.prefer_sub_rooms = prefer_sub_rooms
     for sid in sorted(result.assignment):
         start = result.assignment[sid]
         _assign(state, sid, start, result.room_assignment[sid],
@@ -424,7 +454,8 @@ def repair(
         """Every member at its old start: in its old room, or (any_room) the first that fits."""
         for s in unit:
             start = old[s][0]
-            rooms = ([r for r in sorted({r for st, r in state.domains[s] if st == start})
+            rooms = ([r for r in sorted({r for st, r in state.domains[s] if st == start},
+                                        key=lambda r: _room_rank(state, r))
                       if r != old[s][1]] if any_room else [])
             if not any(_put(state, s, start, r) for r in [old[s][1], *rooms]):
                 return False
@@ -471,7 +502,8 @@ def repair(
             if s["id"] not in moved:
                 s["fixed_slot"] = {"day": starts[s["id"]].day, "period": starts[s["id"]].period}
         repaired = improve(held, repaired, max_moves=max_moves, seed=seed,
-                           time_limit_s=left(), stats=improve_stats)
+                           time_limit_s=left(), prefer_sub_rooms=prefer_sub_rooms,
+                           stats=improve_stats)
         repaired["quality"] = score(changed, {
             i["session_id"]: SlotId(i["day"], i["period"]) for i in repaired["assignment"]
         })

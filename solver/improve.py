@@ -81,6 +81,7 @@ from solver.backtracking import (
     _new_state,
     _placement_ok,
     _room_is_available,
+    _room_rank,
     _SolverState,
     _unassign,
 )
@@ -208,13 +209,15 @@ class _Penalty:
 
 
 def _room_choices(state: _SolverState) -> dict[str, dict[SlotId, list[str]]]:
-    """Session -> start -> rooms its static domain allows there, sorted by id."""
+    """Session -> start -> rooms its static domain allows there, in
+    :func:`solver.backtracking._room_rank` order (by id unless ``prefer_sub_rooms``)."""
     choices: dict[str, dict[SlotId, list[str]]] = {}
     for sid in sorted(state.domains):
         by_start: dict[SlotId, list[str]] = {}
         for start, room in sorted(state.domains[sid]):
             by_start.setdefault(start, []).append(room)
-        choices[sid] = by_start
+        choices[sid] = {start: sorted(rooms, key=lambda r: _room_rank(state, r))
+                        for start, rooms in by_start.items()}
     return choices
 
 
@@ -226,6 +229,7 @@ def improve(
     seed: int = SEED,
     time_limit_s: float | None = None,
     extended_moves: bool = False,
+    prefer_sub_rooms: bool = False,
     stats: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """A ``solution.v2`` timetable at least as good as *solution*, still valid.
@@ -249,6 +253,9 @@ def improve(
         Also propose Kempe-chain interchanges and moves aimed at student gaps
         (module docstring). ``False`` gives exactly the result of the three
         moves alone.
+    prefer_sub_rooms:
+        A moved session tries a split lab's sub-rooms before the whole lab
+        (D58, S14s); off by default, which keeps every result as it was.
     stats:
         If given, filled with move counts: ``proposed``, ``infeasible``,
         ``accepted`` and ``improved`` (new best), the last two also per move
@@ -277,6 +284,7 @@ def improve(
 
     graph = build_conflict_graph(payload)
     state = _new_state(graph, payload)
+    state.prefer_sub_rooms = prefer_sub_rooms
     _build_initial_domains(state)
     rooms_at = _room_choices(state)
     penalty = _Penalty(payload, graph.grid)
