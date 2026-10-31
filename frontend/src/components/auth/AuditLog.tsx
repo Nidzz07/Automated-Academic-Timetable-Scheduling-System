@@ -4,7 +4,7 @@ import { useAuditQuery } from '@/api/queries';
 import { EdgeList, Labels } from '@/adapters/timetable';
 import { ROLE_CAPABILITIES } from '@/types/roles';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatTimestamp } from '@/lib/format';
+import { displayText, formatTimestamp } from '@/lib/format';
 import { UI, auditSentence, changePhrase } from '@/lib/wording';
 
 // GET /audit accepts 1..1000 (backend/app/routers.py); 100 is its default
@@ -76,7 +76,7 @@ export const AuditLog: React.FC<AuditLogProps> = ({ client, edgeList, labels, se
                           Details: <span data-testid="audit-code" className="font-mono">{entry.action}</span>
                         </summary>
                         {entry.detail && (
-                          <pre className="mt-1 whitespace-pre-wrap break-all font-mono">{JSON.stringify(entry.detail)}</pre>
+                          <pre className="mt-1 whitespace-pre-wrap break-all font-mono">{displayText(JSON.stringify(entry.detail))}</pre>
                         )}
                       </details>
                     </td>

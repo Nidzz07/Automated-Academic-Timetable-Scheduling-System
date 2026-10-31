@@ -1,9 +1,10 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { FacultyLoad, loadText } from '@/adapters/timetable';
+import { FacultyLoad } from '@/adapters/timetable';
 import { QualityRule } from '@/adapters/solution';
-import { loadLimitHours, loadPartsText, readableSolverText } from '@/lib/wording';
+import { loadLimitHours, loadPartsText, loadText, ruleWording } from '@/lib/wording';
 import { OverLimitWarning } from './OverLimitWarning';
+import { RuleFindings } from './QualityScoreCard';
 
 interface FacultyWorkloadCardProps {
   facultyName: string;
@@ -37,9 +38,8 @@ export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
             </CardTitle>
             <CardDescription>Sessions placed in this timetable plus the fixed items this teacher holds.</CardDescription>
           </div>
-          {/* The department's own notation, e.g. 6T + 8P = 14 */}
           <p data-testid="workload-formula-badge" className="font-serif text-xl font-semibold">
-            {loadText(load)} h
+            {loadText(load)}
           </p>
         </div>
       </CardHeader>
@@ -56,11 +56,11 @@ export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
         )}
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
           <div>
-            <dt className="text-xs font-semibold">Theory (T)</dt>
+            <dt className="text-xs font-semibold">Lectures</dt>
             <dd className="text-base">{load.theory} h a week</dd>
           </div>
           <div>
-            <dt className="text-xs font-semibold">Practical (P)</dt>
+            <dt className="text-xs font-semibold">Practicals</dt>
             <dd className="text-base">{load.practical} h a week</dd>
           </div>
           <div>
@@ -72,15 +72,20 @@ export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
             <dd className="text-base font-semibold">{load.total} h a week</dd>
           </div>
           <div className="col-span-2 sm:col-span-4">
-            <dt className="text-xs font-semibold">
-              Solver's weekly-limit check <span className="font-mono">S-LOAD16</span>
+            <dt data-testid="load-rule-heading" className="text-xs font-semibold">
+              <span>{ruleWording('S-LOAD16').title}</span>{' '}
+              <span data-testid="load-rule-code" className="font-mono text-[11px] font-normal text-muted-foreground">
+                S-LOAD16
+              </span>
             </dt>
             <dd data-testid="load-status" className="text-xs">
-              {!loadRule
-                ? 'not reported by the solver'
-                : loadRule.status === 'not_evaluated'
-                  ? 'not evaluated'
-                  : readableSolverText(loadRule.explanation, nameOf)}
+              {!loadRule ? (
+                'not reported by the solver'
+              ) : loadRule.status === 'not_evaluated' ? (
+                'not evaluated'
+              ) : (
+                <RuleFindings rule={loadRule} nameOf={nameOf} warningTestId="load-rule-over-limit" />
+              )}
             </dd>
           </div>
         </dl>
