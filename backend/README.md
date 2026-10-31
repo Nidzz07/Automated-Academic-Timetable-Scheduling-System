@@ -14,7 +14,7 @@ Read from the environment, else from `backend/.env` (never committed):
 | `CHRONOS_ALLOW_REMOTE_DB` | `1` lets the app use a non-local database. D57: set only in the Render service's environment, by hand, and for Nidhi's own hand-run `alembic` and `demo_seed` commands (D55, D59); never in a `.env` file, the repository, tests or an agent session. |
 | `SECRET_KEY` | HS256 signing key for access tokens, at least 32 characters. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime, default 30; a value outside 5 to 1440 stops the app at startup. |
-| `CHRONOS_DEMO_PASSWORD` | Password of the demo accounts, `python -m backend.app.demo_seed` only (README.md). `CHRONOS_DEMO_PASSWORD_ADMIN`, `_COORDINATOR`, `_FACULTY`, `_STUDENT` override it per account. |
+| `CHRONOS_DEMO_PASSWORD` | Password of the demo accounts, `python -m backend.app.demo_seed` only (README.md). `CHRONOS_DEMO_PASSWORD_ADMIN`, `_COORDINATOR`, `_FACULTY`, `_STUDENT` override it per account. `--reset` sets them again, clears the accepted changes and makes the committed `solution.json` official without solving; `--solve` solves once instead. |
 | `CHRONOS_FRONTEND_DIST` | Built frontend that `backend.app.prod:app` serves at `/` (API under `/api`); default `frontend/dist`. |
 | `PORT` | Port `backend/Dockerfile.prod` listens on; Render sets it; default 8000. |
 

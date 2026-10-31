@@ -136,9 +136,12 @@ run changes nothing. Each account's password is `CHRONOS_DEMO_PASSWORD_ADMIN`,
 `CHRONOS_DEMO_PASSWORD_STUDENT` when set, else `CHRONOS_DEMO_PASSWORD`; at least 8 characters.
 With `--reset` it also sets every existing demo account's password again, clears the accepted
 changes of `even-2025-26`, exactly as `DELETE /instances/{id}/changes` does (audited as
-`demo_seed`), then runs one solve with the default budget (about 30 s). That solve becomes the
-official timetable (D56). Run `--reset` while the API is not solving: like an API start, it marks
-jobs left queued or running as `error`.
+`demo_seed`), then makes the committed `data/instances/even-2025-26/solution.json` the official
+timetable again without running the solver (S14y): it is recorded as one finished solve, audited
+as a solve by `demo_seed`, so the demo starts from the timetable the repair measurements used.
+`--solve` does the same but runs one fresh solve with the default budget (about 30 s) instead, and
+that solve becomes the official timetable (D56). Run either while the API is not solving: like an
+API start, it marks jobs left queued or running as `error`.
 
 ## Deploy (D55, D57, D59)
 
@@ -195,8 +198,10 @@ exit
 ```
 
 `demo_seed --reset` creates the four demo accounts if missing, sets every demo account's
-password again (so the known logins come back), clears the accepted changes and solves once
-(about 30 s); that solve becomes the official timetable. It prints no password. Run it when
+password again (so the known logins come back), clears the accepted changes and makes the
+committed `solution.json` the official timetable again, without solving. `--solve` in place of
+`--reset` solves once instead (about 30 s), and that solve becomes official. It prints no
+password. Run it when
 nobody is solving on the site: like an API start, it marks jobs left queued or running as
 `error`.
 

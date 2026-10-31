@@ -1,5 +1,6 @@
 """S16b (ROADMAP D55): python -m backend.app.demo_seed creates the demo accounts once and
---reset clears the accepted changes and solves the real instance to an official timetable.
+--reset clears the accepted changes and makes the committed solution.json official again
+(S14y); --solve solves the real instance to an official timetable instead.
 
 Its own scratch database: --reset makes a new official solution for even-2025-26, which
 the shared one must not see.
@@ -7,6 +8,7 @@ the shared one must not see.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 
 import pytest
@@ -15,12 +17,13 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session as OrmSession
 
 from backend.app import demo_seed
+from backend.app import service as service_module
 from backend.app.auth import hash_password
 from backend.app.store import INSTANCES_DIR
 from backend.tests.conftest import bearer, scratch_database
 from backend.tests.test_api import REAL, client_for
 from backend.tests.test_repair import ROOM_603_MONDAY, accept, audit, run
-from db.models import SolveJob, User
+from db.models import AuditEntry, SolveJob, User
 from solver.validate import validate_solution
 
 PASSWORD = "demo-pass-" + "x" * 8
@@ -91,28 +94,84 @@ def test_creates_once_then_changes_nothing(
     assert login.json()["faculty_id"] == "fac-anant-nimkar"
 
 
-def test_reset_clears_changes_and_leaves_a_valid_official_solve(
+def rows(url: str) -> tuple[dict[str, SolveJob], dict[int, AuditEntry]]:
+    """Every solve_job and audit_entry row, by id."""
+    engine = create_engine(url)
+    try:
+        with OrmSession(engine, expire_on_commit=False) as db:
+            return ({j.id: j for j in db.scalars(select(SolveJob))},
+                    {a.id: a for a in db.scalars(select(AuditEntry))})
+    finally:
+        engine.dispose()
+
+
+def test_reset_restores_the_committed_solution(
     url: str, env: None, client: TestClient, capsys: pytest.CaptureFixture
 ) -> None:
+    """S14y: an accepted change is cleared and the official timetable is the committed
+    solution.json again, recorded as one solved job without a solver run; no row is
+    deleted and the demo passwords are set again."""
+    committed = json.loads((INSTANCES_DIR / REAL / "solution.json").read_text("utf-8"))
     repaired = run(client, REAL, ROOM_603_MONDAY)
     assert repaired["status"] == "solved", repaired
     assert accept(client, repaired["id"]).status_code == 200
     assert len(client.get(f"/instances/{REAL}/changes").json()) == 1
+    assert client.get(f"/instances/{REAL}/solution").json() != committed
+    jobs, audits = rows(url)
 
     assert demo_seed.main(["--reset"]) == 0
     out = capsys.readouterr().out
+    assert out.count("reset the password of") == 4 and PASSWORD not in out
     assert "cleared 1 accepted change(s)" in out and ", official" in out
+    assert "restored the committed solution.json" in out and "solving" not in out
 
     assert client.get(f"/instances/{REAL}/changes").json() == []
     cleared = audit(url, demo_seed.ACTOR, "clear_changes")
     assert len(cleared) == 1 and '"cleared": 1' in cleared[0].detail
-    engine = create_engine(url)
-    try:
-        with OrmSession(engine) as db:
-            job = db.scalars(select(SolveJob).where(SolveJob.requested_by == demo_seed.ACTOR)).one()
-            assert (job.kind, job.status, job.built_with) == ("solve", "solved", [])
-    finally:
-        engine.dispose()
+    jobs_after, audits_after = rows(url)
+    assert jobs.keys() <= jobs_after.keys() and audits.keys() <= audits_after.keys()
+    (new,) = (jobs_after[i] for i in jobs_after.keys() - jobs.keys())
+    assert (new.kind, new.status, new.built_with, new.requested_by, new.params) == (
+        "solve", "solved", [], demo_seed.ACTOR, {"source": "solution.json"})
+    assert new.solution == committed and new.error is None
+    solved = audit(url, demo_seed.ACTOR, "solve")
+    assert [a.id for a in solved] == [new.audit_id]
+    assert json.loads(solved[0].detail) | {"started_at": None, "ended_at": None} == {
+        "instance_id": REAL, "job_id": new.id, "source": "solution.json",
+        "status": "solved", "started_at": None, "ended_at": None}
+    for job_id, job in jobs.items():  # earlier jobs: only the cleared change's cleared_at
+        assert (job.status, job.solution, job.accepted_at) == (
+            jobs_after[job_id].status, jobs_after[job_id].solution,
+            jobs_after[job_id].accepted_at)
+    assert all(audits_after[i].detail == a.detail for i, a in audits.items())
+
+    official = client.get(f"/instances/{REAL}/solution", headers=bearer("student")).json()
+    for key in ("assignment", "quality", "metadata"):
+        assert official[key] == committed[key], key
+    assert official == committed
+    view = client.get(f"/jobs/{new.id}", headers=bearer("student")).json()
+    assert (view["source"], view["status"], view["stale"]) == ("solution.json", "solved", False)
+    assert "time_limit_s" not in view and "max_moves" not in view
+    current = client.get(f"/instances/{REAL}/edge-list/current").json()
+    assert validate_solution(current, official) == []
+
+
+def test_solve_keeps_the_fresh_solve(
+    url: str, env: None, client: TestClient, capsys: pytest.CaptureFixture
+) -> None:
+    """--solve clears the accepted changes and solves once at the default budget; that
+    solve becomes official (D56) and no earlier row is deleted."""
+    jobs, audits = rows(url)
+    assert demo_seed.main(["--solve"]) == 0
+    out = capsys.readouterr().out
+    assert "solving" in out and ", official" in out and "restored" not in out
+    jobs_after, audits_after = rows(url)
+    assert jobs.keys() <= jobs_after.keys() and audits.keys() <= audits_after.keys()
+    (job,) = (jobs_after[i] for i in jobs_after.keys() - jobs.keys())
+    assert (job.kind, job.status, job.built_with, job.requested_by) == (
+        "solve", "solved", [], demo_seed.ACTOR)
+    assert job.params == {"time_limit_s": service_module.DEFAULT_TIME_LIMIT_S,
+                          "max_moves": service_module.DEFAULT_MAX_MOVES}
     official = client.get(f"/instances/{REAL}/solution", headers=bearer("student")).json()
     assert official == job.solution
     current = client.get(f"/instances/{REAL}/edge-list/current").json()
