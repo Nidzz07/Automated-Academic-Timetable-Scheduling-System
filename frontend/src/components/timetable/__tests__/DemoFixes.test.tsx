@@ -644,9 +644,11 @@ describe('M9: the session details window', () => {
 });
 
 describe('M10: the division filter shows labels only', () => {
-  it('two groups named alike keep their ids out of the option text', () => {
+    it('groups once named alike now have distinct labels, and no ids in the option text', () => {
     const options = cohortOptions(edgeList, labelsFor(display));
-    expect(options.filter((o) => o.label === 'MDM-DBMS').length).toBeGreaterThan(0);
+    const mdm = options.filter((o) => o.label.includes('MDM-DBMS'));
+    expect(mdm.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(mdm.map((o) => o.label)).size).toBe(mdm.length);
     expect(options.some((o) => o.label.includes('coh-'))).toBe(false);
   });
 
