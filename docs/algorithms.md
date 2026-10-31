@@ -4,7 +4,9 @@
 `solver/`, checked against the code on `main` (commit 0d6b10e). Every measured number links to
 where it was recorded: [evaluation](evaluation-even-2025-26.md), [real
 solve](real-solve-even-2025-26.md), [repair](repair-even-2025-26.md). Course names are the
-ones the code's own docstrings give; where a module names none, this says so.
+eight of CLAUDE.md rule 6. Where a docstring names another course (CE303, Artificial
+Intelligence and Soft Computing), this document gives the closest of the eight and says why
+(S14s); those docstrings still say CE303. Rechecked against `main` on 2026-10-31 (S14s).
 
 ## Overview
 
@@ -54,15 +56,15 @@ column says what stops it in practice.
 
 | Algorithm | File: main function | Time | Course (as in the code) | Bounded by |
 |---|---|---|---|---|
-| Conflict graph | `graph.py`: `build_conflict_graph` | O(n + m + p) | none named | n/a |
-| Welsh-Powell colouring | `colouring.py`: `welsh_powell` | O(n log n + s·d·(n + m)) | none named | n/a (greedy) |
-| Backtracking + FC, MRV, degree, LCV, lab blocks | `backtracking.py`: `backtrack_solve` | Exp.: O((s·r)^n) nodes, O(n·s·r) per node | CE207; CE303 | `node_limit`, `time_limit_s` |
+| Conflict graph | `graph.py`: `build_conflict_graph` | O(n + m + p) | DSGT | n/a |
+| Welsh-Powell colouring | `colouring.py`: `welsh_powell` | O(n log n + s·d·(n + m)) | DSGT | n/a (greedy) |
+| Backtracking + FC, MRV, degree, LCV, lab blocks | `backtracking.py`: `backtrack_solve` | Exp.: O((s·r)^n) nodes, O(n·s·r) per node | DAA (CE207) | `node_limit`, `time_limit_s` |
 | Pre-solve (pigeonhole, Hall/Hopcroft–Karp, lab capacity) | `presolve.py`: `presolve`, `hopcroft_karp` | O(n·s·r + (F + C)·s²·√s) | Discrete Structures, CE201; CE207 | n/a (polynomial) |
-| Independent validator | `validate.py`: `validate_solution` | O(n log n + m·d + p + n²·d) worst | none named | n/a |
+| Independent validator | `validate.py`: `validate_solution` | O(n log n + m·d + p + n²·d) worst | Software Engineering | n/a |
 | YAML quality scoring | `scoring.py`: `score`, `load_rules` | O((C + m)·s + n·d + p) | Data Structures; DSGT; Statistical Methods, CE205; Software Engineering | n/a |
-| Simulated-annealing `improve()` (+ Kempe, gap moves, D54) | `improve.py`: `improve` | O(n·s·r·d + k·L), L local | CE303; DSGT; Data Structures | `max_moves` (k) |
+| Simulated-annealing `improve()` (+ Kempe, gap moves, D54) | `improve.py`: `improve` | O(n·s·r·d + k·L), L local | DAA; DSGT; Data Structures; Statistical Methods | `max_moves` (k) |
 | Freeze-and-expand repair | `repair.py`: `repair`, `apply_change` | Exp. in its last ring | CE207; DSGT | `RING_NODES`, `time_limit_s` |
-| Minimal conflicting set + verified relaxation | `mus.py`: `explain`, `apply_action` | Exp. without budgets; O(g) checks | CE303 | `MUS_NODES`, `time_limit_s` (S14k) |
+| Minimal conflicting set + verified relaxation | `mus.py`: `explain`, `apply_action` | Exp. without budgets; O(g) checks | DAA | `MUS_NODES`, `time_limit_s` (S14k) |
 | Substitution candidates | `repair.py`: `substitute_candidates` | O(q·(n + m + V + S)) | Data Structures | n/a |
 | Clique and load lower bounds | `bounds.py`: `lower_bounds` | Exp. exact clique, O(n) per node | DSGT; DAA; Data Structures | `EXACT_NODES`, then greedy |
 
@@ -85,8 +87,9 @@ lookups.
 
 **Determinism.** A pure function of the payload.
 
-**Course.** `graph.py` names none. `slots.py` describes each day's teaching periods as
-disjoint paths (Discrete Structures, CE201).
+**Course.** Discrete Structures and Graph Theory, as `graph.py`'s docstring says: an undirected
+conflict graph, adjacency as a map of neighbour sets. `slots.py` describes each day's teaching
+periods as disjoint paths (Discrete Structures, CE201).
 
 **Measured.** Real instance: 156 sessions, 1,568 edges (1,020 COHORT, 548 FACULTY), 1,430
 conflicting pairs ([real solve § Instance](real-solve-even-2025-26.md#instance)).
@@ -106,7 +109,8 @@ each checking its members' d periods and their neighbours. Space O(n·d + m).
 
 **Determinism.** Fully deterministic: the unit order and the start order are both sorted.
 
-**Course.** `colouring.py` names none.
+**Course.** Discrete Structures and Graph Theory, as `colouring.py`'s docstring says: greedy
+vertex colouring in Welsh-Powell's largest-degree-first order.
 
 **Measured.** Real instance: 8 sessions unplaced, 148 coloured with 0 time-only violations,
 10.9 ms ([evaluation § 1](evaluation-even-2025-26.md#1-algorithms)). Which sessions were left
@@ -123,8 +127,9 @@ presets it colours every session of `small`, `medium` and `large` ([evaluation �
   Ties go to the most unassigned conflict neighbours (degree), then to the smaller id. Lab
   blocks and single sessions compete in that one ordering.
 - **Value order.** Starts are tried least constraining first: fewest (neighbour, start) values
-  removed, then slot order, with rooms by id. A lab block is one variable: every member takes
-  the same start, each in its own room or sub-room.
+  removed, then slot order, with rooms by id. With `prefer_sub_rooms` (off by default, D58,
+  S14s) a split lab's sub-rooms come just before the whole lab. A lab block is one variable:
+  every member takes the same start, each in its own room or sub-room.
 - **Forward checking.** After each placement, the values that now clash are pruned from
   neighbours' domains and from every domain using the same room. Each prune is recorded on a
   trail and undone exactly when the search backtracks.
@@ -154,7 +159,8 @@ search. `time_limit_s` is wall clock, so whether a long search ends `solved` or 
 differ between machines. `node_limit` cannot.
 
 **Course.** Backtracking and its search tree: Design and Analysis of Algorithms, CE207. MRV,
-degree and least-constraining-value: Artificial Intelligence and Soft Computing, CE303.
+degree and least-constraining-value: also Design and Analysis of Algorithms, as the orderings
+that prune a backtracking search tree (the docstrings say CE303, not one of the eight).
 
 **Measured.**
 
@@ -230,7 +236,8 @@ in the worst case. Space O(n·d + p).
 
 **Determinism.** Violations are returned in a fixed sort order.
 
-**Course.** `validate.py` names none.
+**Course.** Software Engineering, as `validate.py`'s docstring says: an independent test oracle,
+verification that shares no code with what it verifies.
 
 **Measured.** 0 hard violations for every generated timetable reported. The printed timetable
 has 36 time-only violations (26 FACULTY_CLASH, 10 PINNED_BLOCK) and cannot be room-checked,
@@ -325,9 +332,11 @@ alone.
   S12h](real-solve-even-2025-26.md#s12h-kempe-chains-and-gap-aimed-moves-off-by-default)).
 - `time_limit_s` is a safety cap: a run it stops depends on the machine.
 
-**Course.** Simulated annealing and the guided and ejection moves: Artificial Intelligence and
-Soft Computing, CE303. Kempe-chain interchange: Discrete Structures and Graph Theory. The
-incremental penalty's hash maps: Data Structures.
+**Course.** Simulated annealing and the guided and ejection moves: Design and Analysis of
+Algorithms, the closest of the eight. They are heuristic optimisation over the same states the
+backtracking searches; the docstrings say CE303. The acceptance rule exp(−Δ/T) draws from a
+seeded random generator: Statistical Methods. Kempe-chain interchange: Discrete Structures and
+Graph Theory. The incremental penalty's hash maps: Data Structures.
 
 **Measured.**
 
@@ -354,6 +363,10 @@ change into existing edge-list fields: an absence, a closed room, a drag, or a s
 - **Infeasible:** the result goes to `explain()`.
 - **Drag onto a pin:** a drag onto a frozen pin is explained before any search.
 - **Never relaxed:** protected pins (S14e) are never suggested as the relaxation.
+- **Options, off by default (S14s):** `prefer_sub_rooms` (as in backtracking) and
+  `last_ring_portfolio`. With the portfolio, the every-session-free ring gets `RING_NODES`, then
+  a second search with sub-rooms first and no preference for old places, before a timeout.
+  Measured in [repair § S14s](repair-even-2025-26.md#s14s-the-d58-options-in-repair-measured-off-by-default).
 
 **Where.** `solver/repair.py`: `repair`, `apply_change`, `_in_the_way`, `_frozen_in_the_way`.
 Constants: `RING_NODES = 5_000`, `MAX_MOVES = 20_000`.
@@ -363,9 +376,10 @@ Constants: `RING_NODES = 5_000`, `MAX_MOVES = 20_000`.
 - `apply_change` copies the payload: O(n + m).
 - Each frozen ring is a backtracking search capped at `RING_NODES` nodes, and the free set grows
   every ring, so there are at most n rings.
-- The last ring, with every session free, has no node cap. It is **exponential in the worst
-  case** and stopped only by `time_limit_s` (`TimeoutError`, never infeasible). Since S14k that
-  limit covers the whole call: the rings, the explanation and `improve()`.
+- The last ring, with every session free, has no node cap by default. It is **exponential in
+  the worst case** and stopped only by `time_limit_s` (`TimeoutError`, never infeasible). Since
+  S14k that limit covers the whole call: the rings, the explanation and `improve()`. With
+  `last_ring_portfolio` it gets `RING_NODES`; only its fallback search is uncapped.
 - The restore pass repeats over the units until nothing improves, and the code gives no tighter
   bound on its number of passes.
 - Space: O(n·s·r).
@@ -427,8 +441,9 @@ machine. A result cut by a deadline can differ between machines, like a timeout.
 (infeasible, by the same proof) does not.
 
 **Course.** The deletion filter is Chinneck and Dravnieks 1991, with QuickXplain-style halving
-(Junker 2004) and witnesses as in model rotation (Marques-Silva and Lynce 2011). All three are
-constraint satisfaction, Artificial Intelligence and Soft Computing, CE303.
+(Junker 2004) and witnesses as in model rotation (Marques-Silva and Lynce 2011). Design and
+Analysis of Algorithms, the closest of the eight: the halving is divide and conquer, and each
+check is a bounded backtracking search. The docstring says CE303 (constraint satisfaction).
 
 **Measured.**
 
@@ -511,10 +526,12 @@ S12i](real-solve-even-2025-26.md#s12i-lower-bounds-on-the-periods-a-week-needs))
   `solution.json` scores −15.0 against the printed timetable's 21.5. It has 0 hard violations;
   the printed one has 36 against this edge list (26 FACULTY_CLASH, 10 PINNED_BLOCK) ([evaluation §
   3](evaluation-even-2025-26.md#3-real-generated-vs-printed-timetable)).
-  - S-GAP is what blocks it: its lowest value in the reported runs is 7 raw, against 2 printed
-    ([real solve § S12h](real-solve-even-2025-26.md#s12h-kempe-chains-and-gap-aimed-moves-off-by-default)).
-  - The gaps that remain are held by frozen items (D24) ([real solve § S12g: side by
-    side](real-solve-even-2025-26.md#s12g-side-by-side-with-the-printed-timetable)).
+  - With the default room order, S-GAP is what blocks it: its lowest value in the S12h runs is 7
+    raw, against 2 printed ([real solve § S12h](real-solve-even-2025-26.md#s12h-kempe-chains-and-gap-aimed-moves-off-by-default)).
+    S12g put the remaining gaps down to frozen items (D24).
+  - Most of that S-GAP comes from the room order instead (D58). With `prefer_sub_rooms` (off by
+    default, S14s) the committed parameters give 26.5, S-GAP 1 raw, with 0 hard violations
+    ([real solve § D58](real-solve-even-2025-26.md#d58-what-preferring-sub-rooms-would-change-measured-not-adopted)).
 - **Repair minimises moves heuristically.** No search proves that fewer moves are impossible.
   Its last ring can run until `time_limit_s`, and 6 of 30 changes did so in S15c ([evaluation §
   7](evaluation-even-2025-26.md#7-repair-vs-regeneration-on-the-real-instance-s15c)).
