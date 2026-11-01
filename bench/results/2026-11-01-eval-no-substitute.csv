@@ -1,0 +1,157 @@
+session_id,subject_id,session_type,cohort_id,teacher,qualified_others,candidates,best
+obs-t0-r1-c2-l0,subj-ce206,theory,coh-se-a,fac-kailas-devadkar,3,2,fac-amey-ganesh-nile (-1.0)
+obs-t0-r1-c3-l0,subj-ce207,theory,coh-se-a,fac-anant-nimkar,3,1,fac-sudhir-dhage (-0.5)
+obs-t0-r2-c2-l0,subj-ce208,theory,coh-se-a,fac-jignesh-sisodia,3,1,fac-isha-sawalkar (+2.5)
+obs-t0-r2-c3-l0,subj-ce206,theory,coh-se-a,fac-kailas-devadkar,3,2,fac-amey-ganesh-nile (-0.5)
+obs-t0-r2-c4-l0,subj-ce207,theory,coh-se-a,fac-anant-nimkar,3,1,fac-prasenjit-bhavathankar (+0.0)
+obs-t0-r4-c1-l0,subj-ce206,lab,coh-se-a-a,fac-amey-ganesh-nile,3,1,fac-aishwarya-nalawade (-2.0)
+obs-t0-r4-c1-l1,subj-ce207,lab,coh-se-a-b,fac-nataasha-raul,3,1,fac-sudhir-dhage (+0.0)
+obs-t0-r4-c1-l2,subj-ce208,lab,coh-se-a-c,fac-jignesh-sisodia,3,1,fac-anuj-tawari (-1.0)
+obs-t0-r4-c2-l1,subj-ce206,lab,coh-se-a-b,fac-kailas-devadkar,3,1,fac-amey-ganesh-nile (+0.5)
+obs-t0-r4-c2-l2,subj-ce207,lab,coh-se-a-c,fac-nataasha-raul,3,0,
+obs-t0-r4-c2-l3,subj-ce208,lab,coh-se-a-d,fac-jignesh-sisodia,3,0,
+obs-t0-r4-c3-l0,subj-ce208,lab,coh-se-a-a,fac-jignesh-sisodia,3,1,fac-anuj-tawari (+0.0)
+obs-t0-r4-c3-l2,subj-ce206,lab,coh-se-a-c,fac-kailas-devadkar,3,0,
+obs-t0-r4-c3-l3,subj-ce207,lab,coh-se-a-d,fac-sudhir-dhage,3,1,fac-nataasha-raul (-1.5)
+obs-t0-r4-c4-l0,subj-ce206,theory,coh-se-a,fac-kailas-devadkar,3,0,
+obs-t0-r4-c5-l0,subj-ce208,theory,coh-se-a,fac-jignesh-sisodia,3,2,fac-anuj-tawari (+2.0)
+obs-t0-r5-c4-l0,subj-ce208,theory,coh-se-a,fac-jignesh-sisodia,3,1,fac-isha-sawalkar (+0.0)
+obs-t0-r5-c5-l0,subj-ce207,theory,coh-se-a,fac-anant-nimkar,3,1,fac-sudhir-dhage (+1.5)
+obs-t0-r7-c5-l0,subj-ce207,lab,coh-se-a-a,fac-prasenjit-bhavathankar,3,1,fac-sudhir-dhage (+0.0)
+obs-t0-r7-c5-l1,subj-ce208,lab,coh-se-a-b,fac-jignesh-sisodia,3,1,fac-anuj-tawari (+0.0)
+obs-t0-r7-c5-l3,subj-ce206,lab,coh-se-a-d,fac-kailas-devadkar,3,1,fac-aishwarya-nalawade (+0.0)
+obs-t10-r1-c5-l0,subj-ce307,theory,coh-te-b,fac-vaishnavee-rathod,4,3,fac-jyoti-ramteke (+0.0)
+obs-t10-r2-c5-l0,subj-ce306,theory,coh-te-b,fac-sunil-ghane,4,4,fac-anand-godbole (-0.5)
+obs-t10-r4-c5-l0,subj-ce307,theory,coh-te-b,fac-vaishnavee-rathod,4,4,fac-jyoti-ramteke (-0.5)
+obs-t10-r6-c1-l0,subj-ce306,theory,coh-te-b,fac-sunil-ghane,4,3,fac-isha-sawalkar (+1.0)
+obs-t10-r6-c2-l0,subj-ce307,lab,coh-te-b-a,fac-vaishnavee-rathod,4,0,
+obs-t10-r6-c2-l1,subj-ce306,lab,coh-te-b-b,fac-anuj-tawari,4,1,fac-aishwarya-nalawade (-1.5)
+obs-t10-r6-c2-l2,subj-ce308,lab,coh-te-b-c,fac-amey-ganesh-nile,5,2,fac-anas-ansari (-2.0)
+obs-t10-r6-c2-l3,subj-ce307,lab,coh-te-b-d,fac-sanjyuktarani-jena,4,0,
+obs-t10-r6-c3-l0,subj-ce306,theory,coh-te-b,fac-sunil-ghane,4,2,fac-anand-godbole (-1.0)
+obs-t10-r6-c4-l0,subj-ce308,lab,coh-te-b-a,fac-azman-qureshi,5,1,fac-jostna-bhagat (+0.0)
+obs-t10-r6-c4-l1,subj-ce307,lab,coh-te-b-c,fac-sanjyuktarani-jena,4,0,
+obs-t10-r6-c4-l2,subj-ce308,lab,coh-te-b-b,fac-sudeep-mali,5,1,fac-jostna-bhagat (+0.0)
+obs-t10-r6-c4-l3,subj-ce306,lab,coh-te-b-d,fac-anand-godbole,4,0,
+obs-t10-r7-c1-l0,subj-ce306,lab,coh-te-b-c,fac-anuj-tawari,4,1,fac-isha-sawalkar (-0.5)
+obs-t10-r7-c1-l1,subj-ce307,lab,coh-te-b-b,fac-jyoti-ramteke,4,4,fac-surekha-dholay (-1.5)
+obs-t10-r7-c1-l2,subj-ce308,lab,coh-te-b-d,fac-azman-qureshi,5,5,fac-anas-ansari (+2.0)
+obs-t10-r7-c3-l0,subj-ce308,theory,coh-te-b,fac-reeta-koshy,5,2,fac-amey-ganesh-nile (+0.5)
+obs-t10-r7-c5-l0,subj-ce306,lab,coh-te-b-a,fac-aishwarya-nalawade,4,1,fac-isha-sawalkar (-2.0)
+obs-t12-r1-c5-l0,subj-ce308,lab,coh-te-c-a,fac-sudeep-mali,5,2,fac-anas-ansari (+1.0)
+obs-t12-r1-c5-l1,subj-ce306,lab,coh-te-c-c,fac-aishwarya-nalawade,4,1,fac-sunil-ghane (-2.5)
+obs-t12-r4-c5-l0,subj-ce306,theory,coh-te-c,fac-anand-godbole,4,3,fac-isha-sawalkar (+0.5)
+obs-t12-r6-c1-l0,subj-ce306,theory,coh-te-c,fac-anand-godbole,4,1,fac-sunil-ghane (-1.5)
+obs-t12-r6-c2-l0,subj-ce308,theory,coh-te-c,fac-reeta-koshy,5,2,fac-anas-ansari (+0.0)
+obs-t12-r6-c3-l0,subj-ce306,theory,coh-te-c,fac-anand-godbole,4,2,fac-isha-sawalkar (+0.5)
+obs-t12-r6-c4-l0,subj-ce307,lab,coh-te-c-a,fac-vaishnavee-rathod,4,0,
+obs-t12-r6-c4-l1,subj-ce307,lab,coh-te-c-c,fac-yogita-patil,4,0,
+obs-t12-r6-c4-l2,subj-ce308,lab,coh-te-c-d,fac-anas-ansari,5,1,fac-jostna-bhagat (-1.0)
+obs-t12-r6-c4-l3,subj-ce306,lab,coh-te-c-b,fac-isha-sawalkar,4,0,
+obs-t12-r7-c1-l0,subj-ce307,lab,coh-te-c-d,fac-vaishnavee-rathod,4,1,fac-yogita-patil (-2.0)
+obs-t12-r7-c1-l1,subj-ce308,lab,coh-te-c-b,fac-anas-ansari,5,0,
+obs-t12-r7-c1-l2,subj-ce306,lab,coh-te-c-a,fac-anand-godbole,4,1,fac-isha-sawalkar (+0.0)
+obs-t12-r7-c1-l3,subj-ce308,lab,coh-te-c-c,fac-jostna-bhagat,5,0,
+obs-t12-r7-c2-l0,subj-ce307,theory,coh-te-c,fac-surekha-dholay,4,0,
+obs-t12-r7-c3-l0,subj-ce307,theory,coh-te-c,fac-surekha-dholay,4,3,fac-jyoti-ramteke (-0.5)
+obs-t12-r8-c4-l0,subj-ce306,lab,coh-te-c-d,fac-anuj-tawari,4,1,fac-anand-godbole (-1.5)
+obs-t12-r8-c4-l1,subj-ce307,lab,coh-te-c-b,fac-vaishnavee-rathod,4,1,fac-jyoti-ramteke (-1.0)
+obs-t14-r1-c1-l0,subj-ce307,theory,coh-te-d,fac-vaishnavee-rathod,4,2,fac-sanjyuktarani-jena (+0.0)
+obs-t14-r1-c5-l0,subj-ce308,lab,coh-te-d-b,fac-amey-ganesh-nile,5,2,fac-anas-ansari (+1.0)
+obs-t14-r1-c5-l1,subj-ce306,lab,coh-te-d-c,fac-isha-sawalkar,4,1,fac-anand-godbole (-2.0)
+obs-t14-r1-c5-l2,subj-ce307,lab,coh-te-d-a,fac-sanjyuktarani-jena,4,1,fac-jyoti-ramteke (-2.0)
+obs-t14-r1-c5-l3,subj-ce307,lab,coh-te-d-d,fac-yogita-patil,4,1,fac-jyoti-ramteke (-2.0)
+obs-t14-r4-c5-l0,subj-ce306,theory,coh-te-d,fac-anand-godbole,4,4,fac-anuj-tawari (+0.0)
+obs-t14-r6-c1-l0,subj-ce306,theory,coh-te-d,fac-anand-godbole,4,3,fac-sunil-ghane (-0.5)
+obs-t14-r6-c2-l0,subj-ce308,theory,coh-te-d,fac-reeta-koshy,5,3,fac-anas-ansari (-1.0)
+obs-t14-r6-c3-l0,subj-ce306,theory,coh-te-d,fac-anand-godbole,4,3,fac-anuj-tawari (+0.5)
+obs-t14-r6-c4-l0,subj-ce307,lab,coh-te-d-c,fac-jyoti-ramteke,4,0,
+obs-t14-r6-c4-l1,subj-ce308,lab,coh-te-d-a,fac-amey-ganesh-nile,5,1,fac-jostna-bhagat (+1.0)
+obs-t14-r6-c4-l2,subj-ce306,lab,coh-te-d-b,fac-aishwarya-nalawade,4,0,
+obs-t14-r6-c4-l3,subj-ce306,lab,coh-te-d-d,fac-sunil-ghane,4,0,
+obs-t14-r7-c1-l0,subj-ce307,lab,coh-te-d-b,fac-sanjyuktarani-jena,4,1,fac-yogita-patil (-2.0)
+obs-t14-r7-c1-l1,subj-ce308,lab,coh-te-d-c,fac-sudeep-mali,5,0,
+obs-t14-r7-c1-l2,subj-ce308,lab,coh-te-d-d,fac-amey-ganesh-nile,5,0,
+obs-t14-r7-c1-l3,subj-ce306,lab,coh-te-d-a,fac-aishwarya-nalawade,4,1,fac-isha-sawalkar (+0.0)
+obs-t14-r7-c3-l0,subj-ce307,theory,coh-te-d,fac-vaishnavee-rathod,4,3,fac-sanjyuktarani-jena (+0.0)
+obs-t2-r1-c2-l0,subj-ce206,theory,coh-se-b,fac-kailas-devadkar,3,1,fac-amey-ganesh-nile (-0.5)
+obs-t2-r1-c3-l0,subj-ce207,theory,coh-se-b,fac-anant-nimkar,3,1,fac-nataasha-raul (-2.0)
+obs-t2-r2-c2-l0,subj-ce208,theory,coh-se-b,fac-jignesh-sisodia,3,3,fac-anuj-tawari (+0.5)
+obs-t2-r2-c3-l0,subj-ce206,theory,coh-se-b,fac-kailas-devadkar,3,2,fac-swapnali-kurhade (-2.5)
+obs-t2-r2-c4-l0,subj-ce207,theory,coh-se-b,fac-anant-nimkar,3,1,fac-sudhir-dhage (+1.5)
+obs-t2-r4-c1-l0,subj-ce206,lab,coh-se-b-a,fac-kailas-devadkar,3,1,fac-aishwarya-nalawade (-3.5)
+obs-t2-r4-c1-l1,subj-ce207,lab,coh-se-b-b,fac-anant-nimkar,3,1,fac-sudhir-dhage (-1.0)
+obs-t2-r4-c1-l2,subj-ce208,lab,coh-se-b-c,fac-isha-sawalkar,3,1,fac-anuj-tawari (+0.0)
+obs-t2-r4-c2-l1,subj-ce206,lab,coh-se-b-b,fac-amey-ganesh-nile,3,0,
+obs-t2-r4-c2-l2,subj-ce207,lab,coh-se-b-c,fac-anant-nimkar,3,1,fac-nataasha-raul (-2.5)
+obs-t2-r4-c2-l3,subj-ce208,lab,coh-se-b-d,fac-isha-sawalkar,3,1,fac-anuj-tawari (+1.0)
+obs-t2-r4-c3-l0,subj-ce208,lab,coh-se-b-a,fac-isha-sawalkar,3,0,
+obs-t2-r4-c3-l2,subj-ce206,lab,coh-se-b-c,fac-swapnali-kurhade,3,1,fac-amey-ganesh-nile (+2.0)
+obs-t2-r4-c3-l3,subj-ce207,lab,coh-se-b-d,fac-anant-nimkar,3,0,
+obs-t2-r4-c4-l0,subj-ce206,theory,coh-se-b,fac-kailas-devadkar,3,1,fac-amey-ganesh-nile (-2.0)
+obs-t2-r4-c5-l0,subj-ce208,theory,coh-se-b,fac-jignesh-sisodia,3,1,fac-anuj-tawari (+2.0)
+obs-t2-r5-c4-l0,subj-ce208,theory,coh-se-b,fac-jignesh-sisodia,3,1,fac-isha-sawalkar (+2.5)
+obs-t2-r5-c5-l0,subj-ce207,theory,coh-se-b,fac-anant-nimkar,3,3,fac-sudhir-dhage (+0.5)
+obs-t2-r7-c5-l0,subj-ce207,lab,coh-se-b-a,fac-anant-nimkar,3,1,fac-sudhir-dhage (+1.0)
+obs-t2-r7-c5-l1,subj-ce208,lab,coh-se-b-b,fac-isha-sawalkar,3,1,fac-anuj-tawari (-0.5)
+obs-t2-r7-c5-l3,subj-ce206,lab,coh-se-b-d,fac-amey-ganesh-nile,3,1,fac-aishwarya-nalawade (+0.0)
+obs-t4-r1-c2-l0,subj-ce206,theory,coh-se-c,fac-swapnali-kurhade,3,2,fac-amey-ganesh-nile (-1.5)
+obs-t4-r1-c3-l0,subj-ce206,lab,coh-se-c-b,fac-swapnali-kurhade,3,0,
+obs-t4-r1-c3-l1,subj-ce207,lab,coh-se-c-c,fac-prasenjit-bhavathankar,3,1,fac-nataasha-raul (-2.5)
+obs-t4-r1-c3-l2,subj-ce208,lab,coh-se-c-d,fac-abhijeet-salunke,3,1,fac-anuj-tawari (+0.5)
+obs-t4-r1-c5-l0,subj-ce208,theory,coh-se-c,fac-abhijeet-salunke,3,3,fac-anuj-tawari (+1.0)
+obs-t4-r2-c2-l0,subj-ce207,theory,coh-se-c,fac-prasenjit-bhavathankar,3,0,
+obs-t4-r2-c4-l0,subj-ce206,theory,coh-se-c,fac-swapnali-kurhade,3,3,fac-amey-ganesh-nile (+2.0)
+obs-t4-r4-c1-l0,subj-ce208,theory,coh-se-c,fac-abhijeet-salunke,3,1,fac-anuj-tawari (+0.0)
+obs-t4-r4-c2-l0,subj-ce206,lab,coh-se-c-a,fac-swapnali-kurhade,3,2,fac-aishwarya-nalawade (-1.0)
+obs-t4-r4-c2-l1,subj-ce207,lab,coh-se-c-b,fac-prasenjit-bhavathankar,3,2,fac-nataasha-raul (-1.5)
+obs-t4-r4-c2-l2,subj-ce208,lab,coh-se-c-c,fac-abhijeet-salunke,3,2,fac-anuj-tawari (-0.5)
+obs-t4-r4-c3-l0,subj-ce208,theory,coh-se-c,fac-abhijeet-salunke,3,0,
+obs-t4-r4-c4-l0,subj-ce206,lab,coh-se-c-c,fac-swapnali-kurhade,3,0,
+obs-t4-r4-c4-l1,subj-ce207,lab,coh-se-c-d,fac-nataasha-raul,3,0,
+obs-t4-r4-c4-l2,subj-ce208,lab,coh-se-c-a,fac-abhijeet-salunke,3,1,fac-anuj-tawari (-0.5)
+obs-t4-r4-c5-l0,subj-ce206,lab,coh-se-c-d,fac-swapnali-kurhade,3,0,
+obs-t4-r4-c5-l1,subj-ce207,lab,coh-se-c-a,fac-nataasha-raul,3,1,fac-sudhir-dhage (+0.0)
+obs-t4-r4-c5-l2,subj-ce208,lab,coh-se-c-b,fac-abhijeet-salunke,3,1,fac-isha-sawalkar (+1.0)
+obs-t4-r5-c1-l0,subj-ce207,theory,coh-se-c,fac-prasenjit-bhavathankar,3,2,fac-anant-nimkar (-1.0)
+obs-t4-r5-c3-l0,subj-ce207,theory,coh-se-c,fac-prasenjit-bhavathankar,3,3,fac-anant-nimkar (+0.0)
+obs-t4-r7-c5-l0,subj-ce206,theory,coh-se-c,fac-swapnali-kurhade,3,0,
+obs-t6-r1-c2-l0,subj-ce206,theory,coh-se-d,fac-swapnali-kurhade,3,1,fac-aishwarya-nalawade (-1.0)
+obs-t6-r1-c3-l0,subj-ce206,lab,coh-se-d-b,fac-amey-ganesh-nile,3,0,
+obs-t6-r1-c3-l1,subj-ce207,lab,coh-se-d-c,fac-sudhir-dhage,3,1,fac-nataasha-raul (-1.5)
+obs-t6-r1-c3-l2,subj-ce208,lab,coh-se-d-d,fac-jignesh-sisodia,3,1,fac-anuj-tawari (+0.0)
+obs-t6-r1-c5-l0,subj-ce208,theory,coh-se-d,fac-abhijeet-salunke,3,1,fac-isha-sawalkar (-0.5)
+obs-t6-r2-c2-l0,subj-ce207,theory,coh-se-d,fac-prasenjit-bhavathankar,3,1,fac-sudhir-dhage (+0.0)
+obs-t6-r2-c4-l0,subj-ce206,theory,coh-se-d,fac-swapnali-kurhade,3,3,fac-amey-ganesh-nile (+2.0)
+obs-t6-r4-c1-l0,subj-ce208,theory,coh-se-d,fac-abhijeet-salunke,3,1,fac-anuj-tawari (-0.5)
+obs-t6-r4-c2-l0,subj-ce206,lab,coh-se-d-a,fac-aishwarya-nalawade,3,1,fac-amey-ganesh-nile (+1.0)
+obs-t6-r4-c2-l1,subj-ce207,lab,coh-se-d-b,fac-sudhir-dhage,3,0,
+obs-t6-r4-c2-l2,subj-ce208,lab,coh-se-d-c,fac-anuj-tawari,3,0,
+obs-t6-r4-c3-l0,subj-ce208,theory,coh-se-d,fac-abhijeet-salunke,3,3,fac-isha-sawalkar (+0.5)
+obs-t6-r4-c4-l0,subj-ce206,lab,coh-se-d-c,fac-amey-ganesh-nile,3,1,fac-aishwarya-nalawade (-2.0)
+obs-t6-r4-c4-l1,subj-ce207,lab,coh-se-d-d,fac-sudhir-dhage,3,1,fac-prasenjit-bhavathankar (+0.5)
+obs-t6-r4-c4-l2,subj-ce208,lab,coh-se-d-a,fac-isha-sawalkar,3,1,fac-anuj-tawari (+2.5)
+obs-t6-r4-c5-l0,subj-ce206,lab,coh-se-d-d,fac-kailas-devadkar,3,0,
+obs-t6-r4-c5-l1,subj-ce207,lab,coh-se-d-a,fac-prasenjit-bhavathankar,3,1,fac-sudhir-dhage (+0.0)
+obs-t6-r4-c5-l2,subj-ce208,lab,coh-se-d-b,fac-anuj-tawari,3,1,fac-isha-sawalkar (+2.0)
+obs-t6-r5-c1-l0,subj-ce207,theory,coh-se-d,fac-prasenjit-bhavathankar,3,1,fac-sudhir-dhage (-1.5)
+obs-t6-r5-c3-l0,subj-ce207,theory,coh-se-d,fac-prasenjit-bhavathankar,3,3,fac-anant-nimkar (+0.0)
+obs-t6-r7-c5-l0,subj-ce206,theory,coh-se-d,fac-swapnali-kurhade,3,2,fac-amey-ganesh-nile (-0.5)
+obs-t8-r1-c5-l0,subj-ce307,theory,coh-te-a,fac-surekha-dholay,4,0,
+obs-t8-r2-c5-l0,subj-ce306,theory,coh-te-a,fac-sunil-ghane,4,2,fac-isha-sawalkar (+1.0)
+obs-t8-r4-c5-l0,subj-ce307,theory,coh-te-a,fac-surekha-dholay,4,2,fac-sanjyuktarani-jena (-1.0)
+obs-t8-r6-c1-l0,subj-ce306,theory,coh-te-a,fac-sunil-ghane,4,1,fac-isha-sawalkar (+1.0)
+obs-t8-r6-c2-l0,subj-ce307,lab,coh-te-a-a,fac-yogita-patil,4,0,
+obs-t8-r6-c2-l1,subj-ce307,lab,coh-te-a-d,fac-jyoti-ramteke,4,0,
+obs-t8-r6-c2-l2,subj-ce306,lab,coh-te-a-b,fac-anand-godbole,4,1,fac-aishwarya-nalawade (-2.0)
+obs-t8-r6-c2-l3,subj-ce308,lab,coh-te-a-c,fac-azman-qureshi,5,2,fac-anas-ansari (-2.0)
+obs-t8-r6-c3-l0,subj-ce306,theory,coh-te-a,fac-sunil-ghane,4,3,fac-anuj-tawari (+0.0)
+obs-t8-r6-c4-l0,subj-ce308,lab,coh-te-a-a,fac-reeta-koshy,5,2,fac-anas-ansari (-1.0)
+obs-t8-r6-c4-l1,subj-ce308,lab,coh-te-a-b,fac-jostna-bhagat,5,2,fac-anas-ansari (-1.0)
+obs-t8-r6-c4-l2,subj-ce307,lab,coh-te-a-c,fac-surekha-dholay,4,1,fac-jyoti-ramteke (-2.0)
+obs-t8-r7-c1-l0,subj-ce307,lab,coh-te-a-b,fac-surekha-dholay,4,2,fac-jyoti-ramteke (-2.0)
+obs-t8-r7-c1-l1,subj-ce306,lab,coh-te-a-c,fac-sunil-ghane,4,1,fac-isha-sawalkar (+1.0)
+obs-t8-r7-c1-l2,subj-ce308,lab,coh-te-a-d,fac-reeta-koshy,5,0,
+obs-t8-r7-c3-l0,subj-ce308,theory,coh-te-a,fac-reeta-koshy,5,1,fac-jostna-bhagat (-1.5)
+obs-t8-r7-c5-l0,subj-ce306,lab,coh-te-a-a,fac-anand-godbole,4,1,fac-isha-sawalkar (-1.5)
+obs-t8-r7-c5-l1,subj-ce306,lab,coh-te-a-d,fac-sunil-ghane,4,1,fac-isha-sawalkar (-2.0)

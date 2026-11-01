@@ -1,0 +1,3 @@
+timetable,score,S-GAP raw,S-GAP penalty,S-B2B raw,S-B2B penalty,S-LOAD16 raw,S-LOAD16 penalty,FAC_LOAD_IMBALANCE raw,FAC_LOAD_IMBALANCE penalty,time_only_violations,by_kind,full_violations,sessions_without_room
+generated (solution.json),26.5,1,2.0,20,20.0,6,6.0,91,45.5,0,,0,0
+printed (real_baseline),21.5,2,4.0,23,23.0,5,5.0,93,46.5,36,FACULTY_CLASH 26; PINNED_BLOCK 10,n/a,58

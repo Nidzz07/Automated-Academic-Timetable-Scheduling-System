@@ -2,7 +2,7 @@
 
 Usage (repo root, venv active)::
 
-    python -m bench.repair_vs_regen               # 30 changes, seed 0 (about 75 min)
+    python -m bench.repair_vs_regen               # 30 changes, seed 0 (about 30 min)
     python -m bench.repair_vs_regen --changes 2 --moves 1000
 
 :func:`changes` draws ``--changes`` seeded random changes to the committed
