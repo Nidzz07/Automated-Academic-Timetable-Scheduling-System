@@ -596,3 +596,36 @@ def test_the_accumulated_drag_times_out_though_feasible(
                             seed_rooms={CE207: "room-601"}, time_limit_s=60.0)
     assert found.solved
     assert validate_solution(changed, found.to_solution_v2_dict()) == []
+
+
+# --- S17c: lab-block tuples that all fail ---------------------------------------------------
+
+# S15e's change 29 (bench/repair_vs_regen.py, seed 0): repair timed out at 300 s, regeneration
+# solved it in 8.4 s. Ring 1 tried over a million room tuples of one lab block at two starts
+# where a neighbour had no value clear of the block's periods; none was a search node.
+JENA = {"kind": "faculty_unavailable", "faculty_id": "fac-sanjyuktarani-jena",
+        "slots": [{"day": 0, "period": 7}, {"day": 1, "period": 5}]}
+
+
+def test_dead_starts_change_no_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """With symmetry breaking off, as in repair: outcome, placements, nodes and the deepest
+    partial are the same with the dead-start pruning and without it."""
+    def answer(edge_list: dict) -> tuple:
+        r = backtrack_solve(build_conflict_graph(edge_list), edge_list, break_symmetry=False,
+                            sub_room_nodes=None)
+        return (r.outcome, r.assignment, r.room_assignment, r.nodes_explored,
+                r.partial_assignment, r.partial_rooms)
+
+    instances = [generate_instance(random.Random(SEED + i)) for i in range(400)]
+    pruned = [answer(e) for e in instances]
+    monkeypatch.setattr(solver.backtracking, "_wiped_by_time", lambda state, block: False)
+    assert [answer(e) for e in instances] == pruned
+
+
+def test_change_29_repairs_within_its_limit(real: tuple[dict, dict]) -> None:
+    edge_list, solution = real
+    stats: dict = {}
+    # 10 s in a script, 38 s under pytest here; before S17c a TimeoutError at this limit
+    result = _check(edge_list, solution, JENA, stats, time_limit_s=300.0, mus_nodes=0)
+    assert result["status"] == "solved" and len(result["displaced"]) == 15
+    assert stats["rings"] == [[0, 8, "infeasible"], [1, 90, "timeout"], ["all", 156, "solved"]]

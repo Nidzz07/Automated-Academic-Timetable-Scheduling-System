@@ -154,10 +154,10 @@ and § S14u.
 | Reliability | Same input, same output | seeded randomness, sorted tie-breaks, node budgets (`docs/algorithms.md`); results cut by a wall-clock limit can differ between machines (documented) |
 | Performance | A solve or repair never blocks the API | jobs run in a process pool of 2 workers (`ProcessPoolExecutor`, `backend/app/service.py`) |
 | Performance | Bounded run time | every job has `time_limit_s` (default 300 s, at most 1,800), which covers the explanation too (S14k) |
-| Performance | Measured (not a guarantee) | Real instance: backtracking 187.6 ms, 92 nodes; with local search at 200,000 moves 9,176.7 ms (`docs/evaluation-even-2025-26.md` § 1). Repair: median 326.8 ms over the 19 changes repair and regeneration both solved (§ 7) |
+| Performance | Measured (not a guarantee) | Real instance: backtracking 162.2 ms, 92 nodes; with local search at 200,000 moves 8,891.6 ms (`docs/evaluation-even-2025-26.md` § 1, S15e). Repair: median 233.2 ms over the 25 changes repair and regeneration both solved (§ 7) |
 | Usability | No internal codes as main text; periods T0–T9 and 12-hour times (D60) | `frontend/src/lib/wording.ts`, `frontend/src/lib/format.ts`; tests `lib/__tests__/wording.test.ts`, `format.test.ts` |
 | Usability | Names, not ids, in the interface (D41, D51) | `display.json`, served at `GET /instances/{id}/display` |
-| Deployment | One service serving the API at `/api` and the built frontend at `/` (D55) | `backend/app/prod.py`, `backend/Dockerfile.prod` (one uvicorn worker), tests `backend/tests/test_prod.py`. The Render service and its Supabase database: **planned, not built** (S16c) |
+| Deployment | One service serving the API at `/api` and the built frontend at `/` (D55) | `backend/app/prod.py`, `backend/Dockerfile.prod` (one uvicorn worker), tests `backend/tests/test_prod.py`. The Render service (free instance) and its Supabase database (eu-west-2): deployed by hand on 2026-11-01 (S16c); live demos run on a laptop, the free instance being about 9 times slower (D64) |
 | Maintainability | Rule weights change without code (`docs/CONTEXT.md` rule 4) | `solver/rules/quality_rules.yaml`, checked by `load_rules` |
 | Maintainability | Solver purity: no web, ORM or database imports in `solver/` (D61: PyYAML in `scoring.py` only) | purity tests (`TestSolverPurity`, `TestSolverPurityBacktracking`, `solver/tests/test_validate.py::TestIndependence`) |
 
@@ -188,6 +188,6 @@ and § S14u.
   rule 5), but only CE is built and demonstrated.
 - Natural-language input and any learned model (`docs/CONTEXT.md` rule 1).
 - **Planned, not built:**
-  - the deployed service and its demo (S16c, S16d);
+  - the demo script and demo video (S16d); the service itself is deployed (S16c);
   - instance data read from the database rather than committed files;
   - end-to-end browser tests (`tests/e2e/` does not exist).

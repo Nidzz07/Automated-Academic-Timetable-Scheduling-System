@@ -614,6 +614,10 @@ calls pass `sub_room_nodes=None`, so every number above stands.
 
 ### Demo flows
 
+**Superseded by § S17c** (2026-11-01): the website keeps a dragged session's room, so flows (b)
+and (d) below do not send what the website sends, and (c) now uses Aishwarya Nalawade. Kept as
+history.
+
 From the new `solution.json`, with the defaults. Names come from `display.json`; T-labels are
 the interface's (D60), P the internal period numbers. Times are wall clock, one run each.
 
@@ -672,6 +676,113 @@ solved).
 her taught periods are infeasible: she teaches 16 periods and has few free slots left after
 D36 and the pins. Most of the others need the fallback or time out within 15 s. A demo absence
 should use the pair above, not an arbitrary one.
+
+## S17c: demo flows as the website sends them
+
+2026-11-01 · Dhruv (with Claude Code) · branch `track/solver-demo-flows`. Machine: Intel64
+Family 6 Model 183, Python 3.12.10. Supersedes the § S14u flows.
+
+**What the website sends** (read from `frontend/src`, not changed):
+
+- **A drag** (`App.tsx`, `handleMoveSession`): `{"kind": "move_session", "session_id", "day",
+  "period", "room_id", "sub_room_id"?}`. The room is the session's own (`from.roomId`, plus its
+  sub-room if it has one); a drop cell has a day and a period, not a room. A drop the browser's
+  pre-check (`checkMove`) finds clean goes straight to repair. One with a clash shows "This move
+  is not allowed" with every clash, and **"Repair around this" posts the same change**
+  (`RejectionAlert.tsx`, `onRepair`).
+- **An absence** (`RepairPanel.tsx`, "Mark unavailable"): `{"kind": "faculty_unavailable",
+  "faculty_id", "slots": [{"day", "period"}, …]}`, the slots in the order they were ticked.
+- **A substitute** (`App.tsx`, "Find substitute", then a candidate's button):
+  `{"kind": "substitute_faculty", "session_id", "faculty_id"}`.
+- **The budgets.** The body is `{"change": …}` alone, so the backend's defaults apply
+  (`backend/app/routers.py`, `service.py`): `time_limit_s = 300`, repair's default local-search
+  moves, and the 10 break pins of `display.json` protected. Each run below used exactly these,
+  through `solver.repair.repair`, from the committed `solution.json` (26.5) with no accepted
+  change.
+
+| Flow | Clicks | Change sent | Outcome | Moved | Time | Pre-check |
+|---|---|---|---|---|---|---|
+| (a) Absence | Repair panel: teacher Swapnali Kurhade, tick Tue T1 and Thu T1, "Mark unavailable" | `{"kind": "faculty_unavailable", "faculty_id": "fac-swapnali-kurhade", "slots": [{"day": 1, "period": 1}, {"day": 3, "period": 1}]}` | repaired, 0 hard violations, 26.5 → 18.5 | 5 (0 room only) | 2.31 s | no: ring 0 node budget out, ring 1 solved |
+| (b) Drag onto the MDM-I lab block, then "Repair around this" | Drag SE-Comp A's CE207 lecture (Anant Nimkar, Thu T1, 701) to Mon T0 | `{"kind": "move_session", "session_id": "obs-t0-r1-c3-l0", "day": 0, "period": 0, "room_id": "room-701"}` | infeasible, `mus` {pin 238 "MDM - I LABs, Mon P0–P1", the drag}, RELAX_PINNED_BLOCK verified `restored` | n/a | 5.32 s, 4.48 s, 4.77 s | **yes**, before any search |
+| (b′) The same block, second period | Drag the same lecture to Mon T1 | `{"kind": "move_session", "session_id": "obs-t0-r1-c3-l0", "day": 0, "period": 1, "room_id": "room-701"}` | infeasible, `mus` {pin 239, the same block, the drag}, verified `restored` | n/a | 0.51 s | **yes**, before any search |
+| (c) Substitute | Click her CE206 lecture for SE-Comp C (Fri T0, 601), "Find substitute", Aishwarya Nalawade | `{"kind": "substitute_faculty", "session_id": "obs-t4-r1-c2-l0", "faculty_id": "fac-aishwarya-nalawade"}` | repaired, 0 hard violations, 26.5 → 24.5 | 0 | 0.22 s | no: ring 0 solved |
+| (d) Small drag | Drag the same CE207 lecture to Wed T0 | `{"kind": "move_session", "session_id": "obs-t0-r1-c3-l0", "day": 2, "period": 0, "room_id": "room-701"}` | repaired, 0 hard violations, 26.5 → 16.0 | 1 (the lecture) | 0.34 s | no: ring 0 solved |
+
+**(b) with the website's room.** § S14u dragged the lecture into 605. The website keeps 701,
+and at Mon P0 room 701 holds Anand Godbole's TE-Comp D CE306 lecture. So the browser's message
+names two clashes: the room taken, and SE-Comp A's fixed MDM-I lab. The S14b pre-check still
+answers it before any search with the same set. But the explanation needs 9 checks instead of
+5, because the drag clashes with a placed lecture too: 4.5–5.3 s over three runs, against
+0.55 s with 605. That is around the 5 s mark. **For the demo, drag onto the block's second
+period, Mon T1 (b′)**: 701 is free then, so the only clash is the fixed lab. The pre-check
+answers it in 0.51 s with pin 239, the same "MDM - I LABs, Mon P0–P1" block. Rule used: the
+same lecture, the same block, its other period.
+
+**(c)** uses Aishwarya Nalawade as asked. § S14u's first-listed candidate was Amey Ganesh Nile
+(score change −1.5; Nalawade −2.0); both fit.
+
+**(d)** gives § S14u's result: the lecture already sits in 701, and 701 is free at Wed P0.
+
+### S15e's change 29: why repair timed out, and the fix
+
+Change 29 of `bench/repair_vs_regen.py` (seed 0): Sanjyuktarani Jena unavailable Mon P7 and
+Tue P5. Repair timed out at 300 s; regeneration solved it in 8.4 s.
+
+**Cause.** Instrumented from outside (no code changed for the measurement), repair's searches
+were:
+
+| Search | Free sessions | Nodes | Outcome | Time |
+|---|---|---|---|---|
+| ring 0 | 8 | 46 | infeasible | 0.67 s |
+| ring 1 | 90 | **137** | timeout (the clock) | **299.8 s** |
+| every session free | 156 | 1 | timeout (no time left) | 0.05 s |
+| fallback | 156 | 1 | timeout | 0.05 s |
+
+Ring 1 has a 5,000-node budget but used 137 nodes in 300 s. The time went into one lab block,
+`lab-t8-r6-c2`. At two starts, Mon P5 and Mon P6, its room tuples were tried one after another
+(1,045,030 forward checks in a profiled run). Every one wiped out the same session,
+`obs-t8-r6-c4-l0`, by time: that session had no value clear of the block's periods, whatever
+rooms the block took. A failed tuple is not a search node, and the deadline is checked per
+node, so neither budget stopped the loop.
+
+- **Why it is that many:** every repair ring passes `prefer` and `seed_rooms`, which turn
+  symmetry breaking off, so interchangeable rooms are not pruned. Sub-rooms first (D58) makes
+  more of them.
+- **Why regeneration was fast:** a fresh solve keeps symmetry breaking and solves change 29 in
+  its first attempt (sub-rooms first, 92 nodes, 0.24 s). Rooms by id alone time out at 300 s.
+
+**Fix (built, `solver/backtracking.py`).** At each start of a lab block, the first tuple is
+placed and recorded as before. Then `_wiped_by_time` checks whether an unassigned conflict
+neighbour of a member has no value clear of that member's periods. If so, every tuple at that
+start would fail forward checking the same way, so the start's other tuples are skipped, and
+the lazy tuple generator stops for it. Failed tuples never enter the search, and one start's
+tuples are equally deep, so only the first can set the deepest partial. So node counts,
+solutions and partials are unchanged.
+
+| Change 29, repair (300 s, `mus_nodes=0` as the benchmark) | Result |
+|---|---|
+| Before | `TimeoutError` at 300 s |
+| After | **repaired**, 15 sessions moved, 9.9–10.6 s in a script (38 s under pytest, same result) |
+| Rings after | 0: 8 infeasible; 1: 90, node budget out (5,001 nodes, 8.6–9.2 s); every session free: 156 solved (92 nodes) |
+
+Ring 1 now spends its 5,000 nodes instead of looping inside a few, so the every-session-free
+ring gets its turn and solves.
+
+**Nothing committed changed.**
+
+- `solution.json` is reproduced by the slow test.
+- The search-equivalence, pre-S12h and pre-S14u digests are unchanged.
+- The 400 property instances give identical outcome, placements, nodes and deepest partial with
+  and without the pruning, symmetry breaking off (`test_dead_starts_change_no_answer`).
+- The six scenarios and the S14i sequence give § S14u's numbers exactly. S14i C took 15.8 s
+  instead of 25.3 s.
+- New test: `test_change_29_repairs_within_its_limit`.
+
+S15e's CSV would now show change 29 repaired. That is Track C's file, not re-run here.
+
+**Not explained:** under pytest the same repair takes 38 s instead of 10 s in a plain script,
+with the same rings and result. The hash seed is not the cause (10.2 and 10.1 s with seeds 0
+and 1).
 
 ## Limits
 

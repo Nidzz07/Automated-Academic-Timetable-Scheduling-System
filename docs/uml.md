@@ -1,6 +1,6 @@
 # Chronos: UML diagrams (S16e)
 
-2026-10-31 · Dhruv (with Claude Code) · branch `docs/srs-uml`, against `main` at commit 7c4d208.
+First written in S16e; last updated 2026-11-01 (S17c).
 Mermaid, which renders on GitHub. Every box and message names something in the code; the files
 are listed under each diagram. Requirements: [docs/srs.md](srs.md).
 
@@ -341,7 +341,7 @@ stateDiagram-v2
 
     state solved {
         [*] --> NotOfficial
-        NotOfficial --> Official : a solve when it ends, if not stale; a repair when accepted (D49)
+        NotOfficial --> Official : a solve when it ends, if not stale, or a repair when accepted (D49)
         Official --> NotOfficial : a newer official job, or its changes cleared (D56)
         NotOfficial --> Stale : built with other changes than those in force (D56)
     }
@@ -439,7 +439,7 @@ solver. `solver/` imports no web, ORM or database code.
 ```mermaid
 flowchart LR
     Browser["Browser (the built React app)"]
-    subgraph Render["Render web service (planned, not built: S16c)"]
+    subgraph Render["Render web service, free instance (deployed by hand, S16c)"]
         subgraph Image["Docker image from backend/Dockerfile.prod"]
             Uvicorn["uvicorn backend.app.prod:app, 1 worker: API under /api, built frontend at /"]
             Pool["Worker processes: ProcessPoolExecutor, 2 workers"]
@@ -448,17 +448,21 @@ flowchart LR
             Uvicorn --> Files
         end
     end
-    Supabase[("Supabase PostgreSQL (D55)")]
+    Supabase[("Supabase PostgreSQL, eu-west-2 (D55)")]
     Browser -- HTTPS --> Uvicorn
-    Uvicorn -- "SQLAlchemy; remote host allowed only with CHRONOS_ALLOW_REMOTE_DB=1, set by hand in Render (D57)" --> Supabase
+    Uvicorn -- "SQLAlchemy, remote host allowed only with CHRONOS_ALLOW_REMOTE_DB=1, set by hand in Render (D57)" --> Supabase
     Pool -- "job status and phase" --> Supabase
 ```
 
 Files: `backend/Dockerfile.prod`, `backend/app/prod.py`, `backend/app/service.py`
 (`max_workers=2`), `db/local_guard.py`.
 
-- **Built:** the image and `prod.py`; locally the same app runs against Docker Postgres.
-- **Not built:** the Render service and its Supabase database are decided (D55, D57) but not
-  deployed yet (S16c).
-- **By hand only:** migrations and demo resets reach Supabase only when Nidhi runs them (D55,
-  D59).
+- **Built and deployed** (S16c, 2026-11-01): one Render web service on the free instance, built
+  from `backend/Dockerfile.prod`. It runs one uvicorn worker and a pool of 2 solver worker
+  processes (`ProcessPoolExecutor`, `max_workers=2` in `ChronosService`). Its database is
+  Supabase PostgreSQL in eu-west-2 (D55). Locally the same app runs against Docker Postgres.
+- **By hand only:** migrations and demo resets reach Supabase only when Nidhi runs them, with
+  `CHRONOS_ALLOW_REMOTE_DB=1` set for that one command (D55, D57, D59). Only the Render service
+  sets that variable, in Render's settings.
+- **Live demos run on a laptop** (D64): Render's free instance is about 9 times slower than a
+  laptop, so the deployed site is shown, not driven.
