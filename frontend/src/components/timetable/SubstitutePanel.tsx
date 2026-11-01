@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { ApiError, HttpChronosApiClient } from '@/api/chronosApi';
 import { useSubstitutesQuery } from '@/api/queries';
-import { EdgeList, Labels, entityName, facultyText } from '@/adapters/timetable';
+import { EdgeList, Labels, entityName, facultyText, sessionWithoutTeacher } from '@/adapters/timetable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatScoreChange } from '@/lib/format';
@@ -46,8 +46,10 @@ export const SubstitutePanel: React.FC<SubstitutePanelProps> = ({
   }, []);
   const subs = useSubstitutesQuery(client, instance, sessionId);
   const data = subs.data;
-  const others = (ids: string[]) =>
-    [...new Set(ids.filter((id) => id !== sessionId))].map((id) => entityName(id, edgeList, labels));
+  // the sessions a left-out teacher teaches then: the line already names the teacher; parallel ones read once
+  const others = (ids: string[]) => [
+    ...new Set(ids.filter((id) => id !== sessionId).map((id) => sessionWithoutTeacher(id, edgeList, labels))),
+  ];
 
   return (
     <Card ref={panel} tabIndex={-1} data-testid="substitute-panel" className="scroll-mt-2 outline-none">

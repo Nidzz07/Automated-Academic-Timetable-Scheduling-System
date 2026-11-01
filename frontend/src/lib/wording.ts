@@ -1,13 +1,14 @@
 /**
  * Plain-language wording for the codes the backend, solver and ingestion use, for people outside
  * the project. One table per kind of code, each with a fallback for a code it does not list; the
- * raw code is still shown beside the words as small secondary text. Wording only: no number here
- * is computed (quality is the solver's, D34).
+ * raw code stays reachable as small secondary text, in the diagnosis panel behind a closed "Details".
+ * Wording only: no number here is computed (quality is the solver's, D34).
  */
 
 import type { AuditEntry, JobStatus, RepairChange } from '@/api/chronosApi';
 import type { DiagnosisMethod, QualityRule } from '@/adapters/solution';
 import {
+  DAY_NAMES,
   EdgeList,
   EnrichedSession,
   FacultyLoad,
@@ -16,9 +17,10 @@ import {
   facultyText,
   sessionPhrase,
   sessionTeacher,
+  sessionWithoutTeacher,
   slotsText,
 } from '@/adapters/timetable';
-import { displayText, formatScore, formatSeconds } from '@/lib/format';
+import { clockSpan, displayText, formatScore, formatSeconds, periodSpan } from '@/lib/format';
 
 /** An unlisted code in words: "frozen_out_of_scope" -> "Frozen out of scope". */
 export function humanise(code: string): string {
@@ -170,6 +172,11 @@ export const UI = {
   timeLimit: 'Time limit (seconds)',
   generate: 'Generate',
   generating: 'Generating…',
+  generateConfirm: 'Generate makes a new timetable and replaces the official one for everyone. Continue?',
+  tryAgain: 'Try again',
+  discard: 'Discard',
+  cancel: 'Cancel',
+  weeklyLimit: 'Weekly limit',
   acceptedChangesNote: 'Unavailability and substitutions accepted so far. Every timetable generated or repaired from now on includes them.',
   howMade: 'How it was made',
   howChecked: 'How it was checked',
@@ -229,6 +236,39 @@ const PHASE_WORDS = {
   improve: 'Improving the timetable it found.',
   repair: 'Repairing the timetable.',
 };
+
+/** The request that starts or reads a job got no answer in time. */
+export const SERVER_NO_ANSWER = 'The server did not answer. It may be busy or restarting. Try again in a minute.';
+
+/** The job is still queued or running well past its limit: the page stops waiting on it. */
+export const SERVER_PAST_LIMIT = 'The server went past the limit without finishing. It may be busy or restarting. Try again in a minute.';
+
+/** Counted in the browser, while a job's first request waits for its answer. */
+export const jobStartingText = (seconds: number, limitS: number) => `Waiting for the server to answer: ${seconds} s of at most ${limitS} s`;
+
+/** Counted in the browser, while a job waits for a free worker; its limit starts when it runs. */
+export const jobQueuedText = (seconds: number) => `Waiting: ${seconds} s so far`;
+
+/** "Running: 47 s of at most 300 s", counted in the browser. */
+export const jobRunningText = (seconds: number, limitS?: number) =>
+  limitS === undefined ? `Running: ${seconds} s` : `Running: ${seconds} s of at most ${num(limitS)} s`;
+
+const JOB_ERROR_WORDS: Record<string, string> = {
+  'server restarted': 'the server restarted while it ran. Nothing was changed.',
+  cancelled: 'it was cancelled. Nothing was changed.',
+};
+
+/**
+ * A failed job's error (backend/app/service.py) in plain words. An administrator's GET /jobs carries
+ * the exception as "RuntimeError: ...": that goes to `detail`, for behind "Details".
+ */
+export function jobErrorText(error: string | undefined): { text: string; detail: string | null } {
+  if (error && JOB_ERROR_WORDS[error]) return { text: JOB_ERROR_WORDS[error], detail: null };
+  if (!error || /^[A-Z][A-Za-z]*: /.test(error)) {
+    return { text: 'the solver stopped with an error. Nothing was changed.', detail: error ?? null };
+  }
+  return { text: error, detail: null };
+}
 
 /** D56: the accepted changes were accepted or cleared while the solve ran. */
 export const STALE_SOLVE = 'Finished, but not used: the accepted changes changed while it ran. Generate it again.';
@@ -369,6 +409,25 @@ export function loadLimitHours(rule: QualityRule | undefined): number | null {
 export const overLimitText = (hours: number, limit: number | null) =>
   limit !== null && hours > limit ? `Over ${num(limit)} h limit: ${num(hours)} h` : null;
 
+/**
+ * One line for a load changing around the limit: "18 h → 19 h, over the 16 h limit", or for a load
+ * coming back under it; `over` says which. Null when neither side is above the limit.
+ */
+export function loadLimitChange(before: number, after: number, limit: number | null): { text: string; over: boolean } | null {
+  if (limit === null) return null;
+  if (before === after) {
+    const text = overLimitText(after, limit);
+    return text ? { text, over: true } : null;
+  }
+  const change = `${num(before)} h → ${num(after)} h`;
+  if (after > limit) return { text: `${change}, over the ${num(limit)} h limit`, over: true };
+  return before > limit ? { text: `${change}, back within the ${num(limit)} h limit`, over: false } : null;
+}
+
+/** A teacher's own load against the limit, beside the red warning when above it. */
+export const ownLimitText = (hours: number, limit: number) =>
+  hours > limit ? `${num(hours - limit)} h above the ${num(limit)} h limit.` : `Within the ${num(limit)} h limit.`;
+
 /** "18 h: 6 h scheduled + 12 h fixed items" */
 export const loadPartsText = (load: FacultyLoad) => `${load.total} h: ${load.scheduled} h scheduled + ${load.fixed} h fixed items`;
 
@@ -417,6 +476,18 @@ export const FIXED_SESSION_NOTE = 'It is fixed to this time, so the solver never
 export const sessionTitle = (
   s: Pick<EnrichedSession, 'subjectCode' | 'subjectName' | 'cohortLabel' | 'facultyName' | 'facultyInitials'>
 ) => sessionPhrase(s.subjectName === 'Subject' ? s.subjectCode : s.subjectName, s.cohortLabel, sessionTeacher(s));
+
+/**
+ * When a session is: "Thursday T1, 10:00 AM–11:00 AM", "Thursday T6–T7, 3:15 PM–5:15 PM" for a double
+ * period; day and period alone for an instance with no clock times (the contract examples).
+ */
+export function sessionWhenText(s: Pick<EnrichedSession, 'day' | 'periods'>, labels: Pick<Labels, 'clock'>): string {
+  const first = s.periods[0];
+  const last = s.periods[s.periods.length - 1];
+  const when = `${DAY_NAMES[s.day]} ${periodSpan(first, last)}`;
+  const clock = clockSpan(labels.clock(first), labels.clock(last));
+  return clock ? `${when}, ${clock}` : when;
+}
 
 // --- Diagnosis (contract solution_v2 Kind, relaxation action and verification) -----------------
 
@@ -619,12 +690,9 @@ export function changePhrase(change: RepairChange, edgeList: EdgeList, labels: L
       return `${entityName(change.room_id, edgeList, labels)} closed on ${slotsText(change.slots)}`;
     case 'move_session':
       return `moving ${entityName(change.session_id, edgeList, labels)} to ${slotsText([change])}`;
-    case 'substitute_faculty': {
+    case 'substitute_faculty':
       // the session without its teacher, whom the substitution replaces
-      const s = edgeList.sessions.find((x) => x.id === change.session_id);
-      const what = s ? `${labels.subject(s.subject_id)?.code ?? s.subject_id} · ${labels.cohort(s.cohort_id)}` : change.session_id;
-      return `${person(change.faculty_id)} teaching ${what} instead`;
-    }
+      return `${person(change.faculty_id)} teaching ${sessionWithoutTeacher(change.session_id, edgeList, labels)} instead`;
   }
 }
 
@@ -661,6 +729,8 @@ export function auditSentence(
     case 'login':
       return d.success === false ? `A sign-in as ${entry.actor} failed.` : `${who} signed in.`;
     case 'solve':
+      // demo_seed --reset (S14y, D63): no solve ran, the committed file became official
+      if (d.source === 'solution.json') return `${who} restored the committed timetable.`;
       return `${who} asked the solver to generate a timetable.${outcome()}`;
     case 'repair': {
       const change = loggedChange(entry.detail);

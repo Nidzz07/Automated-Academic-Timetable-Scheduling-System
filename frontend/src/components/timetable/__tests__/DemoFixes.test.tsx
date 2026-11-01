@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { clickGenerate } from '@/test/generate';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
 import { GeneratedVsPrintedCard } from '../GeneratedVsPrintedCard';
@@ -278,7 +279,7 @@ describe('S3: "Accepted" holds only until the official timetable changes', () =>
     const backend = await open();
     await acceptOne(backend);
     backend.solveJob = { id: 'solve-1', instance_id: REAL_INSTANCE, kind: 'solve', time_limit_s: 300, status: 'solved', solution };
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(screen.getByTestId('solve-status')).toHaveAttribute('data-status', 'solved'));
     await waitFor(expectAtStart);
   });
@@ -287,7 +288,7 @@ describe('S3: "Accepted" holds only until the official timetable changes', () =>
     const backend = await open();
     await acceptOne(backend);
     backend.solveJob = { id: 'solve-1', instance_id: REAL_INSTANCE, kind: 'solve', time_limit_s: 300, status: 'solved', solution, stale: true };
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(screen.getByTestId('solve-status')).toHaveAttribute('data-stale', 'true'));
     expect(status()).toHaveTextContent('Accepted:');
   });
@@ -395,7 +396,9 @@ describe('M2: the workload card in the app', () => {
     fireEvent.click(await screen.findByTestId('substitute-fac-anant-nimkar'));
     const row = await screen.findByTestId('substitution-load-fac-jignesh-sisodia');
     expect(row).toHaveTextContent('+ 1 h fixed item = 17 h');
-    expect(within(row).getAllByTestId('load-over-limit')[0]).toHaveTextContent('Over 16 h limit: 17 h');
+    // 17 h → 16 h comes back within the limit: said once, and not as a warning
+    expect(within(row).getByTestId('load-back-within')).toHaveTextContent('17 h → 16 h, back within the 16 h limit');
+    expect(within(row).queryByTestId('load-over-limit')).not.toBeInTheDocument();
   });
 });
 
@@ -542,7 +545,7 @@ describe('M6: the diagnosis is written with names', () => {
     return { panel: await screen.findByTestId('infeasibility-panel'), s };
   };
 
-  it('in the app: names as main text, plain headings, codes only as small secondary text', async () => {
+  it('in the app: names as main text, plain headings, codes only behind a closed "Details"', async () => {
     const { panel, s } = await openDiagnosis();
     const subject = display.subjects[edgeList.sessions.find((x) => x.id === s.sessionId)!.subject_id].name;
     const change = within(panel).getByTestId('conflicting-constraint-change');
@@ -559,10 +562,12 @@ describe('M6: the diagnosis is written with names', () => {
     expect(within(panel).getByText('What would make it possible')).toBeInTheDocument();
     expect(panel).not.toHaveTextContent('Minimal Unsatisfiable Subset');
 
-    // the codes appear only in the small notes
-    const code = within(pin).getByText('PINNED_BLOCK · pin.238');
-    expect(code.className).toContain('text-[11px]');
-    expect(within(panel).getByText('RELAX_PINNED_BLOCK, restored').className).toContain('text-[11px]');
+    // the codes appear only in the small notes, closed until asked for
+    for (const code of [within(pin).getByText('PINNED_BLOCK · pin.238'), within(panel).getByText('RELAX_PINNED_BLOCK, restored')]) {
+      expect(code.className).toContain('text-[11px]');
+      expect(code.closest('details')).not.toHaveAttribute('open');
+      expect(code).not.toBeVisible();
+    }
   });
 
   it('says what an impossible repair means instead of "0 / 156 sessions placed"', async () => {

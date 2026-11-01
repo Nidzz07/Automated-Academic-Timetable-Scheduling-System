@@ -46,6 +46,15 @@ export function formatClock(time: string): string {
 /** "9:00 AM – 10:00 AM" */
 export const formatClockRange = (start: string, end: string) => `${formatClock(start)} – ${formatClock(end)}`;
 
+/**
+ * From the start of one "9:00 AM – 10:00 AM" to the end of another, tight: "9:00 AM–11:00 AM".
+ * Null when either has no clock time.
+ */
+export function clockSpan(first: string | null, last: string | null): string | null {
+  if (!first || !last) return null;
+  return `${first.split(' – ')[0]}–${last.split(' – ').pop()}`;
+}
+
 /** A moment (an ISO timestamp from the backend) in the viewer's time zone: "22 Oct 2026, 3:30 PM". */
 export function formatTimestamp(iso: string): string {
   const d = new Date(iso);

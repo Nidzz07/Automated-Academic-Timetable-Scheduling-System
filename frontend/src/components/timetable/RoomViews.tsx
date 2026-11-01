@@ -101,7 +101,8 @@ export const FreeRoomsPanel: React.FC<RoomViewsProps> = ({ edgeList, sessions, l
   const free = freeRoomsAt(edgeList, occupancies, day, period, labels);
 
   return (
-    <Card data-testid="free-rooms">
+    // self-start: as tall as its list, not stretched to the room timetable beside it
+    <Card data-testid="free-rooms" className="self-start">
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle>Free rooms</CardTitle>

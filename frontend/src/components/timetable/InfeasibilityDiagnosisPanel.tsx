@@ -17,16 +17,13 @@ import {
   searchStepsText,
   verificationLabel,
 } from '@/lib/wording';
-import { MethodDetails } from './MethodDetails';
+import { CodeDetails, CodeLine, MethodDetails } from './MethodDetails';
 import { AlertTriangle, Lightbulb, ArrowRight } from 'lucide-react';
 
 type Slot = { day: number; period: number };
 
 /** How many of a constraint's entities "Involves" lists by name before "and N more". */
 const LISTED_ENTITIES = 8;
-
-/** The contract's codes and ids: small secondary text beside the words, never the main text. */
-const CODE_CLASS = 'font-mono text-[11px] font-normal text-muted-foreground';
 
 /** The ids a relaxation's params name (contracts/solution_v2 params_*), by name; its pin (D51), if any, by unique_label. */
 function relaxationTargets(params: Record<string, unknown>, name: (id: string) => string, pin: string | null): string[] {
@@ -50,7 +47,7 @@ interface InfeasibilityDiagnosisPanelProps {
 
 /**
  * Why no timetable exists: the solver's diagnosis in plain words, every id by name (D51), each
- * constraint's kind by its meaning with the contract's code as small text beside it.
+ * constraint's kind by its meaning. The contract's codes and ids are behind a closed "Details" only.
  */
 export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelProps> = ({
   infeasibleSolution,
@@ -80,9 +77,6 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
           <div>
             <h2 className="text-xl font-semibold">{headings.title}</h2>
             <p>{method.text}</p>
-            <p className={CODE_CLASS}>
-              <span data-testid="diagnosis-method">{method.badge}</span>
-            </p>
           </div>
         </div>
 
@@ -100,7 +94,7 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
           <dt className="font-semibold">{UI.howChecked}</dt>
           <dd>{methodText(metadata.algorithm)}</dd>
           <dd>
-            <MethodDetails algorithm={metadata.algorithm} />
+            <MethodDetails algorithm={metadata.algorithm} diagnosisMethod={method.badge} />
           </dd>
         </div>
         <div>
@@ -145,9 +139,6 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
               >
                 <p data-testid={`constraint-kind-${constraint.kind}`} className="font-semibold">
                   {constraint.constraint_id === 'change' ? 'The change you asked for' : constraintKindLabel(constraint.kind)}
-                  <span className={`block ${CODE_CLASS}`}>
-                    {constraint.kind} · {constraint.constraint_id}
-                  </span>
                 </p>
                 <p>{text(constraint.description)}</p>
 
@@ -173,6 +164,12 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                   ))}
                   {constraint.entity_ids.length > LISTED_ENTITIES && ` and ${constraint.entity_ids.length - LISTED_ENTITIES} more`}
                 </p>
+
+                <CodeDetails testId={`constraint-details-${constraint.constraint_id}`}>
+                  <CodeLine testId={`constraint-code-${constraint.constraint_id}`}>
+                    {constraint.kind} · {constraint.constraint_id}
+                  </CodeLine>
+                </CodeDetails>
               </li>
             ))}
           </ul>
@@ -196,10 +193,7 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                 {relaxationActionLabel(suggested_relaxation.action_type)};{' '}
                 {verificationLabel(suggested_relaxation.verification.status)}
                 {suggested_relaxation.verification.runtime_ms !== null &&
-                  ` (${formatDuration(suggested_relaxation.verification.runtime_ms)})`}{' '}
-                <span className={CODE_CLASS}>
-                  {suggested_relaxation.action_type}, {suggested_relaxation.verification.status}
-                </span>
+                  ` (${formatDuration(suggested_relaxation.verification.runtime_ms)})`}
               </p>
             )}
             {edgeList && suggested_relaxation.action_params && (
@@ -207,9 +201,14 @@ export const InfeasibilityDiagnosisPanel: React.FC<InfeasibilityDiagnosisPanelPr
                 Applies to: {relaxationTargets(suggested_relaxation.action_params, name, pin(suggested_relaxation.constraint_id)).join('; ') || 'nothing named'}
               </p>
             )}
-            <p data-testid="relaxation-constraint-id" className={CODE_CLASS}>
-              Constraint {suggested_relaxation.constraint_id}
-            </p>
+            <CodeDetails testId="relaxation-details">
+              {suggested_relaxation.action_type && suggested_relaxation.verification && (
+                <CodeLine testId="relaxation-code">
+                  {suggested_relaxation.action_type}, {suggested_relaxation.verification.status}
+                </CodeLine>
+              )}
+              <CodeLine testId="relaxation-constraint-id">Constraint {suggested_relaxation.constraint_id}</CodeLine>
+            </CodeDetails>
           </div>
 
           {onApplyRelaxation && (
