@@ -357,7 +357,8 @@ describe('8. outline and keyboard', () => {
     expect(screen.getByTestId('skip-past-timetable')).toHaveAttribute('href', '#after-timetable');
     expect(document.getElementById('after-timetable')).toBeInTheDocument();
     const focusable = [...document.querySelectorAll<HTMLElement>('a[href], button, select, input, [tabindex="0"]')].filter((e) => !e.hasAttribute('disabled'));
-    expect(focusable.slice(0, 2)).toContain(skip);
+    // the first tab stop of the page, before Log out in http mode
+    expect(focusable[0]).toBe(skip);
   });
 
   it.each(['administrator', 'coordinator'] as const)('http, %s: Space picks a session up, a cell takes the focus, Enter sends the move', async (role) => {

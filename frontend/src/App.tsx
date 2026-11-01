@@ -13,6 +13,7 @@ import { FacultyAtSlotPanel } from '@/components/timetable/FacultyAtSlotPanel';
 import { AnomalyReportPanel } from '@/components/timetable/AnomalyReport';
 import { PrintedViolationsPanel } from '@/components/timetable/PrintedViolations';
 import { SolvePanel } from '@/components/timetable/SolvePanel';
+import type { JobClocks } from '@/components/timetable/JobProgress';
 import { RepairPanel, RepairPrefill, RepairProposal } from '@/components/timetable/RepairPanel';
 import { AcceptedChangesPanel } from '@/components/timetable/AcceptedChangesPanel';
 import { SubstitutePanel } from '@/components/timetable/SubstitutePanel';
@@ -99,11 +100,20 @@ export function App({ client = chronosApiClient }: AppProps) {
   return <SessionApp key={session?.token ?? 'static'} client={client} session={session} />;
 }
 
+const SKIP_LINK =
+  'sr-only rounded-md bg-primary font-semibold text-primary-foreground focus:not-sr-only focus:inline-block focus:px-3 focus:py-2';
+// shown over the page when focused, so the page does not jump under it
+const SKIP_TO_GRID_LINK = `${SKIP_LINK} focus:absolute focus:left-4 focus:top-2 focus:z-50`;
+
 function SessionApp({ client, session }: { client: ChronosApiClient; session: AuthSession | null }) {
   // One client per App mount, so every render (and every test) starts with an empty cache.
   const [queryClient] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={queryClient}>
+      {/* The first tab stop, before Log out: the grid is far down the page, past the panels */}
+      <a href="#timetable" data-testid="skip-to-timetable" className={SKIP_TO_GRID_LINK}>
+        {SKIP_TO_TIMETABLE}
+      </a>
       {session && (
         <div className="bg-background text-foreground">
           <div className="flex w-full items-center justify-end gap-3 px-4 pt-4 lg:px-6">
@@ -154,6 +164,12 @@ function TimetableApp({ client, session }: { client: ChronosApiClient; session: 
     startOrder.current.set(jobId, startOrder.current.size);
     setSolveJobs((jobs) => ({ ...jobs, [solved]: jobId }));
   }, []);
+  const onSolveDiscarded = useCallback(
+    (solved: EdgeListInstance) => setSolveJobs(({ [solved]: _discarded, ...jobs }) => jobs),
+    []
+  );
+  // When each job started: the panels counting its seconds unmount on a switch of instance, this does not
+  const jobClocks = useRef<JobClocks>(new Map());
   // The solves already applied: the workspace and its SolvePanel unmount on a switch of instance, this does not
   const appliedSolves = useRef(new Set<string>());
   const [repairJobs, setRepairJobs] = useState<Record<EdgeListInstance, string>>({});
@@ -225,6 +241,8 @@ function TimetableApp({ client, session }: { client: ChronosApiClient; session: 
       startOrder={startOrder.current}
       appliedSolves={appliedSolves.current}
       onSolveStarted={onSolveStarted}
+      onSolveDiscarded={onSolveDiscarded}
+      jobClocks={jobClocks.current}
       repairJobId={repairJobs[instance] ?? null}
       onRepairStarted={onRepairStarted}
       onRepairDiscarded={onRepairDiscarded}
@@ -260,9 +278,6 @@ function TimetableLoadError({ error, onRetry }: { error: Error; onRetry: () => v
   );
 }
 
-const SKIP_LINK =
-  'sr-only rounded-md bg-primary font-semibold text-primary-foreground focus:not-sr-only focus:inline-block focus:px-3 focus:py-2';
-
 interface TimetableWorkspaceProps {
   solution: SolutionContract;
   /** The edge list with every accepted change (http mode, D52): absences, room closures, substitutions */
@@ -291,6 +306,8 @@ interface TimetableWorkspaceProps {
   /** The solve jobs whose result was already written to the query cache */
   appliedSolves: Set<string>;
   onSolveStarted: (instance: EdgeListInstance, jobId: string) => void;
+  onSolveDiscarded: (instance: EdgeListInstance) => void;
+  jobClocks: JobClocks;
   /** The instance's latest repair job, until accepted-and-shown or discarded */
   repairJobId: string | null;
   onRepairStarted: (instance: EdgeListInstance, jobId: string) => void;
@@ -315,6 +332,8 @@ function TimetableWorkspace({
   startOrder,
   appliedSolves,
   onSolveStarted,
+  onSolveDiscarded,
+  jobClocks,
   repairJobId,
   onRepairStarted,
   onRepairDiscarded,
@@ -381,11 +400,15 @@ function TimetableWorkspace({
 
   // Repairs of a backend instance's official timetable (S14c; administrator and coordinator)
   const http = client instanceof HttpChronosApiClient ? client : null;
-  const repair = useRepair(http, instance, repairJobId, onRepairStarted);
-  const repairJob = repair.job.data;
-  // The instance's solve, started before the repair and still queued or running, is what a queued repair waits for
   const solveJobId = http ? solveJobs[instance] ?? null : null;
   const solveJob = useJobQuery(http!, solveJobId, 1000).data;
+  // What an ended Generate said ("Done: the grid ... show the new timetable") holds only until the official timetable changes otherwise
+  const forgetEndedSolve = () => {
+    if (isFinished(solveJob?.status)) onSolveDiscarded(instance);
+  };
+  const repair = useRepair(http, instance, repairJobId, onRepairStarted, 1000, forgetEndedSolve);
+  const repairJob = repair.job.data;
+  // The instance's solve, started before the repair and still queued or running, is what a queued repair waits for
   const solveFirst =
     solveJobId !== null && repairJobId !== null && (startOrder.get(solveJobId) ?? 0) < (startOrder.get(repairJobId) ?? 0);
   const waitingFor = solveFirst && solveJob && !isFinished(solveJob.status) ? 'the solve of this instance' : null;
@@ -695,11 +718,6 @@ function TimetableWorkspace({
       }`}
     >
       <div className="w-full px-4 py-8 space-y-5 lg:px-6">
-        {/* The grid is far down the page, past the panels */}
-        <a href="#timetable" data-testid="skip-to-timetable" className={SKIP_LINK}>
-          {SKIP_TO_TIMETABLE}
-        </a>
-
         {/* Header Toolbar */}
         <TimetableHeader
           cohortFilter={selectedCohortFilter}
@@ -745,8 +763,10 @@ function TimetableWorkspace({
             instance={instance}
             jobId={solveJobs[instance] ?? null}
             onJobStarted={onSolveStarted}
+            onJobDiscarded={onSolveDiscarded}
             onOfficial={forgetAcceptedRepair}
             appliedSolves={appliedSolves}
+            jobClocks={jobClocks}
           />
         )}
 
@@ -766,6 +786,7 @@ function TimetableWorkspace({
               prefill={repairPrefill}
               onStart={startRepair}
               onDiscard={discardRepair}
+              jobClocks={jobClocks}
             />
           </div>
         )}
@@ -799,7 +820,10 @@ function TimetableWorkspace({
             edgeList={edgeList}
             labels={labels}
             canClear={currentRole === 'administrator'}
-            onCleared={forgetAcceptedRepair}
+            onCleared={() => {
+              forgetAcceptedRepair();
+              forgetEndedSolve();
+            }}
           />
         )}
 
@@ -810,7 +834,6 @@ function TimetableWorkspace({
             facultyInitials={labels.faculty(selectedFaculty).initials}
             load={workload}
             loadRule={quality.rules.find((r) => r.rule_id === 'S-LOAD16')}
-            nameOf={nameOf}
           />
         )}
 
@@ -955,6 +978,7 @@ function TimetableWorkspace({
         {/* Session Details Modal */}
         <SessionDetailModal
           session={isModalOpen ? selectedSession : null}
+          labels={labels}
           onClose={() => setIsModalOpen(false)}
           onFindSubstitute={
             canRepair && !repairOpen && selectedSession

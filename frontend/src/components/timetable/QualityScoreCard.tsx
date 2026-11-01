@@ -40,12 +40,10 @@ interface QualityScoreCardProps {
  * What a rule found, one finding per line: the first LISTED_FINDINGS, then all of them on request.
  * A teacher above the weekly limit is in red with the over-limit wording (D11).
  */
-export const RuleFindings: React.FC<{
+const RuleFindings: React.FC<{
   rule: Extract<QualityRule, { status: 'evaluated' }>;
   nameOf?: (id: string) => string | null;
-  /** Where a page has another warning of its own (the workload card), to tell them apart */
-  warningTestId?: string;
-}> = ({ rule, nameOf, warningTestId }) => {
+}> = ({ rule, nameOf }) => {
   const [showAll, setShowAll] = useState(false);
   const items = explanationItems(rule.explanation);
   // a sentence that lists nothing ("No faculty member teaches more than 16 h a week.")
@@ -64,7 +62,7 @@ export const RuleFindings: React.FC<{
               {over ? (
                 <span className="inline-flex flex-wrap items-center gap-x-1.5 font-semibold text-destructive dark:text-red-300">
                   <span>{nameOf?.(over.who) ?? over.who}:</span>{' '}
-                  <OverLimitWarning hours={over.hours} limit={limit} testId={warningTestId} />
+                  <OverLimitWarning hours={over.hours} limit={limit} />
                 </span>
               ) : (
                 readableItem(item, nameOf)

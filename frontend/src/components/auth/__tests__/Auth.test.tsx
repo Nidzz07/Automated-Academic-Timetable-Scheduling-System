@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { clickGenerate } from '@/test/generate';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
 import {
@@ -158,7 +159,8 @@ describe('Solve job across instance switches', () => {
     await logIn('administrator');
     await screen.findByTestId('timetable-grid');
     fireEvent.change(screen.getByLabelText('Select timetable'), { target: { value: REAL_INSTANCE } });
-    fireEvent.click(await screen.findByTestId('solve-button'));
+    await screen.findByTestId('solve-button');
+    clickGenerate();
     state.job = { ...state.job, status: 'running', phase: 'search' };
     await waitFor(() => expect(screen.getByTestId('solve-status')).toHaveAttribute('data-phase', 'search'));
     expect(screen.getByTestId('solve-status')).toHaveTextContent('Searching for a timetable.');

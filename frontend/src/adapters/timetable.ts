@@ -568,6 +568,12 @@ export function entityName(id: string, edgeList: EdgeList, labels: Labels = EXAM
   return block ? `Lab block of ${block.session_ids.length} batches` : id;
 }
 
+/** A session by subject and class, for where its teacher is already named or is what changes: "CE207 · SE-Comp A". */
+export function sessionWithoutTeacher(id: string, edgeList: EdgeList, labels: Labels = EXAMPLE_LABELS): string {
+  const session = edgeList.sessions.find((s) => s.id === id);
+  return session ? `${labels.subject(session.subject_id)?.code ?? session.subject_id} · ${labels.cohort(session.cohort_id)}` : id;
+}
+
 /**
  * A diagnosis's `pin.<i>` by display.json pins[i] (D51): its unique_label; null for any other id.
  * Past display.json's pins it is a room an accepted change made unavailable (ACCEPTED_ROOM_PIN).

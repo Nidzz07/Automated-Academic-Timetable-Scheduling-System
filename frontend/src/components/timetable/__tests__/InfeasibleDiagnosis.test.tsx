@@ -53,7 +53,7 @@ describe('Infeasibility Diagnosis Panel', () => {
       expect(card).toBeInTheDocument();
 
       // Check kind badge
-      expect(within(card).getByTestId(`constraint-kind-${c.kind}`)).toHaveTextContent(c.kind);
+      expect(within(card).getByTestId(`constraint-code-${c.constraint_id}`)).toHaveTextContent(c.kind);
 
       // Check institutional description
       expect(within(card).getByText(c.description)).toBeInTheDocument();
@@ -111,8 +111,10 @@ describe('Infeasibility Diagnosis Panel (solution.v2)', () => {
     );
     expect(screen.queryByTestId('constraint-slots-labblk-0001.contiguity')).not.toBeInTheDocument();
     expect(screen.getByTestId('relaxation-action')).toHaveTextContent(
-      'Allow the room to be used as the other kind (lab or classroom); checked: with this change a timetable exists (212 ms) RECLASSIFY_ROOM, restored'
+      'Allow the room to be used as the other kind (lab or classroom); checked: with this change a timetable exists (212 ms)'
     );
+    expect(screen.getByTestId('relaxation-action')).not.toHaveTextContent('RECLASSIFY_ROOM');
+    expect(screen.getByTestId('relaxation-code')).toHaveTextContent('RECLASSIFY_ROOM, restored');
 
     const partial = screen.getByTestId('partial-placement');
     expect(partial).toHaveTextContent(/for diagnosis only, not a timetable\): 4 placed, 4 not placed/i);

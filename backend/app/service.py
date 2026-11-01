@@ -43,17 +43,23 @@ uncleared change for the same faculty or room) is refused, never queued nor acce
 S14r: a job's error keeps the exception in the job row, the audit row and the server log;
 clients other than an administrator get :data:`JOB_FAILED`. At most :data:`MAX_QUEUED`
 jobs wait; failed logins are limited per username (:class:`backend.app.auth.LoginLimiter`).
+
+S17b: ``CHRONOS_SOLVER_WORKERS`` sets the worker processes (default 2, at least 1). A worker
+that dies (killed for memory, say) ends its job ``error`` with :data:`WORKER_STOPPED` and the
+next job gets a new pool. Each job's end is logged on one line.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 import time
 import uuid
 from collections.abc import Callable, Collection
 from concurrent.futures import Future, ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from datetime import UTC, datetime
 from functools import cache, partial
 from typing import Any
@@ -89,7 +95,11 @@ LEFT_OUT = {"FACULTY_CLASH": "busy", "PINNED_BLOCK": "busy",
             "FACULTY_UNAVAILABLE": "unavailable"}
 IN_FORCE = "This change is already in force"
 JOB_FAILED = "The solver failed. An administrator can see the details in the audit log."
-PLAIN_ERRORS = ("server restarted", "cancelled")  # job errors that carry no exception text
+WORKER_STOPPED = ("The solver process stopped before the job ended, possibly out of memory. "
+                  "Try again.")
+# job errors that carry no exception text
+PLAIN_ERRORS = ("server restarted", "cancelled", WORKER_STOPPED)
+DEFAULT_SOLVER_WORKERS = 2
 MAX_QUEUED = 5  # jobs waiting for a pool worker; one more is refused (HTTP 429)
 AUDIT_ERROR_CHARS = 400  # of the exception text, so the row stays within detail's 1024
 log = logging.getLogger(__name__)
@@ -221,11 +231,28 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def solver_workers() -> int:
+    """The solver worker processes: ``CHRONOS_SOLVER_WORKERS``, default 2. Each one holds
+    an instance and its search in memory; Render's free instance (512 MB) runs 1."""
+    workers = int(os.environ.get("CHRONOS_SOLVER_WORKERS") or DEFAULT_SOLVER_WORKERS)
+    if workers < 1:
+        raise ValueError(f"CHRONOS_SOLVER_WORKERS must be at least 1, not {workers}")
+    return workers
+
+
+def _clock(at: datetime | None) -> str:
+    return at.isoformat(timespec="seconds") if at else "-"
+
+
 class ChronosService:
-    def __init__(self, store: InstanceStore, engine: Engine, max_workers: int = 2) -> None:
+    def __init__(
+        self, store: InstanceStore, engine: Engine, max_workers: int | None = None
+    ) -> None:
         self.store = store
         self._engine = engine  # users, the audit log and solve jobs
-        self._pool = ProcessPoolExecutor(max_workers=max_workers)
+        self._workers = solver_workers() if max_workers is None else max_workers
+        self._pool = ProcessPoolExecutor(max_workers=self._workers)
+        self._pool_lock = threading.Lock()  # replacing a broken pool vs. submitting to it
         self._lock = threading.Lock()
         self._official_lock = threading.Lock()  # accepting a repair vs. a job ending
         self._queue_lock = threading.Lock()  # counting queued jobs vs. adding one
@@ -238,6 +265,9 @@ class ChronosService:
         with OrmSession(engine) as db:
             unfinished = select(SolveJob).where(SolveJob.status.in_(("queued", "running")))
             for job in db.scalars(unfinished):
+                log.warning("job %s %s: server restarted while %s (queued %s, started %s)",
+                            job.id, job.kind, job.status, _clock(job.created_at),
+                            _clock(job.started_at))
                 job.status, job.error, job.ended_at = "error", "server restarted", func.now()
                 if job.audit_id is not None:
                     self._finish_audit(db, job.audit_id, "error")
@@ -541,15 +571,33 @@ class ChronosService:
         on_phase = partial(
             _mark_running, self._engine.url.render_as_string(hide_password=False), job_id
         )
-        future = self._pool.submit(work, *args, on_phase)
+        try:
+            future = self._submit(work, *args, on_phase)
+        except Exception as exc:  # the queued row must still end, never wait for ever
+            future = Future()
+            future.set_exception(exc)
         future.add_done_callback(lambda f: self._job_done(job_id, f))
         return job_id
+
+    def _submit(self, work: Callable[..., Any], *args: Any) -> Future[Any]:
+        """Submit to the pool, first replacing it when a dead worker broke it."""
+        with self._pool_lock:
+            try:
+                return self._pool.submit(work, *args)
+            except BrokenProcessPool:
+                log.warning("solver pool broken by a dead worker: starting a new one")
+                self._pool.shutdown(wait=False, cancel_futures=True)
+                self._pool = ProcessPoolExecutor(max_workers=self._workers)
+                return self._pool.submit(work, *args)
 
     def _job_done(self, job_id: str, future: Future[Any]) -> None:
         solution, error = None, None
         if future.cancelled():
             status, error = "error", "cancelled"
-        elif (exc := future.exception()) is not None:
+        elif isinstance(exc := future.exception(), BrokenProcessPool):
+            status, error = "error", WORKER_STOPPED
+            log.error("job %s: %s", job_id, exc)
+        elif exc is not None:
             status, error = "error", f"{type(exc).__name__}: {exc}"
             log.error("job %s failed", job_id, exc_info=exc)
         else:
@@ -568,6 +616,11 @@ class ChronosService:
             if job.audit_id is not None:
                 self._finish_audit(db, job.audit_id, status, extra)
             db.commit()
+            # the database's times, reloaded after the commit
+            log.info("job %s %s: queued %s, started %s, ended %s, %.1f s, %s", job_id,
+                     job.kind, _clock(job.created_at), _clock(job.started_at),
+                     _clock(job.ended_at), (job.ended_at - job.created_at).total_seconds(),
+                     status)
 
     def accept(self, job_id: str, actor: str) -> dict[str, Any] | None:
         """Make a solved repair the official solution (D49): the job, or None if unknown.

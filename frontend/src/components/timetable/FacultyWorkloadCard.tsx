@@ -2,9 +2,8 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { FacultyLoad } from '@/adapters/timetable';
 import { QualityRule } from '@/adapters/solution';
-import { loadLimitHours, loadPartsText, loadText, ruleWording } from '@/lib/wording';
+import { UI, loadLimitHours, loadPartsText, loadText, ownLimitText } from '@/lib/wording';
 import { OverLimitWarning } from './OverLimitWarning';
-import { RuleFindings } from './QualityScoreCard';
 
 interface FacultyWorkloadCardProps {
   facultyName: string;
@@ -14,19 +13,21 @@ interface FacultyWorkloadCardProps {
   load: FacultyLoad;
   /** The solver's S-LOAD16 entry (D11, D34); the only source of a load status and of the limit */
   loadRule?: QualityRule;
-  /** A faculty id the solver's explanation names, by name; null keeps the id */
-  nameOf?: (id: string) => string | null;
 }
 
+/**
+ * This teacher's own load and own warning. S-LOAD16's department-wide list of teachers above the
+ * limit is for administrator and coordinator, in the quality card; it is never shown here.
+ */
 export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
   facultyName,
   facultyInitials,
   load,
   loadRule,
-  nameOf,
 }) => {
   // Two sessions in one slot (a printed clash) are one teaching hour, as the solver counts them
   const overlap = load.theory + load.practical - load.scheduled;
+  const limit = loadLimitHours(loadRule);
 
   return (
     <Card data-testid="faculty-workload-card">
@@ -48,7 +49,7 @@ export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
         <p data-testid="workload-parts" className="font-semibold">
           {loadPartsText(load)}
         </p>
-        <OverLimitWarning hours={load.total} limit={loadLimitHours(loadRule)} />
+        <OverLimitWarning hours={load.total} limit={limit} />
         {overlap > 0 && (
           <p data-testid="workload-overlap" className="text-xs">
             {overlap} h of these sessions overlap in this timetable and are counted once.
@@ -73,19 +74,19 @@ export const FacultyWorkloadCard: React.FC<FacultyWorkloadCardProps> = ({
           </div>
           <div className="col-span-2 sm:col-span-4">
             <dt data-testid="load-rule-heading" className="text-xs font-semibold">
-              <span>{ruleWording('S-LOAD16').title}</span>{' '}
+              <span>{UI.weeklyLimit}</span>{' '}
               <span data-testid="load-rule-code" className="font-mono text-[11px] font-normal text-muted-foreground">
                 S-LOAD16
               </span>
             </dt>
             <dd data-testid="load-status" className="text-xs">
-              {!loadRule ? (
-                'not reported by the solver'
-              ) : loadRule.status === 'not_evaluated' ? (
-                'not evaluated'
-              ) : (
-                <RuleFindings rule={loadRule} nameOf={nameOf} warningTestId="load-rule-over-limit" />
-              )}
+              {!loadRule
+                ? 'not reported by the solver'
+                : loadRule.status === 'not_evaluated'
+                  ? 'not evaluated'
+                  : limit === null
+                    ? 'limit not stated by the solver'
+                    : ownLimitText(load.total, limit)}
             </dd>
           </div>
         </dl>

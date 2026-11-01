@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { clickGenerate } from '@/test/generate';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
 import { InfeasibilityDiagnosisPanel } from '@/components/timetable/InfeasibilityDiagnosisPanel';
@@ -11,7 +12,7 @@ import {
   EdgeList,
   EnrichedSession,
   buildEnrichedSessions,
-  entityName,
+  sessionWithoutTeacher,
   facultyText,
   checkMove,
   labelsFor,
@@ -635,8 +636,9 @@ describe('Find substitute (S14h, D53)', () => {
     expect(within(panel).getByTestId('substitute-fac-nataasha-raul')).toHaveTextContent('Nataasha Raul (NR)');
     expect(within(panel).getByTestId('substitute-score-fac-nataasha-raul')).toHaveTextContent('score −2.0');
     expect(within(panel).getByTestId('left-out-fac-sudhir-dhage')).toHaveTextContent(
-      `Sudhir Dhage (SND): teaches ${entityName('obs-t6-r4-c4-l1', edgeList, labelsFor(display))} then`
+      `Sudhir Dhage (SND): teaches ${sessionWithoutTeacher('obs-t6-r4-c4-l1', edgeList, labelsFor(display))} then`
     );
+    expect(within(panel).getByTestId('left-out-fac-sudhir-dhage').textContent!.match(/Sudhir Dhage/g)).toHaveLength(1);
 
     // nobody moves: the result is the official placement with the new teacher, in the job's edge list
     backend.job = repairJob({ status: 'solved', change: substitution, solution: { ...solution, displaced: [] } });
@@ -728,7 +730,7 @@ describe('A queued repair and the audit log (S14o)', () => {
   it('a repair queued while this instance’s solve runs waits for it; once the solve ends it is only queued', async () => {
     const backend = await openReal('administrator');
     backend.jobs['solve-1'] = solveJob('running');
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(solveStatus()).toHaveAttribute('data-status', 'running'));
 
     markKurhadeUnavailable();
@@ -747,7 +749,7 @@ describe('A queued repair and the audit log (S14o)', () => {
     markKurhadeUnavailable();
     await waitFor(() => expect(status()).toHaveTextContent('Waiting its turn on the server.'));
     backend.jobs['solve-1'] = solveJob('running');
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(solveStatus()).toHaveAttribute('data-status', 'running'));
     expect(status()).toHaveTextContent('Waiting its turn on the server.');
   });
@@ -761,7 +763,7 @@ describe('A queued repair and the audit log (S14o)', () => {
 
     // a solve: its row appears when it is queued, and shows its final status once it ends
     backend.jobs['solve-1'] = solveJob('timeout');
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(solveStatus()).toHaveAttribute('data-status', 'timeout'));
     await waitFor(() => expect(rows()).toEqual([expect.stringContaining('"status":"timeout"')]));
     expect(rows()[0]).toContain('solve');

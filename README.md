@@ -228,12 +228,19 @@ Environment variables (Render → the service → Environment), every one the pr
 | `SECRET_KEY` | a new random key for production only, at least 32 characters (`python -c "import secrets; print(secrets.token_hex(32))"`) |
 | `CHRONOS_ALLOW_REMOTE_DB` | `1` (here and nowhere else, D57) |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | optional, 5 to 1440; default 30 |
+| `CHRONOS_SOLVER_WORKERS` | `1` on the free instance: each solver worker process holds an instance and its search in memory, and two can exceed the free instance's 512 MB (default 2, at least 1) |
 
 Already set, do not add: `PORT` (Render sets it; `backend/Dockerfile.prod` defaults it to 8000)
 and `CHRONOS_FRONTEND_DIST` (unset in the image: the app serves `/app/frontend/dist`, where the
 image puts the built frontend). The image has no `.env` file. The free instance sleeps when idle,
 so the first request after a while takes about a minute; a sleep or redeploy ends any running
 job, which is then marked `error` ("server restarted").
+
+The free instance is about 9 times slower than a laptop (deployed check, 2026-11-01): a repair
+that takes 2 s locally takes 20–70 s there. Live demos run on a laptop; the deployed site is
+shown, not driven (D64). Render's logs have one line per finished job (`job <id> <kind>: queued
+…, started …, ended …, <seconds> s, <outcome>`), one per request slower than 5 s, and one per
+job a restart interrupted.
 
 ### 4. After deploying
 

@@ -98,10 +98,10 @@ describe('Faculty load status (S-LOAD16 only)', () => {
       weight: 1,
       raw: 0,
       penalty: 0,
-      explanation: 'Explanation as the solver wrote it.',
+      explanation: 'No faculty member teaches more than 16 h a week.',
     };
     render(<FacultyWorkloadCard facultyName="A. G. Nikam" facultyInitials="AGN" load={load} loadRule={rule} />);
-    expect(screen.getByTestId('load-status')).toHaveTextContent('Explanation as the solver wrote it.');
+    expect(screen.getByTestId('load-status')).toHaveTextContent(`Within the 16 h limit.`);
   });
 
   it('shows "not evaluated", or that the solver reported nothing, otherwise', () => {

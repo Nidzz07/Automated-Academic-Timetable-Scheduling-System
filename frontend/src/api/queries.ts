@@ -184,14 +184,16 @@ export function useJobQuery(client: HttpChronosApiClient, jobId: string | null, 
 /**
  * An instance's latest repair job (S14c): start one, poll it, read the solution it started
  * from (its base, D48) once solved and the edge list it ran on once it has a solution, and
- * accept it (D49). Null client: static mode, never used.
+ * accept it (D49). Null client: static mode, never used. onAccepted is a hook-level callback, so it
+ * still fires when the panel unmounts mid-POST.
  */
 export function useRepair(
   client: HttpChronosApiClient | null,
   instance: EdgeListInstance,
   jobId: string | null,
   onStarted: (instance: EdgeListInstance, jobId: string) => void,
-  pollMs = 1000
+  pollMs = 1000,
+  onAccepted?: () => void
 ) {
   const queryClient = useQueryClient();
   const start = useMutation({
@@ -226,6 +228,7 @@ export function useRepair(
       queryClient.invalidateQueries({ queryKey: changesQueryKey(instance) });
       queryClient.invalidateQueries({ queryKey: currentEdgeListQueryKey(instance) });
       queryClient.invalidateQueries({ queryKey: auditQueryKey });
+      onAccepted?.();
     },
   });
   return { start, job, base, edgeList, accept };
