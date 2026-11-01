@@ -10,7 +10,8 @@ Read from the environment, else from `backend/.env` (never committed):
 
 | Variable | Use |
 |---|---|
-| `DATABASE_URL` | Postgres for users, the audit log and solve jobs. Local hosts only (`db/local_guard.py`), except with `CHRONOS_ALLOW_REMOTE_DB`. Connections are tested before use and renewed after 5 minutes (Supabase closes idle ones). |
+| `DATABASE_URL` | Postgres for users, the audit log and solve jobs. Local hosts only (`db/local_guard.py`), except with `CHRONOS_ALLOW_REMOTE_DB`. Connections are tested before use and renewed after 5 minutes (Supabase closes idle ones). At most 5 per API process (Supabase's session pooler refuses clients beyond its pool size); a request that waits 10 s for one, or cannot connect within 10 s, gets 503. |
+| `CHRONOS_SOLVER_WORKERS` | Solver worker processes, default 2, at least 1 (a lower value stops the app at startup). `1` on Render's free instance (512 MB). |
 | `CHRONOS_ALLOW_REMOTE_DB` | `1` lets the app use a non-local database. D57: set only in the Render service's environment, by hand, and for Nidhi's own hand-run `alembic` and `demo_seed` commands (D55, D59); never in a `.env` file, the repository, tests or an agent session. |
 | `SECRET_KEY` | HS256 signing key for access tokens, at least 32 characters. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime, default 30; a value outside 5 to 1440 stops the app at startup. |
@@ -102,8 +103,15 @@ ends `error`; the job row, its audit row (`"error"`, first 400 characters) and t
 log keep the exception, and `GET /jobs/{id}` shows it to an administrator only. Everyone
 else gets `"The solver failed. An administrator can see the details in the audit log."`
 
-Jobs run in the API process's own pool (two at a time); at most 5 wait in `queued`. One
-more solve or repair gets 429 and is not queued.
+Jobs run in the API process's own pool (`CHRONOS_SOLVER_WORKERS` at a time, default two);
+at most 5 wait in `queued`. One more solve or repair gets 429 and is not queued. No request
+waits for a job: solve and repair return 202 once the job is queued.
+
+A worker process that dies (killed for memory, say) ends its job, and any job waiting in
+that pool, `error` with `"The solver process stopped before the job ended, possibly out of
+memory. Try again."`, shown to everyone; the next job starts a new pool. The log has one
+line per finished job (id, kind, when queued, started and ended, seconds, outcome), one per
+job a restart interrupted and one per request slower than 5 s.
 
 ## The official solution (ROADMAP D49, D56)
 
