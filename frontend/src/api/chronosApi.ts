@@ -33,7 +33,7 @@ import {
 } from '@/adapters/timetable';
 import { AnomalyReport, PrintedBaseline, toPrintedBaseline } from '@/adapters/realInstance';
 import { ROLE_CAPABILITIES, UserRole } from '@/types/roles';
-import { instanceLabel } from '@/lib/wording';
+import { SERVER_NO_ANSWER, instanceLabel } from '@/lib/wording';
 
 // ajv and the schemas load on first use, off the main bundle
 const validation = () => import('@/api/contractValidation');
@@ -554,6 +554,23 @@ export class ApiError extends Error {
   }
 }
 
+/** How long a request that starts or reads a job may go unanswered before the page stops waiting. */
+export const JOB_ANSWER_WITHIN_MS = 30_000;
+
+/**
+ * A request that starts or reads a job got no usable answer: nothing within JOB_ANSWER_WITHIN_MS, no
+ * connection, a gateway's error or a body that is not the API's (a host's page while it restarts).
+ * The job may or may not exist on the server.
+ */
+export class NoAnswerError extends Error {
+  constructor(readonly endpoint: string = '') {
+    super(SERVER_NO_ANSWER);
+    this.name = 'NoAnswerError';
+  }
+}
+
+const GATEWAY_ERRORS = [502, 503, 504];
+
 /**
  * What a refusal says: FastAPI's `detail`, a sentence or a validation error's list of { msg }; else
  * the HTTP status's own words.
@@ -660,8 +677,31 @@ export const setSession = (session: AuthSession | null) => setAuthState({ sessio
  * them), as do the printed baseline and moves on the example; the mock's simulations are not here.
  */
 export class HttpChronosApiClient extends BundledFilesClient {
-  constructor(private readonly baseUrl: string = import.meta.env.VITE_API_BASE_URL ?? '/api') {
+  constructor(
+    private readonly baseUrl: string = import.meta.env.VITE_API_BASE_URL ?? '/api',
+    private readonly answerWithinMs: number = JOB_ANSWER_WITHIN_MS
+  ) {
     super();
+  }
+
+  /** A request of the job flow: it stops waiting after answerWithinMs, and no answer is a NoAnswerError. */
+  private async jobRequest(path: string, init: RequestInit = {}): Promise<unknown> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.answerWithinMs);
+    try {
+      return await this.request(path, { ...init, signal: controller.signal });
+    } catch (error) {
+      // fetch rejects with a TypeError when there is no connection, response.json() with a SyntaxError on a non-JSON body
+      const unanswered =
+        controller.signal.aborted ||
+        error instanceof TypeError ||
+        error instanceof SyntaxError ||
+        (error instanceof ApiError && GATEWAY_ERRORS.includes(error.status));
+      if (unanswered) throw new NoAnswerError(`${init.method ?? 'GET'} ${path}`);
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private async request(path: string, init: RequestInit = {}): Promise<unknown> {
@@ -718,7 +758,7 @@ export class HttpChronosApiClient extends BundledFilesClient {
     instance: EdgeListInstance,
     timeLimitS: number
   ): Promise<{ job_id: string; status: JobStatus }> {
-    return (await this.request(`/instances/${encodeURIComponent(instance)}/solve`, {
+    return (await this.jobRequest(`/instances/${encodeURIComponent(instance)}/solve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ time_limit_s: timeLimitS }),
@@ -730,7 +770,7 @@ export class HttpChronosApiClient extends BundledFilesClient {
     instance: EdgeListInstance,
     change: RepairChange
   ): Promise<{ job_id: string; status: JobStatus }> {
-    return (await this.request(`/instances/${encodeURIComponent(instance)}/repair`, {
+    return (await this.jobRequest(`/instances/${encodeURIComponent(instance)}/repair`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ change }),
@@ -786,7 +826,7 @@ export class HttpChronosApiClient extends BundledFilesClient {
   }
 
   public async getJob(jobId: string): Promise<SolveJob> {
-    const job = (await this.request(`/jobs/${encodeURIComponent(jobId)}`)) as SolveJob;
+    const job = (await this.jobRequest(`/jobs/${encodeURIComponent(jobId)}`)) as SolveJob;
     // an unknown status would be polled forever
     if (!JOB_STATUSES.includes(job.status)) throw new Error(`Job ${jobId} has unknown status '${job.status}'`);
     return job.solution === undefined ? job : { ...job, solution: (await validation()).parseSolution(job.solution) };

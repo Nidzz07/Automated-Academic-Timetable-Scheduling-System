@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, JobStatus, RepairChange } from '@/api/chronosApi';
+import { ApiError, JobStatus, NoAnswerError, RepairChange } from '@/api/chronosApi';
 import { useRepair } from '@/api/queries';
 import {
   RepairChangeView,
@@ -25,9 +25,23 @@ import { changeText } from './AcceptedChangesPanel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatScore, formatScoreChange, periodLabel } from '@/lib/format';
-import { TAUGHT_PERIOD_KEY, UI, loadChangeText, loadLimitHours, refusalText, repairStatusText, repairSummary, taughtPeriodText } from '@/lib/wording';
-import { OverLimitWarning } from './OverLimitWarning';
-import { Check, Wrench, X } from 'lucide-react';
+import {
+  SERVER_NO_ANSWER,
+  SERVER_PAST_LIMIT,
+  TAUGHT_PERIOD_KEY,
+  UI,
+  jobErrorText,
+  loadChangeText,
+  loadLimitHours,
+  refusalText,
+  repairStatusText,
+  repairSummary,
+  taughtPeriodText,
+} from '@/lib/wording';
+import { JobClocks, JobProgressText, useJobProgress } from './JobProgress';
+import { CodeDetails, CodeLine } from './MethodDetails';
+import { LoadLimitChange } from './OverLimitWarning';
+import { Check, RotateCw, Wrench, X } from 'lucide-react';
 
 /** A solved repair not yet accepted, against the solution it started from (D48). */
 export interface RepairProposal {
@@ -66,6 +80,8 @@ interface RepairPanelProps {
   onStart: (change: RepairChange) => void;
   /** Forget the job: the grid shows the official timetable again */
   onDiscard: () => void;
+  /** When a job started; kept by the caller, so it survives this panel being mounted again */
+  jobClocks?: JobClocks;
 }
 
 const selectClass = 'rounded-md border border-border bg-transparent px-2 py-1 font-medium text-foreground';
@@ -76,7 +92,8 @@ const score = (s: SolvedSolution) => toQualityView(s).score;
  * slots, or (from the grid) move a session, then poll the job. A solved result is shown with
  * every changed session and the score change, and becomes official only when accepted (D49).
  * A timeout is never shown as infeasible (D33). Every ending can be left: a proposal, an
- * impossible change, a timeout or a failure by Discard, which returns the panel to its start.
+ * impossible change, a timeout or a failure by Discard, which returns the panel to its start. No
+ * answer from the server, or a job past its limit, ends the wait with Try again and Discard.
  */
 export const RepairPanel: React.FC<RepairPanelProps> = ({
   repair,
@@ -90,6 +107,7 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
   prefill,
   onStart,
   onDiscard,
+  jobClocks,
 }) => {
   const [kind, setKind] = useState<'faculty' | 'room'>('faculty');
   const [target, setTarget] = useState('');
@@ -138,8 +156,26 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
   // the POST's answer stands in only until the job it started is read; with no job it says nothing
   const status: JobStatus | null = failure ? 'error' : data?.status ?? (jobId !== null ? start.data?.status : null) ?? null;
   const pending = data?.status === 'solved' && !data.accepted_at;
-  const busy = start.isPending || (jobId !== null && job.isPending && !failure) || status === 'queued' || status === 'running';
+  const ownClocks = useRef<JobClocks>(new Map());
+  const { text: progress, stalled } = useJobProgress({
+    postedAt: start.isPending ? start.submittedAt : null,
+    jobId,
+    status,
+    limitS: data?.time_limit_s,
+    waiting: !!waitingFor,
+    clocks: jobClocks ?? ownClocks.current,
+  });
+  const busy =
+    start.isPending || (jobId !== null && job.isPending && !failure) || ((status === 'queued' || status === 'running') && !stalled);
   const ended = status === 'infeasible' || status === 'timeout' || status === 'error';
+  const noAnswer = failure instanceof NoAnswerError;
+  const jobError = !failure && status === 'error' ? jobErrorText(data?.error) : null;
+  // A job that could not be read may still be running: read it again. One never started, or stuck, starts anew.
+  const change = start.variables ?? data?.change;
+  const retry = () => {
+    if ((start.error || stalled) && change) onStart(change);
+    else job.refetch();
+  };
 
   const resetForm = () => {
     setKind('faculty');
@@ -289,14 +325,28 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
 
         {status && (
           <p role="status" data-testid="repair-status" data-status={status}>
-            {repairStatusText(status, {
-              accepted: !!data?.accepted_at,
-              waiting: !!waitingFor,
-              timeLimitS: data?.time_limit_s,
-              // what the backend said, by name; a job's own error is its text as it stands
-              error: failure ? refusalText(failure.message, (id) => diagnosisName(id, edgeList, labels)) : data?.error,
-            })}
+            {noAnswer
+              ? SERVER_NO_ANSWER
+              : stalled
+                ? SERVER_PAST_LIMIT
+                : repairStatusText(status, {
+                    accepted: !!data?.accepted_at,
+                    waiting: !!waitingFor,
+                    timeLimitS: data?.time_limit_s,
+                    // what the backend said, by name; a job's own error in plain words
+                    error: failure ? refusalText(failure.message, (id) => diagnosisName(id, edgeList, labels)) : jobError?.text,
+                  })}
           </p>
+        )}
+        {progress && (
+          <p>
+            <JobProgressText text={progress} testId="repair-progress" />
+          </p>
+        )}
+        {jobError?.detail && (
+          <CodeDetails testId="repair-error-details">
+            <CodeLine>{jobError.detail}</CodeLine>
+          </CodeDetails>
         )}
 
         {pending && (
@@ -319,10 +369,7 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
                           <span>
                             {facultyText(labels, l.id)}: {loadChangeText(l.before, l.after)}
                           </span>
-                          <OverLimitWarning hours={l.before.total} limit={limit} className="text-xs" />
-                          {l.after.total !== l.before.total && (
-                            <OverLimitWarning hours={l.after.total} limit={limit} className="text-xs" />
-                          )}
+                          <LoadLimitChange before={l.before.total} after={l.after.total} limit={limit} className="text-xs" />
                         </li>
                       ))}
                     </ul>
@@ -383,11 +430,19 @@ export const RepairPanel: React.FC<RepairPanelProps> = ({
           <InfeasibilityDiagnosisPanel infeasibleSolution={data.solution} edgeList={edgeList} labels={labels} forRepair />
         )}
 
-        {ended && (
-          <Button variant="outline" size="sm" className="gap-1" onClick={discard} data-testid="discard-repair">
-            <X className="h-3.5 w-3.5" />
-            Discard
-          </Button>
+        {(ended || stalled) && (
+          <div className="flex gap-2">
+            {(noAnswer || stalled) && (
+              <Button size="sm" className="gap-1" disabled={!!job.error && job.isFetching} onClick={retry} data-testid="retry-repair">
+                <RotateCw className="h-3.5 w-3.5" />
+                {UI.tryAgain}
+              </Button>
+            )}
+            <Button variant="outline" size="sm" className="gap-1" onClick={discard} data-testid="discard-repair">
+              <X className="h-3.5 w-3.5" />
+              {UI.discard}
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

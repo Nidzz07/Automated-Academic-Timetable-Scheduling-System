@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { EnrichedSession, sessionTeacher } from '@/adapters/timetable';
+import { EXAMPLE_LABELS, EnrichedSession, Labels, sessionTeacher } from '@/adapters/timetable';
 import { Button } from '@/components/ui/button';
-import { periodLabel } from '@/lib/format';
-import { FIXED_SESSION_NOTE, sessionKindText, sessionTitle } from '@/lib/wording';
+import { FIXED_SESSION_NOTE, sessionKindText, sessionTitle, sessionWhenText } from '@/lib/wording';
 import { X, Pin } from 'lucide-react';
 
 interface SessionDetailModalProps {
   session: EnrichedSession | null;
+  /** The clock times of its periods; defaults to the contract examples', which have none */
+  labels?: Labels;
   onClose: () => void;
   /** Administrator and coordinator on a backend instance: list who may take the session (S14g) */
   onFindSubstitute?: () => void;
@@ -20,6 +21,7 @@ const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select
  */
 const SessionDetailDialog: React.FC<{ session: EnrichedSession } & Omit<SessionDetailModalProps, 'session'>> = ({
   session,
+  labels = EXAMPLE_LABELS,
   onClose,
   onFindSubstitute,
 }) => {
@@ -105,7 +107,9 @@ const SessionDetailDialog: React.FC<{ session: EnrichedSession } & Omit<SessionD
             <dd className="font-semibold">
               {session.durationPeriods} teaching period{session.durationPeriods > 1 ? 's' : ''}
             </dd>
-            <dd className="text-xs">Starts at {periodLabel(session.wallClockPeriod)}</dd>
+            <dd data-testid="session-when" className="text-xs">
+              {sessionWhenText(session, labels)}
+            </dd>
           </div>
         </dl>
 

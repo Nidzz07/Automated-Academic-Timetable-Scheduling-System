@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { clickGenerate } from '@/test/generate';
 import { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -106,7 +107,7 @@ describe('SolvePanel: the job lifecycle', () => {
     const backend = mockBackend();
     const { queryClient } = renderPanel();
     fireEvent.change(screen.getByTestId('solve-time-limit'), { target: { value: '30' } });
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
 
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'queued'));
     expect(screen.getByTestId('solve-button')).toBeDisabled();
@@ -126,7 +127,7 @@ describe('SolvePanel: the job lifecycle', () => {
     const backend = mockBackend();
     const { queryClient } = renderPanel();
     backend.job = job({ status: 'timeout', time_limit_s: 5 });
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'timeout'));
     expect(status()).toHaveTextContent('No timetable found within 5.0 s. This does not prove it is impossible.');
     expect(queryClient.getQueryData(instanceSolutionQueryKey(REAL_INSTANCE))).toBeUndefined();
@@ -136,15 +137,19 @@ describe('SolvePanel: the job lifecycle', () => {
     const backend = mockBackend();
     renderPanel();
     backend.job = job({ status: 'error', error: 'RuntimeError: solved but invalid' });
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'error'));
-    expect(status()).toHaveTextContent('Could not generate a timetable: RuntimeError: solved but invalid');
+    expect(status()).toHaveTextContent('Could not generate a timetable: the solver stopped with an error. Nothing was changed.');
+    expect(status()).not.toHaveTextContent('RuntimeError');
+    // the exception text, an administrator's view of it, stays behind Details
+    const raw = within(screen.getByTestId('solve-error-details')).getByText('RuntimeError: solved but invalid');
+    expect(raw).not.toBeVisible();
   });
 
   it('shows the backend’s reason when the POST is refused', async () => {
     mockBackend(() => json({ detail: 'student may not do this' }, 403));
     renderPanel();
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'error'));
     expect(status()).toHaveTextContent('Could not generate a timetable: student may not do this');
     expect(status().textContent).not.toMatch(/POST|\/instances|403/);
@@ -154,7 +159,7 @@ describe('SolvePanel: the job lifecycle', () => {
     const backend = mockBackend();
     const { unmount } = renderPanel();
     backend.job = job({ status: 'running' });
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(backend.jobPolls).toBeGreaterThan(2));
     unmount();
     const polls = backend.jobPolls;
@@ -203,7 +208,7 @@ describe('Solving the real instance in the app (http mode)', () => {
     const backend = await openReal();
     const fresh = { ...solution, quality: { ...solution.quality, score: 42 } };
     backend.job = job({ status: 'solved', solution: fresh });
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(screen.getByTestId('quality-score')).toHaveTextContent('42'));
     expect(within(screen.getByTestId('compare-score')).getByText('42.0')).toBeInTheDocument();
   });
@@ -211,7 +216,7 @@ describe('Solving the real instance in the app (http mode)', () => {
   it('an infeasible job opens the diagnosis panel with its diagnosis', async () => {
     const backend = await openReal();
     backend.job = job({ status: 'infeasible', solution: infeasibleFixture });
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await screen.findByTestId('infeasibility-panel');
     const first = infeasibleFixture.diagnosis.minimal_conflicting_set[0].constraint_id;
     expect(screen.getByTestId(`conflicting-constraint-${first}`)).toBeInTheDocument();
@@ -220,7 +225,7 @@ describe('Solving the real instance in the app (http mode)', () => {
   it('a timeout never opens the diagnosis panel (D33)', async () => {
     const backend = await openReal();
     backend.job = job({ status: 'timeout', time_limit_s: 300 });
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(status()).toHaveAttribute('data-status', 'timeout'));
     expect(status()).toHaveTextContent('No timetable found within 300.0 s. This does not prove it is impossible.');
     expect(screen.queryByTestId('infeasibility-panel')).not.toBeInTheDocument();
@@ -240,7 +245,7 @@ describe('Solving the real instance in the app (http mode)', () => {
       quality: { ...solution.quality, score: 42 },
     };
     backend.job = job({ status: 'solved', solution: fresh, stale: true, built_with: ['rep-7'] });
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(status()).toHaveAttribute('data-stale', 'true'));
     expect(status()).toHaveTextContent(STALE);
     expect(status()).not.toHaveTextContent('Done: the grid');
@@ -254,7 +259,7 @@ describe('Solving the real instance in the app (http mode)', () => {
   it('a stale infeasible solve opens no diagnosis panel', async () => {
     const backend = await openReal();
     backend.job = job({ status: 'infeasible', solution: infeasibleFixture, stale: true });
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(status()).toHaveTextContent(STALE));
     await wait(50);
     expect(screen.queryByTestId('infeasibility-panel')).not.toBeInTheDocument();
@@ -264,7 +269,7 @@ describe('Solving the real instance in the app (http mode)', () => {
   it('a solve that is not stale (stale: false) still replaces the grid', async () => {
     const backend = await openReal();
     backend.job = job({ status: 'solved', solution: { ...solution, quality: { ...solution.quality, score: 42 } }, stale: false });
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(screen.getByTestId('quality-score')).toHaveTextContent('42'));
     expect(status()).not.toHaveAttribute('data-stale');
   });

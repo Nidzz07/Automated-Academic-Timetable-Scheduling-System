@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { clickGenerate } from '@/test/generate';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
 import { FacultyWorkloadCard } from '../FacultyWorkloadCard';
@@ -244,7 +245,7 @@ describe('1. no P-label reaches a user (D60)', () => {
   });
 });
 
-describe('2. the workload card’s over-16 h list', () => {
+describe('2. the workload card: this teacher only (S17a)', () => {
   const rule: QualityRule = {
     rule_id: 'S-LOAD16',
     status: 'evaluated',
@@ -254,38 +255,56 @@ describe('2. the workload card’s over-16 h list', () => {
     explanation: '2 faculty members above 16 h a week - fac-a 18 h, fac-b 17 h.',
   };
   const load = { theory: 6, practical: 8, scheduled: 14, fixed: 0, total: 14 };
-  const nameOf = (id: string) => ({ 'fac-a': 'Asha Rao (AR)', 'fac-b': 'Binu Paul (BP)' })[id] ?? null;
 
-  it('lists each teacher with the red warning; a plain heading, the code as small text', () => {
-    render(<FacultyWorkloadCard facultyName="Asha Rao" facultyInitials="AR" load={load} loadRule={rule} nameOf={nameOf} />);
-    const status = screen.getByTestId('load-status');
-    const rows = within(status).getAllByTestId('rule-finding');
-    expect(rows.map((r) => r.textContent)).toEqual(['Asha Rao (AR): Over 16 h limit: 18 h', 'Binu Paul (BP): Over 16 h limit: 17 h']);
-    const warnings = within(status).getAllByTestId('load-rule-over-limit');
-    expect(warnings).toHaveLength(2);
-    for (const warning of warnings) {
-      expect(warning.querySelector('svg')).not.toBeNull();
-      expect(warning.className).toContain('text-destructive');
-    }
-    // this teacher's own load is within the limit: no warning of their own
+  it('within the limit: no warning and no one else’s hours, though the rule flags others; the code as small text', () => {
+    render(<FacultyWorkloadCard facultyName="Chitra Iyer" facultyInitials="CI" load={load} loadRule={rule} />);
+    const card = screen.getByTestId('faculty-workload-card');
+    expect(screen.getByTestId('load-status')).toHaveTextContent('Within the 16 h limit.');
     expect(screen.queryByTestId('load-over-limit')).not.toBeInTheDocument();
+    expect(card).not.toHaveTextContent(/fac-a|fac-b|18 h|17 h/);
+    expect(screen.queryByTestId('rule-finding')).not.toBeInTheDocument();
     const heading = screen.getByTestId('load-rule-heading');
-    expect(heading).toHaveTextContent('Teachers over the weekly limit');
+    expect(heading).toHaveTextContent('Weekly limit');
     const code = within(heading).getByTestId('load-rule-code');
     expect(code).toHaveTextContent('S-LOAD16');
     expect(code).toHaveClass('text-[11px]');
     expect(heading.firstChild?.textContent).not.toContain('S-LOAD16');
   });
 
-  it.each(TEACHER_MODES)('%s: in the app, every flagged teacher by name, in red', async (_mode, openIt) => {
+  it('above the limit: their own red warning, once', () => {
+    render(
+      <FacultyWorkloadCard
+        facultyName="Asha Rao"
+        facultyInitials="AR"
+        load={{ theory: 6, practical: 8, scheduled: 14, fixed: 4, total: 18 }}
+        loadRule={rule}
+      />
+    );
+    const warning = screen.getByTestId('load-over-limit');
+    expect(warning).toHaveTextContent('Over 16 h limit: 18 h');
+    expect(warning.querySelector('svg')).not.toBeNull();
+    expect(warning.className).toContain('text-destructive');
+    expect(screen.getByTestId('load-status')).toHaveTextContent('2 h above the 16 h limit.');
+    expect(screen.getByTestId('faculty-workload-card')).not.toHaveTextContent(/fac-b|Binu|17 h/);
+  });
+
+  it.each(TEACHER_MODES)('%s: in the app, no other teacher’s name or warning; the quality card’s list is not there', async (_mode, openIt) => {
     await openIt();
-    const status = within(screen.getByTestId('faculty-workload-card')).getByTestId('load-status');
-    const rows = within(status).getAllByTestId('rule-finding');
-    expect(rows).toHaveLength(6);
-    for (const row of rows) {
-      expect(row.textContent).toMatch(/\): Over 16 h limit: \d+ h$/);
-      expect(within(row).getByTestId('load-rule-over-limit').className).toContain('text-destructive');
-    }
+    fireEvent.change(screen.getByLabelText('Select teacher'), { target: { value: 'fac-anant-nimkar' } });
+    const card = screen.getByTestId('faculty-workload-card');
+    expect(card).toHaveTextContent('Anant Nimkar');
+    expect(card).toHaveTextContent('Within the 16 h limit.');
+    expect(within(card).queryByTestId('load-over-limit')).not.toBeInTheDocument();
+    expect(card).not.toHaveTextContent(/Amey Ganesh Nile|Azman Qureshi/);
+    expect(screen.queryByTestId('rule-finding')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('quality-rule-S-LOAD16')).not.toBeInTheDocument();
+  });
+
+  it.each(['administrator', 'coordinator'] as const)('http, %s: the department-wide list is still in the quality card', async (role) => {
+    await openHttp(role);
+    const list = within(screen.getByTestId('quality-rule-S-LOAD16')).getAllByTestId('rule-finding');
+    expect(list).toHaveLength(6);
+    expect(list[0].textContent).toMatch(/\): Over 16 h limit: \d+ h$/);
   });
 });
 
@@ -490,8 +509,8 @@ describe('8. a refused request shows the backend’s detail, in words', () => {
     answer({}, 500, 'Internal Server Error');
     expect(((await refused()) as ApiError).message).toBe('Internal Server Error');
 
-    answer({}, 503);
-    expect(((await refused()) as ApiError).message).toBe('The server answered with an error (503).');
+    answer({}, 500);
+    expect(((await refused()) as ApiError).message).toBe('The server answered with an error (500).');
   });
 
   it('static: never asks a backend, so it has nothing to refuse', async () => {
@@ -518,7 +537,7 @@ describe('9. switching Timetable and back never re-applies an earlier solve', ()
   it('http: solve, accept a repair, switch away and back: the repair stays official', async () => {
     const backend = await openHttp();
     backend.solveJob = { id: 'solve-1', instance_id: REAL_INSTANCE, kind: 'solve', time_limit_s: 300, status: 'solved', solution: withScore(42) };
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(score()).toHaveTextContent('42.0'));
 
     backend.job = repairJob({ status: 'solved', change: { kind: 'faculty_unavailable', faculty_id: 'fac-swapnali-kurhade', slots: [{ day: 1, period: 6 }] }, solution: withScore(50) });
@@ -537,7 +556,7 @@ describe('9. switching Timetable and back never re-applies an earlier solve', ()
   it('http: a solve that ends while away is still applied on the way back, once', async () => {
     const backend = await openHttp();
     backend.solveJob = { id: 'solve-1', instance_id: REAL_INSTANCE, kind: 'solve', time_limit_s: 300, status: 'running' };
-    fireEvent.click(screen.getByTestId('solve-button'));
+    clickGenerate();
     await waitFor(() => expect(screen.getByTestId('solve-status')).toHaveAttribute('data-status', 'running'));
     await away();
     backend.solveJob = { ...backend.solveJob, status: 'solved', solution: withScore(42) };

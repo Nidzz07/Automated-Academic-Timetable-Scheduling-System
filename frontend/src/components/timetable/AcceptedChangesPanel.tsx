@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { HttpChronosApiClient, RepairChange } from '@/api/chronosApi';
 import { useChangesQuery, useClearChangesMutation } from '@/api/queries';
-import { EdgeList, Labels, entityName, facultyText, slotsText } from '@/adapters/timetable';
+import { EdgeList, Labels, entityName, facultyText, sessionWithoutTeacher, slotsText } from '@/adapters/timetable';
 import { formatTimestamp } from '@/lib/format';
 import { UI, clearChangesText } from '@/lib/wording';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,11 +17,8 @@ export function changeText(change: RepairChange, edgeList: EdgeList, labels: Lab
       return `${room(change.room_id)} unavailable: ${slotsText(change.slots)}`;
     case 'move_session':
       return `${entityName(change.session_id, edgeList, labels)} moved to ${slotsText([change])}, ${room(change.sub_room_id ?? change.room_id)}`;
-    case 'substitute_faculty': {
-      const s = edgeList.sessions.find((x) => x.id === change.session_id);
-      const what = s ? `${labels.subject(s.subject_id)?.code ?? s.subject_id} · ${labels.cohort(s.cohort_id)}` : change.session_id;
-      return `${what}: taught by ${facultyText(labels, change.faculty_id)}`;
-    }
+    case 'substitute_faculty':
+      return `${sessionWithoutTeacher(change.session_id, edgeList, labels)}: taught by ${facultyText(labels, change.faculty_id)}`;
   }
 }
 
