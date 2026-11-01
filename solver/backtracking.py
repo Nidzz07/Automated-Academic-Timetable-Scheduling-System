@@ -553,6 +553,8 @@ class _SolverState:
     prefer: dict[str, tuple[SlotId, str]] = field(default_factory=dict)
     # D58 (S14s): a split lab's sub-rooms tried before the whole lab (:func:`_room_rank`)
     prefer_sub_rooms: bool = False
+    # S17c: block id -> starts at which every room tuple fails (:func:`_solve_block`)
+    dead_starts: dict[str, set[SlotId]] = field(default_factory=dict)
 
     # Deepest consistent partial placement so far: (start slots, rooms).
     deepest: tuple[dict[str, SlotId], dict[str, str]] = field(default_factory=lambda: ({}, {}))
@@ -1124,6 +1126,8 @@ def _lab_block_candidates(
         else:
             for rt in _gen_room_tuples(room_lists, state, start.day):
                 yield start, rt
+                if start in state.dead_starts.get(block.id, ()):
+                    break  # every other tuple of this start fails too (S17c)
 
 
 # ---------------------------------------------------------------------------
@@ -1184,9 +1188,36 @@ def _solve_session(state: _SolverState, sid: str) -> bool:
     return False
 
 
+def _wiped_by_time(state: _SolverState, block: LabBlock) -> bool:
+    """True when the placed *block* leaves an unassigned conflict neighbour of a
+    member no value clear of that member's periods: step 1 of
+    :func:`_forward_check` then empties its domain whatever rooms were chosen.
+    Pruning a backtracking search tree: Design and Analysis of Algorithms."""
+    for sid in block.session_ids:
+        slots = set(state.occupied[sid])
+        for neighbour_id in state.graph.neighbours(sid):
+            if neighbour_id not in state.slot_assignment and all(
+                _overlaps(state, neighbour_id, start, slots)
+                for start, _ in state.domains[neighbour_id]
+            ):
+                return True
+    return False
+
+
 def _solve_block(state: _SolverState, block: LabBlock) -> bool:
-    """Try to place a LabBlock jointly."""
+    """Try to place a LabBlock jointly.
+
+    S17c: a start at which an unassigned conflict neighbour of a member has no
+    value clear of that member's periods fails forward checking for every room
+    tuple, so its other tuples are skipped.  Failed tuples never enter
+    :func:`_solve`, and one start's tuples are equally deep (only the first can
+    set the deepest partial), so nodes, solutions and partials are unchanged.
+    """
+    dead = state.dead_starts[block.id] = set()
+    checked: SlotId | None = None
     for start, room_tuple in _lab_block_candidates(state, block):
+        if start in dead:
+            continue
         trail_start = len(state.trail)
 
         for sid, room_id in zip(block.session_ids, room_tuple, strict=True):
@@ -1195,7 +1226,12 @@ def _solve_block(state: _SolverState, block: LabBlock) -> bool:
             _assign(state, sid, start, room_id, slots)
         _note_depth(state)
 
-        if all(_forward_check(state, sid) for sid in block.session_ids) and _solve(state):
+        if start != checked:  # the state before any tuple of this start is the same
+            checked = start
+            if _wiped_by_time(state, block):
+                dead.add(start)
+        if start not in dead and all(
+                _forward_check(state, sid) for sid in block.session_ids) and _solve(state):
             return True
 
         _undo_trail(state, trail_start)

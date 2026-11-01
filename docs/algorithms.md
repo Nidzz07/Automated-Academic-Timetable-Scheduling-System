@@ -114,7 +114,7 @@ each checking its members' d periods and their neighbours. Space O(n·d + m).
 vertex colouring in Welsh-Powell's largest-degree-first order.
 
 **Measured.** Real instance: 8 sessions unplaced, 148 coloured with 0 time-only violations,
-10.9 ms ([evaluation § 1](evaluation-even-2025-26.md#1-algorithms)). Which sessions were left
+10.4 ms ([evaluation § 1](evaluation-even-2025-26.md#1-algorithms)). Which sessions were left
 out: [real solve § What Welsh-Powell could not
 colour](real-solve-even-2025-26.md#what-welsh-powell-could-not-colour). On the synthetic
 presets it colours every session of `small`, `medium` and `large` ([evaluation §
@@ -144,6 +144,13 @@ presets it colours every session of `small`, `medium` and `large` ([evaluation �
   `metadata.algorithm` names the fallback. Repair passes `sub_room_nodes=None` (its rings have
   their own budgets), and `explain()` uses rooms by id. Course: Design and Analysis of
   Algorithms (a portfolio of two orders with a fixed budget).
+- **Dead starts of a lab block (S17c).** A failed room tuple of a lab block is not a search
+  node, so neither `node_limit` nor `time_limit_s` stops a loop over them. With symmetry
+  breaking off (every repair ring), one block had over a million tuples at two starts, all
+  wiping out the same neighbour. So when a start leaves an unassigned conflict neighbour of a
+  member no value clear of that member's periods (`_wiped_by_time`), the start's other tuples
+  are skipped. They would all fail, never enter the search and are equally deep, so nodes,
+  solutions and the deepest partial are unchanged (tested on the 400 property instances).
 
 **Where.** `solver/backtracking.py`:
 
@@ -176,14 +183,14 @@ that prune a backtracking search tree (the docstrings cite the same).
 
 **Measured.**
 
-- Real instance: solved in 92 nodes, 187.6 ms, score −162.5 before improve ([evaluation §
+- Real instance: solved in 92 nodes, 162.2 ms, score −107.0 before improve ([evaluation §
   1](evaluation-even-2025-26.md#1-algorithms)). The S12d run was 0.26 s and 92 nodes ([real
   solve § S12d result](real-solve-even-2025-26.md#s12d-result-before-local-search)).
 - The earlier order (labs first, ascending starts) timed out at 300 s; why LCV fixed it is in
   [real solve § S12d: what changed](real-solve-even-2025-26.md#s12d-what-changed-and-what-each-step-measured).
 - Runtime vs size: [evaluation § 2](evaluation-even-2025-26.md#2-runtime-vs-size) and [§
-  6](evaluation-even-2025-26.md#6-runtime-and-score-vs-size-s15c): 33 to 183 nodes, 157.9 ms
-  to 2,921.2 ms, for 50 to 290 sessions.
+  6](evaluation-even-2025-26.md#6-runtime-and-score-vs-size-s15c): 33 to 183 nodes, 131.9 ms
+  to 1,925.4 ms, for 50 to 290 sessions (S15e).
 
 ## Pre-solve checks
 
@@ -293,8 +300,9 @@ CE205. Configuration over code: Software Engineering.
 
 **Measured.** Every score in the three docs. The committed timetable's 26.5 (since S14u)
 against the printed 21.5, by rule: [real solve § S14u](real-solve-even-2025-26.md#s14u-both-d58-options-are-the-default-committed-result).
-The earlier −15.0, by rule: [evaluation § 3](evaluation-even-2025-26.md#3-real-generated-vs-printed-timetable)
-(re-run in S15e).
+Both by rule, against the printed timetable: [evaluation §
+3](evaluation-even-2025-26.md#3-real-generated-vs-printed-timetable) (26.5, S15e) and its
+[history](evaluation-even-2025-26.md#history-the-numbers-before-s14u) (the earlier −15.0).
 
 ## Simulated-annealing `improve()`
 
@@ -412,12 +420,14 @@ Discrete Structures and Graph Theory.
 
 **Measured.**
 
-- The six real scenarios moved 1–6 sessions or were shown impossible ([repair §
+- The six real scenarios moved 0–2 sessions or were shown impossible ([repair §
   Results](repair-even-2025-26.md#results); [evaluation §
   5](evaluation-even-2025-26.md#5-repair)).
-- Over 19 changes solved both ways, repair moved 4.53 sessions [0.98, 8.07] and regeneration
-  85.68 [80.45, 90.92].
-- 6 of 30 repairs hit the 300 s limit in that run ([evaluation §
+- Over the 25 changes solved both ways (S15e), repair moved 4.48 sessions [1.93, 7.03] and
+  regeneration 87.76 [82.52, 93.00], 95% intervals.
+- 3 of 30 repairs hit the 300 s limit in that run (changes 19, 21, 29); regeneration 2 (19,
+  21). Change 29 repairs in about 10 s since S17c ([repair §
+  S17c](repair-even-2025-26.md#s17c-demo-flows-as-the-website-sends-them)) ([evaluation §
   7](evaluation-even-2025-26.md#7-repair-vs-regeneration-on-the-real-instance-s15c)).
 
 ## Minimal conflicting set and verified relaxations
@@ -560,7 +570,7 @@ S12i](real-solve-even-2025-26.md#s12i-lower-bounds-on-the-periods-a-week-needs))
     therefore tries rooms by id after 5,000 nodes: 1.79 s for that case ([real solve §
     S14u](real-solve-even-2025-26.md#fixed-a-fresh-solve-tries-rooms-by-id-when-sub-rooms-first-runs-out-of-nodes)).
 - **Repair minimises moves heuristically.** No search proves that fewer moves are impossible.
-  Its last ring can run until `time_limit_s`, and 6 of 30 changes did so in S15c ([evaluation §
+  Its last ring can run until `time_limit_s`, and 3 of 30 changes did so in S15e ([evaluation §
   7](evaluation-even-2025-26.md#7-repair-vs-regeneration-on-the-real-instance-s15c)).
 - **Wall-clock limits make results machine-dependent.**
   - Backtracking's `time_limit_s` can turn `solved` into `timeout` on a slower machine.
