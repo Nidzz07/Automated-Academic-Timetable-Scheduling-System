@@ -9,7 +9,7 @@ before making changes.
 2. `ROADMAP.md` (repo root) — the phased plan, the [M]/[S]/[C] tags, and the parallel-work protocol.
 3. `docs/CURRENT-PROGRESS.md` — what is actually done, blockers, decision log, contract change log.
 
-`ROADMAP.md` §1 (ownership) and §3 (decisions D1–D61) are binding; they override anything here that disagrees.
+`ROADMAP.md` §1 (ownership) and §3 (decisions D1–D64) are binding; they override anything here that disagrees.
 
 `docs/CURRENT-STATUS.md` is a **historical snapshot from 2026-09-24** (before any application
 code existed). Do not treat it as the current inventory — check the code and
@@ -132,7 +132,7 @@ cd frontend; npm run dev                       # Vite dev server
 
 ## What exists today (verify before relying on it)
 
-Checked against `main` on 2026-10-31.
+Checked against `main` on 2026-11-01.
 
 - `solver/`: `slots.py`, `graph.py`, `colouring.py` (Welsh-Powell), `backtracking.py` (forward
   checking + MRV, lab blocks, sub-rooms), `presolve.py`, `scoring.py`, `improve.py` (local
@@ -142,13 +142,18 @@ Checked against `main` on 2026-10-31.
   import, D61),
   `benchmarks/` (synthetic generator, real solve/repair scripts). The v1 output
   (`to_solution_dict`) still carries the placeholder diagnosis and a hardcoded score;
-  `solution.v2` does not.
+  `solution.v2` does not. The D58 options are on by default (D62): `prefer_sub_rooms`
+  (`backtrack_solve`, `improve`, `repair`) and `last_ring_portfolio` (`repair`); `explain()`
+  keeps rooms by id. A fresh solve makes two attempts: sub-rooms first within
+  `SUB_ROOM_NODES` = 5,000 search nodes, then rooms by id (S14x); a timeout is never
+  infeasible. The committed `solution.json` scores 26.5 (printed 21.5), 0 hard violations.
 - `ingestion/`: docx reader, initials legends, scheme, `class_tt.py`, `lab_tt.py`,
   `faculty.py`, `anomalies.py`, `emit_v2.py`, `seed_even.py`, `real_baseline.py`,
   `qualifications.py`. `data/instances/even-2025-26/` holds the committed edge list, display,
   anomalies, qualifications, solution and printed baseline.
 - `db/models.py`, `db/export_edge_list.py`; migrations 0001–0009, head `0009_accepted_changes`.
-- `backend/app/` (`create_app` in `main.py`, routes in `routers.py`): `GET /health`,
+- `backend/app/` (`create_app` in `main.py`, routes in `routers.py`; tokens are PyJWT, not
+  python-jose, since S14r): `GET /health`,
   `POST /auth/login`; under `/instances`: `GET` list, `GET /{id}/edge-list`,
   `GET /{id}/edge-list/current`, `GET /{id}/display`, `GET /{id}/anomalies`,
   `GET /{id}/solution`, `POST /{id}/solve`, `POST /{id}/repair`, `GET`/`DELETE /{id}/changes`,
@@ -156,8 +161,12 @@ Checked against `main` on 2026-10-31.
   `GET /{id}/base-solution`, `GET /{id}/edge-list`, `POST /{id}/accept`; `GET /audit`
   (administrator). `prod.py` (`uvicorn backend.app.prod:app`) mounts that API at `/api` and
   the built frontend at `/`; `backend/Dockerfile.prod` builds both into one image (D55);
-  `python -m backend.app.demo_seed [--reset]` creates the demo accounts and resets the demo
-  (D59). No deployment yet (S16c).
+  `python -m backend.app.demo_seed [--reset | --solve]` creates the demo accounts; `--reset`
+  clears accepted changes and restores the committed `solution.json` as official without
+  solving, `--solve` runs one fresh solve instead (D63); both reset the demo passwords (D59).
+  Deployed 2026-11-01 by Nidhi by hand (S16c): one Render web service on the free instance,
+  Supabase Postgres in eu-west-2; migrations, demo accounts and resets by hand (D55, D57, D59).
+  The free instance is about 9 times slower than a laptop: live demos run on a laptop (D64).
 - `frontend/`: http mode (default, `VITE_API_BASE_URL`, default `/api`) or static mode
   (`VITE_API_MODE=static`); login, solve, repair and diagnosis, accepted changes, substitutes,
   room views, anomaly panel, audit log, faculty workloads after a change, free/engaged faculty
