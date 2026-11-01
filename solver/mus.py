@@ -35,7 +35,7 @@ either (ROADMAP D33). A wall-clock deadline (``time_limit_s``, S14k) stops the
 whole explanation where it is; what is left of it is unfinished (below).
 
 **Deletion-based extraction** (deletion filter, Chinneck and Dravnieks 1991;
-constraint satisfaction, Artificial Intelligence and Soft Computing CE303).
+Design and Analysis of Algorithms: each check is a bounded backtracking search).
 Start from a set proven infeasible and try to remove members: a removal whose
 check is still infeasible is kept, anything else (feasible or unknown) puts the
 members back. Chunks go first, halving down to single members - the

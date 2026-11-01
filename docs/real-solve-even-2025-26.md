@@ -544,6 +544,26 @@ digests (defaults), the pre-S12h digests (options off) and the verdicts of the p
 instances and synthetic presets are all unchanged. None of them needs a second attempt. Tests:
 `solver/tests/test_d58_options.py`.
 
+**Fresh solves after the S14u demo flows** (2026-11-01, branch `track/solver-leftovers`, same
+machine). Each change is accepted and applied as the backend builds a solve's edge list
+(`apply_change` for every accepted change; D52). The search runs as the solve job runs it:
+`backtrack_solve`, `time_limit_s=30`. Hard violations are counted against the changed edge
+list. The flows are in `docs/repair-even-2025-26.md` § S14u "Demo flows". The drag onto the
+MDM-I lab is impossible and needs no solve.
+
+| Change accepted | Attempts used | Outcome | Time (two runs) | Hard violations |
+|---|---|---|---|---|
+| (a) Swapnali Kurhade unavailable Tue P1 and Thu P1 | sub-rooms first only (92 nodes) | solved | 0.29 s, 0.29 s | 0 |
+| (c) Amey Ganesh Nile takes CE206 for SE-Comp C (`obs-t4-r1-c2-l0`) | sub-rooms first only (92 nodes) | solved | 0.30 s, 0.31 s | 0 |
+| (d) CE207 lecture dragged to Wed P0, 601 | sub-rooms first only (92 nodes) | solved | 0.31 s, 0.30 s | 0 |
+| (a) and (c) both | sub-rooms first only (92 nodes) | solved | 0.30 s, 0.31 s | 0 |
+| S14i sequence: Kurhade unavailable Tue P5–P9, then the SE-Comp A CE207 lecture (`obs-t0-r1-c3-l0`) to Prasenjit Bhavathankar | sub-rooms first only (92 nodes) | solved | 0.31 s, 0.32 s | 0 |
+
+An accepted drag is only a placement (D52): the backend accumulates absences, room closures and
+substitutions, not moves (`ACCUMULATED` in `backend/app/service.py`). So the fresh solve after
+(d) runs on the committed edge list. None of these solves needs the second attempt. Only the
+search was timed; a solve job's `improve()` comes after it.
+
 ## S12d: why the old search got stuck
 
 Re-run of the S12a search (commit 75a3f31) for 300 s on the same machine: timeout, 563,081

@@ -24,11 +24,13 @@ movable lab block whole.
   ``t1``, the two-colour interchange a single move or a pairwise swap cannot
   make. A chain that reaches a session that may not move, or grows past
   :data:`KEMPE_MAX` sessions, is not tried.
-* **gap** - a move aimed at a student gap (CE303: a guided neighbourhood). An
+* **gap** - a move aimed at a student gap (Design and Analysis of Algorithms:
+  a guided neighbourhood). An
   idle period S-GAP counts is drawn, then a unit holding that cohort's
   students; half the time it is sent to a start covering the idle period,
   otherwise to any start it allows. It gets there along a Kempe chain or, with
-  probability :data:`P_EJECT`, by an ejection chain of length one (CE303):
+  probability :data:`P_EJECT`, by an ejection chain of length one (Design and
+  Analysis of Algorithms):
   the one or two movable sessions outside lab blocks in its way take starts
   among the periods it leaves.
 
@@ -53,8 +55,8 @@ days, cohorts and teachers it touches (:class:`_Penalty`). S-LOAD16 counts who
 teaches what, which no move changes, so it is a constant. The result is
 re-scored by :func:`solver.scoring.score` and must match.
 
-**Search.** Simulated annealing (Artificial Intelligence and Soft Computing,
-CE303): a random move is always kept when it does not raise the penalty and
+**Search.** Simulated annealing (Design and Analysis of Algorithms, the closest
+course): a random move is always kept when it does not raise the penalty and
 kept with probability ``exp(-delta / T)`` when it does, ``T`` cooling
 geometrically from :data:`T_START` to :data:`T_END` over the move budget, so it
 ends close to hill climbing (a one-gap loss kept 0.1% of the time); the best

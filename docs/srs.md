@@ -80,7 +80,7 @@ the files that exercise each one.
 | FR-2 | List the instances and read an instance's edge list, its names (`display.json`, D41) and its anomaly report. | `GET /instances`, `GET /instances/{id}/edge-list`, `GET /instances/{id}/display`, `GET /instances/{id}/anomalies` | `App.tsx` (instance picker), `components/timetable/AnomalyReport.tsx` | `backend/tests/test_api.py`; `__tests__/AnomalyReport.test.tsx`, `__tests__/RealData.test.tsx` |
 | FR-3 | Show the official timetable (D49, D56) as a weekly grid, with lab blocks, combined lectures and pins drawn as such. | `GET /instances/{id}/solution` | `components/timetable/TimetableGrid.tsx`, `ParallelLabBlock.tsx`, `CombinedLectureBlock.tsx`, `PinnedBlock.tsx` | `backend/tests/test_api.py`, `test_fixes.py`; `__tests__/TimetableGrid.test.tsx` |
 | FR-4 | Role views: faculty and students see a read-only timetable, opened on their own when linked (D50). | none (UI only) | `components/timetable/RoleSelector.tsx`, `App.tsx` | `__tests__/RoleViews.test.tsx`, `Auth.test.tsx` |
-| FR-5 | Solve the instance as a background job: backtracking, then local search within the time limit (default 300 s, at most 1,800). The job ends `solved`, `infeasible` (explained, FR-7) or `timeout`, never infeasible on a timeout (D33). The job's status and phase can be polled. | `POST /instances/{id}/solve`, `GET /jobs/{id}` | `components/timetable/SolvePanel.tsx` | `backend/tests/test_api.py`; `__tests__/SolveFlow.test.tsx`; `solver/tests/test_backtracking.py`, `test_improve.py` |
+| FR-5 | Solve the instance as a background job: backtracking (sub-rooms first within 5,000 nodes, repair's `RING_NODES`, then rooms by id in the time left, S14x), then local search within the time limit (default 300 s, at most 1,800). The job ends `solved`, `infeasible` (explained, FR-7) or `timeout`, never infeasible on a timeout (D33). The job's status and phase can be polled. | `POST /instances/{id}/solve`, `GET /jobs/{id}` | `components/timetable/SolvePanel.tsx` | `backend/tests/test_api.py`; `__tests__/SolveFlow.test.tsx`; `solver/tests/test_backtracking.py`, `test_improve.py` |
 | FR-6 | Score every solved timetable on the four rules of `solver/rules/quality_rules.yaml` and show the breakdown (D34). | (in `solution.v2`) | `components/timetable/QualityScoreCard.tsx` | `solver/tests/test_scoring.py`; `__tests__/QualityFlags.test.tsx` |
 | FR-7 | Explain an infeasible solve or repair: a minimal conflicting set, or one proven by pre-solve, and a relaxation verified to restore feasibility, or MANUAL. Break pins are never suggested (S14e, S14g). | (in `solution.v2`) | `components/timetable/InfeasibilityDiagnosisPanel.tsx` | `solver/tests/test_mus.py`; `backend/tests/test_api.py`, `test_substitution.py`; `__tests__/InfeasibleDiagnosis.test.tsx` |
 | FR-8 | Repair the official timetable after one change, moving as few sessions as possible. The change is a faculty unavailability, a room unavailability, a drag of one session to a slot and room, or a substitute teacher. The drop is checked in the browser first. | `POST /instances/{id}/repair`, `GET /jobs/{id}` | `components/timetable/RepairPanel.tsx`; drag on `TimetableGrid.tsx` (check in `adapters/timetable.ts`) | `solver/tests/test_repair.py`; `backend/tests/test_repair.py`; `__tests__/RepairFlow.test.tsx`, `__tests__/DragAndDrop.test.tsx` |
@@ -99,7 +99,11 @@ the files that exercise each one.
 **D58 options (added in S14s, PR #85), on by default since S14u.**
 
 - `prefer_sub_rooms` (`solver/backtracking.py` `backtrack_solve`, `solver/improve.py` `improve`,
-  `solver/repair.py` `repair`): try a split lab's sub-rooms before the whole lab.
+  `solver/repair.py` `repair`): try a split lab's sub-rooms before the whole lab. A fresh solve
+  (`backtrack_solve`, as the solve job calls it) makes up to two attempts (S14x): sub-rooms first
+  within 5,000 nodes (`SUB_ROOM_NODES` = `RING_NODES`), then, only if that budget runs out with
+  no verdict, rooms by id in what is left of the time limit. A verdict of the first attempt
+  stands, and a timeout is never reported as infeasible (D33).
 - `last_ring_portfolio` (`repair`): cap the every-session-free ring, then try a fallback search.
 
 The team made both the default (D58, S14u, 2026-10-31; `solution.json` regenerated: 26.5).

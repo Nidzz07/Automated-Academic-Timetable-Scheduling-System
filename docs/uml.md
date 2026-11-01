@@ -117,7 +117,7 @@ classDiagram
     class ConflictGraph { +grid; +sessions; +edges; +adjacency; +faculty_unavailable; +pinned_slots; +lab_blocks; +neighbours(session_id) }
     class Room { +str id; +str code; +int capacity; +room_type; +parent_room_id }
     class LabBlock { +str id; +session_ids; +int duration_periods }
-    class BacktrackResult { +assignment; +room_assignment; +bool solved; +int nodes_explored; +bool timed_out; +certificate; +to_solution_v2_dict() }
+    class BacktrackResult { +assignment; +room_assignment; +bool solved; +int nodes_explored; +bool timed_out; +bool rooms_by_id_fallback; +certificate; +to_solution_v2_dict() }
     class Certificate { +str check; +str kind; +session_ids; +str resource; +str reason; +slots }
     class Violation { +str kind; +session_ids; +slots }
     class Rule { +str id; +float weight; +parameters }
@@ -190,7 +190,7 @@ sequenceDiagram
     Service->>Worker: submit solve_edge_list(edge list, ...)
     Router-->>Client: 202 {job_id}
     Worker->>Database: _mark_running: status "running", phase "search"
-    Worker->>Worker: backtrack_solve (pre-solve, backtracking)
+    Worker->>Worker: backtrack_solve (pre-solve, sub-rooms first within 5000 nodes, then rooms by id)
     alt solved
         Worker->>Database: phase "improve"
         Worker->>Worker: improve (local search)
@@ -209,7 +209,10 @@ sequenceDiagram
 Files: `frontend/src/components/timetable/SolvePanel.tsx`, `frontend/src/api/queries.ts`
 (`useSolveMutation`, `useJobQuery`), `backend/app/routers.py`, `backend/app/service.py`
 (`start_solve`, `_start`, `solve_edge_list`, `_mark_running`, `_job_done`), `solver/backtracking.py`,
-`solver/improve.py`, `solver/mus.py`.
+`solver/improve.py`, `solver/mus.py`. The search makes up to two attempts (S14x): sub-rooms first
+within 5,000 nodes (`SUB_ROOM_NODES` = `RING_NODES`), then rooms by id in the time left, only if
+that budget ran out with no verdict. A verdict of the first attempt stands, and running out of
+time is the status `timeout`, never `infeasible` (D33).
 
 ### 3.3 An absence, repaired and accepted
 
