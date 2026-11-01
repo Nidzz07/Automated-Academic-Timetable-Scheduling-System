@@ -254,11 +254,11 @@ against them in tests. The v1 files are frozen; the v2 files (`ingestion_v2`, `s
 | Solver | Python 3.12, stdlib plus PyYAML, which only `scoring.py` uses to read `rules/quality_rules.yaml` (ROADMAP D61); `networkx` and `jsonschema` in tests only |
 | Ingestion | `python-docx`, `openpyxl`, PyYAML; payloads validated with `jsonschema` against `contracts/` |
 | Backend | FastAPI, Pydantic, Uvicorn, SQLAlchemy 2.0, Alembic |
-| Auth | `python-jose` (JWT), `hashlib.scrypt` (standard library) |
-| Database | PostgreSQL 16 — local via Docker Compose for development and tests; Supabase Postgres is the production database (ROADMAP D55, D57) |
+| Auth | PyJWT (HS256 access tokens; replaced `python-jose` in S14r), `hashlib.scrypt` (standard library) |
+| Database | PostgreSQL 16 — local via Docker Compose for development and tests; Supabase Postgres (eu-west-2) is the production database (ROADMAP D55, D57) |
 | Frontend | React 18, Vite, TypeScript, TailwindCSS, shadcn/ui, dnd-kit, TanStack Query, Ajv (contract validation), lucide-react, self-hosted Source fonts (`@fontsource`). No charting library: the evaluation figures are hand-written SVG (`bench/charts.py`) |
 | Testing | pytest, pytest-cov, httpx, a seeded-random property test (`solver/tests/test_property_solved_is_valid.py`; Hypothesis is installed but unused), Vitest, React Testing Library |
-| Ops | Docker, Git, GitHub Actions, Render (one web service from `backend/Dockerfile.prod`, ROADMAP D55) |
+| Ops | Docker, Git, GitHub Actions, Render (one web service from `backend/Dockerfile.prod` on the free instance, deployed by hand 2026-11-01, ROADMAP D55, D64; live demos run on a laptop). Demo accounts and the demo reset come from `python -m backend.app.demo_seed`: `--reset` restores the committed `solution.json` without solving, `--solve` runs a fresh solve (D59, D63) |
 
 ---
 
@@ -281,7 +281,7 @@ chronos/
 │   ├── graph.py                conflict graph construction
 │   ├── colouring.py            Welsh-Powell greedy
 │   ├── presolve.py             counting and matching checks
-│   ├── backtracking.py         forward checking + MRV
+│   ├── backtracking.py         forward checking + MRV; sub-rooms first, then rooms by id (D62)
 │   ├── improve.py              local search on a solved timetable
 │   ├── mus.py                  minimal unsatisfiable subset
 │   ├── repair.py               freeze-and-expand

@@ -1,6 +1,6 @@
 # Chronos — Roadmap and Tracker
 
-Last updated: 2026-10-31 · Maintained by all three members.
+Last updated: 2026-11-01 · Maintained by all three members.
 Agents: read this file and CLAUDE.md before any task. §1 (ownership) and §3 (decisions) are binding.
 
 ## 0. How to use this file
@@ -96,6 +96,9 @@ Agents: read this file and CLAUDE.md before any task. §1 (ownership) and §3 (d
 | D59 (2026-10-31): Demo accounts and resets reach Supabase only when Nidhi runs `python -m backend.app.demo_seed --reset` by hand, with CHRONOS_ALLOW_REMOTE_DB=1 and the demo passwords set in her own terminal for that command only, as for alembic (D55, D57); never by an agent.
 | D60 (2026-10-31): The interface labels periods T0–T9 and shows 12-hour clock times (the project guide's request, S14p, PR #83). Code, contracts, data, decisions and docs keep P0–P9 as the internal period numbers; D6 stands.
 | D61 (2026-10-31): solver/scoring.py reads solver/rules/quality_rules.yaml with PyYAML (since S10, PR #29). It is the only non-stdlib import under solver/ and is accepted because it loads data, not an algorithm; §10's import rule is read with this exception.
+| D62 (2026-10-31): D58 adopted: prefer_sub_rooms and last_ring_portfolio are the defaults (S14u, PR #92). The committed solution.json scores 26.5 against the printed 21.5 with 0 hard violations. A fresh solve tries sub-rooms first within 5,000 search nodes, then rooms by id, before any timeout (S14x, PR #93). Fixed items block exactly the cohorts that share students with them (S14u's pin-rule check).
+| D63 (2026-11-01): `python -m backend.app.demo_seed --reset` restores the committed solution.json as the official timetable without solving; `--solve` runs a fresh solve instead (S14y, PR #94).
+| D64 (2026-11-01): The deployed site runs on Render's free instance, about 9 times slower than a laptop (deployed check, 2026-11-01). Live demos run on a laptop; the deployed site is shown, not driven. Upgrading the instance is a later team decision.
 
 ## 4. Real data inventory (data/real/ unless stated)
 | File | What it gives | Status |
@@ -171,10 +174,10 @@ Legend: [x] done and merged · [~] partial · [ ] not started · ✂️ cut (dat
 - C: [x] (PR #58, #66, #72) diagnosis panel and repair preview on real data (S14, S14j) · [x] (PR #80) workload recalculated for both faculty (S14m) · [x] (PR #80) coordinator free/engaged view for a slot (S14m)
 
 ### Phase 5 — Evaluation (S15)
-- [x] (PR #36, #65) Runtime vs size, with plots · [x] (PR #38, #56) compare with the real EVEN timetable · [x] (PR #56) greedy vs backtracking · [x] (PR #65) repair vs regeneration · [x] (PR #73) lab utilisation reproduced (S15d) · [x] (PR #73) edge cases (S15d) · [x] (PR #42, #47, #57, #64) API tests · [x] (PR #15, #18) property tests · [ ] FET constraint-coverage table (S16e) · ✂️ weight sensitivity analysis (cut for time, decided 2026-10-26)
+- [x] (PR #36, #65) Runtime vs size, with plots · [x] (PR #38, #56) compare with the real EVEN timetable · [x] (PR #56) greedy vs backtracking · [x] (PR #65) repair vs regeneration · [x] (PR #73) lab utilisation reproduced (S15d) · [x] (PR #73) edge cases (S15d) · [x] (PR #42, #47, #57, #64) API tests · [x] (PR #15, #18) property tests · [x] (PR #86) FET constraint-coverage table (S16e) · ✂️ weight sensitivity analysis (cut for time, decided 2026-10-26)
 
 ### Phase 6 — Report and demo (S16)
-- [~] README (S16g) · [x] (PR #75) algorithms write-up (S16a) · [~] (PR #76) deployment and demo accounts (S16b done; S16c) · [ ] demo script (S16d) · [ ] SRS and UML (S16e) · [ ] report (S16f) · [ ] slides (S16f) · [ ] poster (S16f)
+- [~] README (S16g) · [x] (PR #75) algorithms write-up (S16a) · [x] (PR #76, #94) deployment and demo accounts (S16b; S16c deployed by hand 2026-11-01; repair hang on Render → S17b) · [ ] demo script (S16d) · [x] (PR #86) SRS and UML (S16e) · [ ] report (S16f) · [ ] slides (S16f) · [ ] poster (S16f)
 
 ## 8. Sequence of work
 | Step | Owner | Branch | Depends on | Reviewer | Status |
@@ -228,33 +231,40 @@ Legend: [x] done and merged · [~] partial · [ ] not started · ✂️ cut (dat
 | S14n | Nidhi | track/backend-change-dedupe | S14m | Rohan | Done (PR #81) |
 | S14o | Rohan | track/frontend-messages | S14m | Nidhi | Done (PR #82) |
 | S14p | Nidhi (in Track C's folder) | track/frontend-professor-feedback | S14o | Rohan | Done (PR #83) |
-| S14q | Rohan | track/frontend-demo-fixes | S14p | Nidhi | Not started |
-| S14r | Nidhi | track/backend-predeploy | S14p | Rohan | Not started |
-| S14s | Dhruv | track/solver-subrooms-option | S14l | Nidhi | Not started |
-| S14t | Rohan | track/frontend-polish | S14q, S14r | Nidhi | Not started |
-| S14u | Dhruv | track/solver-d58-default | S16c, D58 decision | Nidhi + Rohan | Not started; only if D58 is adopted |
+| S14q | Rohan | track/frontend-demo-fixes | S14p | Nidhi | Done (PR #87) |
+| S14r | Nidhi | track/backend-predeploy | S14p | Rohan | Done (PR #88) |
+| S14s | Dhruv | track/solver-subrooms-option | S14l | Nidhi | Done (PR #85) |
+| S14t | Rohan | track/frontend-polish | S14q, S14r | Nidhi | Done (PR #89) |
+| S14u | Dhruv | track/solver-d58-default | S14s, D58 decision (D62) | Nidhi + Rohan | Done (PR #92): D58 adopted (D62) |
+| S14v | Rohan | track/frontend-recheck-fixes | S14t | Nidhi | Done (PR #91) |
+| S14w | Nidhi | track/backend-cleanups | S14r | Rohan | Done (PR #90) |
+| S14x | Dhruv | track/solver-solve-fallback, track/solver-leftovers | S14u | Rohan | Done (PR #93; leftovers PR #96): two-attempt fresh solve |
+| S14y | Nidhi | track/backend-demo-reset | S14u | Rohan | Done (PR #94): `demo_seed --reset` restores solution.json (D63) |
 | S15 | All | eval/* | S14 | cross | Done |
 | S15a | Rohan | track/bench-harness | — | Nidhi | Done (PR #36) |
 | S15b | Rohan | track/bench-evaluation | S12g | Nidhi | Done (PR #56, merged 2026-10-22) |
 | S15c | Rohan | track/bench-evaluation-2 | S15b | Nidhi | Done (PR #65, merged 2026-10-23) |
 | S15d | Rohan | track/bench-evaluation-3 | S15c | Nidhi | Done (PR #73) |
-| S15e | Rohan | track/bench-evaluation-4 | S14u | Nidhi | Not started; only if D58 is adopted |
+| S15e | Rohan | track/bench-evaluation-4 | S14u | Nidhi | Done (PR #95) |
 | S16 | All | docs/report | S15 | cross | In progress |
 | S16a | Dhruv | docs/algorithms | S12i | Nidhi | Done (PR #75) |
 | S16b | Nidhi | track/backend-deploy | S14i, D55 | Rohan | Done (PR #76) |
-| S16c | Nidhi | — (deployment, no code) | S14q–S14t, local re-check | all three | Not started |
-| S16d | Rohan | docs/demo-script | S16c (S15e if D58 is adopted) | Nidhi | Not started |
-| S16e | Dhruv | docs/srs-uml (SRS and UML + FET coverage table) | S14s | Nidhi | Not started |
+| S16c | Nidhi | — (deployment, no code) | S14q–S14t, local re-check | all three | Done (2026-11-01): deployed by Nidhi by hand: Render web service, Supabase in eu-west-2; migrations, demo accounts and resets by hand (D55, D57, D59); deployed check run 2026-11-01 (D64) |
+| S16d | Rohan | docs/demo-script | S16c, S15e, S17a–S17c | Nidhi | Not started |
+| S16e | Dhruv | docs/srs-uml (SRS and UML + FET coverage table) | S14s | Nidhi | Done (PR #86) |
 | S16f | All | — (final report, slides and poster, built from the college's templates outside the repository) | S16d, S16e, S16g, final sync | cross | Not started |
 | S16g | Nidhi | docs/readme-final | S16c | Rohan | Not started |
+| S17a | Rohan | track/frontend-deploy-fixes | S16c | Nidhi | Not started |
+| S17b | Nidhi | track/backend-render-hang | S16c | Rohan | Not started: the repair hang on Render |
+| S17c | Dhruv | track/solver-demo-flows | S14x | Nidhi | Not started |
+| S17d | Nidhi | chore/sync-after-s14y (status sync after S14y, docs only) | S14y, S15e | Rohan | In progress |
 
-## 9. Weekly plan (week 1 = 2026-09-21; replanned 2026-10-31)
-- Done by 2026-10-24 (W5): S1–S15c and S12h (see §8).
-- W6 (to Nov 1): status sync after S14p.
-- W7 (Nov 2–8): S14q, S14r, S14s, then S14t; S16e starts; local re-check.
-- W8 (Nov 9–15): S16c deployment and deployed browser check; D58 decision (S14u, S15e only if adopted); S16g, S16d.
-- W9 (Nov 16–22): final sync and v1.0 tag; S16f starts when the college's templates arrive.
-- W10–W11 (Nov 23–Dec 6): S16f report, slides and poster; demo rehearsals.
+## 9. Weekly plan (week 1 = 2026-09-21; replanned 2026-11-01)
+- Done by 2026-11-01 (W6): S1–S16c except S16d, S16f, S16g (see §8); D58 adopted (D62).
+- W7 (Nov 2–8): S17a, S17b, S17c, S17d; Render settings and production reset (Nidhi, by hand, D57, D59); a short deployed re-check.
+- W8 (Nov 9–15): S16d demo script and the demo video (screencast fallback); S16g README.
+- W9–W10 (Nov 16–29): S16f report, slides and poster from the college's templates; demo rehearsals on a laptop (D64).
+- W11 (Nov 30–Dec 6): final sync and v1.0 tag.
 - W12 (Dec 7–13): buffer.
 
 ## 10. Workflow
@@ -269,7 +279,7 @@ Legend: [x] done and merged · [~] partial · [ ] not started · ✂️ cut (dat
 - R3: Faculty initials and qualifications are not human-verified.
 - R4: Pigeonhole infeasibility is slow to prove. S4 adds pre-solve checks and a timeout.
 - R5: Local DB tests silently skip if Docker is down. Always check that there are 0 skips.
-- D58: S14s adds sub-rooms first and a last-ring portfolio as options, off by default. The team decides after the deployed browser check (S16c) whether to make them the default (S14u, S15e).
+- D58: decided by D62 (2026-10-31): both options are the defaults (S14u, PR #92; S14x, PR #93). Was: S14s adds sub-rooms first and a last-ring portfolio as options, off by default. The team decides after the deployed browser check (S16c) whether to make them the default (S14u, S15e).
 - Open: none. Promoting migrations to Supabase is decided by D55 (Nidhi, by hand). bench/ (C) reuses solver/benchmarks (A): bench/run_bench.py, bench/evaluate.py and bench/size_sweep.py import solver.benchmarks.synthetic, and bench/evaluate.py also imports solver.benchmarks.real_repair.
 
 ## 12. Carried over from the previous ROADMAP
@@ -348,3 +358,4 @@ Tags as in the old plan: [S] = should (cut only if behind schedule, note the cut
 - 2026-10-26: S11c (anomaly panel grouped by category, #69), S14k (the time limit covers the explanation, #70), S14i (D56 official timetable after clearing changes, current and job edge lists, qualifications.json checked by hand, #71), S14j (UI on the current and job edge lists, stale solves not official, #72), S15d (lab utilisation 11 of 15 printed tables reproduced, 4 reported; edge cases, #73), S12i (lower bounds: clique 18, teacher 25, cohort 41, #74), S16a (`docs/algorithms.md`, #75), S16b (production app, `backend/Dockerfile.prod`, demo accounts and reset, #76) merged. S16c waits on a team decision: the backend's local-host guard refuses a Supabase `DATABASE_URL` (D55). Local browser check: not yet run. Next: S16c deployment, deployed browser check, S16d, S16e.
 - 2026-10-26: D57, D58 recorded; weight sensitivity cut; S14l and S14m added. Next: S14l, S14m, local browser check, S16c.
 - 2026-10-31: S14l (#79), S14m (#80), S14n (#81), S14o (#82), S14p (#83, the project guide's corrections) merged; a read-only audit of the repository and the website was run; D59–D61 recorded; S14q–S14u, S15e and S16g added. Next: S14q, S14r, S14s, then S14t, local re-check, S16c.
+- 2026-11-01: S14s (#85), S16e (#86), S14q (#87), S14r (#88), S14t (#89), S14w (#90), S14v (#91), S14u (#92), S14x (#93, leftovers #96), S14y (#94), S15e (#95) merged; D58 adopted (D62); S16c deployed by Nidhi by hand (Render web service, Supabase in eu-west-2) and a deployed check run (a repair hangs on Render: S17b); D62–D64 recorded; rows S14v–S14y and S17a–S17d added. Next: S17a–S17d, Render settings and production reset, a short deployed re-check, S16d and the demo video, S16g, S16f, final sync and v1.0.
