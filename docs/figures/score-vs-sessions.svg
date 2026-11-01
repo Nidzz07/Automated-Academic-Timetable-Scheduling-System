@@ -3,13 +3,15 @@
 <rect width="640" height="400" fill="#fcfcfb"/>
 <text x="80.0" y="22.0" text-anchor="start" fill="#0b0b0b" font-size="15" font-weight="600">Score vs sessions, synthetic large-shape instances, seed 1</text>
 <line x1="80" x2="620" y1="344.0" y2="344.0" stroke="#e4e3df"/>
-<text x="72.0" y="348.0" text-anchor="end" fill="#52514e">-600</text>
-<line x1="80" x2="620" y1="274.0" y2="274.0" stroke="#e4e3df"/>
-<text x="72.0" y="278.0" text-anchor="end" fill="#52514e">-400</text>
-<line x1="80" x2="620" y1="204.0" y2="204.0" stroke="#e4e3df"/>
-<text x="72.0" y="208.0" text-anchor="end" fill="#52514e">-200</text>
-<line x1="80" x2="620" y1="134.0" y2="134.0" stroke="#e4e3df"/>
-<text x="72.0" y="138.0" text-anchor="end" fill="#52514e">0</text>
+<text x="72.0" y="348.0" text-anchor="end" fill="#52514e">-800</text>
+<line x1="80" x2="620" y1="288.0" y2="288.0" stroke="#e4e3df"/>
+<text x="72.0" y="292.0" text-anchor="end" fill="#52514e">-600</text>
+<line x1="80" x2="620" y1="232.0" y2="232.0" stroke="#e4e3df"/>
+<text x="72.0" y="236.0" text-anchor="end" fill="#52514e">-400</text>
+<line x1="80" x2="620" y1="176.0" y2="176.0" stroke="#e4e3df"/>
+<text x="72.0" y="180.0" text-anchor="end" fill="#52514e">-200</text>
+<line x1="80" x2="620" y1="120.0" y2="120.0" stroke="#e4e3df"/>
+<text x="72.0" y="124.0" text-anchor="end" fill="#52514e">0</text>
 <line x1="80" x2="620" y1="64.0" y2="64.0" stroke="#e4e3df"/>
 <text x="72.0" y="68.0" text-anchor="end" fill="#52514e">200</text>
 <text x="80.0" y="362.0" text-anchor="middle" fill="#52514e">50</text>
@@ -23,28 +25,28 @@
 <text x="18.0" y="204.0" text-anchor="middle" fill="#52514e" transform="rotate(-90 18 204.0)">score (rules v1)</text>
 <circle cx="86.0" cy="44.0" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
 <text x="96.0" y="48.0" text-anchor="start" fill="#0b0b0b">backtracking</text>
-<polyline points="80.0,147.1 131.8,195.4 183.7,199.5 235.5,227.1 287.4,227.1 339.2,335.1 391.0,269.8 442.9,268.9 494.7,305.1 598.4,330.5" fill="none" stroke="#2a78d6" stroke-width="2"/>
-<circle cx="80.0" cy="147.1" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<circle cx="131.8" cy="195.4" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<circle cx="183.7" cy="199.5" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<circle cx="235.5" cy="227.1" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<circle cx="287.4" cy="227.1" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<circle cx="339.2" cy="335.1" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<circle cx="391.0" cy="269.8" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<circle cx="442.9" cy="268.9" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<circle cx="494.7" cy="305.1" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<circle cx="598.4" cy="330.5" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<polyline points="80.0,130.5 131.8,169.1 183.7,172.4 235.5,194.5 287.4,194.5 339.2,280.9 391.0,229.6 442.9,209.3 494.7,245.3 598.4,312.5" fill="none" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="80.0" cy="130.5" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="131.8" cy="169.1" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="183.7" cy="172.4" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="235.5" cy="194.5" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="287.4" cy="194.5" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="339.2" cy="280.9" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="391.0" cy="229.6" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="442.9" cy="209.3" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="494.7" cy="245.3" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="598.4" cy="312.5" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
 <rect x="189.0" y="39.0" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
 <text x="204.0" y="48.0" text-anchor="start" fill="#0b0b0b">backtracking + improve</text>
-<polyline points="80.0,100.4 131.8,103.5 183.7,102.5 235.5,104.4 287.4,105.8 339.2,106.7 391.0,107.8 442.9,110.9 494.7,109.8 598.4,113.3" fill="none" stroke="#eb6834" stroke-width="2"/>
-<rect x="75.0" y="95.4" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<rect x="126.8" y="98.5" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<rect x="178.7" y="97.5" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<rect x="230.5" y="99.4" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<rect x="282.4" y="100.8" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<rect x="334.2" y="101.7" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<rect x="386.0" y="102.8" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<rect x="437.9" y="105.9" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<rect x="489.7" y="104.8" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
-<rect x="593.4" y="108.3" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<polyline points="80.0,93.1 131.8,95.5 183.7,94.5 235.5,96.2 287.4,96.9 339.2,97.5 391.0,100.0 442.9,100.3 494.7,101.7 598.4,104.0" fill="none" stroke="#eb6834" stroke-width="2"/>
+<rect x="75.0" y="88.1" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="126.8" y="90.5" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="178.7" y="89.5" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="230.5" y="91.2" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="282.4" y="91.9" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="334.2" y="92.5" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="386.0" y="95.0" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="437.9" y="95.3" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="489.7" y="96.7" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="593.4" y="99.0" width="10" height="10" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
 </svg>

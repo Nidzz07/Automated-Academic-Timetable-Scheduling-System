@@ -1,0 +1,9 @@
+case,sessions,outcome,nodes,placed,hard_violations,method,conflicting_set,relaxation,verification,explained_method,explained_set,explained_relaxation,explained_verification,note
+empty,0,solved,1,0,0,,,,,,,,,
+single,1,solved,2,1,0,,,,,,,,,
+no free substitute,2,0 candidates; repair solved,,2,0,,,,,,,,,repair displaced a
+infeasible (pre-solve),46,infeasible,0,,,presolve,presolve.cohort_load.d00,MANUAL,not_attempted,mus,cohort_clash.d00; cohort_clash.d00.d00-b0; pin.0,RELAX_PINNED_BLOCK,restored,
+infeasible (search),3,infeasible,3,,,search_exhaustion,,,,mus,unavailable.fac-0.0; unavailable.fac-0.1; unavailable.fac-0.2; unavailable.fac-0.3; unavailable.fac-0.4; unavailable.fac-1.0; unavailable.fac-1.1; unavailable.fac-1.2; unavailable.fac-1.3; unavailable.fac-1.4; unavailable.fac-2.0; unavailable.fac-2.1; unavailable.fac-2.2; unavailable.fac-2.3; unavailable.fac-2.4,RELAX_FACULTY_AVAILABILITY,restored,
+division with 45 lectures,45,solved,46,45,0,,,,,,,,,
+over-subscribed division (46 lectures),46,infeasible,0,,,presolve,presolve.cohort_load.div,MANUAL,not_attempted,mus,cohort_clash.div,MANUAL,not_attempted,
+timeout (node_limit=1),12,timeout,2,,,,,,,,,,,to_solution_v2_dict raises ValueError: solution.v2 has no status for a search timeout (ROADMAP D33); without the limit: solved

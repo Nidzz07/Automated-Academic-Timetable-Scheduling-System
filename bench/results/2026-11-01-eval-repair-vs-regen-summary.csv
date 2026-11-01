@@ -1,0 +1,7 @@
+method,changes,solved,unsolved_both_ways,metric,over,n,mean,ci95_low,ci95_high,machine
+repair,30,25,4,moved,solved both ways,25,4.48,1.93,7.03,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
+repair,30,25,4,score,solved both ways,25,16.36,10.06,22.66,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
+repair,30,25,4,runtime_ms,all changes,30,30771.43,-3327.39,64870.24,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
+"regeneration (backtracking + improve(200000, seed 0))",30,26,4,moved,solved both ways,25,87.76,82.52,93.0,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
+"regeneration (backtracking + improve(200000, seed 0))",30,26,4,score,solved both ways,25,10.6,5.28,15.92,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
+"regeneration (backtracking + improve(200000, seed 0))",30,26,4,runtime_ms,all changes,30,27566.37,-103.55,55236.28,"AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD, Python 3.12.10, Windows"
