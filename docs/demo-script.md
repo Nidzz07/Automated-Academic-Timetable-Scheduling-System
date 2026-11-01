@@ -1,5 +1,7 @@
 # Chronos demo script (S16d)
 
+Demo video: https://drive.google.com/drive/folders/1pFl8iyvg3LlMR4gH6ygTWzjXf_mOb63t?usp=sharing
+
 For showing Chronos to our project guide and examiners, and for recording the demo video.
 2026-11-02 · Rohan (with Claude Code) · branch `docs/demo-script`.
 
