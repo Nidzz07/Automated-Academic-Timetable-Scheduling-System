@@ -4,9 +4,10 @@
 `solver/`, checked against the code on `main` (commit 0d6b10e). Every measured number links to
 where it was recorded: [evaluation](evaluation-even-2025-26.md), [real
 solve](real-solve-even-2025-26.md), [repair](repair-even-2025-26.md). Course names are the
-eight of CLAUDE.md rule 6. Where a docstring names another course (CE303, Artificial
+eight of CLAUDE.md rule 6. Where a docstring named another course (CE303, Artificial
 Intelligence and Soft Computing), this document gives the closest of the eight and says why
-(S14s); those docstrings still say CE303. Rechecked against `main` on 2026-10-31 (S14s).
+(S14s); since 2026-11-01 the docstrings cite the same course. Rechecked against `main` on
+2026-10-31 (S14s).
 
 ## Overview
 
@@ -159,6 +160,9 @@ presets it colours every session of `small`, `medium` and `large` ([evaluation �
 - The tree is **exponential in the worst case**, O((s·r)^n) leaves.
 - Space is O(n·s·r) for the domains and the trail.
 
+`metadata.backtracks` in a `solution.v2` result holds `nodes_explored`, the search nodes
+visited, not the number of backtracking steps its contract description names.
+
 In practice, pre-solve refutes the counting cases before any search. `node_limit` (machine
 independent) and `time_limit_s` stop it and report `timeout`, never `infeasible` (D21, D33).
 
@@ -168,7 +172,7 @@ differ between machines. `node_limit` cannot.
 
 **Course.** Backtracking and its search tree: Design and Analysis of Algorithms, CE207. MRV,
 degree and least-constraining-value: also Design and Analysis of Algorithms, as the orderings
-that prune a backtracking search tree (the docstrings say CE303, not one of the eight).
+that prune a backtracking search tree (the docstrings cite the same).
 
 **Measured.**
 
@@ -344,7 +348,7 @@ alone.
 
 **Course.** Simulated annealing and the guided and ejection moves: Design and Analysis of
 Algorithms, the closest of the eight. They are heuristic optimisation over the same states the
-backtracking searches; the docstrings say CE303. The acceptance rule exp(−Δ/T) draws from a
+backtracking searches; the docstrings cite the same. The acceptance rule exp(−Δ/T) draws from a
 seeded random generator: Statistical Methods. Kempe-chain interchange: Discrete Structures and
 Graph Theory. The incremental penalty's hash maps: Data Structures.
 
@@ -459,7 +463,7 @@ machine. A result cut by a deadline can differ between machines, like a timeout.
 **Course.** The deletion filter is Chinneck and Dravnieks 1991, with QuickXplain-style halving
 (Junker 2004) and witnesses as in model rotation (Marques-Silva and Lynce 2011). Design and
 Analysis of Algorithms, the closest of the eight: the halving is divide and conquer, and each
-check is a bounded backtracking search. The docstring says CE303 (constraint satisfaction).
+check is a bounded backtracking search. The docstring cites the same.
 
 **Measured.**
 

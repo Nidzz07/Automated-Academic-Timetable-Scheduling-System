@@ -242,7 +242,7 @@ class BacktrackResult:
             "sessions_total": tot,
             "sessions_assigned": len(self.assignment),
             "slots_used": slots_used,
-            "backtracks": self.nodes_explored,
+            "backtracks": self.nodes_explored,  # search nodes visited, not backtracking steps
         }
 
     def _placements(
@@ -980,8 +980,8 @@ def _select_variable(state: _SolverState) -> LabBlock | str | None:
     starts its members share) and a lecture (whatever its room) compare
     fairly; ties go to the variable with the most unassigned conflict
     neighbours (the degree heuristic), then to the smaller id.  Both are the
-    variable-ordering heuristics for constraint satisfaction search
-    (Artificial Intelligence and Soft Computing, CE303).  Returns None when
+    orderings that prune a backtracking search tree (Design and Analysis of
+    Algorithms).  Returns None when
     everything is placed.
     """
     best: list[tuple[int, str, LabBlock | str, tuple[str, ...]]] = []
@@ -1019,7 +1019,7 @@ def _start_order(
 
     A start costs the number of (neighbour, start) values it would remove from
     the unassigned conflict neighbours' domains - the least-constraining-value
-    heuristic (Artificial Intelligence and Soft Computing, CE303).  Ties keep
+    heuristic (Design and Analysis of Algorithms).  Ties keep
     slot order, so the result is deterministic.  A start in ``state.prefer``
     goes first (minimal perturbation, :mod:`solver.repair`).
     """
