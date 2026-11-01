@@ -628,6 +628,34 @@ class ChronosService:
             db.commit()
         return cleared
 
+    def restore_committed(self, instance_id: str, actor: str) -> str | None:
+        """Make the committed ``solution.json`` official without solving (S14y): record it
+        as one finished solve job, built with no accepted change and audited as a solve by
+        *actor*: its id, or None when the instance has no edge list or no solution.json.
+        Raises :class:`Conflict` while accepted changes are in force (D56: it was built
+        with none), :class:`ContractError` or ValueError when the file does not conform or
+        is not valid for the committed edge list."""
+        edge_list = self.edge_list(instance_id)
+        committed = self.store.read(instance_id, "solution")
+        if edge_list is None or committed is None:
+            return None
+        check_contract("solution_v2", committed)
+        if violations := validate_solution(edge_list, committed):
+            raise ValueError(f"solution.json is not valid: {[v.to_dict() for v in violations]}")
+        job_id, params, now = uuid.uuid4().hex, {"source": "solution.json"}, _now()
+        with self._official_lock, OrmSession(self._engine) as db:
+            if self._accepted(db, instance_id):
+                raise Conflict("clear the accepted changes before restoring solution.json")
+            audit_id = self._audit(db, actor, "solve", {
+                "instance_id": instance_id, "job_id": job_id, **params, "status": "solved",
+                "started_at": now, "ended_at": now})
+            db.add(SolveJob(id=job_id, instance_id=instance_id, requested_by=actor,
+                            kind="solve", status="solved", params=params, audit_id=audit_id,
+                            built_with=[], solution=committed, started_at=func.now(),
+                            ended_at=func.now()))
+            db.commit()
+        return job_id
+
     def base_solution(self, job_id: str) -> dict[str, Any] | None:
         """The solution.v2 a repair started from: the committed ``solution.json`` or its
         base job's solution. None for an unknown job or one that is not a repair."""

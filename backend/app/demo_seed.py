@@ -1,4 +1,5 @@
-"""Demo accounts and reset (S16b, ROADMAP D55):  python -m backend.app.demo_seed [--reset]
+"""Demo accounts and reset (S16b, ROADMAP D55):
+python -m backend.app.demo_seed [--reset | --solve]
 
 Creates, when missing, ``demo-admin`` (administrator), ``demo-coordinator``,
 ``demo-faculty`` (linked to fac-anant-nimkar) and ``demo-student`` (linked to coh-se-a,
@@ -10,8 +11,11 @@ password included, so a second run changes nothing.
 
 ``--reset`` sets every existing demo account's password again (S14r), so the known logins
 come back, then clears the accepted changes of even-2025-26 exactly as
-``DELETE /instances/{id}/changes`` does (audited, actor ``demo_seed``; D56 picks the
-official timetable) and runs one solve with the API's default budget to completion.
+``DELETE /instances/{id}/changes`` does (audited, actor ``demo_seed``), then makes the
+committed ``solution.json`` official without solving (S14y): one finished solve job, audited
+as a solve by ``demo_seed``, so the demo starts from the timetable the docs measured.
+``--solve`` does the same but runs one solve with the API's default budget to completion
+instead, and that solve becomes official (D56).
 
 Writes to DATABASE_URL, local hosts only (db.local_guard, as create_user). Run ``--reset``
 while no API process is solving on the same database: like an API start, it marks jobs
@@ -73,16 +77,20 @@ def seed_accounts(engine: Engine, password: dict[str, str], reset: bool = False)
         db.commit()
 
 
-def reset(engine: Engine) -> bool:
-    """Clear the accepted changes, then solve to completion; True when the solve is
-    solved and official."""
+def reset(engine: Engine, solve: bool = False) -> bool:
+    """Clear the accepted changes, then restore the committed solution.json or, with
+    *solve*, solve to completion; True when that job is solved and official."""
     service = ChronosService(InstanceStore(), engine)
     try:
         cleared = service.clear_changes(REAL_INSTANCE, ACTOR)
         print(f"cleared {len(cleared or [])} accepted change(s) of {REAL_INSTANCE}")
-        job_id = service.start_solve(REAL_INSTANCE, DEFAULT_TIME_LIMIT_S, DEFAULT_MAX_MOVES,
-                                     ACTOR)
-        print(f"solving {REAL_INSTANCE} (job {job_id}, at most {DEFAULT_TIME_LIMIT_S:g} s)")
+        if not solve:
+            job_id = service.restore_committed(REAL_INSTANCE, ACTOR)
+            print(f"restored the committed solution.json of {REAL_INSTANCE} (job {job_id})")
+        else:
+            job_id = service.start_solve(REAL_INSTANCE, DEFAULT_TIME_LIMIT_S, DEFAULT_MAX_MOVES,
+                                         ACTOR)
+            print(f"solving {REAL_INSTANCE} (job {job_id}, at most {DEFAULT_TIME_LIMIT_S:g} s)")
         while (job := service.job(job_id, details=True))["status"] in ("queued", "running"):
             time.sleep(0.5)
         official = job.get("solution") is not None and (
@@ -97,7 +105,10 @@ def reset(engine: Engine) -> bool:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Create the demo accounts; reset the demo.")
     parser.add_argument("--reset", action="store_true",
-                        help=f"clear {REAL_INSTANCE}'s accepted changes, then solve it")
+                        help=f"clear {REAL_INSTANCE}'s accepted changes, then make its "
+                        "committed solution.json official")
+    parser.add_argument("--solve", action="store_true",
+                        help="as --reset, but solve once at the default budget instead")
     args = parser.parse_args(argv)
     password = passwords()
     if missing := [u for u, p in password.items() if len(p) < MIN_PASSWORD_LENGTH]:
@@ -107,8 +118,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     engine = create_engine(local_database_url())
     try:
-        seed_accounts(engine, password, reset=args.reset)
-        return 0 if not args.reset or reset(engine) else 1
+        resetting = args.reset or args.solve
+        seed_accounts(engine, password, reset=resetting)
+        return 0 if not resetting or reset(engine, solve=args.solve) else 1
     finally:
         engine.dispose()
 

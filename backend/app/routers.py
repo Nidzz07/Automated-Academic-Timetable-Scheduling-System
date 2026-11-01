@@ -118,8 +118,11 @@ class JobView(BaseModel):
     id: str
     instance_id: str
     kind: Literal["solve", "repair"]
-    time_limit_s: float
-    max_moves: int
+    time_limit_s: float | None = Field(None, description="absent on a restored solve")
+    max_moves: int | None = Field(None, description="absent on a restored solve")
+    source: str | None = Field(
+        None, description="restored solve (S14y): the committed file it records, no solver run"
+    )
     status: JobStatus
     phase: Literal["search", "improve", "repair"] | None = Field(
         None, description="while running"
